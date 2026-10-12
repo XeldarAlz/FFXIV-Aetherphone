@@ -195,22 +195,23 @@ internal sealed class DeathrollRoom
     private string TrailText(CasinoDeathrollDuelDto duel)
     {
         var rolls = duel.Rolls;
-        var key = duel.Seq * 1_000 + (rolls?.Length ?? 0);
+        var landed = Math.Max(0, (rolls?.Length ?? 0) - (playback.Rolling ? 1 : 0));
+        var key = duel.Seq * 1_000 + landed;
         if (key == trailKey)
         {
             return trail;
         }
 
         trailKey = key;
-        if (rolls is null || rolls.Length == 0)
+        if (rolls is null || landed == 0)
         {
             trail = string.Empty;
             return trail;
         }
 
-        var first = Math.Max(0, rolls.Length - TrailShown);
+        var first = Math.Max(0, landed - TrailShown);
         var builder = trailBuilder.Clear();
-        for (var index = first; index < rolls.Length; index++)
+        for (var index = first; index < landed; index++)
         {
             if (builder.Length > 0)
             {
@@ -271,9 +272,32 @@ internal sealed class DeathrollRoom
         room.Stage.Celebration.Celebrate(duel.Stake, duel.Stake * 2, origin, room.Frame.Instant);
     }
 
+    internal static long StackOf(CasinoDeathrollStateDto board, string userId)
+    {
+        var stacks = board.Stacks;
+        if (stacks is not null && userId.Length > 0)
+        {
+            for (var index = 0; index < stacks.Length; index++)
+            {
+                if (string.Equals(stacks[index].UserId, userId, StringComparison.Ordinal))
+                {
+                    return stacks[index].Chips;
+                }
+            }
+        }
+
+        return board.PracticeStack;
+    }
+
     private void DrawDeck(in VenueRoomFrame room, CasinoDeathrollStateDto board, CasinoDeathrollDuelDto? duel,
         Rect deck)
     {
+        if (!room.Gil)
+        {
+            VenueArt.DeckCaption(room.DrawList, deck, texts.Number(L.Venue.YourPracticeStack, StackOf(board, room.Me)),
+                room.Scale);
+        }
+
         if (duel is null || duel.Phase >= DuelPhases.Finished)
         {
             var label = room.Gil

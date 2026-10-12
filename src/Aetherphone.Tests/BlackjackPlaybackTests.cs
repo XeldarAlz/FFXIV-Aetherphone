@@ -43,6 +43,38 @@ public sealed class BlackjackPlaybackTests
     }
 
     [Fact]
+    public void APaidPairOnALostHandKeepsTheMainResultALoss()
+    {
+        var seat = Seat(0, Hand(500, BlackjackOutcomes.Lose, -500)) with
+        {
+            SideBets = new CasinoBlackjackSideBetsDto(100, 100, BlackjackSideBets.PairMixed, 0, 700, 0),
+        };
+
+        var recap = BlackjackRecap.Of(seat, seat.Hands!);
+
+        Assert.Equal(0, recap.Net);
+        Assert.Equal(-500, recap.MainNet);
+        Assert.Equal(-1, recap.MainSign);
+        Assert.Equal(600, recap.PairsNet);
+        Assert.Equal(-100, recap.ThreeNet);
+    }
+
+    [Fact]
+    public void ANaturalStaysAWinWhenBothSideBetsLose()
+    {
+        var seat = Seat(0, Hand(500, BlackjackOutcomes.Blackjack, 750)) with
+        {
+            SideBets = new CasinoBlackjackSideBetsDto(500, 500, 0, 0, 0, 0),
+        };
+
+        var recap = BlackjackRecap.Of(seat, seat.Hands!);
+
+        Assert.Equal(-250, recap.Net);
+        Assert.Equal(750, recap.MainNet);
+        Assert.Equal(1, recap.MainSign);
+    }
+
+    [Fact]
     public void InsurancePaidAgainstANaturalOffsetsTheLostHand()
     {
         var seat = Seat(0, Hand(2_000, BlackjackOutcomes.Lose, -2_000)) with { Insurance = 1_000, InsuranceWin = 3_000 };

@@ -17,6 +17,7 @@ public sealed class CasinoFeatureGateTests
         CasinoGames.Holdem, CasinoGames.SlotsBird, CasinoGames.SlotsCascade, CasinoGames.SlotsMoogle,
         CasinoGames.Plinko, CasinoGames.Mines, CasinoGames.Dice, CasinoGames.Limbo, CasinoGames.Keno,
         CasinoGames.HiLo, CasinoGames.Race, CasinoGames.DiceTable, CasinoGames.Deathroll, CasinoGames.Raffle,
+        CasinoGames.Book,
     };
 
     [Fact]
@@ -45,6 +46,10 @@ public sealed class CasinoFeatureGateTests
         Assert.True(CasinoGameGate.IsOpen(originals, CasinoGames.Keno));
         Assert.True(CasinoGameGate.IsOpen(originals, CasinoGames.Plinko));
         Assert.False(CasinoGameGate.IsOpen(originals, CasinoGames.Race));
+        var book = CasinoFeatureSet.From(new[] { CasinoFeatures.VenueBook });
+        Assert.True(CasinoGameGate.IsOpen(book, CasinoGames.Book));
+        Assert.False(CasinoGameGate.IsOpen(book, CasinoGames.Raffle));
+        Assert.False(CasinoGameGate.IsOpen(CasinoFeatureSet.From(new[] { CasinoFeatures.Venue }), CasinoGames.Book));
     }
 
     [Fact]
@@ -59,6 +64,9 @@ public sealed class CasinoFeatureGateTests
         Assert.True(CasinoGameGate.RoomOpen(all, HoldemRules.Kind));
         Assert.True(CasinoGameGate.RoomOpen(all, CasinoWire.RaceKind));
         Assert.True(CasinoGameGate.RoomOpen(all, VenueKinds.Deathroll));
+        Assert.False(CasinoGameGate.RoomOpen(all, CasinoWire.BookKind));
+        Assert.True(CasinoGameGate.RoomOpen(CasinoFeatureSet.From(new[] { CasinoFeatures.VenueBook }),
+            CasinoWire.BookKind));
     }
 
     [Fact]

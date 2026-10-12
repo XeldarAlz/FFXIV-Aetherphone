@@ -15,12 +15,16 @@ namespace Aetherphone.Apps.Casino;
 internal sealed partial class CasinoApp
 {
     private const float ChallengeBulbInset = 6f;
+    private const string FloorFameBoard = CasinoFameBoards.Win;
 
-    private readonly MissionsCard missionsCard = new();
+    private readonly MissionsCapsule missionsCapsule = new();
+    private readonly MissionsSheet missionsSheet;
     private readonly ClubCapsule clubCapsule = new();
     private readonly ClubSheet clubSheet = new();
     private readonly FamePodium famePodium = new();
     private readonly FameView fameView;
+    private readonly FameConsentSheet fameConsent;
+    private readonly CasinoFameChoiceStore fameChoice;
     private string challengeTextId = string.Empty;
     private LanguageInfo? challengeLanguage;
     private string challengeLeader = string.Empty;
@@ -29,31 +33,69 @@ internal sealed partial class CasinoApp
 
     private float DrawFloorExtras(ImDrawListPtr drawList, Vector2 origin, float width, float scale)
     {
-        var top = origin.Y;
         var missions = floor.Missions;
-        if (casino.HasFeature(CasinoFeatures.Missions) && MissionsCard.Count(missions) > 0)
+        var showsMissions = casino.HasFeature(CasinoFeatures.Missions) && MissionsCard.Count(missions) > 0;
+        var club = casino.HasFeature(CasinoFeatures.Club) ? casino.Club : null;
+        var gap = CardGap * scale;
+        if (showsMissions && club is not null
+            && DrawFloorStatusPair(drawList, missions!, club, origin, width, scale, out var pairBottom))
         {
-            var tapped = missionsCard.Draw(drawList, ui, missions!, new Vector2(origin.X, top), width,
-                floor.ClaimingMission, DateTimeOffset.UtcNow.ToUnixTimeSeconds(), scale, out var bottom);
-            if (tapped.Length > 0)
-            {
-                floor.ClaimMission(tapped);
-            }
-
-            top = bottom + CardGap * scale;
+            return pairBottom + gap;
         }
 
-        if (casino.HasFeature(CasinoFeatures.Club) && casino.Club is { } club)
+        var top = origin.Y;
+        if (showsMissions)
         {
-            if (clubCapsule.Draw(drawList, ui, club, new Vector2(origin.X, top), width, scale, out var bottom))
+            if (FloorCapsule.Draw(drawList, ui, missionsCapsule.Content(ui, missions!, false),
+                    new Vector2(origin.X, top), width, scale, out var bottom))
+            {
+                missionsSheet.Open();
+            }
+
+            top = bottom + gap;
+        }
+
+        if (club is not null)
+        {
+            if (FloorCapsule.Draw(drawList, ui, clubCapsule.Content(ui, club, false), new Vector2(origin.X, top), width,
+                    scale, out var bottom))
             {
                 clubSheet.Open(club.Tier);
             }
 
-            top = bottom + CardGap * scale;
+            top = bottom + gap;
         }
 
         return top;
+    }
+
+    private bool DrawFloorStatusPair(ImDrawListPtr drawList, CasinoMissionsDto missions, CasinoClubDto club,
+        Vector2 origin, float width, float scale, out float bottom)
+    {
+        var gap = CardGap * scale;
+        var half = (width - gap) * 0.5f;
+        var missionsTile = missionsCapsule.Content(ui, missions, true);
+        var clubTile = clubCapsule.Content(ui, club, true);
+        if (!FloorCapsule.FitsHalf(missionsTile, half, scale) || !FloorCapsule.FitsHalf(clubTile, half, scale))
+        {
+            bottom = origin.Y;
+            return false;
+        }
+
+        var height = MathF.Max(FloorCapsule.HalfHeight(missionsTile, scale), FloorCapsule.HalfHeight(clubTile, scale));
+        if (FloorCapsule.DrawHalf(drawList, ui, missionsTile, origin, half, height, scale))
+        {
+            missionsSheet.Open();
+        }
+
+        if (FloorCapsule.DrawHalf(drawList, ui, clubTile, new Vector2(origin.X + half + gap, origin.Y), half, height,
+                scale))
+        {
+            clubSheet.Open(club.Tier);
+        }
+
+        bottom = origin.Y + height;
+        return true;
     }
 
     private float DrawFloorTail(ImDrawListPtr drawList, Vector2 origin, float width, float scale)
@@ -63,14 +105,14 @@ internal sealed partial class CasinoApp
             return origin.Y;
         }
 
-        floor.EnsureFame(CasinoFameBoards.Profit, CasinoFameSpans.Week);
-        var board = floor.Fame(CasinoFameBoards.Profit, CasinoFameSpans.Week);
-        if (board?.Entries is not { Length: > 0 } && board?.Champion is null)
+        floor.EnsureFame(FloorFameBoard, CasinoFameSpans.Week);
+        var board = floor.Fame(FloorFameBoard, CasinoFameSpans.Week);
+        if (board is null)
         {
             return origin.Y;
         }
 
-        if (famePodium.Draw(drawList, ui, board!, origin, width, scale, out var bottom))
+        if (famePodium.Draw(drawList, ui, board, origin, width, scale, out var bottom))
         {
             OpenFame();
         }
@@ -85,8 +127,41 @@ internal sealed partial class CasinoApp
             return;
         }
 
-        fameView.Enter();
+        fameView.Enter(FloorFameBoard);
         routes.Push(new CasinoRoute(CasinoScreen.Fame));
+    }
+
+    private void ConsumeFameConsentRequest()
+    {
+        if (fameView.TakeConsentRequest())
+        {
+            fameConsent.Open();
+        }
+    }
+
+    private void OfferFameConsent()
+    {
+        if (fameConsent.IsOpen || !FloorIdle() || !fameChoice.Needed)
+        {
+            return;
+        }
+
+        fameConsent.Open();
+    }
+
+    private bool FloorIdle() =>
+        casino.State is not null && preferences.IntroSeen && routes.OnRoot && routes.Tab == CasinoTab.Floor
+        && !router.IsTransitioning && !LaunchActive && !rulesSheet.IsOpen && !clubSheet.IsOpen && !cashier.IsOpen
+        && !missionsSheet.IsOpen && !venueSheet.IsOpen && !tradePrompt.Visible && conduct.Active is null
+        && confirm.Active is null;
+
+    private void HandleMissionsSheet()
+    {
+        var claim = missionsSheet.TakeClaim();
+        if (claim.Length > 0)
+        {
+            floor.ClaimMission(claim);
+        }
     }
 
     private void ConsumeMissionNotes()
@@ -101,7 +176,7 @@ internal sealed partial class CasinoApp
         {
             if (claim.Granted)
             {
-                bonusShelf.Shower(missionsCard.ClaimCenter, UiScale.Current);
+                bonusShelf.Shower(missionsSheet.ClaimCenter, UiScale.Current);
                 ShellToast.Show(texts.Compact(L.Strip.BonusLanded, claim.Amount));
             }
             else
@@ -133,21 +208,16 @@ internal sealed partial class CasinoApp
         RefreshChallengeText(challenge);
         var pad = HeroOverlayPad * scale;
         var width = card.Width - pad * 2f;
+        var left = card.Min.X + pad;
         var top = card.Min.Y + pad * 1.4f;
-        Typography.Draw(drawList, new Vector2(card.Min.X + pad, top),
-            Typography.FitText(Loc.T(L.Club.ChallengeEyebrow), width, TextStyles.FootnoteEmphasized), CasinoColors.LightB,
-            TextStyles.FootnoteEmphasized);
-        top += Typography.LineHeight(TextStyles.FootnoteEmphasized);
-        Marquee.DrawLeftAuto(drawList, "casino.hero.challenge", challenge.Title, card.Min.X + pad, top, width,
-            TextStyles.Title2, CasinoColors.InkTitle);
-        top += Typography.LineHeight(TextStyles.Title2) + Metrics.Space.Sm * scale;
-        Typography.Draw(drawList, new Vector2(card.Min.X + pad, top),
-            Typography.FitText(challengeLeader, width, TextStyles.Subheadline), CasinoColors.InkTitle,
-            TextStyles.Subheadline);
-        top += Typography.LineHeight(TextStyles.Subheadline);
-        Typography.Draw(drawList, new Vector2(card.Min.X + pad, top),
-            Typography.FitText(challengeReward, width, TextStyles.SubheadlineEmphasized), CasinoColors.Money,
-            TextStyles.SubheadlineEmphasized);
+        top = Tables.PitText.Draw(drawList, Loc.T(L.Club.ChallengeEyebrow), TextStyles.FootnoteEmphasized,
+            CasinoColors.LightB, left, top, width, false);
+        top = Tables.PitText.Draw(drawList, challenge.Title, TextStyles.Title2, CasinoColors.InkTitle, left, top, width,
+            false) + Metrics.Space.Sm * scale;
+        top = Tables.PitText.Draw(drawList, challengeLeader, TextStyles.Subheadline, CasinoColors.InkTitle, left, top,
+            width, false);
+        Tables.PitText.Draw(drawList, challengeReward, TextStyles.SubheadlineEmphasized, CasinoColors.Money, left, top,
+            width, false);
         var remaining = Math.Max(0, challenge.EndsAtUnix - floor.ServerNowUnix);
         var ends = texts.Duration(L.Club.ChallengeEndsIn, (int)Math.Min(remaining, int.MaxValue));
         StageText.Plate(drawList, new Vector2(card.Center.X, card.Max.Y - pad - 14f * scale), ends, width,

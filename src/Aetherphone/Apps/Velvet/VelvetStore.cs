@@ -296,6 +296,7 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
         ResetUserPosts();
         ResetTagPosts();
         ResetArchived();
+        ResetLiked();
 
         notInterestedIds = EmptyIds;
         notInterestedLoaded = false;
@@ -637,6 +638,7 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
         }
 
         tagLane.Items = CopyOnWrite.RemoveById(tagLane.Items, postId);
+        likedLane.Items = CopyOnWrite.RemoveById(likedLane.Items, postId);
         var remainingUserPosts = CopyOnWrite.RemoveById(userPosts, postId);
         if (!ReferenceEquals(remainingUserPosts, userPosts))
         {

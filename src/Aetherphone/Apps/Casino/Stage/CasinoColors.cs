@@ -11,6 +11,7 @@ internal static class CasinoColors
     public static readonly Vector4 InkTitle = new(0.957f, 0.937f, 0.894f, 1f);
     public static readonly Vector4 InkBody = new(0.851f, 0.839f, 0.800f, 1f);
     public static readonly Vector4 InkMuted = new(0.557f, 0.541f, 0.612f, 1f);
+    public static readonly Vector4 InkOnLight = new(0.078f, 0.047f, 0.094f, 1f);
     public static readonly Vector4 Practice = new(0.604f, 0.627f, 0.651f, 1f);
     public static readonly Vector4 Loss = InkMuted;
 

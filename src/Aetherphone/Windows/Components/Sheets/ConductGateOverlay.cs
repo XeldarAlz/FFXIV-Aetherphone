@@ -21,6 +21,7 @@ internal sealed class ConductGateOverlay
     private const float PanelRounding = 28f;
     private const float PanelTopGap = 8f;
     private const float ContentClipInset = 6f;
+    private const float AntiAliasFringe = 1f;
     private const float BarHeight = 56f;
     private const float EdgeFade = 20f;
     private const float BottomFadeSpan = 1.5f;
@@ -53,8 +54,17 @@ internal sealed class ConductGateOverlay
     private const int RevealStaggerCap = 8;
     private const int HeroBeats = 3;
 
-    private static readonly Vector4 EncouragedColor = new(0.204f, 0.780f, 0.349f, 1f);
-    private static readonly Vector4 RestrictedColor = new(1f, 0.584f, 0f, 1f);
+    private const float BandTail = 0.75f;
+    private const float BandedCardTint = 0.06f;
+    private const float BandOverlayAlpha = 0.22f;
+    private const float PillFillAlpha = 0.14f;
+    private const float PillPadX = 8f;
+    private const float PillPadY = 3f;
+    private const float LightInkDeepen = 0.3f;
+
+    private static readonly Vector4 AllowedColor = new(0.204f, 0.780f, 0.349f, 1f);
+    private static readonly Vector4 VeiledColor = new(1f, 0.584f, 0f, 1f);
+    private static readonly Vector4 ZeroColor = new(0.80f, 0.16f, 0.20f, 1f);
     private static readonly Vector4 GlyphInk = new(1f, 1f, 1f, 1f);
 
     private readonly ConductGateService service;
@@ -235,7 +245,10 @@ internal sealed class ConductGateOverlay
             TrackReading();
 
             var collapseStart = titleBottom - origin.Y + (ContentClipInset - BarHeight) * scale;
-            var cover = new Rect(new Vector2(left, listRect.Min.Y), new Vector2(left + width, listRect.Max.Y));
+            var windowMin = ImGui.GetWindowPos();
+            var windowMax = windowMin + ImGui.GetWindowSize();
+            var cover = new Rect(new Vector2(left - AntiAliasFringe, windowMin.Y),
+                new Vector2(left + width + AntiAliasFringe, windowMax.Y));
             DrawScrollEdges(drawList, cover, panel, gate, theme, accent, surface, collapseStart);
             if (!shownIsReview)
             {
@@ -300,13 +313,6 @@ internal sealed class ConductGateOverlay
         var scale = UiScale.Current;
         var alpha = Reveal(order + HeroBeats);
         var cardTop = top + Rise(alpha);
-        if (section.Heading is null && section.Items.Length == 0)
-        {
-            return section.Lead is { } closingNote
-                ? DrawNote(Loc.T(closingNote), left, cardTop, width, theme, alpha)
-                : 0f;
-        }
-
         var trim = ImGui.GetStyle().ItemSpacing.Y;
         var pad = Metrics.Space.Lg * scale;
         var tile = TileSize * scale;
@@ -316,12 +322,19 @@ internal sealed class ConductGateOverlay
         var textWidth = left + width - pad - textLeft;
         var itemWidth = textWidth - markColumn;
         var items = section.Items;
+        var banded = section.Tone == ConductTone.ZeroTolerance;
 
-        var heading = section.Heading is { } headingKey ? Loc.T(headingKey) : null;
-        var headingHeight = heading is null
-            ? 0f
-            : Typography.MeasureWrappedBlock(heading, TextStyles.Headline, textWidth).Y - trim;
-        var headerHeight = heading is null ? 0f : MathF.Max(tile, headingHeight);
+        var heading = Loc.T(section.Heading);
+        var pill = PillLabel(section.Pill);
+        var pillSize = pill is null ? Vector2.Zero : PillSize(pill);
+        var pillGap = Metrics.Space.Sm * scale;
+        var pillBeside = pill is null ||
+                         Typography.Measure(heading, TextStyles.Headline).X + pillGap + pillSize.X <= textWidth;
+        var headingWidth = pill is not null && pillBeside ? textWidth - pillGap - pillSize.X : textWidth;
+        var headingHeight = Typography.MeasureWrappedBlock(heading, TextStyles.Headline, headingWidth).Y - trim;
+        var pillStack = pillBeside ? 0f : Metrics.Space.Xs * scale + pillSize.Y;
+        var headerHeight = MathF.Max(tile, headingHeight + pillStack);
+        var bandTail = banded ? pad * BandTail : 0f;
         var lead = section.Lead is { } leadKey ? Loc.T(leadKey) : null;
         var leadHeight = lead is null
             ? 0f
@@ -340,10 +353,10 @@ internal sealed class ConductGateOverlay
             itemsHeight += itemHeights[index] + rowPad * 2f;
         }
 
-        var leadGap = heading is null ? 0f : Metrics.Space.Xs * scale;
+        var leadGap = banded ? Metrics.Space.Md * scale : Metrics.Space.Xs * scale;
         var itemsGap = Metrics.Space.Xxs * scale;
         var noteGap = items.Length > 0 ? 0f : Metrics.Space.Md * scale;
-        var cardHeight = pad + headerHeight;
+        var cardHeight = pad + headerHeight + bandTail;
         if (lead is not null)
         {
             cardHeight += leadGap + leadHeight;
@@ -363,23 +376,41 @@ internal sealed class ConductGateOverlay
 
         var min = new Vector2(left, cardTop);
         var max = new Vector2(left + width, cardTop + cardHeight);
-        Squircle.Fill(drawList, min, max, Metrics.Radius.Grouped * scale,
-            ImGui.GetColorU32(theme.GroupedCard with { W = theme.GroupedCard.W * alpha }));
-
+        var rounding = Metrics.Radius.Grouped * scale;
         var tone = ToneColor(section.Tone, theme, accent);
+        var ink = Ink(tone, theme);
+        var cardFill = banded ? Palette.Mix(theme.GroupedCard, tone, BandedCardTint) : theme.GroupedCard;
+        Squircle.Fill(drawList, min, max, rounding,
+            ImGui.GetColorU32(cardFill with { W = theme.GroupedCard.W * alpha }));
+
         var cursorY = cardTop + pad;
-        if (heading is not null)
+        if (banded)
         {
-            var tileMin = new Vector2(left + pad, cursorY + (headerHeight - tile) * 0.5f);
-            var tileMax = tileMin + new Vector2(tile, tile);
-            IconTile.FillShaded(drawList, tileMin, tileMax, tile * Metrics.Radius.TileFactor, tone, alpha);
-            ProgressRing.CenterIcon(drawList, (tileMin + tileMax) * 0.5f, section.Icon ?? ToneIcon(section.Tone),
-                GlyphInk with { W = alpha }, TileGlyph * scale);
-            Typography.DrawWrappedLeft(new Vector2(textLeft, cursorY + (headerHeight - headingHeight) * 0.5f),
-                heading, theme.TextStrong with { W = alpha }, TextStyles.Headline, textWidth);
-            cursorY += headerHeight;
+            drawList.PushClipRect(min, new Vector2(max.X, cursorY + headerHeight + bandTail), true);
+            Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(tone with { W = alpha }));
+            drawList.PopClipRect();
         }
 
+        var tileMin = new Vector2(left + pad, cursorY + (headerHeight - tile) * 0.5f);
+        var tileMax = tileMin + new Vector2(tile, tile);
+        IconTile.FillShaded(drawList, tileMin, tileMax, tile * Metrics.Radius.TileFactor,
+            banded ? GlyphInk with { W = BandOverlayAlpha } : tone, alpha);
+        ProgressRing.CenterIcon(drawList, (tileMin + tileMax) * 0.5f, section.Icon, GlyphInk with { W = alpha },
+            TileGlyph * scale);
+        var headingTop = cursorY + (headerHeight - headingHeight - pillStack) * 0.5f;
+        Typography.DrawWrappedLeft(new Vector2(textLeft, headingTop), heading,
+            (banded ? GlyphInk : theme.TextStrong) with { W = alpha }, TextStyles.Headline, headingWidth);
+        if (pill is not null)
+        {
+            var pillMin = pillBeside
+                ? new Vector2(max.X - pad - pillSize.X, cursorY + (headerHeight - pillSize.Y) * 0.5f)
+                : new Vector2(textLeft, headingTop + headingHeight + Metrics.Space.Xs * scale);
+            DrawPill(drawList, pillMin, pillSize, pill,
+                banded ? GlyphInk with { W = BandOverlayAlpha } : tone with { W = PillFillAlpha },
+                banded ? GlyphInk : ink, alpha);
+        }
+
+        cursorY += headerHeight + bandTail;
         if (lead is not null)
         {
             cursorY += leadGap;
@@ -400,7 +431,7 @@ internal sealed class ConductGateOverlay
                 }
 
                 var textTop = cursorY + rowPad;
-                DrawMark(drawList, section.Tone, tone, new Vector2(textLeft + MarkGlyph * scale * 0.5f, textTop + markY),
+                DrawMark(drawList, section.Tone, ink, new Vector2(textLeft + MarkGlyph * scale * 0.5f, textTop + markY),
                     theme, alpha);
                 Typography.DrawWrappedLeft(new Vector2(textLeft + markColumn, textTop), Loc.T(items[index]),
                     theme.TextStrong with { W = alpha }, TextStyles.Subheadline, itemWidth);
@@ -423,13 +454,6 @@ internal sealed class ConductGateOverlay
         return cardHeight;
     }
 
-    private static float DrawNote(string text, float left, float top, float width, PhoneTheme theme, float alpha)
-    {
-        var inset = Metrics.Space.Lg * UiScale.Current;
-        return Typography.DrawWrappedLeft(new Vector2(left + inset, top), text, theme.TextMuted with { W = alpha },
-            TextStyles.Footnote, width - inset * 2f) - ImGui.GetStyle().ItemSpacing.Y;
-    }
-
     private float DrawClosing(float centerX, float top, float width, PhoneTheme theme, int order)
     {
         var inset = Metrics.Space.Lg * UiScale.Current;
@@ -446,38 +470,71 @@ internal sealed class ConductGateOverlay
             ImGui.GetColorU32(theme.Separator with { W = theme.Separator.W * alpha }));
     }
 
-    private static void DrawMark(ImDrawListPtr drawList, ConductTone tone, Vector4 toneColor, Vector2 center,
+    private static void DrawMark(ImDrawListPtr drawList, ConductTone tone, Vector4 ink, Vector2 center,
         PhoneTheme theme, float alpha)
     {
-        if (tone == ConductTone.Neutral)
+        var scale = UiScale.Current;
+        if (tone is ConductTone.Rule or ConductTone.Info)
         {
-            drawList.AddCircleFilled(center, DotRadius * UiScale.Current,
-                ImGui.GetColorU32(theme.TextMuted with { W = alpha }), 12);
+            var dot = tone == ConductTone.Rule ? ink : theme.TextMuted;
+            drawList.AddCircleFilled(center, DotRadius * scale, ImGui.GetColorU32(dot with { W = alpha }), 12);
             return;
         }
 
-        var glyph = tone == ConductTone.Encouraged ? FontAwesomeIcon.Check : FontAwesomeIcon.Times;
-        ProgressRing.CenterIcon(drawList, center, glyph, toneColor with { W = alpha }, MarkGlyph * UiScale.Current);
+        var glyph = tone switch
+        {
+            ConductTone.Allowed => FontAwesomeIcon.Check,
+            ConductTone.Veiled => FontAwesomeIcon.EyeSlash,
+            _ => FontAwesomeIcon.Times,
+        };
+        ProgressRing.CenterIcon(drawList, center, glyph, ink with { W = alpha }, MarkGlyph * scale);
     }
 
     private static Vector4 ToneColor(ConductTone tone, PhoneTheme theme, Vector4 accent) => tone switch
     {
-        ConductTone.Encouraged => EncouragedColor,
-        ConductTone.Prohibited => theme.Danger with { W = 1f },
-        ConductTone.Restricted => RestrictedColor,
+        ConductTone.Allowed => AllowedColor,
+        ConductTone.Veiled => VeiledColor,
+        ConductTone.Removed => theme.Danger with { W = 1f },
+        ConductTone.ZeroTolerance => ZeroColor,
+        ConductTone.Info => AccentRing.Slate,
         _ => accent,
     };
 
-    private static FontAwesomeIcon ToneIcon(ConductTone tone) => tone switch
+    private static Vector4 Ink(Vector4 tone, PhoneTheme theme) =>
+        Palette.Luminance(theme.TextStrong) < 0.5f ? Palette.Mix(tone, theme.TextStrong, LightInkDeepen) : tone;
+
+    private static string? PillLabel(ConductPill pill) => pill switch
     {
-        ConductTone.Encouraged => FontAwesomeIcon.Check,
-        ConductTone.Prohibited => FontAwesomeIcon.Ban,
-        ConductTone.Restricted => FontAwesomeIcon.Ban,
-        _ => FontAwesomeIcon.InfoCircle,
+        ConductPill.Fine => Loc.T(L.Conduct.PillFine),
+        ConductPill.Veiled => Loc.T(L.Conduct.PillVeiled),
+        ConductPill.Removed => Loc.T(L.Conduct.PillRemoved),
+        ConductPill.Suspended => Loc.T(L.Conduct.PillSuspended),
+        _ => null,
     };
+
+    private static Vector2 PillSize(string label)
+    {
+        var scale = UiScale.Current;
+        var text = Typography.Measure(label, TextStyles.FootnoteEmphasized);
+        return new Vector2(text.X + PillPadX * 2f * scale, text.Y + PillPadY * 2f * scale);
+    }
+
+    private static void DrawPill(ImDrawListPtr drawList, Vector2 min, Vector2 size, string label, Vector4 fill,
+        Vector4 ink, float alpha)
+    {
+        var max = min + size;
+        Squircle.Fill(drawList, min, max, size.Y * 0.5f, ImGui.GetColorU32(fill with { W = fill.W * alpha }));
+        Typography.DrawCentered(drawList, (min + max) * 0.5f, label, ink with { W = alpha },
+            TextStyles.FootnoteEmphasized);
+    }
 
     private void TrackReading()
     {
+        if (ImGui.GetFrameCount() == openedFrame)
+        {
+            return;
+        }
+
         var maxScroll = ImGui.GetScrollMaxY();
         if (maxScroll <= 0.001f)
         {

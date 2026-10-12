@@ -217,6 +217,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     private bool feedActionsAnchorPending;
     private bool commentFocusPending;
     private readonly PhotoComposeSession composeSession;
+    private readonly ImageIntake composeIntake = new();
     private bool composeAvatarMode;
     private bool composeStoryMode;
     private string? pendingSharedPhoto;
@@ -516,6 +517,9 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
                 break;
             case AethergramScreen.Saved:
                 DrawSaved(area);
+                break;
+            case AethergramScreen.Liked:
+                DrawLiked(area);
                 break;
             case AethergramScreen.Encryption:
                 threadView.DrawEncryptionScreen(ChatArea(area));
@@ -1021,7 +1025,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             else
             {
                 ImGui.Dummy(new Vector2(0f, 4f * UiScale.Current));
-                feedVirtualizer.BeginFrame(store.FeedSource(scope));
+                feedVirtualizer.BeginFrame(store.FeedSource(scope), configuration.ArrowKeysStepPosts);
                 var viewportTop = ImGui.GetWindowPos().Y;
                 store.BeginImpressions(viewportTop, viewportTop + ImGui.GetWindowSize().Y, ImGui.GetIO().DeltaTime);
                 var ranked = scope == SocialFeedScope.ForYou && store.ForYouRanked;

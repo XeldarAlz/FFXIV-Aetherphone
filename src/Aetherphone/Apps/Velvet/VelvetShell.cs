@@ -522,6 +522,9 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
             case VelvetScreenId.Archive:
                 DrawArchive(area);
                 break;
+            case VelvetScreenId.Liked:
+                DrawLiked(area);
+                break;
             case VelvetScreenId.ArchivedChats:
                 DrawArchivedChats(area);
                 break;

@@ -89,8 +89,18 @@ internal sealed class BroadcastView
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
-        Project();
         var safe = frame.Safe;
+        var closedReason = rooms.Room.ClosedReason;
+        if (closedReason.Length > 0)
+        {
+            projectedFrom = null;
+            table = BroadcastTable.Empty;
+            StageText.State(drawList, safe.Center, Loc.T(CasinoReasons.MessageFor(closedReason)), safe.Width,
+                StateMarquee);
+            return;
+        }
+
+        Project();
         if (table.Seats.Length == 0 && table.Waiting)
         {
             StageText.State(drawList, safe.Center, Loc.T(L.Venue.BroadcastWaiting), safe.Width, StateMarquee);

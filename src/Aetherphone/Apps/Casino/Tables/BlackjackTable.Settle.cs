@@ -15,17 +15,6 @@ internal sealed partial class BlackjackTable
     private const float AnnounceSeconds = 1.8f;
     private const int AnnounceCapacity = 3;
 
-    private static readonly LocString[] PairNames =
-    {
-        default, L.Blackjack.PairMixed, L.Blackjack.PairColoured, L.Blackjack.PairPerfect,
-    };
-
-    private static readonly LocString[] ThreeNames =
-    {
-        default, L.Blackjack.ThreeFlush, L.Blackjack.ThreeStraight, L.Blackjack.ThreeTrips,
-        L.Blackjack.ThreeStraightFlush, L.Blackjack.ThreeSuitedTrips,
-    };
-
     private readonly string[] announcements = new string[AnnounceCapacity];
 
     private RollingAmount stackRoll;
@@ -144,6 +133,8 @@ internal sealed partial class BlackjackTable
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var capped = projection.SeatAt(mySeat)?.Capped ?? false;
         var returned = capped ? Math.Min(recap.Returned, recap.Staked + chips.MaxWinPerBet) : recap.Returned;
+        handLog.Record(board.HandIndex, now / 1000, returned - recap.Staked, projection.HandsAt(mySeat),
+            board.DealerCards ?? Array.Empty<int>(), board.DealerTotal, recap);
         if (currency == CasinoCurrencies.Chips)
         {
             stage.Settle(new CasinoBetRecord(L.Casino.GameBlackjack, recap.Staked, returned, board.HandId, now,
@@ -152,7 +143,9 @@ internal sealed partial class BlackjackTable
 
         if (!CasinoRoomIds.IsBlackjackHouse(roomId))
         {
-            var name = board.Name.Length > 0 ? board.Name : Loc.T(L.Casino.TableUnnamed);
+            var card = tables.CardFor(roomId);
+            var name = card is not null ? TableBrowser.NameOf(card)
+                : board.Name.Length > 0 ? board.Name : Loc.T(L.Casino.TableUnnamed);
             history.RecordTableHand(roomId, board.HandIndex, name, currency, recap.Net, now);
         }
 
@@ -163,7 +156,7 @@ internal sealed partial class BlackjackTable
         }
 
         QueueSideAnnouncements(recap);
-        if (recap.Net <= 0)
+        if (recap.MainNet <= 0)
         {
             if (HeroBusted())
             {
@@ -174,22 +167,29 @@ internal sealed partial class BlackjackTable
         }
 
         var origin = new Vector2(layout.Felt.Center.X, layout.HeroFanY);
-        stage.Celebration.Celebrate(recap.Staked, returned, origin, frame.Instant);
+        var mainReturned = capped
+            ? Math.Min(recap.MainReturned, recap.MainStaked + chips.MaxWinPerBet)
+            : recap.MainReturned;
+        stage.Celebration.Celebrate(recap.MainStaked, mainReturned, origin, frame.Instant);
     }
 
     private void QueueSideAnnouncements(in BlackjackSeatRecap recap)
     {
-        if (recap.PairsPaid && recap.PairsKind < PairNames.Length)
+        if (recap.PairsPaid && BlackjackRecap.HasKindName(BlackjackSideBet.PerfectPairs, recap.PairsKind))
         {
-            Announce(Loc.T(L.Blackjack.SideWin, Loc.T(PairNames[recap.PairsKind]),
-                GameNumber.Label(BlackjackSideBets.PaysFor(BlackjackSideBet.PerfectPairs, recap.PairsKind))));
+            Announce(Loc.T(L.Blackjack.SideWin, Loc.T(BlackjackRecap.KindName(BlackjackSideBet.PerfectPairs,
+                    recap.PairsKind)),
+                GameNumber.Label(BlackjackSideBets.PaysFor(BlackjackSideBet.PerfectPairs, recap.PairsKind)),
+                NumberText.Signed(recap.PairsNet)));
         }
 
-        if (recap.ThreePaid && recap.ThreeKind < ThreeNames.Length)
+        if (recap.ThreePaid && BlackjackRecap.HasKindName(BlackjackSideBet.TwentyOnePlusThree, recap.ThreeKind))
         {
-            Announce(Loc.T(L.Blackjack.SideWin, Loc.T(ThreeNames[recap.ThreeKind]),
+            Announce(Loc.T(L.Blackjack.SideWin, Loc.T(BlackjackRecap.KindName(BlackjackSideBet.TwentyOnePlusThree,
+                    recap.ThreeKind)),
                 GameNumber.Label(BlackjackSideBets.PaysFor(BlackjackSideBet.TwentyOnePlusThree,
-                    recap.ThreeKind))));
+                    recap.ThreeKind)),
+                NumberText.Signed(recap.ThreeNet)));
         }
 
         if (recap.InsurancePaid)

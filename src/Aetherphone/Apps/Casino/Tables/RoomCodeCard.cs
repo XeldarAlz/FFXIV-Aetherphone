@@ -31,16 +31,17 @@ internal sealed class RoomCodeCard
         copiedAtTick = 0;
     }
 
-    public void Draw(AppSkin ui, string code, string fallbackToken, float width, float scale)
+    public void Draw(AppSkin ui, string code, string fallbackToken, float width, float scale,
+        bool overlay = false)
     {
         var origin = ImGui.GetCursorScreenPos();
-        var bottom = Draw(ImGui.GetWindowDrawList(), ui, origin, code, fallbackToken, width, scale);
+        var bottom = Draw(ImGui.GetWindowDrawList(), ui, origin, code, fallbackToken, width, scale, overlay);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, bottom - origin.Y));
     }
 
     public float Draw(ImDrawListPtr drawList, AppSkin ui, Vector2 origin, string code, string fallbackToken,
-        float width, float scale)
+        float width, float scale, bool overlay = false)
     {
         var hasCode = code.Length == CasinoRoomCodes.Length;
         var copied = Environment.TickCount64 - copiedAtTick < CopiedMilliseconds;
@@ -66,7 +67,7 @@ internal sealed class RoomCodeCard
         Typography.DrawWrappedLeft(layout.Hint, message, ui.BodyInk, TextStyles.Subheadline, layout.HintWidth);
         var copyText = hasCode ? code : fallbackToken;
         if (Button.Draw(drawList, layout.Copy, copyLabel, ui.Ink, copied ? ButtonStyle.Gray : ButtonStyle.Prominent,
-                enabled: copyText.Length > 0, id: id))
+                enabled: copyText.Length > 0, overlay: overlay, id: id))
         {
             ImGui.SetClipboardText(copyText);
             copiedAtTick = Environment.TickCount64;
@@ -111,7 +112,7 @@ internal sealed class RoomCodeCard
         }
 
         hintLanguage = Loc.Current;
-        hint = Loc.T(L.Tables.CodeHint, Loc.T(L.Apps.Casino), Loc.T(L.Casino.TablesTitle),
+        hint = Loc.T(L.Tables.CodeHint, Loc.T(L.Apps.Casino), Loc.T(L.VenueHub.Tab),
             Loc.T(L.Tables.JoinAction));
         return hint;
     }

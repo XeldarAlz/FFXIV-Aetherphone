@@ -155,6 +155,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public int ChirperFeedScope { get; set; }
     public int AethergramFeedScope { get; set; }
     public bool ShowSensitiveContent { get; set; }
+    public bool ArrowKeysStepPosts { get; set; } = true;
     public Dictionary<string, AppNotificationSetting> NotificationSettings { get; set; } = new();
     public bool NotifyDailyReset { get; set; }
     public bool NotifyWeeklyReset { get; set; }
@@ -372,6 +373,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public string PendingCoinGameSession { get; set; } = string.Empty;
     public List<PendingScoreUpload> PendingScoreUploads { get; set; } = new();
     public List<string> LeaderboardConsentAnswered { get; set; } = new();
+    public List<string> HallOfFameConsentAnswered { get; set; } = new();
     public MoogleClickerSave MoogleClicker { get; set; } = new();
     public Dictionary<string, Core.Coins.CoinSavingGoal> CoinSavingGoals { get; set; } = new();
     public Dictionary<ulong, string> PendingCasinoSittings { get; set; } = new();
@@ -385,6 +387,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public HashSet<string> CasinoInstantGames { get; set; } = new();
     public bool CasinoStripIntroSeen { get; set; }
     public HashSet<ulong> CasinoAutoTopUp { get; set; } = new();
+    public Dictionary<ulong, CasinoHostDraftMemory> CasinoHostDrafts { get; set; } = new();
     public HomeLayout? Home { get; set; }
     public Dictionary<string, bool> AppFlags { get; set; } = new();
     public int HomeGridRows { get; set; } = 6;

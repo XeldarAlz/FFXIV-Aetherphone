@@ -252,7 +252,7 @@ for (var index = 0; index < snapshot.Length; index++)
 }
 ```
 
-`Skip` advances the cursor by the cached height when the row is out of view (beyond the cull margin); `Record` captures the height after drawing. Bump the `revision` argument whenever something changes the row's height, or the stale cached height will be used. `BeginFrame` invalidates the cache on width or font changes and trims the backing store to `rowCap` rows while the list is parked at the top.
+`Skip` advances the cursor by the cached height when the row is out of view (beyond the cull margin); `Record` captures the height after drawing. Bump the `revision` argument whenever something changes the row's height, or the stale cached height will be used. `BeginFrame` invalidates the cache on width or font changes and trims the backing store to `rowCap` rows while the list is parked at the top. Pass `arrowSteps: true` (the social feeds pass `Configuration.ArrowKeysStepPosts`) and Up or Down glides the list exactly one row up or down (a row whose top already sits within `Metrics.Space.Xxl` of the view top counts as reached, and a press cancels any drag fling); the keys come from `ArrowKeyCapture` (src/Aetherphone/Core/Platform/ArrowKeyCapture.cs), which reads and clears them in `Framework.Update` so the camera never sees them, and repeats a held key on its own timer because the game only reports the first press.
 
 For paged loading, `InfiniteScroll.ReachedBottom()` (src/Aetherphone/Windows/Components/Layout/InfiniteScroll.cs) reports when the scroll position is near the end so you can fetch the next page, and `InfiniteScroll.DrawLoadingRow` draws the three-dot loading indicator; see [Messaging and chat](messaging-and-chat.md) for the chat-side pagination contract.
 

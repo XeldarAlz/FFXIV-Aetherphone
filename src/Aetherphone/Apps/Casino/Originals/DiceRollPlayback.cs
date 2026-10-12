@@ -99,6 +99,8 @@ internal sealed class DiceRollPlayback
         return true;
     }
 
+    public long UnshownPayout => settlePending ? outcome.Payout : 0;
+
     public bool TakeSettled(out OriginalsOutcome settled)
     {
         settled = default;

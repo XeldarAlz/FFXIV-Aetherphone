@@ -12,6 +12,7 @@ internal enum HostGame : byte
     DiceTable,
     Deathroll,
     Raffle,
+    Book,
 }
 
 internal readonly record struct HostGameInfo(
@@ -39,11 +40,17 @@ internal static class HostGames
             CasinoSign.Deathroll, FontAwesomeIcon.Skull, false, VenueRoomKind.Deathroll, AccentRing.Orange),
         new(HostGame.Raffle, CasinoGames.Raffle, L.Venue.GameRaffle, L.Tables.GameRaffleLine, CasinoSign.Raffle,
             FontAwesomeIcon.Ticket, false, VenueRoomKind.Raffle, AccentRing.Gold),
+        new(HostGame.Book, CasinoGames.Book, L.Book.Game, L.Book.Line, CasinoSign.Book, FontAwesomeIcon.Book,
+            false, VenueRoomKind.None, AccentRing.Violet),
     };
 
     public static ref readonly HostGameInfo Of(HostGame game) => ref All[(int)game];
 
-    public static bool IsVenue(HostGame game) => game >= HostGame.DiceTable;
+    public static int Count(bool bookOpen) => bookOpen ? All.Length : All.Length - 1;
+
+    public static bool IsVenue(HostGame game) => game is HostGame.DiceTable or HostGame.Deathroll or HostGame.Raffle;
+
+    public static bool IsBook(HostGame game) => game == HostGame.Book;
 
     public static bool HasSeats(HostGame game) => game is HostGame.Blackjack or HostGame.Holdem;
 
@@ -65,24 +72,34 @@ internal static class HostGames
             return HostGame.Holdem;
         }
 
+        if (CasinoBookRules.IsBook(gameKind))
+        {
+            return HostGame.Book;
+        }
+
         return FromVenue(VenueKinds.Of(gameKind));
     }
 
     public static bool Accepts(HostGame game, int currency, bool gilOpen) => currency switch
     {
-        CasinoCurrencies.Chips => !IsVenue(game),
-        CasinoCurrencies.Practice => true,
+        CasinoCurrencies.Chips => !IsVenue(game) && !IsBook(game),
+        CasinoCurrencies.Practice => !IsBook(game),
         CasinoCurrencies.Gil => gilOpen && game != HostGame.Holdem,
         _ => false,
     };
 
-    public static int FallbackCurrency(HostGame game, int currency, bool gilOpen)
+    public static int DefaultCurrency(HostGame game)
     {
-        if (Accepts(game, currency, gilOpen))
+        if (IsBook(game))
         {
-            return currency;
+            return CasinoCurrencies.Gil;
         }
 
         return IsVenue(game) ? CasinoCurrencies.Practice : CasinoCurrencies.Chips;
+    }
+
+    public static int FallbackCurrency(HostGame game, int currency, bool gilOpen)
+    {
+        return Accepts(game, currency, gilOpen) ? currency : DefaultCurrency(game);
     }
 }

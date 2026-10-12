@@ -121,6 +121,16 @@ public sealed class HoldemRulesTests
     }
 
     [Fact]
+    public void ATopUpStopsAtTheRackCeilingTheServerHolds()
+    {
+        Assert.Equal(1_200, HoldemRules.TopUpCeiling(8_800, 10_000, 1_000_000, 10_000));
+        Assert.Equal(500, HoldemRules.TopUpCeiling(8_800, 10_000, 500, 10_000));
+        Assert.Equal(200, HoldemRules.TopUpCeiling(1_800, 10_000, 1_000_000, 100));
+        Assert.Equal(0, HoldemRules.TopUpCeiling(2_500, 10_000, 1_000_000, 100));
+        Assert.Equal(1_200, HoldemRules.TopUpCeiling(8_800, 10_000, 1_000_000, 0));
+    }
+
+    [Fact]
     public void BlindsAndDealOrderFollowTheButton()
     {
         HoldemRules.Blinds(new[] { 0, 2, 4 }, 2, out var small, out var big);

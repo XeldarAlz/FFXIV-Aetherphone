@@ -66,6 +66,7 @@ internal sealed partial class HoldemTable : ICabinetIdle
     private string ribbonHand = string.Empty;
     private int ribbonPhase = -1;
     private int ribbonCursor = int.MinValue;
+    private bool ribbonPaused;
     private LanguageInfo? ribbonLanguage;
     private HoldemDeckMode deckMode;
     private int mySeat = -1;
@@ -145,6 +146,7 @@ internal sealed partial class HoldemTable : ICabinetIdle
         {
             rooms.Leave();
             seatFlow.Left();
+            tables.ForgetKnock();
         }
 
         entered = false;
@@ -255,7 +257,9 @@ internal sealed partial class HoldemTable : ICabinetIdle
             flights.Advance(delta);
         }
 
-        layout.Compute(safe, SeatCountOf(board), mySeat >= 0 ? mySeat : 0, mySeat >= 0, scale);
+        var knockHeight = HostKnockBanner.Reserve(tables, roomId, safe.Width, scale);
+        var tableArea = new Rect(new Vector2(safe.Min.X, safe.Min.Y + knockHeight), safe.Max);
+        layout.Compute(tableArea, SeatCountOf(board), mySeat >= 0 ? mySeat : 0, mySeat >= 0, scale);
         DrainLaunches(board, scale);
         DrainCues(stage, frame, board, scale);
         AdvanceClocks(delta);
@@ -285,6 +289,7 @@ internal sealed partial class HoldemTable : ICabinetIdle
         }
 
         TrackTurn(board, mine, remaining);
+        HostKnockBanner.Draw(drawList, ui, tables, roomId, safe.Min, safe.Width, scale);
         DrawDeck(stage, frame, ui, board, mine, hero, scale);
         if (veiled)
         {
@@ -643,7 +648,7 @@ internal sealed partial class HoldemTable : ICabinetIdle
 
     private string RibbonLabel(CasinoHoldemRoomStateDto board)
     {
-        if (board.Phase == ribbonPhase && board.CursorSeat == ribbonCursor
+        if (board.Phase == ribbonPhase && board.CursorSeat == ribbonCursor && board.Paused == ribbonPaused
             && ReferenceEquals(ribbonLanguage, Loc.Current)
             && string.Equals(ribbonHand, board.HandId, StringComparison.Ordinal))
         {
@@ -652,14 +657,26 @@ internal sealed partial class HoldemTable : ICabinetIdle
 
         ribbonPhase = board.Phase;
         ribbonCursor = board.CursorSeat;
+        ribbonPaused = board.Paused;
         ribbonLanguage = Loc.Current;
         ribbonHand = board.HandId;
         ribbonText = BuildRibbon(board);
         return ribbonText;
     }
 
+    internal static bool PausedBetweenHands(CasinoHoldemRoomStateDto board)
+    {
+        return board.Paused && board.Phase is HoldemPhases.Waiting or HoldemPhases.Intermission
+            or HoldemPhases.Settled or HoldemPhases.Voided;
+    }
+
     private string BuildRibbon(CasinoHoldemRoomStateDto board)
     {
+        if (PausedBetweenHands(board))
+        {
+            return Loc.T(L.Tables.PausedByHost);
+        }
+
         switch (board.Phase)
         {
             case HoldemPhases.Waiting:
@@ -712,24 +729,27 @@ internal sealed partial class HoldemTable : ICabinetIdle
 
     private void DrawClosed(ImDrawListPtr drawList, AppSkin ui, string reason, Rect safe, float scale)
     {
-        var asks = BlackjackTable.AsksToJoin(reason);
-        var title = Loc.T(asks ? L.Casino.BlackjackDoorTitle : L.Holdem.ClosedTitle);
-        var hint = Loc.T(CasinoReasons.TryMessage(reason, out var known) ? known : L.Holdem.ClosedHint);
-        var action = Loc.T(asks ? L.Casino.BlackjackAskToJoin : L.Casino.WheelBackToFloor);
-        CasinoNotice.DrawWithAction(drawList, ui, CasinoNoticeKind.Card, title, hint, action, safe.Min.X,
-            safe.Min.Y + Metrics.Space.Lg * scale, safe.Width, scale, out var pressed);
-        if (!pressed)
+        if (tables.TakeKnockAdmitted(roomId))
         {
+            rooms.Enter(roomId);
+            tables.RefreshCard(roomId);
             return;
         }
 
-        if (asks)
+        var knock = tables.KnockFor(roomId, reason);
+        tables.EnsureKnockFresh(roomId);
+        var action = TableDoorCard.Draw(drawList, ui, reason, knock, L.Holdem.ClosedTitle, L.Holdem.ClosedHint,
+            safe, scale);
+        if (action == TableDoorAction.Knock)
         {
             tables.Knock(roomId);
             return;
         }
 
-        leaveRoom();
+        if (action == TableDoorAction.Leave)
+        {
+            leaveRoom();
+        }
     }
 
     private void DrawElsewhere(ImDrawListPtr drawList, AppSkin ui, CasinoRoomSession room, Rect body, float scale)

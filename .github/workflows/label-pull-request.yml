@@ -1,0 +1,189 @@
+name: Pull request labels
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize]
+  workflow_dispatch:
+    inputs:
+      pull_request:
+        description: Number of an existing pull request to label
+        required: true
+        type: number
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: pull-request-labels-${{ github.event.pull_request.number || github.event.inputs.pull_request }}
+  cancel-in-progress: true
+
+jobs:
+  label:
+    name: Title and labels
+    runs-on: ubuntu-latest
+    # Dependabot labels its own pull requests through dependabot.yml and its
+    # titles keep their own fixed shape, so bots are left alone.
+    if: github.event.pull_request.user.type != 'Bot'
+
+    steps:
+      # pull_request_target runs this file from the base branch with a write
+      # token and never checks the fork out, so the PR's code cannot reach it.
+      - name: Check the title and apply labels
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pull = context.payload.pull_request
+              ?? (await github.rest.pulls.get({ owner, repo, pull_number: Number(context.payload.inputs.pull_request) })).data;
+            if (pull.user.type === 'Bot') {
+              core.info('Bots label their own pull requests; nothing to do.');
+              return;
+            }
+            const issueNumber = pull.number;
+            const title = pull.title.trim();
+
+            const typeLabels = {
+              feat: 'enhancement',
+              fix: 'bug',
+              docs: 'documentation',
+              refactor: 'refactor',
+              perf: 'performance',
+              chore: 'chore',
+              style: 'chore',
+              revert: 'chore',
+              ci: 'ci',
+              test: 'tests',
+              deps: 'dependencies',
+            };
+            const familyColors = { 'app: ': '1d76db', 'area: ': '5319e7' };
+            const appLabelCap = 8;
+            const managedNames = new Set([...Object.values(typeLabels), 'translation']);
+            const isManaged = (name) => managedNames.has(name) || name.startsWith('app: ') || name.startsWith('area: ');
+
+            const desired = new Set();
+            const problems = [];
+
+            const shape = /^([A-Za-z]+)(\(([^)]*)\))?!?:\s*(.*)$/.exec(title);
+            if (shape === null) {
+              problems.push('The title must read "type(scope): lowercase summary", for example "fix(net): cap the rate-limit pause at 30 seconds".');
+            } else {
+              const type = shape[1];
+              const scope = shape[3];
+              const summary = shape[4];
+              if (type !== type.toLowerCase()) {
+                problems.push(`The type "${type}" must be lowercase.`);
+              } else if (!Object.hasOwn(typeLabels, type)) {
+                problems.push(`Unknown type "${type}". Use one of: ${Object.keys(typeLabels).join(', ')}.`);
+              } else {
+                desired.add(typeLabels[type]);
+              }
+              if (scope !== undefined && (scope.length === 0 || scope !== scope.toLowerCase())) {
+                problems.push(`The scope "${scope}" must be lowercase and name the app or subsystem you touched.`);
+              }
+              if (scope === 'deps') {
+                desired.add('dependencies');
+              }
+              if (summary.length === 0) {
+                problems.push('The title has no summary after the colon.');
+              } else if (/^[A-Z]/.test(summary)) {
+                problems.push('The summary is a lowercase sentence fragment; it must not start with a capital letter.');
+              }
+              if (summary.endsWith('.')) {
+                problems.push('The summary carries no trailing period.');
+              }
+            }
+            if (title.includes('\u2014')) {
+              problems.push('The title contains an em dash. Use a comma, colon, or parentheses.');
+            }
+
+            const files = await github.paginate(github.rest.pulls.listFiles, { owner, repo, pull_number: issueNumber, per_page: 100 });
+            const appFolders = new Map();
+            let translationOnly = files.length > 0;
+            for (const file of files) {
+              const path = file.filename;
+              if (!/^src\/Aetherphone\/Localization\/[a-z]{2}\.json$/.test(path)) {
+                translationOnly = false;
+              }
+              const app = /^src\/Aetherphone\/Apps\/([^/]+)\//.exec(path);
+              if (app !== null) {
+                appFolders.set(`app: ${app[1].toLowerCase()}`, app[1]);
+                continue;
+              }
+              if (path.startsWith('src/Aetherphone/Core/')) {
+                desired.add('area: core');
+                continue;
+              }
+              if (path.startsWith('src/Aetherphone/Windows/')) {
+                desired.add('area: shell');
+                continue;
+              }
+              if (path.startsWith('src/Aetherphone.Tests/')) {
+                desired.add('tests');
+                continue;
+              }
+              if (path.startsWith('.github/')) {
+                desired.add('ci');
+                continue;
+              }
+              if (path.startsWith('docs/') || path.endsWith('.md')) {
+                desired.add('documentation');
+                continue;
+              }
+              if (/^src\/Aetherphone\/(Cases|Emoji|Fonts|Icons|Images|Sounds|Wallpapers)\//.test(path)) {
+                desired.add('area: assets');
+              }
+            }
+            if (translationOnly) {
+              desired.add('translation');
+            }
+            if (appFolders.size > appLabelCap) {
+              desired.add('area: apps');
+            } else {
+              for (const name of appFolders.keys()) {
+                desired.add(name);
+              }
+            }
+
+            const repoLabels = await github.paginate(github.rest.issues.listLabelsForRepo, { owner, repo, per_page: 100 });
+            const known = new Set(repoLabels.map((label) => label.name));
+            for (const name of desired) {
+              if (known.has(name)) {
+                continue;
+              }
+              const family = Object.keys(familyColors).find((prefix) => name.startsWith(prefix));
+              const folder = appFolders.get(name);
+              await github.rest.issues.createLabel({
+                owner,
+                repo,
+                name,
+                color: family === undefined ? 'ededed' : familyColors[family],
+                description: folder === undefined ? '' : `Touches src/Aetherphone/Apps/${folder}`,
+              });
+              core.info(`Created the label "${name}".`);
+            }
+
+            const current = (await github.paginate(github.rest.issues.listLabelsOnIssue, { owner, repo, issue_number: issueNumber, per_page: 100 })).map((label) => label.name);
+            const stale = current.filter((name) => isManaged(name) && !desired.has(name));
+            const missing = [...desired].filter((name) => !current.includes(name));
+            for (const name of stale) {
+              try {
+                await github.rest.issues.removeLabel({ owner, repo, issue_number: issueNumber, name });
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+              }
+            }
+            if (missing.length > 0) {
+              await github.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels: missing });
+            }
+            core.info(`Labels: ${[...desired].sort().join(', ') || 'none'} (added ${missing.length}, removed ${stale.length}).`);
+
+            if (problems.length > 0) {
+              core.setFailed([
+                'The pull request title needs a fix (CONTRIBUTING.md, "Before you open a PR"):',
+                ...problems.map((problem) => `- ${problem}`),
+              ].join('\n'));
+            }

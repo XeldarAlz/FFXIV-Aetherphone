@@ -93,8 +93,11 @@ internal static class CasinoArt
             drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(seatIndex < seated ? filled : empty), 16);
         }
 
-        return seats <= 0 ? 0f : seats * step - SeatDotGap * scale;
+        return SeatDotsWidth(seats, scale);
     }
+
+    public static float SeatDotsWidth(int seats, float scale) =>
+        seats <= 0 ? 0f : seats * (SeatDotRadius * 2f * scale + SeatDotGap * scale) - SeatDotGap * scale;
 
     public static SheetSkin Sheet(AppSkin ui) => new(
         Palette.Lighten(ui.Palette.BackdropTop, SheetLighten) with { W = 1f },

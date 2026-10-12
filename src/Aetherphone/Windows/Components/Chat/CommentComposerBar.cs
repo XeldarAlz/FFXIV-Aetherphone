@@ -97,6 +97,11 @@ internal static class CommentComposerBar
             submitted = MentionField.SingleLineWithHint(inputId, hint, ref draft, maxLength, mentions);
         }
 
+        if (attachmentActive)
+        {
+            attachment!.AcceptPasteAndDrop(library!, ImGui.IsItemActive(), style.SendEnabled);
+        }
+
         var pickedMention = mentionPopup.Draw(mentions, screen, theme, images, lodestone);
         if (pickedMention >= 0)
         {
@@ -145,7 +150,7 @@ internal static class CommentComposerBar
             if (photoPanelHeight > 0f)
             {
                 attachment.DrawPanel(new Rect(new Vector2(bar.Min.X, overlayTop - photoPanelHeight),
-                    new Vector2(bar.Max.X, overlayTop)), ui, theme, wallpaperImages!);
+                    new Vector2(bar.Max.X, overlayTop)), ui, theme, wallpaperImages!, library!);
             }
         }
 

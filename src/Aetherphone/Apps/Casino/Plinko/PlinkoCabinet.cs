@@ -318,6 +318,12 @@ internal sealed class PlinkoCabinet : ICabinetIdle
 
     private void Raise(string reason, long ceiling)
     {
+        if (composer.Auto.WaitsOut(reason))
+        {
+            autoTimer = AutoBetPlan.PacingRetrySeconds;
+            return;
+        }
+
         noticeReason = reason.Length > 0 ? reason : CasinoReasons.Unreachable;
         noticeCeiling = ceiling;
         hasNotice = true;

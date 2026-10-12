@@ -6,6 +6,7 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino.Venue;
 
@@ -20,6 +21,7 @@ internal sealed class DiceTableRoom
     private const string Tumbling = "...";
     private const string StateMarquee = "venue.dice.state";
     private const string CaptionMarquee = "venue.dice.caption";
+    private const string LogChildId = "##diceLog";
 
     private readonly CasinoTextCache texts;
     private readonly RollLabels labels = new();
@@ -29,6 +31,7 @@ internal sealed class DiceTableRoom
 
     private int lastTumbleStep = -1;
     private long landedSeq;
+    private string roundLine = string.Empty;
 
     public DiceTableRoom(CasinoTextCache texts, Action<VenueActDraft> act)
     {
@@ -44,6 +47,7 @@ internal sealed class DiceTableRoom
         cheer.Clear();
         lastTumbleStep = -1;
         landedSeq = 0;
+        roundLine = string.Empty;
     }
 
     public void OnActAnswer(CasinoVenueActDto answer)
@@ -51,13 +55,16 @@ internal sealed class DiceTableRoom
         if (!answer.Granted)
         {
             playback.CancelMine();
+            return;
         }
+
+        playback.Confirm(answer.Seq);
     }
 
     public void Draw(in VenueRoomFrame room, Rect deck)
     {
         var board = room.View.Dice;
-        playback.Update(board, room.Frame.DeltaSeconds, room.Frame.SnapToTruth || room.Frame.Instant);
+        playback.Update(board, room.Me, room.Frame.DeltaSeconds, room.Frame.SnapToTruth || room.Frame.Instant);
         if (board is null)
         {
             return;
@@ -130,7 +137,12 @@ internal sealed class DiceTableRoom
     {
         var lineHeight = Typography.LineHeight(TextStyles.Subheadline);
         top += lineHeight + VenueArt.LineGap * room.Scale;
-        var text = RoundText(board);
+        if (!playback.Tumbling)
+        {
+            roundLine = RoundText(board);
+        }
+
+        var text = roundLine;
         if (text.Length == 0)
         {
             return top;
@@ -172,37 +184,60 @@ internal sealed class DiceTableRoom
         }
 
         var scale = room.Scale;
-        var drawList = room.DrawList;
         var captionHeight = Typography.LineHeight(TextStyles.FootnoteEmphasized);
-        Typography.Draw(drawList, area.Min, Typography.FitText(Loc.T(L.Venue.RecentRolls), area.Width,
+        Typography.Draw(room.DrawList, area.Min, Typography.FitText(Loc.T(L.Venue.RecentRolls), area.Width,
             TextStyles.FootnoteEmphasized), StageText.Strong, TextStyles.FootnoteEmphasized);
-        area = new Rect(new Vector2(area.Min.X, area.Min.Y + captionHeight + LogCaptionGap * scale), area.Max);
-        var rowHeight = MathF.Max(VenueArt.RowHeight * scale, Typography.LineHeight(TextStyles.Subheadline) + 6f * scale);
-        var count = Math.Min(rolls.Length, (int)(MathF.Max(0f, area.Height) / rowHeight));
-        var timeWidth = Typography.Measure(labels.Time(-1, MeasureMoment), TextStyles.Footnote).X + 64f * scale;
-        for (var index = 0; index < count; index++)
+        var list = new Rect(new Vector2(area.Min.X, area.Min.Y + captionHeight + LogCaptionGap * scale), area.Max);
+        if (list.Height <= 1f)
         {
-            var roll = rolls[index];
-            var rowTop = area.Min.Y + index * rowHeight;
-            var mine = room.IsMe(roll.UserId);
-            var fresh = index == 0 && playback.Tumbling && roll.Seq == playback.HeroSeq;
-            var alpha = 1f - index * (1f - LogFadeFloor) / Math.Max(1, count);
-            var center = rowTop + rowHeight * 0.5f;
-            var time = labels.Time(roll.Seq, roll.AtUnixMs);
-            Typography.Draw(drawList,
-                new Vector2(area.Min.X, center - Typography.LineHeight(TextStyles.Footnote) * 0.5f), time,
-                StageText.Strong with { W = alpha }, TextStyles.Footnote);
-            var value = fresh ? Tumbling : labels.Value(roll.Value);
-            var valueSize = Typography.Measure(value, TextStyles.Headline);
-            Typography.Draw(drawList, new Vector2(area.Max.X - valueSize.X, center - valueSize.Y * 0.5f), value,
-                (mine ? CasinoColors.Money : CasinoColors.InkTitle) with { W = alpha }, TextStyles.Headline);
-            var nameLeft = area.Min.X + MathF.Min(timeWidth, area.Width * 0.3f);
-            var nameWidth = area.Max.X - valueSize.X - 8f * scale - nameLeft;
-            VenueArt.LeftLine(drawList, roll.DisplayName,
-                new Vector2(nameLeft, center - Typography.LineHeight(TextStyles.Subheadline) * 0.5f),
-                MathF.Max(1f, nameWidth), (mine ? CasinoColors.MoneyHighlight : CasinoColors.InkTitle) with { W = alpha },
-                TextStyles.Subheadline);
+            return;
         }
+
+        var rowHeight = MathF.Max(VenueArt.RowHeight * scale, Typography.LineHeight(TextStyles.Subheadline) + 6f * scale);
+        var pageRows = Math.Max(1, (int)(list.Height / rowHeight));
+        var timeWidth = Typography.Measure(labels.Time(-1, MeasureMoment), TextStyles.Footnote).X + 64f * scale;
+        ImGui.SetCursorScreenPos(list.Min);
+        using (ScrollLayout.PushScrollbarInk(CasinoColors.InkBody))
+        using (ImRaii.Child(LogChildId, list.Size, false, ImGuiWindowFlags.NoBackground))
+        {
+            var drawList = ImGui.GetWindowDrawList();
+            var width = ScrollLayout.NativeScrollContentWidth();
+            var rowSize = new Vector2(width, rowHeight);
+            for (var index = 0; index < rolls.Length; index++)
+            {
+                if (ImGui.IsRectVisible(rowSize))
+                {
+                    var origin = ImGui.GetCursorScreenPos();
+                    var alpha = 1f - Math.Min(index, pageRows) * (1f - LogFadeFloor) / pageRows;
+                    DrawLogRow(room, drawList, rolls[index], index == 0,
+                        new Rect(origin, origin + rowSize), timeWidth, alpha);
+                }
+
+                ImGui.Dummy(rowSize);
+            }
+        }
+    }
+
+    private void DrawLogRow(in VenueRoomFrame room, ImDrawListPtr drawList, CasinoVenueRollDto roll, bool newest,
+        Rect row, float timeWidth, float alpha)
+    {
+        var mine = room.IsMe(roll.UserId);
+        var fresh = newest && playback.Tumbling && roll.Seq == playback.HeroSeq;
+        var center = row.Center.Y;
+        var time = labels.Time(roll.Seq, roll.AtUnixMs);
+        Typography.Draw(drawList,
+            new Vector2(row.Min.X, center - Typography.LineHeight(TextStyles.Footnote) * 0.5f), time,
+            StageText.Strong with { W = alpha }, TextStyles.Footnote);
+        var value = fresh ? Tumbling : labels.Value(roll.Value);
+        var valueSize = Typography.Measure(value, TextStyles.Headline);
+        Typography.Draw(drawList, new Vector2(row.Max.X - valueSize.X, center - valueSize.Y * 0.5f), value,
+            (mine ? CasinoColors.Money : CasinoColors.InkTitle) with { W = alpha }, TextStyles.Headline);
+        var nameLeft = row.Min.X + MathF.Min(timeWidth, row.Width * 0.3f);
+        var nameWidth = row.Max.X - valueSize.X - 8f * room.Scale - nameLeft;
+        VenueArt.LeftLine(drawList, roll.DisplayName,
+            new Vector2(nameLeft, center - Typography.LineHeight(TextStyles.Subheadline) * 0.5f),
+            MathF.Max(1f, nameWidth), (mine ? CasinoColors.MoneyHighlight : CasinoColors.InkTitle) with { W = alpha },
+            TextStyles.Subheadline);
     }
 
     private void CelebrateRound(in VenueRoomFrame room, CasinoDiceTableStateDto board, Vector2 origin)
@@ -230,9 +265,10 @@ internal sealed class DiceTableRoom
             act(new VenueActDraft(VenueActions.RoundOpen));
         }
 
-        var ready = room.Enabled && !playback.AwaitingMine;
-        if (room.Stage.PrimaryAction(texts.Number(L.Venue.RollAction, board.Sides), ready, room.Ui.Ink)
-            || (ready && room.Stage.RepeatPressed()))
+        var rolledThisRound = DiceRounds.Rolled(round, room.Me);
+        var ready = room.Enabled && !playback.AwaitingMine && !rolledThisRound;
+        var label = rolledThisRound ? Loc.T(L.Venue.RolledThisRound) : texts.Number(L.Venue.RollAction, board.Sides);
+        if (room.Stage.PrimaryAction(label, ready, room.Ui.Ink) || (ready && room.Stage.RepeatPressed()))
         {
             playback.BeginMine(board.Sides);
             CasinoSfx.Play(UiSound.ChipSlide);
@@ -243,6 +279,12 @@ internal sealed class DiceTableRoom
 
 internal static class DiceRounds
 {
+    public static bool Rolled(CasinoDiceRoundDto? round, string userId)
+    {
+        return round is { Closed: false, Rollers: not null } && userId.Length > 0
+            && Array.IndexOf(round.Rollers, userId) >= 0;
+    }
+
     public static CasinoVenueRollDto? Leader(CasinoVenueRollDto[]? rolls, CasinoDiceRoundDto round)
     {
         if (rolls is null)

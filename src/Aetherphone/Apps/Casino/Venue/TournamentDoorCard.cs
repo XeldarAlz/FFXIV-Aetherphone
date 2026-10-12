@@ -7,6 +7,14 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Casino.Venue;
 
+internal enum TournamentGate : byte
+{
+    Ready,
+    NeedsPlayers,
+    DealerOut,
+    BadStack,
+}
+
 internal sealed class TournamentDoorCard
 {
     private const int HandsDigits = 2;
@@ -31,10 +39,42 @@ internal sealed class TournamentDoorCard
 
     public static bool Applies(CasinoTableRowDto? card)
     {
-        return card is not null
-            && string.Equals(card.GameKind, CasinoWire.BlackjackKind, StringComparison.Ordinal)
-            && CasinoCurrencies.Of(card) == CasinoCurrencies.Practice;
+        return card is not null && IsBlackjack(card) && CasinoCurrencies.Of(card) == CasinoCurrencies.Practice;
     }
+
+    public static TournamentGate GateOf(bool hostDeals, int seated, long stack, long minBet)
+    {
+        if (seated < CasinoHostingRules.MinSeats)
+        {
+            return hostDeals ? TournamentGate.DealerOut : TournamentGate.NeedsPlayers;
+        }
+
+        return StackFits(stack, minBet) ? TournamentGate.Ready : TournamentGate.BadStack;
+    }
+
+    public static bool StackFits(long stack, long minBet)
+    {
+        return stack == 0 || (stack >= CasinoHostingRules.MinPracticeStack
+            && stack <= CasinoHostingRules.MaxPracticeStack && stack >= minBet);
+    }
+
+    private static bool IsBlackjack(CasinoTableRowDto card)
+    {
+        return string.Equals(card.GameKind, CasinoWire.BlackjackKind, StringComparison.Ordinal);
+    }
+
+    private static int SeatedOf(CasinoTableRowDto card, CasinoTableDoorDto? door)
+    {
+        return door is { Owner: true } ? door.Seated?.Length ?? 0 : card.SeatedCount;
+    }
+
+    private static LocString GateHint(TournamentGate gate) => gate switch
+    {
+        TournamentGate.NeedsPlayers => L.Venue.TournamentNeedsPlayers,
+        TournamentGate.DealerOut => L.Venue.TournamentDealerOut,
+        TournamentGate.BadStack => L.Tables.ReasonTournamentStack,
+        _ => L.Venue.TournamentHint,
+    };
 
     public static int HandsFrom(string text)
     {
@@ -42,10 +82,18 @@ internal sealed class TournamentDoorCard
             CasinoHostingRules.TournamentMaxHands);
     }
 
-    public void Draw(AppSkin ui, CasinoTableRowDto? card, string roomId)
+    public void Draw(AppSkin ui, CasinoTableRowDto? card, CasinoTableDoorDto? door, string roomId)
     {
+        if (card is null || !IsBlackjack(card))
+        {
+            return;
+        }
+
+        var scale = UiScale.Current;
         if (!Applies(card))
         {
+            ui.SectionHeading(Loc.T(L.Venue.TournamentHeading), Metrics.Space.Md);
+            VenueFields.Hint(ui, Loc.T(L.Venue.TournamentHint), scale);
             return;
         }
 
@@ -55,7 +103,6 @@ internal sealed class TournamentDoorCard
             inlineReason = outcome.Granted ? string.Empty : outcome.Reason;
         }
 
-        var scale = UiScale.Current;
         ui.SectionHeading(Loc.T(L.Venue.TournamentHeading), Metrics.Space.Md);
         var group = GroupCard.Begin(ui, 2, VenueFields.RowUnits);
         VenueFields.TextRow(ui, group.NextRow(VenueFields.RowUnits), "##tournamentHands", Loc.T(L.Venue.TournamentHands),
@@ -63,8 +110,11 @@ internal sealed class TournamentDoorCard
         VenueFields.TextRow(ui, group.NextRow(VenueFields.RowUnits), "##tournamentStack", Loc.T(L.Venue.TournamentStack),
             Loc.T(L.Tables.DefaultHint), ref stack, VenueFields.AmountDigits, true, scale);
         group.End();
+        var hostDeals = card.Config is { DealerMode: CasinoDealerModes.Host };
+        var startingStack = VenueFields.Parse(stack);
+        var gate = GateOf(hostDeals, SeatedOf(card, door), startingStack, card.MinBet);
         VenueFields.Hint(ui, Loc.T(inlineReason.Length > 0 ? CasinoReasons.MessageFor(inlineReason)
-            : L.Venue.TournamentHint), scale);
+            : GateHint(gate)), scale);
         var width = ScrollLayout.StableContentWidth();
         var origin = ImGui.GetCursorScreenPos();
         var gap = Metrics.Space.Sm * scale;
@@ -73,10 +123,10 @@ internal sealed class TournamentDoorCard
         var start = new Rect(origin, new Vector2(origin.X + half, origin.Y + height));
         var stop = new Rect(new Vector2(origin.X + half + gap, origin.Y), new Vector2(origin.X + width, origin.Y + height));
         if (Button.Draw(start, Loc.T(L.Venue.TournamentStart), ui.Ink, ButtonStyle.Prominent,
-                enabled: !venue.HostInFlight, id: "door.tournament.start"))
+                enabled: !venue.HostInFlight && gate == TournamentGate.Ready, id: "door.tournament.start"))
         {
             inlineReason = string.Empty;
-            venue.StartTournament(roomId, HandsFrom(hands), VenueFields.Parse(stack));
+            venue.StartTournament(roomId, HandsFrom(hands), startingStack);
         }
 
         if (Button.Draw(stop, Loc.T(L.Venue.TournamentStop), ui.Ink, ButtonStyle.Gray, ButtonRole.Destructive,

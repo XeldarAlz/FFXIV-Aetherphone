@@ -53,4 +53,29 @@ internal static class GameBanner
         Squircle.Stroke(drawList, min, max, radius, ImGui.GetColorU32(accent with { W = 0.7f * alpha }), 1.5f * scale);
         Typography.DrawCentered(drawList, center, text, StageInks.Strong with { W = alpha }, textScale, style.Weight);
     }
+
+    public static void DrawWrapped(ImDrawListPtr drawList, Vector2 center, string text, float maxWidth,
+        Vector4 accent, float progress, in TextStyle style)
+    {
+        if (progress <= 0f || progress >= 1f)
+        {
+            return;
+        }
+
+        var scale = UiScale.Current;
+        var pop = progress < PopFraction ? MathF.Max(0.01f, GameJuice.PopIn(progress / PopFraction)) : 1f;
+        var alpha = progress > 1f - FadeFraction ? (1f - progress) / FadeFraction : 1f;
+        var padding = new Vector2(PaddingX * scale, PaddingY * scale);
+        var wrapWidth = MathF.Max(1f, maxWidth - padding.X * 2f);
+        var block = Typography.MeasureWrappedBlock(text, style, wrapWidth);
+        var half = (block * 0.5f + padding) * pop;
+        var min = center - half;
+        var max = center + half;
+        var radius = MathF.Min(half.Y, HalfHeight(style) * pop);
+        ProgressRing.Glow(center, half.Y * 1.6f, accent, 0.45f * alpha);
+        Material.Frosted(drawList, min, max, radius, scale, 0.92f * alpha);
+        Squircle.Stroke(drawList, min, max, radius, ImGui.GetColorU32(accent with { W = 0.7f * alpha }), 1.5f * scale);
+        Typography.DrawWrappedCentered(drawList, center, text, StageInks.Strong with { W = alpha * MathF.Min(1f, pop) },
+            style, wrapWidth);
+    }
 }

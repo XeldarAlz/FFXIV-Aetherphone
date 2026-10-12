@@ -284,6 +284,14 @@ public sealed class CasinoRoomWireContractTests
     }
 
     [Fact]
+    public void ARefusedBlackjackBetGivesUpItsRoundSoTheNextBetIsNotExpired()
+    {
+        Assert.Equal(string.Empty, CasinoRoomsStore.RoundAfterRefusal("round-a", "round-a"));
+        Assert.Equal("round-b", CasinoRoomsStore.RoundAfterRefusal("round-b", "round-a"));
+        Assert.Equal(string.Empty, CasinoRoomsStore.RoundAfterRefusal(string.Empty, "round-a"));
+    }
+
+    [Fact]
     public void APurchaseIdIsOnlyReusedForTheSameRoundAndTheSameCount()
     {
         Assert.True(CasinoRoomsStore.ReusesPurchase(7, 1, 7, 1));

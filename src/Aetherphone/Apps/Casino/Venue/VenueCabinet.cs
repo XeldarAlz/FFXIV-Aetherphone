@@ -15,6 +15,7 @@ internal sealed class VenueCabinet : ICabinetIdle
 
     private readonly CasinoVenueStore venue;
     private readonly Action leaveRoom;
+    private readonly Action openGilLedger;
     private readonly CasinoTextCache texts = new();
     private readonly DiceTableRoom dice;
     private readonly DeathrollRoom deathroll;
@@ -27,10 +28,11 @@ internal sealed class VenueCabinet : ICabinetIdle
     private bool entered;
     private float idleClock;
 
-    public VenueCabinet(CasinoVenueStore venue, Action leaveRoom)
+    public VenueCabinet(CasinoVenueStore venue, Action leaveRoom, Action openGilLedger)
     {
         this.venue = venue;
         this.leaveRoom = leaveRoom;
+        this.openGilLedger = openGilLedger;
         Action<VenueActDraft> act = Act;
         dice = new DiceTableRoom(texts, act);
         deathroll = new DeathrollRoom(texts, act);
@@ -94,6 +96,7 @@ internal sealed class VenueCabinet : ICabinetIdle
         if (entered)
         {
             venue.Rooms.Leave();
+            venue.Tables.ForgetKnock();
         }
 
         entered = false;
@@ -130,6 +133,13 @@ internal sealed class VenueCabinet : ICabinetIdle
             || (card.Config is not null && Tables.TableDoor.IsCoDealer(card.Config, me));
     }
 
+    private bool Owning()
+    {
+        var me = venue.AccountId;
+        var card = venue.Tables.CardFor(roomId);
+        return card is not null && me.Length > 0 && string.Equals(card.OwnerUserId, me, StringComparison.Ordinal);
+    }
+
     public void Draw(CasinoStage stage, in CasinoStageFrame frame, AppSkin ui)
     {
         var scale = UiScale.Current;
@@ -153,18 +163,19 @@ internal sealed class VenueCabinet : ICabinetIdle
 
         var now = session.ServerNowUnixMs(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
         DrawRibbon(drawList, frame, view, now, session.Attached, scale);
-        var world = safe;
+        var knockHeight = Tables.HostKnockBanner.Reserve(venue.Tables, roomId, safe.Width, scale);
+        var world = new Rect(new Vector2(safe.Min.X, safe.Min.Y + knockHeight), safe.Max);
         if (inlineReason.Length > 0)
         {
             var message = CasinoReasons.Text(inlineReason, 0);
             var height = CasinoNotice.Height(CasinoNoticeKind.Reason, string.Empty, message, safe.Width, scale);
             CasinoNotice.Draw(drawList, ui, CasinoNoticeKind.Reason, string.Empty, message, safe.Min.X,
                 safe.Max.Y - height, safe.Width, scale);
-            world = new Rect(safe.Min, new Vector2(safe.Max.X, safe.Max.Y - height - VenueArt.LineGap * scale));
+            world = new Rect(world.Min, new Vector2(safe.Max.X, safe.Max.Y - height - VenueArt.LineGap * scale));
         }
 
-        var room = new VenueRoomFrame(stage, frame, ui, view, drawList, world, venue.AccountId, Hosting(),
-            venue.ActInFlight, now, scale);
+        var room = new VenueRoomFrame(stage, frame, ui, view, drawList, world, venue.AccountId, Hosting(), Owning(),
+            venue.ActInFlight || view.Paused, now, scale);
         switch (view.Kind)
         {
             case VenueRoomKind.Deathroll:
@@ -177,6 +188,8 @@ internal sealed class VenueCabinet : ICabinetIdle
                 dice.Draw(room, frame.Deck);
                 break;
         }
+
+        Tables.HostKnockBanner.Draw(drawList, ui, venue.Tables, roomId, safe.Min, safe.Width, scale);
     }
 
     public void DrawIdle(ImDrawListPtr drawList, Rect rect, float deltaSeconds)
@@ -219,6 +232,13 @@ internal sealed class VenueCabinet : ICabinetIdle
     private void DrawRibbon(ImDrawListPtr drawList, in CasinoStageFrame frame, VenueRoomView view, long now,
         bool attached, float scale)
     {
+        if (view.Paused)
+        {
+            PhaseRibbon.Draw(drawList, frame.Layout.Ribbon, Loc.T(L.Tables.PausedByHost), 0, 0,
+                view.Snapshot.Occupancy, CasinoColors.InkMuted, scale);
+            return;
+        }
+
         var name = view.Name.Length > 0 ? view.Name : Loc.T(NameOf(view.Kind));
         var remaining = 0L;
         var window = 0;
@@ -240,11 +260,30 @@ internal sealed class VenueCabinet : ICabinetIdle
 
     private void DrawClosed(ImDrawListPtr drawList, AppSkin ui, string reason, Rect safe, float scale)
     {
-        var title = Loc.T(L.Venue.RoomClosedTitle);
-        var hint = Loc.T(CasinoReasons.TryMessage(reason, out var known) ? known : L.Venue.RoomClosedHint);
-        CasinoNotice.DrawWithAction(drawList, ui, CasinoNoticeKind.Card, title, hint, Loc.T(L.Casino.WheelBackToFloor),
-            safe.Min.X, safe.Min.Y + Metrics.Space.Lg * scale, safe.Width, scale, out var pressed);
-        if (pressed)
+        if (venue.Tables.TakeKnockAdmitted(roomId))
+        {
+            venue.Rooms.Enter(roomId);
+            venue.Tables.RefreshCard(roomId);
+            return;
+        }
+
+        var knock = venue.Tables.KnockFor(roomId, reason);
+        venue.Tables.EnsureKnockFresh(roomId);
+        var action = Tables.TableDoorCard.Draw(drawList, ui, reason, knock, L.Venue.RoomClosedTitle,
+            L.Venue.RoomClosedHint, safe, scale, Currency == CasinoCurrencies.Gil);
+        if (action == Tables.TableDoorAction.Knock)
+        {
+            venue.Tables.Knock(roomId);
+            return;
+        }
+
+        if (action == Tables.TableDoorAction.GilLedger)
+        {
+            openGilLedger();
+            return;
+        }
+
+        if (action == Tables.TableDoorAction.Leave)
         {
             leaveRoom();
         }

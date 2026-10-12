@@ -55,6 +55,16 @@ public sealed class CasinoTableWireContractTests
         Assert.True(CasinoTableFilters.HasOpenSeat(row));
         Assert.Equal(4, CasinoTableFilters.SpectatorsOf(row));
         Assert.False(CasinoTableFilters.IsPrivate(row));
+        Assert.Equal(3, CasinoTableFilters.PlayersOf(row));
+    }
+
+    [Fact]
+    public void AVenueRoomCountsEveryoneInItAsPlaying()
+    {
+        var room = new CasinoTableRowDto(TableId: "table-raffle", GameKind: VenueKinds.Raffle, MaxSeats: 0,
+            SeatedCount: 0, Occupancy: 5);
+        Assert.Equal(5, CasinoTableFilters.PlayersOf(room));
+        Assert.Equal(0, CasinoTableFilters.PlayersOf(room with { Occupancy = 0 }));
     }
 
     [Fact]
@@ -196,6 +206,47 @@ public sealed class CasinoTableWireContractTests
         Assert.Single(door.Seated!);
         Assert.Equal("u2", door.Seated![0].UserId);
         Assert.Equal(4, door.Seated![0].SeatIndex);
+        Assert.False(door.Seated![0].Leaving);
+    }
+
+    [Fact]
+    public void ASeatStandingAtTheEndOfTheHandReadsAsLeaving()
+    {
+        const string json = """
+        {
+          "roomId": "private-4f2a",
+          "owner": true,
+          "seated": [{"userId":"u2","displayName":"Hildibrand","seatIndex":4,"leaving":true}]
+        }
+        """;
+
+        var door = JsonSerializer.Deserialize(json, AethernetJsonContext.Default.CasinoTableDoorDto);
+        Assert.True(door!.Seated![0].Leaving);
+    }
+
+    [Fact]
+    public void TheDoorListsTheRoomBesideTheSeats()
+    {
+        const string json = """
+        {
+          "roomId": "table-4f2a",
+          "owner": true,
+          "seated": [],
+          "present": [
+            {"userId":"u3","displayName":"Krile","attached":true},
+            {"userId":"u4","displayName":"Alisaie","attached":false}
+          ]
+        }
+        """;
+
+        var door = JsonSerializer.Deserialize(json, AethernetJsonContext.Default.CasinoTableDoorDto);
+        Assert.Equal(2, door!.Present!.Length);
+        Assert.Equal("u3", door.Present[0].UserId);
+        Assert.Equal("Krile", door.Present[0].DisplayName);
+        Assert.True(door.Present[0].Attached);
+        Assert.False(door.Present[1].Attached);
+        Assert.Null(JsonSerializer.Deserialize("{\"roomId\":\"t1\"}",
+            AethernetJsonContext.Default.CasinoTableDoorDto)!.Present);
     }
 
     [Fact]

@@ -1,55 +1,33 @@
-using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
 
 namespace Aetherphone.Apps.Casino.Strip;
 
 internal enum StripShelf : byte
 {
-    Tables,
+    Cards,
     Machines,
-    Originals,
-    LiveFloor,
-    Instant,
-    Skill,
-    Venue,
+    QuickBets,
 }
 
-internal enum StripAction : byte
+internal readonly record struct StripEntry(string GameId, LocString Title, CasinoSign Sign)
 {
-    Game,
-    HostTable,
-    HostVenue,
-}
-
-internal readonly record struct StripEntry(
-    string GameId,
-    LocString Title,
-    CasinoSign Sign,
-    StripAction Action = StripAction.Game,
-    VenueRoomKind Venue = VenueRoomKind.None)
-{
-    public bool LiveIdle => Action == StripAction.Game && Machines.MachineCabinet.Owns(GameId);
+    public bool LiveIdle => Machines.MachineCabinet.Owns(GameId);
 }
 
 internal static class StripCatalog
 {
     public static readonly StripShelf[] Shelves =
     {
-        StripShelf.Tables,
+        StripShelf.Cards,
         StripShelf.Machines,
-        StripShelf.Originals,
-        StripShelf.LiveFloor,
-        StripShelf.Instant,
-        StripShelf.Skill,
-        StripShelf.Venue,
+        StripShelf.QuickBets,
     };
 
-    private static readonly StripEntry[] Tables =
+    private static readonly StripEntry[] Cards =
     {
         new(CasinoGames.Blackjack, L.Casino.GameBlackjack, CasinoSign.TwentyOne),
         new(CasinoGames.Holdem, L.Casino.GameHoldem, CasinoSign.Holdem),
         new(CasinoGames.DealerHoldem, L.DealerHoldem.Game, CasinoSign.DealerHoldem),
-        new(CasinoGames.Blackjack, L.Tables.HostTitle, CasinoSign.Gamba, StripAction.HostTable),
     };
 
     private static readonly StripEntry[] MachineEntries =
@@ -59,7 +37,7 @@ internal static class StripCatalog
         new(CasinoGames.SlotsMoogle, L.Machines.GameMoogle, CasinoSign.Moogle),
     };
 
-    private static readonly StripEntry[] Originals =
+    private static readonly StripEntry[] QuickBets =
     {
         new(CasinoGames.Plinko, L.Plinko.Game, CasinoSign.Plinko),
         new(CasinoGames.Mines, L.Originals.GameMines, CasinoSign.Mines),
@@ -67,55 +45,30 @@ internal static class StripCatalog
         new(CasinoGames.Limbo, L.Originals.GameLimbo, CasinoSign.Limbo),
         new(CasinoGames.Keno, L.Originals.GameKeno, CasinoSign.Keno),
         new(CasinoGames.HiLo, L.Originals.GameHiLo, CasinoSign.HiLo),
-    };
-
-    private static readonly StripEntry[] LiveFloor =
-    {
-        new(CasinoGames.Race, L.Race.Title, CasinoSign.Race),
-        new(CasinoGames.Wheel, L.Casino.GameWheel, CasinoSign.Wheel),
-        new(CasinoGames.Bingo, L.Casino.GameBingo, CasinoSign.Bingo),
-    };
-
-    private static readonly StripEntry[] Instant =
-    {
         new(CasinoGames.Scratch, L.Casino.GameScratch, CasinoSign.Scratch),
-        new(CasinoGames.DailySpin, L.Casino.GameDailySpin, CasinoSign.FreeSpin),
-    };
-
-    private static readonly StripEntry[] Skill =
-    {
         new(CasinoGames.Barkeep, L.Casino.GameBarkeep, CasinoSign.Bar),
     };
 
-    private static readonly StripEntry[] Venue =
-    {
-        new(CasinoGames.DiceTable, L.Venue.GameDiceTable, CasinoSign.Dice, StripAction.HostVenue, VenueRoomKind.Dice),
-        new(CasinoGames.Deathroll, L.Venue.GameDeathroll, CasinoSign.Deathroll, StripAction.HostVenue,
-            VenueRoomKind.Deathroll),
-        new(CasinoGames.Raffle, L.Venue.GameRaffle, CasinoSign.Raffle, StripAction.HostVenue, VenueRoomKind.Raffle),
-    };
+    public static readonly StripEntry[] Playable = CollectPlayable();
+
+    public static readonly string[] PlayableIds = IdsOf(Playable);
 
     public static ReadOnlySpan<StripEntry> EntriesOf(StripShelf shelf) => shelf switch
     {
-        StripShelf.Tables => Tables,
+        StripShelf.Cards => Cards,
         StripShelf.Machines => MachineEntries,
-        StripShelf.Originals => Originals,
-        StripShelf.LiveFloor => LiveFloor,
-        StripShelf.Instant => Instant,
-        StripShelf.Skill => Skill,
-        _ => Venue,
+        _ => QuickBets,
     };
 
     public static LocString TitleOf(StripShelf shelf) => shelf switch
     {
-        StripShelf.Tables => L.Strip.ShelfTables,
+        StripShelf.Cards => L.Floor.ShelfCards,
         StripShelf.Machines => L.Strip.ShelfMachines,
-        StripShelf.Originals => L.Strip.ShelfOriginals,
-        StripShelf.LiveFloor => L.Strip.ShelfLive,
-        StripShelf.Instant => L.Strip.ShelfInstant,
-        StripShelf.Skill => L.Strip.ShelfSkill,
-        _ => L.Strip.ShelfVenue,
+        _ => L.Floor.ShelfQuickBets,
     };
+
+    public static bool WearsSkillBadge(string gameId) =>
+        string.Equals(gameId, CasinoGames.Barkeep, StringComparison.Ordinal);
 
     public static int EntryCount
     {
@@ -133,19 +86,41 @@ internal static class StripCatalog
 
     public static bool Reaches(string gameId)
     {
+        for (var index = 0; index < PlayableIds.Length; index++)
+        {
+            if (string.Equals(PlayableIds[index], gameId, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static StripEntry[] CollectPlayable()
+    {
+        var playable = new StripEntry[EntryCount];
+        var next = 0;
         for (var shelfIndex = 0; shelfIndex < Shelves.Length; shelfIndex++)
         {
             var entries = EntriesOf(Shelves[shelfIndex]);
             for (var index = 0; index < entries.Length; index++)
             {
-                if (entries[index].Action == StripAction.Game
-                    && string.Equals(entries[index].GameId, gameId, StringComparison.Ordinal))
-                {
-                    return true;
-                }
+                playable[next++] = entries[index];
             }
         }
 
-        return false;
+        return playable;
+    }
+
+    private static string[] IdsOf(StripEntry[] entries)
+    {
+        var ids = new string[entries.Length];
+        for (var index = 0; index < entries.Length; index++)
+        {
+            ids[index] = entries[index].GameId;
+        }
+
+        return ids;
     }
 }

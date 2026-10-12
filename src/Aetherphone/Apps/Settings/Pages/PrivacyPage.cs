@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Casino;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
@@ -23,6 +24,7 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
         new(L.Settings.ReadReceipts),
         new(L.Settings.LastSeenOnline),
         new(L.Stage.ShowOnLeaderboards),
+        new(L.Club.FameSetting),
         new(L.PhotoTag.SettingsTitle),
         new(L.Social.BlockedUsers),
         new(L.Settings.ClearCache, L.Settings.Storage),
@@ -37,6 +39,7 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
     private readonly AethernetSession session;
     private readonly AccountClient client;
     private readonly LeaderboardStore leaderboard;
+    private readonly CasinoFameChoiceStore fameChoice;
     private readonly SafetyClient safety;
     private readonly ConfirmService confirm;
     private readonly ISettingsNavigator navigator;
@@ -58,13 +61,14 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
     private long clearCacheLabelMegabytes = -1;
 
     public PrivacyPage(Configuration configuration, AethernetSession session, AccountClient client,
-        LeaderboardStore leaderboard, SafetyClient safety, ConfirmService confirm, ISettingsNavigator navigator,
-        ISettingsPage tagsMentionsPage, CacheStorage cacheStorage)
+        LeaderboardStore leaderboard, CasinoFameChoiceStore fameChoice, SafetyClient safety, ConfirmService confirm,
+        ISettingsNavigator navigator, ISettingsPage tagsMentionsPage, CacheStorage cacheStorage)
     {
         this.configuration = configuration;
         this.session = session;
         this.client = client;
         this.leaderboard = leaderboard;
+        this.fameChoice = fameChoice;
         this.safety = safety;
         this.confirm = confirm;
         this.navigator = navigator;
@@ -260,13 +264,16 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
             return;
         }
 
-        var card = GroupCard.Begin(theme, 4);
+        var card = GroupCard.Begin(theme, 5);
         var readReceipts = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.ReadReceipts), shareReadReceipts, theme,
             null, Loc.T(L.Settings.ChatPrivacyHint));
         var lastSeen = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.LastSeenOnline), sharePresence, theme);
         var showOnLeaderboards = leaderboard.ShownParticipation;
         var leaderboards = SettingsRow.Bool(card.NextRow(), Loc.T(L.Stage.ShowOnLeaderboards), showOnLeaderboards,
             theme, null, Loc.T(L.Leaderboard.OffHint));
+        var showInHallOfFame = fameChoice.Shown;
+        var hallOfFame = SettingsRow.Bool(card.NextRow(), Loc.T(L.Club.FameSetting), showInHallOfFame, theme, null,
+            Loc.T(L.Club.FameSettingHint));
         var tagsOpened = SettingsRow.Disclosure(card.NextRow(), Loc.T(L.PhotoTag.SettingsTitle), string.Empty, theme);
         card.End();
         if (readReceipts != shareReadReceipts || lastSeen != sharePresence)
@@ -279,6 +286,11 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
         if (leaderboards != showOnLeaderboards)
         {
             leaderboard.SetParticipation(leaderboards);
+        }
+
+        if (hallOfFame != showInHallOfFame)
+        {
+            fameChoice.SetChoice(hallOfFame);
         }
 
         if (tagsOpened)

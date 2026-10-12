@@ -32,7 +32,6 @@ internal sealed partial class AethergramApp
     private string exploreDraft = string.Empty;
     private double exploreDirtyAt = -1d;
     private Action? refreshExplore;
-    private Action? loadMoreExplore;
 
     private void OpenSaved()
     {
@@ -137,7 +136,6 @@ internal sealed partial class AethergramApp
         const SocialFeedScope scope = SocialFeedScope.Latest;
         profile.EnsureLoaded(scope);
         refreshExplore ??= RefreshExploreFeed;
-        loadMoreExplore ??= LoadMoreExploreFeed;
         var posts = store.Feed(scope);
         using (var surface = AppSurface.BeginEdgeToEdge(listRect))
         {
@@ -147,7 +145,7 @@ internal sealed partial class AethergramApp
             {
                 ImGui.Dummy(new Vector2(0f, 2f * scale));
                 DrawPostGrid(posts, L.Aethergram.ExploreEmpty, store.HasMoreFeed(scope), store.LoadingMore(scope),
-                    loadMoreExplore, ExploreGrid, PostSource.Explore);
+                    ExploreGrid, PostSource.Explore);
                 return;
             }
 
@@ -169,8 +167,6 @@ internal sealed partial class AethergramApp
     }
 
     private void RefreshExploreFeed() => RefreshFeed(SocialFeedScope.Latest);
-
-    private void LoadMoreExploreFeed() => store.LoadMoreFeed(SocialFeedScope.Latest);
 
     private static void DrawExploreSkeleton(Rect listRect)
     {
@@ -279,7 +275,7 @@ internal sealed partial class AethergramApp
             if (posts.Length > 0)
             {
                 DrawPostGrid(posts, L.Social.HashtagEmpty, store.HasMoreHashtagPosts, store.HashtagLoadingMore,
-                    store.LoadMoreHashtagPosts, SquareGrid, PostSource.Hashtag);
+                    SquareGrid, PostSource.Hashtag);
                 return;
             }
 
@@ -323,29 +319,6 @@ internal sealed partial class AethergramApp
         ImGui.Dummy(new Vector2(width, height + GridGap * scale));
     }
 
-    private void DrawSaved(Rect area)
-    {
-        var scale = UiScale.Current;
-        DrawScreenHeader(area, Loc.T(L.Aethergram.SavedTitle));
-        var listRect = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-        var posts = store.SavedPosts;
-        using (AppSurface.BeginEdgeToEdge(listRect))
-        {
-            if (posts.Length > 0)
-            {
-                ImGui.Dummy(new Vector2(0f, 2f * scale));
-                DrawPostGrid(posts, L.Aethergram.SavedEmpty, store.HasMoreSaved, store.SavedLoadingMore,
-                    store.LoadMoreSaved, SquareGrid, PostSource.Saved);
-                return;
-            }
-
-            if (store.SavedLoading)
-            {
-                DrawEmptyState(listRect, Loc.T(L.Common.Loading), string.Empty);
-                return;
-            }
-
-            DrawEmptyState(listRect, Loc.T(L.Aethergram.SavedEmpty), Loc.T(L.Aethergram.SavedEmptyHint));
-        }
-    }
+    private void DrawSaved(Rect area) =>
+        DrawPostGridScreen(area, PostSource.Saved, L.Aethergram.SavedEmpty, L.Aethergram.SavedEmptyHint);
 }

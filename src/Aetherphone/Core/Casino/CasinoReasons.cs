@@ -73,17 +73,23 @@ internal static class CasinoReasons
     public const string ConfigInvalid = "config_invalid";
     public const string PracticeOnly = "practice_only";
     public const string NotDealer = "not_dealer";
+    public const string DealerCannotSit = "dealer_cannot_sit";
     public const string RebuyOff = "rebuy_off";
     public const string TournamentLive = "tournament_live";
     public const string NoTournament = "no_tournament";
+    public const string TournamentPlayers = "tournament_players";
+    public const string TournamentStack = "tournament_stack";
     public const string NothingToDeal = "nothing_to_deal";
+    public const string TablePaused = "table_paused";
     public const string NoSpectators = "no_spectators";
     public const string DuelLive = "duel_live";
     public const string NoDuel = "no_duel";
     public const string RaffleLive = "raffle_live";
     public const string NoRaffle = "no_raffle";
     public const string TicketLimit = "ticket_limit";
+    public const string HostTicket = "host_ticket";
     public const string RoundLive = "round_live";
+    public const string AlreadyRolled = "already_rolled";
     public const string BankLimit = "bank_limit";
     public const string HostFrozen = "host_frozen";
     public const string NotParty = "not_party";
@@ -94,12 +100,14 @@ internal static class CasinoReasons
     public const string MissionIncomplete = "mission_incomplete";
     public const string NotOwner = "not_owner";
     public const string CodeUnknown = "code_unknown";
+    public const string GuestEntry = "guest_entry";
 
     public static readonly string[] All =
     {
         MissionIncomplete,
         NotOwner,
         CodeUnknown,
+        GuestEntry,
         Ceiling,
         Ladder,
         BonusNotReady,
@@ -107,17 +115,23 @@ internal static class CasinoReasons
         ConfigInvalid,
         PracticeOnly,
         NotDealer,
+        DealerCannotSit,
         RebuyOff,
         TournamentLive,
         NoTournament,
+        TournamentPlayers,
+        TournamentStack,
         NothingToDeal,
+        TablePaused,
         NoSpectators,
         DuelLive,
         NoDuel,
         RaffleLive,
         NoRaffle,
         TicketLimit,
+        HostTicket,
         RoundLive,
+        AlreadyRolled,
         BankLimit,
         HostFrozen,
         NotParty,
@@ -197,17 +211,23 @@ internal static class CasinoReasons
         [ConfigInvalid] = L.Tables.ReasonConfigInvalid,
         [PracticeOnly] = L.Tables.ReasonPracticeOnly,
         [NotDealer] = L.Tables.ReasonNotDealer,
+        [DealerCannotSit] = L.Tables.ReasonDealerCannotSit,
         [RebuyOff] = L.Tables.ReasonRebuyOff,
         [TournamentLive] = L.Tables.ReasonTournamentLive,
         [NoTournament] = L.Tables.ReasonNoTournament,
+        [TournamentPlayers] = L.Tables.ReasonTournamentPlayers,
+        [TournamentStack] = L.Tables.ReasonTournamentStack,
         [NothingToDeal] = L.Tables.ReasonNothingToDeal,
+        [TablePaused] = L.Tables.ReasonTablePaused,
         [NoSpectators] = L.Tables.ReasonNoSpectators,
         [DuelLive] = L.Tables.ReasonDuelLive,
         [NoDuel] = L.Tables.ReasonNoDuel,
         [RaffleLive] = L.Tables.ReasonRaffleLive,
         [NoRaffle] = L.Tables.ReasonNoRaffle,
         [TicketLimit] = L.Tables.ReasonTicketLimit,
+        [HostTicket] = L.Tables.ReasonHostTicket,
         [RoundLive] = L.Tables.ReasonRoundLive,
+        [AlreadyRolled] = L.Tables.ReasonAlreadyRolled,
         [BankLimit] = L.Tables.ReasonBankLimit,
         [HostFrozen] = L.Tables.ReasonHostFrozen,
         [NotParty] = L.Tables.ReasonNotParty,
@@ -216,6 +236,7 @@ internal static class CasinoReasons
         [GilOnly] = L.Tables.ReasonGilOnly,
         [NotOwner] = L.Tables.ReasonNotOwner,
         [CodeUnknown] = L.Tables.ReasonCodeUnknown,
+        [GuestEntry] = L.Book.ReasonGuestEntry,
         [StakesPaused] = L.Casino.ReasonStakesPaused,
         [LossLimit] = L.Casino.ReasonLossLimit,
         [Draining] = L.Casino.ReasonDraining,

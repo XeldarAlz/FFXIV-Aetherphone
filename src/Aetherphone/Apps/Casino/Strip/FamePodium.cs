@@ -39,14 +39,17 @@ internal sealed class FamePodium
     {
         var headline = Typography.LineHeight(TextStyles.Headline);
         var footnote = Typography.LineHeight(TextStyles.Footnote);
+        var pad = Pad * scale;
         var champion = board.Champion;
-        var championLine = champion is null ? 0f : Typography.LineHeight(TextStyles.Subheadline) + Metrics.Space.Sm * scale;
+        var line = champion is null ? string.Empty : texts.Named(L.Club.FameChampionLine, FameText.Name(champion));
+        var championLine = champion is null
+            ? 0f
+            : Tables.PitText.Height(line, TextStyles.Subheadline, width - pad * 2f) + Metrics.Space.Sm * scale;
         var height = Height(scale, headline, footnote, championLine);
         var max = new Vector2(origin.X + width, origin.Y + height);
         bottom = max.Y;
         var hovered = CasinoArt.PressCard(ImGui.GetID("casino.fame.podium"), origin, max, out var min, out var shown);
         ui.Card(drawList, min, shown, Metrics.Radius.Grouped * scale);
-        var pad = Pad * scale;
         var seeAll = Loc.T(L.Club.FameSeeAll);
         var seeAllWidth = Typography.Measure(seeAll, TextStyles.SubheadlineEmphasized).X;
         Typography.Draw(drawList, new Vector2(min.X + pad, min.Y + pad),
@@ -86,12 +89,8 @@ internal sealed class FamePodium
                 CasinoColors.Money, TextStyles.FootnoteEmphasized);
         }
 
-        if (champion is not null)
-        {
-            var line = texts.Named(L.Club.FameChampionLine, FameText.Name(champion));
-            Typography.Draw(drawList, new Vector2(min.X + pad, floor + Metrics.Space.Sm * scale),
-                Typography.FitText(line, width - pad * 2f, TextStyles.Subheadline), ui.BodyInk, TextStyles.Subheadline);
-        }
+        Tables.PitText.Draw(drawList, line, TextStyles.Subheadline, ui.BodyInk, min.X + pad,
+            floor + Metrics.Space.Sm * scale, width - pad * 2f, false);
 
         return UiInteract.Click(origin, max, hovered);
     }

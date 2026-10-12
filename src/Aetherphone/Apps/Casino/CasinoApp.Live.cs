@@ -115,7 +115,7 @@ internal sealed partial class CasinoApp
             }
 
             var view = LiveView(index, liveShown[index]);
-            var height = TableRow.HeightOf(view) * scale;
+            var height = TableRow.HeightOf(view, width) * scale;
             var card = new Rect(new Vector2(origin.X, top), new Vector2(origin.X + width, top + height));
             using (ImRaii.PushId(index))
             {
@@ -208,12 +208,6 @@ internal sealed partial class CasinoApp
         if (HouseBlackjack.Is(table))
         {
             EnterHouseBlackjack();
-            return;
-        }
-
-        if (table.Kind == CasinoTableKinds.Private && !table.Admitted && !casinoTables.Owns(table))
-        {
-            OpenDoor(table.TableId);
             return;
         }
 

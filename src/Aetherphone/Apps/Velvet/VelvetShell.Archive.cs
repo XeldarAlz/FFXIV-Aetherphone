@@ -1,6 +1,5 @@
 using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
-using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Social;
@@ -26,8 +25,6 @@ internal sealed partial class VelvetShell
     }
 
     private const int MaxPinnedPosts = 3;
-    private const float ArchiveTopGap = 6f;
-    private const float ArchiveBottomPad = 40f;
     private const float PinGlyphSize = 12f;
     private const float PinGlyphGap = 3f;
 
@@ -40,81 +37,6 @@ internal sealed partial class VelvetShell
     {
         store.RefreshArchived();
         router.Push(VelvetView.Archive);
-    }
-
-    private void DrawArchive(Rect area)
-    {
-        var scale = UiScale.Current;
-        if (VHeader.Push(area, Loc.T(L.Social.ArchiveTitle)))
-        {
-            router.Pop();
-            return;
-        }
-
-        var body = new Rect(new Vector2(area.Min.X, area.Min.Y + VHeader.Height * scale), area.Max);
-        var posts = store.ArchivedPosts;
-        using (AppSurface.BeginEdgeToEdge(body))
-        {
-            if (posts.Length == 0)
-            {
-                if (store.ArchivedLoaded)
-                {
-                    DrawEmpty(body, Loc.T(L.Social.ArchiveEmpty), Loc.T(L.Social.ArchiveEmptyHint));
-                }
-                else
-                {
-                    DrawEmpty(body, Loc.T(L.Common.Loading), string.Empty);
-                }
-
-                return;
-            }
-
-            var width = ScrollLayout.StableContentWidth();
-            Gap(ArchiveTopGap);
-            DrawArchiveGrid(posts, width);
-            if (store.ArchivedLoadingMore)
-            {
-                InfiniteScroll.DrawLoadingRow(body.Center.X, VelvetTheme.MutedInk);
-            }
-
-            Gap(ArchiveBottomPad);
-            if (store.HasMoreArchived && !store.ArchivedLoadingMore && InfiniteScroll.ReachedBottom())
-            {
-                store.LoadMoreArchived();
-            }
-        }
-    }
-
-    private void DrawArchiveGrid(VelvetPostDto[] posts, float width)
-    {
-        var scale = UiScale.Current;
-        var cellGap = ProfileGridGap * scale;
-        var cell = (width - cellGap * (ProfileColumns - 1)) / ProfileColumns;
-        var rows = (posts.Length + ProfileColumns - 1) / ProfileColumns;
-        var origin = ImGui.GetCursorScreenPos();
-        var drawList = ImGui.GetWindowDrawList();
-        for (var index = 0; index < posts.Length; index++)
-        {
-            var post = posts[index];
-            var row = index / ProfileColumns;
-            var column = index % ProfileColumns;
-            var min = new Vector2(origin.X + column * (cell + cellGap), origin.Y + row * (cell + cellGap));
-            var max = new Vector2(min.X + cell, min.Y + cell);
-            if (!ImGui.IsRectVisible(min, max))
-            {
-                continue;
-            }
-
-            var veiled = SensitiveReveals.ShouldVeil(post.Sensitive, post.Id, configuration.ShowSensitiveContent);
-            DrawMedia(drawList, min, max, post.MediaUrl, 0f, veiled: veiled);
-            if (UiInteract.Click(min, max))
-            {
-                OpenPostDetail(post.Id);
-            }
-        }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, rows * cell + (rows - 1) * cellGap));
     }
 
     private static float DrawPinnedGlyph(ImDrawListPtr drawList, float left, float top, float lineHeight)

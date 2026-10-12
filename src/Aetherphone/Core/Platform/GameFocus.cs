@@ -1,7 +1,7 @@
 using Aetherphone.Windows.Components;
 using FFXIVClientStructs.FFXIV.Client.UI;
 
-namespace Aetherphone.Apps.Games.Framework;
+namespace Aetherphone.Core.Platform;
 
 internal static class GameFocus
 {

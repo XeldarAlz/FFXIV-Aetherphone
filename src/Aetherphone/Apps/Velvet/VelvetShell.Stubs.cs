@@ -23,6 +23,7 @@ internal sealed partial class VelvetShell
     private enum ProfileMenuAction
     {
         Settings,
+        Liked,
         Archive,
         Rules,
         Report,

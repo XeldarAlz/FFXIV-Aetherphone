@@ -1,5 +1,6 @@
 using System.Numerics;
 using Aetherphone.Apps.Casino.Stage;
+using Aetherphone.Apps.Casino.Tables;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Theme;
@@ -106,6 +107,15 @@ public sealed class StagePolishTests
         var felt = StageBackdrop.NightFeltCenter;
         Assert.True(StageContrast.Ratio(StageText.Strong, felt) >= StageContrast.Readable);
         Assert.True(StageContrast.Ratio(CasinoColors.Money, felt) >= StageContrast.Readable);
+    }
+
+    [Fact]
+    public void BlackjackResultBadgesReadOverAWhiteCardFace()
+    {
+        var badge = StageContrast.Over(BlackjackTableArt.OutcomeBadgeFill, White);
+        Assert.True(StageContrast.Ratio(CasinoColors.Money, badge) >= StageContrast.Readable);
+        Assert.True(StageContrast.Ratio(StageText.Strong, badge) >= StageContrast.Readable);
+        Assert.True(StageContrast.Ratio(StageText.Body, badge) >= StageContrast.Readable);
     }
 
     [Fact]

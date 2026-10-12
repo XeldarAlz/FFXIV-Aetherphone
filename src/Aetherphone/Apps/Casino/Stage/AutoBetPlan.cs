@@ -1,4 +1,5 @@
 using Aetherphone.Core.Casino;
+using Aetherphone.Core.Localization;
 
 namespace Aetherphone.Apps.Casino.Stage;
 
@@ -33,6 +34,7 @@ internal sealed class AutoBetPlan
     public const int DefaultRounds = 10;
     public const int MaxRounds = 1000;
     public const int MaxPercent = 1000;
+    public const float PacingRetrySeconds = 2f;
 
     public int Rounds { get; set; } = DefaultRounds;
 
@@ -110,6 +112,12 @@ internal sealed class AutoBetPlan
         Running = false;
         Stopped = reason;
     }
+
+    public bool WaitsOut(string reason) =>
+        Running && string.Equals(reason, CasinoReasons.Cooldown, StringComparison.Ordinal);
+
+    public bool WaitsOut(LocString notice) =>
+        Running && string.Equals(notice.Key, L.Casino.ReasonCooldown.Key, StringComparison.Ordinal);
 
     public void Acknowledge()
     {

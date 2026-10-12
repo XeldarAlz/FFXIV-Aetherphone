@@ -40,6 +40,8 @@ internal static class CasinoFeatures
 
     public const string Originals = "originals";
 
+    public const string VenueBook = "venue.book";
+
     public static bool Has(CasinoStateDto? state, string feature)
     {
         var features = state?.Features;

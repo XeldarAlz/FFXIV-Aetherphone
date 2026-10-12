@@ -11,10 +11,13 @@ namespace Aetherphone.Apps.Casino;
 
 internal sealed class CashierCashOut
 {
+    private const long RiskCheckTimeoutMilliseconds = 4_000;
+
     private readonly CasinoStore store;
     private readonly ConfirmService confirm;
     private readonly CasinoTextCache texts = new();
     private readonly Action closeSitting;
+    private long riskCheckAtTick;
 
     public CashierCashOut(CasinoStore store, ConfirmService confirm)
     {
@@ -36,7 +39,8 @@ internal sealed class CashierCashOut
         CurrencyGlyph.DrawAmount(drawList, new Vector2(line.Max.X - amountSize.X, line.Center.Y - amountSize.Y * 0.5f),
             amount, CurrencyKind.Coins, CasinoColors.Money, TextStyles.Title3);
 
-        var enabled = interactive && stack > 0 && !store.MovingMoney;
+        ResolveRiskCheck();
+        var enabled = interactive && stack > 0 && !store.MovingMoney && riskCheckAtTick == 0;
         if (Button.Draw(drawList, layout.CashOut, Loc.T(L.Casino.CashOut), ui.Ink, ButtonStyle.Tinted,
                 enabled: enabled, overlay: overlay, id: "cashier.cashout"))
         {
@@ -48,6 +52,24 @@ internal sealed class CashierCashOut
 
     private void Press()
     {
+        riskCheckAtTick = Environment.TickCount64;
+        store.RefreshNow();
+    }
+
+    private void ResolveRiskCheck()
+    {
+        if (riskCheckAtTick == 0)
+        {
+            return;
+        }
+
+        var fresh = store.StateLoadedAtTick >= riskCheckAtTick;
+        if (!fresh && Environment.TickCount64 - riskCheckAtTick < RiskCheckTimeoutMilliseconds)
+        {
+            return;
+        }
+
+        riskCheckAtTick = 0;
         if ((store.State?.AtRisk ?? 0) <= 0)
         {
             store.CloseSitting();

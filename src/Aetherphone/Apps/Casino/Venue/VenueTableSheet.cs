@@ -13,9 +13,11 @@ internal enum VenueSheetRequest : byte
 {
     None,
     Broadcast,
+    GilLedger,
+    HostControls,
 }
 
-internal readonly record struct VenueSheetTarget(string TableId, bool Gil, bool CanBroadcast);
+internal readonly record struct VenueSheetTarget(string TableId, bool Gil, bool CanBroadcast, bool Hosting = false);
 
 internal sealed class VenueTableSheet
 {
@@ -140,8 +142,19 @@ internal sealed class VenueTableSheet
         var joinCode = codeOf(target.TableId);
         if (joinCode.Length > 0)
         {
-            code.Draw(ui, joinCode, string.Empty, ScrollLayout.StableContentWidth(), scale);
+            code.Draw(ui, joinCode, string.Empty, ScrollLayout.StableContentWidth(), scale, overlay: true);
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
+        }
+
+        if (target.Hosting)
+        {
+            ActionRow(ui, Loc.T(L.Tables.HostPanelHeading), Loc.T(L.Venue.HostControlsHint), ButtonStyle.Tinted,
+                ButtonRole.Normal, "venue.sheet.host", out var hostPressed, scale);
+            if (hostPressed)
+            {
+                request = VenueSheetRequest.HostControls;
+                sheet.Close();
+            }
         }
 
         var view = venue.ViewFor(target.TableId);
@@ -152,7 +165,16 @@ internal sealed class VenueTableSheet
 
         if (target.Gil)
         {
-            DrawTradeSync(ui, scale);
+            var host = string.Equals(venue.Tables.CardFor(target.TableId)?.OwnerUserId, venue.AccountId,
+                StringComparison.Ordinal);
+            Tables.TradeSyncCard.Draw(ui, trade, scale, true, host);
+            ActionRow(ui, Loc.T(L.Tables.MyLedgerTitle), Loc.T(L.Tables.MyLedgerLine), ButtonStyle.Tinted,
+                ButtonRole.Normal, "venue.sheet.gilLedger", out var ledgerPressed, scale);
+            if (ledgerPressed)
+            {
+                request = VenueSheetRequest.GilLedger;
+                sheet.Close();
+            }
         }
 
         if (target.CanBroadcast)
@@ -211,35 +233,13 @@ internal sealed class VenueTableSheet
         }
     }
 
-    private void DrawTradeSync(AppSkin ui, float scale)
-    {
-        ui.SectionHeading(Loc.T(L.Venue.TradeSync), Metrics.Space.Sm);
-        var card = GroupCard.Begin(ui, 2, VenueFields.RowUnits);
-        var enabled = VenueFields.ToggleRow(ui, card.NextRow(VenueFields.RowUnits), "venue.trade.sync",
-            Loc.T(L.Venue.TradeSyncToggle), trade.Enabled, scale);
-        if (enabled != trade.Enabled)
-        {
-            trade.Enabled = enabled;
-        }
-
-        var auto = VenueFields.ToggleRow(ui, card.NextRow(VenueFields.RowUnits), "venue.trade.auto",
-            Loc.T(L.Venue.TradeAutoConfirm), trade.AutoConfirm, scale);
-        if (auto != trade.AutoConfirm)
-        {
-            trade.AutoConfirm = auto;
-        }
-
-        card.End();
-        VenueFields.Hint(ui, Loc.T(L.Venue.TradeSyncHint), scale);
-    }
-
     private static void ActionRow(AppSkin ui, string label, string hint, ButtonStyle style, ButtonRole role,
         string id, out bool pressed, float scale)
     {
         var width = ScrollLayout.NativeScrollContentWidth();
         var origin = ImGui.GetCursorScreenPos();
         var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + Button.LargeHeight * scale));
-        pressed = Button.Draw(rect, label, ui.Ink, style, role, id: id);
+        pressed = Button.Draw(rect, label, ui.Ink, style, role, overlay: true, id: id);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, Button.LargeHeight * scale));
         var hintOrigin = ImGui.GetCursorScreenPos();

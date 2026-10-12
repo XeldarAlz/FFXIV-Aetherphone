@@ -8,9 +8,11 @@ internal readonly record struct TradeWindowSample(
     string[] NameCandidates,
     long MyOffer,
     long TheirOffer,
-    long WalletGil);
+    long WalletGil,
+    bool PartnerRead = false);
 
-internal readonly record struct TradeCompletion(string[] NameCandidates, long Received, long Sent)
+internal readonly record struct TradeCompletion(string[] NameCandidates, long Received, long Sent,
+    bool PartnerRead = false)
 {
     public long Net => Received - Sent;
 }
@@ -23,7 +25,8 @@ internal readonly record struct TradeTableContext(
     string HostUserId,
     string HostName,
     TradeSeat[] Seats,
-    CasinoLedgerEntryDto[] Entries)
+    CasinoLedgerEntryDto[] Entries,
+    bool Venue = false)
 {
     public bool Known => !string.IsNullOrEmpty(TableId) && !string.IsNullOrEmpty(MyUserId)
         && !string.IsNullOrEmpty(HostUserId);
@@ -65,6 +68,7 @@ internal sealed class TradeSyncTracker
     public const long SettleWindowMilliseconds = 4_000;
 
     private string[] candidates = Array.Empty<string>();
+    private bool partnerRead;
     private long myOffer;
     private long theirOffer;
     private long baseline;
@@ -79,16 +83,19 @@ internal sealed class TradeSyncTracker
             if (Stage != TradeTrackerStage.Open)
             {
                 candidates = Array.Empty<string>();
+                partnerRead = false;
                 myOffer = 0;
                 theirOffer = 0;
+                baseline = sample.WalletGil;
             }
 
             Stage = TradeTrackerStage.Open;
-            baseline = sample.WalletGil;
             if (sample.NameCandidates.Length > 0)
             {
                 candidates = sample.NameCandidates;
             }
+
+            partnerRead |= sample.PartnerRead;
 
             myOffer = Math.Max(0, sample.MyOffer);
             theirOffer = Math.Max(0, sample.TheirOffer);
@@ -125,6 +132,7 @@ internal sealed class TradeSyncTracker
     {
         Stage = TradeTrackerStage.Idle;
         candidates = Array.Empty<string>();
+        partnerRead = false;
         myOffer = 0;
         theirOffer = 0;
         baseline = 0;
@@ -135,17 +143,17 @@ internal sealed class TradeSyncTracker
     {
         if (theirOffer - myOffer == delta)
         {
-            return new TradeCompletion(candidates, theirOffer, myOffer);
+            return new TradeCompletion(candidates, theirOffer, myOffer, partnerRead);
         }
 
         if (myOffer - theirOffer == delta)
         {
-            return new TradeCompletion(candidates, myOffer, theirOffer);
+            return new TradeCompletion(candidates, myOffer, theirOffer, partnerRead);
         }
 
         return delta > 0
-            ? new TradeCompletion(candidates, delta, 0)
-            : new TradeCompletion(candidates, 0, -delta);
+            ? new TradeCompletion(candidates, delta, 0, partnerRead)
+            : new TradeCompletion(candidates, 0, -delta, partnerRead);
     }
 }
 
@@ -160,6 +168,38 @@ internal static class TradeLedgerMatcher
         }
 
         return context.Hosting ? MatchHost(completion, context, net) : MatchPlayer(completion, context, net);
+    }
+
+    public static TradeMatchResult FromServer(in TradeCompletion completion, in TradeTableContext context,
+        CasinoLedgerTradeMatchDto? answer)
+    {
+        if (answer is null)
+        {
+            return TradeMatchResult.Of(TradeMatchRoute.Unreachable);
+        }
+
+        if (!answer.Granted)
+        {
+            return new TradeMatchResult(TradeProposal.None, TradeMatchRoute.Refused, answer.Reason ?? string.Empty);
+        }
+
+        if (!answer.Matched || string.IsNullOrEmpty(answer.CounterpartyUserId))
+        {
+            return TradeMatchResult.Of(TradeMatchRoute.NoMatch);
+        }
+
+        var net = completion.Net;
+        if (!context.Known || net == 0 || answer.HostSide != context.Hosting
+            || string.Equals(answer.CounterpartyUserId, context.MyUserId, StringComparison.Ordinal))
+        {
+            return TradeMatchResult.Of(TradeMatchRoute.Mismatch);
+        }
+
+        var counterparty = new TradeSeat(answer.CounterpartyUserId, answer.CounterpartyName ?? string.Empty);
+        var proposal = Resolve(context, counterparty, net, answer.HostSide);
+        return proposal.Kind == TradeProposalKind.None
+            ? TradeMatchResult.Of(TradeMatchRoute.Unrecordable)
+            : new TradeMatchResult(proposal, TradeMatchRoute.Server, string.Empty);
     }
 
     private static TradeProposal MatchHost(in TradeCompletion completion, in TradeTableContext context, long net)
@@ -196,9 +236,43 @@ internal static class TradeLedgerMatcher
                 counterparty.DisplayName, amount, entry.EntryId, hostSide, incoming);
         }
 
+        if (!hostSide && !string.Equals(counterparty.UserId, context.HostUserId, StringComparison.Ordinal))
+        {
+            return TradeProposal.None;
+        }
+
         var kind = incoming == hostSide ? CasinoLedgerKinds.BuyIn : CasinoLedgerKinds.Payout;
+        if (context.Venue && string.Equals(kind, CasinoLedgerKinds.BuyIn, StringComparison.Ordinal)
+            && !Covered(context.Entries, payer, payee, amount, incoming ? LedgerSide.Payee : LedgerSide.Payer))
+        {
+            return TradeProposal.None;
+        }
+
         return new TradeProposal(TradeProposalKind.Propose, context.TableId, kind, counterparty.UserId,
             counterparty.DisplayName, amount, string.Empty, hostSide, incoming);
+    }
+
+    internal static bool Covered(CasinoLedgerEntryDto[] entries, string payer, string payee, long amount,
+        LedgerSide mySide)
+    {
+        for (var index = 0; index < entries.Length; index++)
+        {
+            var entry = entries[index];
+            if (entry.Settled || entry.Amount <= amount
+                || !string.Equals(entry.PayerUserId, payer, StringComparison.Ordinal)
+                || !string.Equals(entry.PayeeUserId, payee, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var stamped = mySide == LedgerSide.Payer ? entry.PayerConfirmed : entry.PayeeConfirmed;
+            if (!stamped)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     internal static CasinoLedgerEntryDto? Unsettled(CasinoLedgerEntryDto[] entries, string payer, string payee,
@@ -269,7 +343,13 @@ internal static class TradeNames
     private const char PrivateUseLast = '\uF8FF';
     private const char NoBreakSpace = '\u00A0';
     private const char NarrowNoBreakSpace = '\u202F';
+    private const char LeftSingleQuote = '\u2018';
+    private const char RightSingleQuote = '\u2019';
     private const int MaxAmountDigits = 12;
+
+    public const int MaxServerNames = 16;
+
+    public const int MaxServerNameLength = 96;
 
     public static string Normalize(string raw)
     {
@@ -289,6 +369,11 @@ internal static class TradeNames
                 continue;
             }
 
+            if (character is LeftSingleQuote or RightSingleQuote)
+            {
+                character = '\'';
+            }
+
             if (!char.IsLetter(character) && character != '\'' && character != '-')
             {
                 continue;
@@ -304,6 +389,34 @@ internal static class TradeNames
         }
 
         return builder.ToString();
+    }
+
+    public static string[] ForServer(string[] candidates)
+    {
+        var count = 0;
+        for (var index = 0; index < candidates.Length && count < MaxServerNames; index++)
+        {
+            if (!string.IsNullOrWhiteSpace(candidates[index]))
+            {
+                count++;
+            }
+        }
+
+        var names = new string[count];
+        var next = 0;
+        for (var index = 0; index < candidates.Length && next < count; index++)
+        {
+            var candidate = candidates[index];
+            if (string.IsNullOrWhiteSpace(candidate))
+            {
+                continue;
+            }
+
+            names[next] = candidate.Length > MaxServerNameLength ? candidate[..MaxServerNameLength] : candidate;
+            next++;
+        }
+
+        return names;
     }
 
     public static bool TryAmount(string text, out long amount)

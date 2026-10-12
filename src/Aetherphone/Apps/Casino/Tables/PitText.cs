@@ -5,6 +5,12 @@ namespace Aetherphone.Apps.Casino.Tables;
 
 internal static class PitText
 {
+    public static string Forename(string displayName)
+    {
+        var space = displayName.IndexOf(' ');
+        return space > 0 ? displayName.Substring(0, space) : displayName;
+    }
+
     public static float Height(string text, in TextStyle style, float maxWidth)
     {
         if (text.Length == 0)

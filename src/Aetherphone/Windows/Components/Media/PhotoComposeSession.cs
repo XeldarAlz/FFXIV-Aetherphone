@@ -173,11 +173,14 @@ internal sealed class PhotoComposeSession : IDisposable
     public void ConsumePendingImport()
     {
         var picked = Interlocked.Exchange(ref pendingPickedPath, null);
-        if (string.IsNullOrEmpty(picked))
+        if (!string.IsNullOrEmpty(picked))
         {
-            return;
+            TakeImported(picked);
         }
+    }
 
+    public void TakeImported(string picked)
+    {
         pickerPaths = PickerPaths.WithImported(pickerPaths, picked);
         if (!SingleSelect && selected.Contains(picked))
         {
@@ -489,8 +492,8 @@ internal sealed class PhotoComposeSession : IDisposable
             Loc.T(L.Social.ComposeChoosePhoto), style.MutedInk, TextStyles.Subheadline);
     }
 
-    public void DrawPickGrid(Rect gridRect, float scale, in PhotoComposeStyle style, bool showBadges,
-        string importLabel, string importTitle)
+    public bool DrawPickGrid(Rect gridRect, float scale, in PhotoComposeStyle style, bool showBadges,
+        string importLabel, string importTitle, string? pasteLabel = null)
     {
         var gap = GridGap * scale;
         var avail = ScrollLayout.StableContentWidth();
@@ -499,7 +502,9 @@ internal sealed class PhotoComposeSession : IDisposable
         var scrollY = ImGui.GetScrollY();
         var viewHeight = ImGui.GetWindowSize().Y;
         var margin = cell + GridOverscan * scale;
-        var cellCount = pickerPaths.Length + 1;
+        var leadingTiles = pasteLabel is null ? 1 : 2;
+        var cellCount = pickerPaths.Length + leadingTiles;
+        var pasteClicked = false;
         for (var cellIndex = 0; cellIndex < cellCount; cellIndex++)
         {
             var column = cellIndex % GridColumns;
@@ -515,7 +520,7 @@ internal sealed class PhotoComposeSession : IDisposable
             var hovered = UiInteract.Hover(min, max);
             if (cellIndex == 0)
             {
-                DrawImportTile(min, max, scale, style, importLabel, hovered);
+                DrawImportTile(min, max, scale, style, PhoneIcons.Plus, importLabel, hovered);
                 if (UiInteract.Click(min, max, hovered))
                 {
                     LaunchImportDialog(importTitle);
@@ -524,7 +529,14 @@ internal sealed class PhotoComposeSession : IDisposable
                 continue;
             }
 
-            var path = pickerPaths[cellIndex - 1];
+            if (cellIndex == 1 && pasteLabel is not null)
+            {
+                DrawImportTile(min, max, scale, style, PhoneIcons.Copy, pasteLabel, hovered);
+                pasteClicked |= UiInteract.Click(min, max, hovered);
+                continue;
+            }
+
+            var path = pickerPaths[cellIndex - leadingTiles];
             DrawThumbnail(wallpaperImages.Get(path), min, max, scale, style.PlaceholderFill, hovered);
             if (showBadges)
             {
@@ -541,10 +553,11 @@ internal sealed class PhotoComposeSession : IDisposable
         var totalHeight = rows * (cell + gap);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(avail, totalHeight));
+        return pasteClicked;
     }
 
     private static void DrawImportTile(Vector2 min, Vector2 max, float scale, in PhotoComposeStyle style,
-        string label, bool hovered)
+        string glyph, string label, bool hovered)
     {
         var drawList = ImGui.GetWindowDrawList();
         var rounding = TileRounding * scale;
@@ -560,7 +573,7 @@ internal sealed class PhotoComposeSession : IDisposable
         var fitted = Typography.FitText(label, max.X - min.X - ImportLabelPad * 2f * scale, TextStyles.Caption1);
         var textHeight = Typography.LineHeight(TextStyles.Caption1);
         var blockTop = center.Y - (iconSize + ImportLabelGap * scale + textHeight) * 0.5f;
-        PhoneIcon.Draw(drawList, new Vector2(center.X, blockTop + iconSize * 0.5f), PhoneIcons.Plus, style.MutedInk,
+        PhoneIcon.Draw(drawList, new Vector2(center.X, blockTop + iconSize * 0.5f), glyph, style.MutedInk,
             iconSize);
         Typography.DrawCentered(drawList,
             new Vector2(center.X, blockTop + iconSize + ImportLabelGap * scale + textHeight * 0.5f), fitted,

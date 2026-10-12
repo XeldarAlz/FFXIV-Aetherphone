@@ -730,19 +730,32 @@ internal sealed record CasinoLedgerEntryDto(
     bool Disputed = false,
     bool DisputeResolved = false,
     long CreatedAtUnixMs = 0,
-    long SettledAtUnixMs = 0);
+    long SettledAtUnixMs = 0,
+    bool Guest = false,
+    string GuestName = "");
 
 internal sealed record CasinoLedgerProposeRequest(
     string ClientEntryId = "",
     string Kind = "buyin",
     string CounterpartyUserId = "",
     long Amount = 0,
-    string Source = "manual");
+    string Source = "manual",
+    string GuestName = "");
 
 internal sealed record CasinoLedgerResultDto(bool Granted = false, string Reason = "",
     CasinoLedgerEntryDto? Entry = null);
 
 internal sealed record CasinoLedgerListDto(CasinoLedgerEntryDto[]? Entries = null, long ServerNowUnixMs = 0);
+
+internal sealed record CasinoLedgerTradeMatchRequest(string[]? Names = null, long Received = 0, long Sent = 0);
+
+internal sealed record CasinoLedgerTradeMatchDto(
+    bool Granted = false,
+    string Reason = "",
+    bool Matched = false,
+    string CounterpartyUserId = "",
+    string CounterpartyName = "",
+    bool HostSide = false);
 
 internal sealed record CasinoVenueActRequest(
     string ClientActionId = "",
@@ -793,7 +806,8 @@ internal sealed record CasinoDiceTableStateDto(
     CasinoVenueRollDto[]? Rolls = null,
     CasinoDiceRoundDto? Round = null,
     CasinoDiceRoundDto? LastRound = null,
-    int Currency = 1);
+    int Currency = 1,
+    bool Paused = false);
 
 internal sealed record CasinoDeathrollDuelDto(
     long Seq = 0,
@@ -821,7 +835,8 @@ internal sealed record CasinoDeathrollStateDto(
     CasinoDeathrollDuelDto? Duel = null,
     CasinoDeathrollDuelDto[]? Recent = null,
     CasinoVenueStackDto[]? Stacks = null,
-    int Currency = 1);
+    int Currency = 1,
+    bool Paused = false);
 
 internal sealed record CasinoRaffleEntrantDto(string UserId = "", string DisplayName = "", int Tickets = 0);
 
@@ -846,7 +861,8 @@ internal sealed record CasinoRaffleStateDto(
     string NextCommit = "",
     CasinoRaffleDto? Raffle = null,
     CasinoRaffleDto? Last = null,
-    int Currency = 1);
+    int Currency = 1,
+    bool Paused = false);
 
 internal sealed record CasinoTableResultDto(
     bool Granted = false,
@@ -861,7 +877,17 @@ internal sealed record CasinoTableKnockDto(
 internal sealed record CasinoTableSeatedDto(
     string UserId = "",
     string DisplayName = "",
-    int SeatIndex = -1);
+    int SeatIndex = -1,
+    bool Leaving = false);
+
+internal sealed record CasinoTableKnocksDto(
+    CasinoTableKnockDto[]? Knocks = null,
+    long ServerNowUnixMs = 0);
+
+internal sealed record CasinoTablePresentDto(
+    string UserId = "",
+    string DisplayName = "",
+    bool Attached = false);
 
 internal sealed record CasinoTableDoorDto(
     string RoomId = "",
@@ -870,7 +896,8 @@ internal sealed record CasinoTableDoorDto(
     CasinoTableKnockDto[]? Knocks = null,
     CasinoTableSeatedDto[]? Seated = null,
     long ServerNowUnixMs = 0,
-    string JoinCode = "");
+    string JoinCode = "",
+    CasinoTablePresentDto[]? Present = null);
 
 internal sealed record CasinoTableDoorRequest(string UserId, bool Approve);
 

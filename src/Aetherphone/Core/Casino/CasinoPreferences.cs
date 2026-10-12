@@ -1,13 +1,19 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Aetherphone.Core.Casino;
 
 internal sealed class CasinoPreferences
 {
     private readonly Configuration configuration;
+    private readonly Func<ulong> activeContentId;
+    private readonly Action save;
     private readonly object gate = new();
 
-    public CasinoPreferences(Configuration configuration)
+    public CasinoPreferences(Configuration configuration, Func<ulong> activeContentId, Action save)
     {
         this.configuration = configuration;
+        this.activeContentId = activeContentId;
+        this.save = save;
     }
 
     public long MachineBet(string machineId)
@@ -31,7 +37,7 @@ internal sealed class CasinoPreferences
             configuration.CasinoMachineBets = next;
         }
 
-        configuration.Save();
+        save();
     }
 
     public int PlinkoRows => PlinkoRules.RowsIndex(configuration.CasinoPlinkoRows) >= 0
@@ -51,7 +57,7 @@ internal sealed class CasinoPreferences
 
         configuration.CasinoPlinkoRows = rows;
         configuration.CasinoPlinkoRisk = risk;
-        configuration.Save();
+        save();
     }
 
     public bool Instant(string gameId) => configuration.CasinoInstantGames.Contains(gameId);
@@ -78,7 +84,7 @@ internal sealed class CasinoPreferences
             configuration.CasinoInstantGames = next;
         }
 
-        configuration.Save();
+        save();
     }
 
     public bool IntroSeen => configuration.CasinoStripIntroSeen;
@@ -91,6 +97,42 @@ internal sealed class CasinoPreferences
         }
 
         configuration.CasinoStripIntroSeen = true;
-        configuration.Save();
+        save();
+    }
+
+    public bool HasHostDraft => TryLoadHostDraft(out _);
+
+    public bool TryLoadHostDraft([NotNullWhen(true)] out CasinoHostDraftMemory? memory)
+    {
+        memory = null;
+        var contentId = activeContentId();
+        if (contentId == 0 || !configuration.CasinoHostDrafts.TryGetValue(contentId, out var saved)
+            || !saved.IsCurrent)
+        {
+            return false;
+        }
+
+        memory = saved;
+        return true;
+    }
+
+    public void RememberHostDraft(CasinoHostDraftMemory memory)
+    {
+        var contentId = activeContentId();
+        if (contentId == 0)
+        {
+            return;
+        }
+
+        lock (gate)
+        {
+            var next = new Dictionary<ulong, CasinoHostDraftMemory>(configuration.CasinoHostDrafts)
+            {
+                [contentId] = memory,
+            };
+            configuration.CasinoHostDrafts = next;
+        }
+
+        save();
     }
 }

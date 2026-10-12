@@ -8,7 +8,7 @@ namespace Aetherphone.Core.Casino;
 
 internal sealed record CasinoSeatOutcome(bool Granted, string Reason, bool JoinsNextHand, bool AtHandEnd);
 
-internal readonly record struct LedgerIntent(string Kind, string Counterparty, long Amount);
+internal readonly record struct LedgerIntent(string Kind, string Counterparty, long Amount, bool Guest = false);
 
 internal sealed class CasinoTablesStore : IDisposable
 {
@@ -16,6 +16,10 @@ internal sealed class CasinoTablesStore : IDisposable
     private static readonly TimeSpan BackgroundPollInterval = TimeSpan.FromSeconds(120);
     private const long RetryAfterAttemptMilliseconds = 30_000;
     private const long LedgerRefreshMilliseconds = 10_000;
+    private const long DoorRefreshMilliseconds = 5_000;
+    private const long KnockRefreshMilliseconds = 3_000;
+    private const long AwayKnockRefreshMilliseconds = 15_000;
+    private const long AttentionMilliseconds = 1_500;
     private const int NotFoundStatus = 404;
 
     private readonly AethernetSession session;
@@ -31,15 +35,33 @@ internal sealed class CasinoTablesStore : IDisposable
     private volatile CasinoTableDoorDto? door;
     private volatile CasinoTableLedgerDto? ledger;
     private volatile CasinoTableRowDto? card;
-    private readonly Action<int> cardStatusSink = static _ => { };
+    private readonly Action<int> cardStatusSink;
     private int fetchingCard;
+    private long cardAtTick;
+    private long listedAtTick;
+    private int cardMissing;
+    private string vanishedTableId = string.Empty;
+    private readonly Action<int> knockStatusSink;
+    private volatile CasinoKnockStatus knock = CasinoKnockStatus.Idle;
+    private int fetchingKnock;
+    private int knockMissing;
+    private long knockReadAtTick;
+    private long knockWatchedAtTick;
+    private long doorWatchedAtTick;
+    private volatile string doorWatchedRoomId = string.Empty;
     private volatile string ledgerRoomId = string.Empty;
     private CasinoTableConfigDto? createIntentConfig;
     private string ledgerIntentId = string.Empty;
     private LedgerIntent ledgerIntentKey;
     private int fetchingLedger;
+    private int ledgerRefetch;
     private long ledgerAttemptedAtTick;
     private long ledgerLoadedAtTick;
+    private volatile CasinoLedgerEntryDto[] myEntries = Array.Empty<CasinoLedgerEntryDto>();
+    private volatile bool myLedgerLoaded;
+    private int fetchingMyLedger;
+    private long myLedgerAttemptedAtTick;
+    private long myLedgerLoadedAtTick;
     private volatile CasinoQuickSeatDto? quickSeat;
     private volatile CasinoTableRowDto? hostedTable;
     private volatile CasinoTableRowDto? resolvedTable;
@@ -48,7 +70,9 @@ internal sealed class CasinoTablesStore : IDisposable
     private volatile bool intentInFlight;
     private CasinoSeatOutcome? seatOutcome;
     private CasinoStakeOutcome? noticeOutcome;
+    private CasinoStakeOutcome? guestOutcome;
     private string closedTableId = string.Empty;
+    private string retiredTableId = string.Empty;
     private string quickSeatRefusal = string.Empty;
     private string seatIntentId = string.Empty;
     private string createIntentId = string.Empty;
@@ -63,6 +87,7 @@ internal sealed class CasinoTablesStore : IDisposable
     private int fetchingDoor;
     private long tablesAttemptedAtTick;
     private long doorAttemptedAtTick;
+    private long doorLoadedAtTick;
     private string? lastAccountId;
 
     public CasinoTablesStore(AethernetSession session, CasinoClient casino, CasinoStore chips,
@@ -73,6 +98,8 @@ internal sealed class CasinoTablesStore : IDisposable
         this.chips = chips;
         cadence = new PollCadence(visibility, ForegroundPollInterval, BackgroundPollInterval);
         tableStatusSink = OnTableStatus;
+        cardStatusSink = OnCardStatus;
+        knockStatusSink = OnKnockStatus;
         session.Changed += OnSessionChanged;
     }
 
@@ -80,13 +107,21 @@ internal sealed class CasinoTablesStore : IDisposable
 
     public CasinoTableRowDto[] Listed => listed;
 
-    public CasinoTableRowDto? CardFor(string roomId) => CardIn(listed, card, roomId);
+    public CasinoTableRowDto? CardFor(string roomId) =>
+        CardIn(listed, Interlocked.Read(ref listedAtTick), card, Interlocked.Read(ref cardAtTick), roomId);
 
-    internal static CasinoTableRowDto? CardIn(CasinoTableRowDto[] rows, CasinoTableRowDto? held, string roomId)
+    internal static CasinoTableRowDto? CardIn(CasinoTableRowDto[] rows, long rowsAtTick, CasinoTableRowDto? held,
+        long heldAtTick, string roomId)
     {
         if (roomId.Length == 0)
         {
             return null;
+        }
+
+        var holds = held is not null && string.Equals(held.TableId, roomId, StringComparison.Ordinal);
+        if (holds && heldAtTick >= rowsAtTick)
+        {
+            return held;
         }
 
         for (var index = 0; index < rows.Length; index++)
@@ -97,7 +132,13 @@ internal sealed class CasinoTablesStore : IDisposable
             }
         }
 
-        return held is not null && string.Equals(held.TableId, roomId, StringComparison.Ordinal) ? held : null;
+        return holds ? held : null;
+    }
+
+    private void HoldCard(CasinoTableRowDto fresh)
+    {
+        card = fresh;
+        Interlocked.Exchange(ref cardAtTick, Environment.TickCount64);
     }
 
     public void RefreshCard(string roomId)
@@ -107,14 +148,52 @@ internal sealed class CasinoTablesStore : IDisposable
             return;
         }
 
+        Interlocked.Exchange(ref cardMissing, 0);
         work.Run("table card", async token =>
         {
             var fresh = await casino.TableAsync(roomId, cardStatusSink, token).ConfigureAwait(false);
             if (fresh is not null)
             {
-                card = fresh;
+                HoldCard(fresh);
+                return;
             }
+
+            if (Interlocked.Exchange(ref cardMissing, 0) == 0)
+            {
+                return;
+            }
+
+            Vanished(roomId);
         }, () => Interlocked.Exchange(ref fetchingCard, 0));
+    }
+
+    internal static bool LostOwnership(CasinoTableDoorDto fresh, CasinoTableRowDto? held, string accountId)
+    {
+        return !fresh.Owner && held is not null && accountId.Length > 0
+            && string.Equals(held.OwnerUserId, accountId, StringComparison.Ordinal);
+    }
+
+    private void Vanished(string roomId)
+    {
+        ForgetCard(roomId);
+        Interlocked.Exchange(ref vanishedTableId, roomId);
+        RefreshNow();
+    }
+
+    private void Retire(string roomId)
+    {
+        Interlocked.Exchange(ref retiredTableId, roomId);
+        listed = CasinoTableFilters.Without(listed, roomId);
+        tables = CasinoTableFilters.Without(tables, roomId);
+    }
+
+    private void ForgetCard(string roomId)
+    {
+        var held = card;
+        if (held is not null && string.Equals(held.TableId, roomId, StringComparison.Ordinal))
+        {
+            card = null;
+        }
     }
 
     public string AccountId => session.CurrentUser?.Id ?? string.Empty;
@@ -163,6 +242,11 @@ internal sealed class CasinoTablesStore : IDisposable
         return Interlocked.Exchange(ref noticeOutcome, null);
     }
 
+    public CasinoStakeOutcome? TakeGuestOutcome()
+    {
+        return Interlocked.Exchange(ref guestOutcome, null);
+    }
+
     public CasinoQuickSeatDto? TakeQuickSeat()
     {
         return Interlocked.Exchange(ref quickSeat, null);
@@ -171,6 +255,11 @@ internal sealed class CasinoTablesStore : IDisposable
     public string TakeClosedTable()
     {
         return Interlocked.Exchange(ref closedTableId, string.Empty);
+    }
+
+    public string TakeVanishedTable()
+    {
+        return Interlocked.Exchange(ref vanishedTableId, string.Empty);
     }
 
     public string TakeQuickSeatRefusal()
@@ -363,9 +452,14 @@ internal sealed class CasinoTablesStore : IDisposable
             Interlocked.Exchange(ref noticeOutcome, new CasinoStakeOutcome(answer.Granted, Named(answer.Reason)));
             if (answer.Granted)
             {
+                ForgetCard(roomId);
+                Retire(roomId);
                 Interlocked.Exchange(ref closedTableId, roomId);
+                RefreshNow();
+                return;
             }
 
+            RefreshCard(roomId);
             RefreshNow();
         }, EndIntent);
     }
@@ -396,6 +490,10 @@ internal sealed class CasinoTablesStore : IDisposable
         return held is not null && string.Equals(held.TableId, roomId, StringComparison.Ordinal) ? held : null;
     }
 
+    public CasinoTableLedgerDto? HeldLedger => ledger;
+
+    public string LedgerRoomId => ledgerRoomId;
+
     public void RefreshLedgerNow(string roomId)
     {
         if (roomId.Length == 0)
@@ -405,6 +503,7 @@ internal sealed class CasinoTablesStore : IDisposable
 
         ledgerRoomId = roomId;
         Interlocked.Exchange(ref ledgerAttemptedAtTick, 0);
+        Interlocked.Exchange(ref ledgerRefetch, 1);
         RefreshLedger(roomId);
     }
 
@@ -430,6 +529,54 @@ internal sealed class CasinoTablesStore : IDisposable
         RefreshLedger(roomId);
     }
 
+    public CasinoLedgerEntryDto[] MyEntries => myEntries;
+
+    public bool MyLedgerLoaded => myLedgerLoaded;
+
+    public void EnsureMyLedgerFresh()
+    {
+        var last = Interlocked.Read(ref myLedgerLoadedAtTick);
+        if (last != 0 && Environment.TickCount64 - last < LedgerRefreshMilliseconds)
+        {
+            return;
+        }
+
+        RefreshMyLedger();
+    }
+
+    public void RefreshMyLedgerNow()
+    {
+        Interlocked.Exchange(ref myLedgerAttemptedAtTick, 0);
+        Interlocked.Exchange(ref myLedgerLoadedAtTick, 0);
+        RefreshMyLedger();
+    }
+
+    private void RefreshMyLedger()
+    {
+        if (!session.IsSignedIn
+            || CoolingDown(Interlocked.Read(ref myLedgerAttemptedAtTick), Environment.TickCount64)
+            || Interlocked.Exchange(ref fetchingMyLedger, 1) != 0)
+        {
+            return;
+        }
+
+        Interlocked.Exchange(ref myLedgerAttemptedAtTick, Environment.TickCount64);
+        var account = session.CurrentUser?.Id;
+        work.Run("my gil ledger", async token =>
+        {
+            var fresh = await casino.MyLedgerAsync(token).ConfigureAwait(false);
+            if (fresh is null || !string.Equals(account, session.CurrentUser?.Id, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            Interlocked.Exchange(ref myLedgerAttemptedAtTick, 0);
+            Interlocked.Exchange(ref myLedgerLoadedAtTick, Environment.TickCount64);
+            myEntries = fresh.Entries ?? Array.Empty<CasinoLedgerEntryDto>();
+            myLedgerLoaded = true;
+        }, () => Interlocked.Exchange(ref fetchingMyLedger, 0));
+    }
+
     public void ForgetLedger()
     {
         ledgerRoomId = string.Empty;
@@ -446,20 +593,7 @@ internal sealed class CasinoTablesStore : IDisposable
             return;
         }
 
-        string clientEntryId;
-        lock (intentGate)
-        {
-            if (!string.Equals(ledgerIntentKey.Kind, kind, StringComparison.Ordinal)
-                || !string.Equals(ledgerIntentKey.Counterparty, counterpartyUserId, StringComparison.Ordinal)
-                || ledgerIntentKey.Amount != amount || ledgerIntentId.Length == 0)
-            {
-                ledgerIntentId = Guid.NewGuid().ToString("N");
-            }
-
-            ledgerIntentKey = new LedgerIntent(kind, counterpartyUserId, amount);
-            clientEntryId = ledgerIntentId;
-        }
-
+        var clientEntryId = LedgerIntentIdFor(new LedgerIntent(kind, counterpartyUserId, amount));
         var request = new CasinoLedgerProposeRequest(clientEntryId, kind, counterpartyUserId, amount,
             CasinoLedgerKinds.Manual);
         work.Run("ledger propose", async token =>
@@ -471,17 +605,65 @@ internal sealed class CasinoTablesStore : IDisposable
                 return;
             }
 
-            lock (intentGate)
-            {
-                if (string.Equals(ledgerIntentId, clientEntryId, StringComparison.Ordinal))
-                {
-                    ledgerIntentId = string.Empty;
-                }
-            }
-
+            ForgetLedgerIntent(clientEntryId);
             Interlocked.Exchange(ref noticeOutcome, new CasinoStakeOutcome(answer.Granted, Named(answer.Reason)));
             RefreshLedgerNow(roomId);
         }, EndIntent);
+    }
+
+    public void ProposeGuestEntry(string roomId, string kind, string guestName, long amount, string source)
+    {
+        var name = CasinoBookRules.NormalizeGuestName(guestName);
+        if (roomId.Length == 0 || !CasinoBookRules.IsGuestName(name) || amount <= 0
+            || !CasinoLedgerKinds.Proposable(kind) || !Begin())
+        {
+            return;
+        }
+
+        var clientEntryId = LedgerIntentIdFor(new LedgerIntent(kind, name, amount, true));
+        var request = new CasinoLedgerProposeRequest(clientEntryId, kind, string.Empty, amount, source, name);
+        work.Run("guest entry", async token =>
+        {
+            var answer = await casino.ProposeLedgerEntryAsync(roomId, request, token).ConfigureAwait(false);
+            if (answer is null)
+            {
+                Interlocked.Exchange(ref guestOutcome, new CasinoStakeOutcome(false, CasinoReasons.Unreachable));
+                return;
+            }
+
+            ForgetLedgerIntent(clientEntryId);
+            Interlocked.Exchange(ref guestOutcome, new CasinoStakeOutcome(answer.Granted, Named(answer.Reason)));
+            RefreshLedgerNow(roomId);
+            if (myLedgerLoaded)
+            {
+                RefreshMyLedgerNow();
+            }
+        }, EndIntent);
+    }
+
+    private string LedgerIntentIdFor(in LedgerIntent key)
+    {
+        lock (intentGate)
+        {
+            if (ledgerIntentKey != key || ledgerIntentId.Length == 0)
+            {
+                ledgerIntentId = Guid.NewGuid().ToString("N");
+            }
+
+            ledgerIntentKey = key;
+            return ledgerIntentId;
+        }
+    }
+
+    private void ForgetLedgerIntent(string intentId)
+    {
+        lock (intentGate)
+        {
+            if (string.Equals(ledgerIntentId, intentId, StringComparison.Ordinal))
+            {
+                ledgerIntentId = string.Empty;
+            }
+        }
     }
 
     public void ConfirmLedgerEntry(string roomId, string entryId)
@@ -538,6 +720,10 @@ internal sealed class CasinoTablesStore : IDisposable
 
             Interlocked.Exchange(ref noticeOutcome, new CasinoStakeOutcome(answer.Granted, Named(answer.Reason)));
             RefreshLedgerNow(roomId);
+            if (myLedgerLoaded)
+            {
+                RefreshMyLedgerNow();
+            }
         }, EndIntent);
     }
 
@@ -550,6 +736,7 @@ internal sealed class CasinoTablesStore : IDisposable
             return;
         }
 
+        Interlocked.Exchange(ref ledgerRefetch, 0);
         Interlocked.Exchange(ref ledgerAttemptedAtTick, Environment.TickCount64);
         work.Run("table ledger", async token =>
         {
@@ -567,7 +754,19 @@ internal sealed class CasinoTablesStore : IDisposable
             }
 
             ledger = fresh.TableId.Length > 0 ? fresh : fresh with { TableId = roomId };
-        }, () => Interlocked.Exchange(ref fetchingLedger, 0));
+        }, LedgerFetched);
+    }
+
+    private void LedgerFetched()
+    {
+        Interlocked.Exchange(ref fetchingLedger, 0);
+        var roomId = ledgerRoomId;
+        if (Interlocked.Exchange(ref ledgerRefetch, 0) == 0 || roomId.Length == 0)
+        {
+            return;
+        }
+
+        RefreshLedger(roomId);
     }
 
     public void ResolveToken(string tableId)
@@ -594,14 +793,26 @@ internal sealed class CasinoTablesStore : IDisposable
                 return;
             }
 
-            if (!answer.Admitted && !Owns(answer))
+            if (!answer.Admitted && !Owns(answer) && !CasinoKnocks.AtTheDoor(answer.Reason))
             {
                 Interlocked.Exchange(ref noticeOutcome, new CasinoStakeOutcome(false, Named(answer.Reason)));
                 return;
             }
 
-            Interlocked.Exchange(ref resolvedTable, answer);
+            Resolved(answer, answer.Admitted ? string.Empty : answer.Reason);
         }, EndIntent);
+    }
+
+    private void Resolved(CasinoTableRowDto table, string doorReason)
+    {
+        HoldCard(table);
+        if (doorReason.Length > 0)
+        {
+            knock = new CasinoKnockStatus(table.TableId, CasinoKnocks.FromDecline(doorReason), doorReason);
+            Interlocked.Exchange(ref knockReadAtTick, Environment.TickCount64);
+        }
+
+        Interlocked.Exchange(ref resolvedTable, table);
     }
 
     public void JoinByCode(string raw)
@@ -622,14 +833,14 @@ internal sealed class CasinoTablesStore : IDisposable
             }
 
             var admitted = answer.Granted && answer.Reason.Length == 0 && answer.Table is not null;
-            if (!admitted)
+            if (admitted || (answer.Table is not null && CasinoKnocks.AtTheDoor(answer.Reason)))
             {
-                Interlocked.Exchange(ref noticeOutcome, new CasinoStakeOutcome(false, Named(answer.Reason)));
+                Resolved(answer.Table!, admitted ? string.Empty : answer.Reason);
                 RefreshNow();
                 return;
             }
 
-            Interlocked.Exchange(ref resolvedTable, answer.Table);
+            Interlocked.Exchange(ref noticeOutcome, new CasinoStakeOutcome(false, Named(answer.Reason)));
             RefreshNow();
         }, EndIntent);
     }
@@ -650,9 +861,138 @@ internal sealed class CasinoTablesStore : IDisposable
                 return;
             }
 
-            Interlocked.Exchange(ref noticeOutcome,
-                new CasinoStakeOutcome(answer.Granted, Named(answer.Reason)));
+            var held = knock;
+            var current = string.Equals(held.RoomId, roomId, StringComparison.Ordinal) ? held.Stage : KnockStage.None;
+            knock = new CasinoKnockStatus(roomId, CasinoKnocks.FromKnock(current, answer.Granted, answer.Reason),
+                Named(answer.Reason));
+            Interlocked.Exchange(ref knockReadAtTick, Environment.TickCount64);
         }, EndIntent);
+    }
+
+    public CasinoKnockStatus KnockFor(string roomId, string declineReason)
+    {
+        var held = knock;
+        if (string.Equals(held.RoomId, roomId, StringComparison.Ordinal))
+        {
+            return held;
+        }
+
+        var seeded = new CasinoKnockStatus(roomId, CasinoKnocks.FromDecline(declineReason), declineReason);
+        knock = seeded;
+        Interlocked.Exchange(ref knockReadAtTick, Environment.TickCount64);
+        return seeded;
+    }
+
+    public CasinoKnockStatus HeldKnock => knock;
+
+    public bool KnockAttended(long nowTick) => Attended(Interlocked.Read(ref knockWatchedAtTick), nowTick);
+
+    public bool DoorAttended(string roomId, long nowTick) =>
+        string.Equals(doorWatchedRoomId, roomId, StringComparison.Ordinal)
+        && Attended(Interlocked.Read(ref doorWatchedAtTick), nowTick);
+
+    internal static bool Attended(long watchedAtTick, long nowTick)
+    {
+        return watchedAtTick != 0 && nowTick - watchedAtTick <= AttentionMilliseconds;
+    }
+
+    public string HostedTableId()
+    {
+        var rows = listed;
+        for (var index = 0; index < rows.Length; index++)
+        {
+            if (rows[index].Kind == CasinoTableKinds.Private && Owns(rows[index]))
+            {
+                return rows[index].TableId;
+            }
+        }
+
+        var held = card;
+        return held is not null && held.Kind == CasinoTableKinds.Private && Owns(held) ? held.TableId : string.Empty;
+    }
+
+    public void EnsureKnockFresh(string roomId)
+    {
+        Interlocked.Exchange(ref knockWatchedAtTick, Environment.TickCount64);
+        RefreshKnock(roomId, KnockRefreshMilliseconds);
+    }
+
+    public void PollWaitingKnock()
+    {
+        var held = knock;
+        if (held.Stage == KnockStage.Waiting)
+        {
+            RefreshKnock(held.RoomId, AwayKnockRefreshMilliseconds);
+        }
+    }
+
+    private void RefreshKnock(string roomId, long intervalMilliseconds)
+    {
+        var held = knock;
+        if (held.Stage != KnockStage.Waiting || !string.Equals(held.RoomId, roomId, StringComparison.Ordinal)
+            || !session.IsSignedIn
+            || Environment.TickCount64 - Interlocked.Read(ref knockReadAtTick) < intervalMilliseconds
+            || Interlocked.Exchange(ref fetchingKnock, 1) != 0)
+        {
+            return;
+        }
+
+        Interlocked.Exchange(ref knockReadAtTick, Environment.TickCount64);
+        Interlocked.Exchange(ref knockMissing, 0);
+        work.Run("knock answer", async token =>
+        {
+            var fresh = await casino.TableAsync(roomId, knockStatusSink, token).ConfigureAwait(false);
+            var watched = knock;
+            if (watched.Stage != KnockStage.Waiting
+                || !string.Equals(watched.RoomId, roomId, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            if (fresh is null)
+            {
+                if (Interlocked.Exchange(ref knockMissing, 0) != 0)
+                {
+                    knock = new CasinoKnockStatus(roomId, KnockStage.Refused, CasinoReasons.Ended);
+                    Vanished(roomId);
+                }
+
+                return;
+            }
+
+            var stage = CasinoKnocks.FromCard(watched.Stage, fresh.Admitted, fresh.Reason);
+            if (stage == KnockStage.Admitted)
+            {
+                HoldCard(fresh);
+            }
+
+            if (stage != watched.Stage)
+            {
+                knock = new CasinoKnockStatus(roomId, stage, fresh.Reason);
+            }
+        }, () => Interlocked.Exchange(ref fetchingKnock, 0));
+    }
+
+    public bool TakeKnockAdmitted(string roomId)
+    {
+        var held = knock;
+        if (held.Stage != KnockStage.Admitted || !string.Equals(held.RoomId, roomId, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        knock = CasinoKnockStatus.Idle;
+        return true;
+    }
+
+    public void ForgetKnock()
+    {
+        if (knock.Stage == KnockStage.Waiting)
+        {
+            return;
+        }
+
+        knock = CasinoKnockStatus.Idle;
     }
 
     public void AnswerKnock(string roomId, string userId, bool approve)
@@ -793,11 +1133,36 @@ internal sealed class CasinoTablesStore : IDisposable
         RefreshDoor(roomId);
     }
 
+    public void EnsureDoorFresh(string roomId)
+    {
+        if (roomId.Length == 0 || !session.IsSignedIn)
+        {
+            return;
+        }
+
+        doorWatchedRoomId = roomId;
+        Interlocked.Exchange(ref doorWatchedAtTick, Environment.TickCount64);
+        if (!string.Equals(doorRoomId, roomId, StringComparison.Ordinal))
+        {
+            RefreshDoorNow(roomId);
+            return;
+        }
+
+        var last = Interlocked.Read(ref doorLoadedAtTick);
+        if (last != 0 && Environment.TickCount64 - last < DoorRefreshMilliseconds)
+        {
+            return;
+        }
+
+        RefreshDoor(roomId);
+    }
+
     public void ForgetDoor()
     {
         doorRoomId = string.Empty;
         door = null;
         Interlocked.Exchange(ref doorAttemptedAtTick, 0);
+        Interlocked.Exchange(ref doorLoadedAtTick, 0);
     }
 
     public CasinoTableDoorDto? DoorFor(string roomId)
@@ -844,7 +1209,7 @@ internal sealed class CasinoTablesStore : IDisposable
 
     private void Hosted(CasinoTableRowDto table)
     {
-        card = table;
+        HoldCard(table);
         Interlocked.Exchange(ref hostedTable, table);
         RefreshNow();
     }
@@ -854,6 +1219,22 @@ internal sealed class CasinoTablesStore : IDisposable
         if (statusCode == NotFoundStatus)
         {
             Interlocked.Exchange(ref tableMissing, 1);
+        }
+    }
+
+    private void OnCardStatus(int statusCode)
+    {
+        if (statusCode == NotFoundStatus)
+        {
+            Interlocked.Exchange(ref cardMissing, 1);
+        }
+    }
+
+    private void OnKnockStatus(int statusCode)
+    {
+        if (statusCode == NotFoundStatus)
+        {
+            Interlocked.Exchange(ref knockMissing, 1);
         }
     }
 
@@ -876,12 +1257,22 @@ internal sealed class CasinoTablesStore : IDisposable
         Interlocked.Exchange(ref resolvedTable, null);
         Interlocked.Exchange(ref seatOutcome, null);
         Interlocked.Exchange(ref noticeOutcome, null);
+        Interlocked.Exchange(ref guestOutcome, null);
         Interlocked.Exchange(ref closedTableId, string.Empty);
+        Interlocked.Exchange(ref retiredTableId, string.Empty);
+        Interlocked.Exchange(ref vanishedTableId, string.Empty);
+        Interlocked.Exchange(ref cardMissing, 0);
+        Interlocked.Exchange(ref knockMissing, 0);
+        knock = CasinoKnockStatus.Idle;
         Interlocked.Exchange(ref quickSeatRefusal, string.Empty);
         Interlocked.Exchange(ref tablesFailed, 0);
         Interlocked.Exchange(ref intentFailed, 0);
         Interlocked.Exchange(ref tablesAttemptedAtTick, 0);
         Interlocked.Exchange(ref doorAttemptedAtTick, 0);
+        myEntries = Array.Empty<CasinoLedgerEntryDto>();
+        myLedgerLoaded = false;
+        Interlocked.Exchange(ref myLedgerAttemptedAtTick, 0);
+        Interlocked.Exchange(ref myLedgerLoadedAtTick, 0);
         lock (intentGate)
         {
             seatIntentId = string.Empty;
@@ -922,8 +1313,10 @@ internal sealed class CasinoTablesStore : IDisposable
             }
 
             Interlocked.Exchange(ref tablesAttemptedAtTick, 0);
-            var rows = directory.Tables ?? Array.Empty<CasinoTableRowDto>();
+            var rows = CasinoTableFilters.Without(directory.Tables ?? Array.Empty<CasinoTableRowDto>(),
+                Volatile.Read(ref retiredTableId));
             listed = rows;
+            Interlocked.Exchange(ref listedAtTick, Environment.TickCount64);
             tables = CasinoTableFilters.OfKind(rows, CasinoWire.BlackjackKind);
             loaded = true;
         }, () =>
@@ -958,6 +1351,11 @@ internal sealed class CasinoTablesStore : IDisposable
             }
 
             door = fresh;
+            Interlocked.Exchange(ref doorLoadedAtTick, Environment.TickCount64);
+            if (LostOwnership(fresh, CardFor(roomId), AccountId))
+            {
+                RefreshCard(roomId);
+            }
         }, () => Interlocked.Exchange(ref fetchingDoor, 0));
     }
 

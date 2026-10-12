@@ -92,6 +92,35 @@ public sealed class CasinoNavigationTests
     }
 
     [Fact]
+    public void BackingFromATableToItsOwnDoorKeepsTheSeat()
+    {
+        var door = new CasinoRoute(CasinoScreen.TableDoor, CasinoGames.Blackjack, string.Empty, "mine");
+        var table = new CasinoRoute(CasinoScreen.Table, CasinoGames.Holdem, string.Empty, "mine");
+        var otherDoor = door with { TableId = "other" };
+
+        Assert.True(CasinoRoute.KeepsSeat(table, door));
+        Assert.False(CasinoRoute.KeepsSeat(table, otherDoor));
+        Assert.False(CasinoRoute.KeepsSeat(table, CasinoRoute.Floor));
+        Assert.False(CasinoRoute.KeepsSeat(door, table));
+        Assert.False(CasinoRoute.KeepsSeat(table with { TableId = string.Empty },
+            door with { TableId = string.Empty }));
+    }
+
+    [Fact]
+    public void ADoorOpenedFromItsTableGoesBackToThatTable()
+    {
+        var door = new CasinoRoute(CasinoScreen.TableDoor, CasinoGames.Blackjack, string.Empty, "mine");
+        var table = new CasinoRoute(CasinoScreen.Table, CasinoGames.Holdem, string.Empty, "mine");
+        var room = new CasinoRoute(CasinoScreen.VenueRoom, CasinoGames.Raffle, string.Empty, "mine");
+
+        Assert.True(CasinoRoute.ReturnsToTable(door, table));
+        Assert.True(CasinoRoute.ReturnsToTable(door, room));
+        Assert.False(CasinoRoute.ReturnsToTable(door, table with { TableId = "other" }));
+        Assert.False(CasinoRoute.ReturnsToTable(door, new CasinoRoute(CasinoScreen.Tables)));
+        Assert.False(CasinoRoute.ReturnsToTable(table, door));
+    }
+
+    [Fact]
     public void AnotherTablesPagesAreNotLeftWhenOneCloses()
     {
         var routes = Fresh();

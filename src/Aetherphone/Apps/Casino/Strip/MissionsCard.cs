@@ -138,7 +138,7 @@ internal sealed class MissionsCard
         var button = new Rect(new Vector2(row.Max.X - pad - buttonWidth, row.Center.Y - buttonHeight * 0.5f),
             new Vector2(row.Max.X - pad, row.Center.Y + buttonHeight * 0.5f));
         var textLeft = tileCenter.X + tile * 0.5f + CoinArt.TextGap * scale;
-        var textWidth = TextWidth(row.Width, buttonWidth, scale);
+        var textWidth = TextWidth(row.Width, ActionReserve(mission, actionLabel, scale), scale);
         var lineHeight = Typography.LineHeight(TextStyles.Subheadline);
         var footnote = Typography.LineHeight(TextStyles.Footnote);
         var lines = Typography.WrapText(sentence, TextStyles.Subheadline, textWidth);
@@ -172,7 +172,7 @@ internal sealed class MissionsCard
         }
 
         var pressed = Button.Draw(drawList, button, actionLabel, ui.Ink, ButtonStyle.Prominent,
-            enabled: claiming.Length == 0, id: "casino.mission.claim");
+            enabled: claiming.Length == 0, overlay: true, id: "casino.mission.claim");
         if (pressed)
         {
             claimCenter = button.Center;
@@ -183,7 +183,7 @@ internal sealed class MissionsCard
 
     private float MeasureRow(CasinoMissionDto mission, string sentence, float width, float scale)
     {
-        var textWidth = TextWidth(width, ActionWidth(ActionLabel(mission), scale), scale);
+        var textWidth = TextWidth(width, ActionReserve(mission, ActionLabel(mission), scale), scale);
         var lines = Math.Min(Typography.WrapText(sentence, TextStyles.Subheadline, textWidth).Length, MaxSentenceLines);
         return RowHeightFor(lines, Typography.LineHeight(TextStyles.Subheadline),
             Typography.LineHeight(TextStyles.Footnote), scale);
@@ -201,6 +201,13 @@ internal sealed class MissionsCard
 
     private static float ActionWidth(string label, float scale) =>
         MathF.Max(Button.WidthFor(label, ButtonSize.Large), MinimumActionWidth * scale);
+
+    private static float ActionReserve(CasinoMissionDto mission, string label, float scale) =>
+        ActionColumn(mission.Complete && !mission.Claimed, ActionWidth(label, scale),
+            Typography.Measure(label, TextStyles.FootnoteEmphasized).X);
+
+    public static float ActionColumn(bool claimable, float buttonWidth, float labelWidth) =>
+        claimable ? buttonWidth : MathF.Min(buttonWidth, labelWidth);
 
     private void Refresh(CasinoMissionsDto missions)
     {

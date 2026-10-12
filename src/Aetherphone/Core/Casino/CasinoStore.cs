@@ -93,6 +93,8 @@ internal sealed class CasinoStore : IDisposable
         RefreshState(StateRefreshMilliseconds);
     }
 
+    public long StateLoadedAtTick => Interlocked.Read(ref stateLoadedAtTick);
+
     public void RefreshNow()
     {
         Interlocked.Exchange(ref stateLoadedAtTick, 0);

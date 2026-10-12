@@ -1,10 +1,11 @@
 using System.Globalization;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Casino;
 using Aetherphone.Core.Net;
 
 namespace Aetherphone.Core.Aethernet.Clients;
 
-internal sealed partial class CasinoClient
+internal sealed partial class CasinoClient : ITradeMatchSource
 {
     internal const string StatePath = "/casino";
     internal const string BuyChipsPath = "/casino/chips/buy";
@@ -43,6 +44,7 @@ internal sealed partial class CasinoClient
     internal const string TournamentLeaf = "tournament";
     internal const string TournamentStopLeaf = "tournament/stop";
     internal const string LedgerLeaf = "ledger";
+    internal const string LedgerMatchLeaf = "ledger/match";
     internal const string CloseLeaf = "close";
 
     internal static string BonusClaimPath(string kind)
@@ -464,6 +466,14 @@ internal sealed partial class CasinoClient
             AethernetJsonContext.Default.CasinoLedgerResultDto, token, null, onFailure);
     }
 
+    public Task<CasinoLedgerTradeMatchDto?> MatchTradeAsync(string roomId, CasinoLedgerTradeMatchRequest request,
+        CancellationToken token, Action<AepFailure>? onFailure = null)
+    {
+        return net.PostAsync(TablePath(roomId, LedgerMatchLeaf), request,
+            AethernetJsonContext.Default.CasinoLedgerTradeMatchRequest,
+            AethernetJsonContext.Default.CasinoLedgerTradeMatchDto, token, null, onFailure);
+    }
+
     public Task<CasinoLedgerResultDto?> ConfirmLedgerEntryAsync(string entryId, CancellationToken token,
         Action<AepFailure>? onFailure = null)
     {
@@ -525,6 +535,13 @@ internal sealed partial class CasinoClient
     {
         return net.GetAsync(TablePath(roomId, "door"), AethernetJsonContext.Default.CasinoTableDoorDto, token, null,
             onFailure);
+    }
+
+    public Task<CasinoTableKnocksDto?> TableKnocksAsync(string roomId, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.GetAsync(TablePath(roomId, "knocks"), AethernetJsonContext.Default.CasinoTableKnocksDto, token,
+            null, onFailure);
     }
 
     public Task<CasinoTableActionDto?> KnockAsync(string roomId, CancellationToken token,

@@ -117,7 +117,7 @@ internal static class AppRegistry
         apps.Add(new WalletApp(services.Wallet, services.GameData, services.Textures));
         apps.Add(new InventoryApp(services.InventoryCapture, services.GameData, services.Textures, new InventoryItemSheet(Plugin.DataManager), services.Market, services.MarketLauncher, services.Configuration));
         apps.Add(new JobsApp(services.GameData, services.Textures, services.Configuration, services.Confirm, services.CharacterWatch));
-        apps.Add(new MusicApp(services.Radio, services.SongSearch, services.SongResolver, services.Playback, services.MusicLibrary, services.Artwork, services.Aethernet, services.AethernetSession, services.Report, photoLibrary, services.WallpaperImages, services.Confirm, services.Configuration, services.RemoteImages, services.Lodestone, services.GameData, services.RadioLauncher, services.SocialNotifications, services.Rolladeck, services.PcMedia, services.Jam, services.JamLauncher, services.Contacts, services.RadioRooms.Room, services.MusicDownloads, services.Lyrics, services.WindowsMedia, services.Listening));
+        apps.Add(new MusicApp(services.Radio, services.SongSearch, services.SongResolver, services.Playback, services.MusicLibrary, services.Artwork, services.Aethernet, services.AethernetSession, services.Report, photoLibrary, services.WallpaperImages, services.Confirm, services.Configuration, services.RemoteImages, services.Lodestone, services.GameData, services.RadioLauncher, services.SocialNotifications, services.Rolladeck, services.PcMedia, services.Jam, services.JamLauncher, services.Contacts, services.RadioRooms.Room, services.MusicDownloads, services.Lyrics, services.WindowsMedia, services.Listening, services.Conduct));
         apps.Add(new ClockApp(services.Configuration, services.Confirm));
         apps.Add(new NotesApp(services.Configuration, services.Confirm));
         apps.Add(new CalculatorApp(services.Configuration, services.Confirm));
@@ -142,7 +142,8 @@ internal static class AppRegistry
             services.CasinoHistory, services.CasinoRooms, services.CasinoTables, services.CasinoSpin,
             services.CasinoTurns, services.CasinoLauncher, services.GameStats, services.Confirm,
             services.Conduct, services.RemoteImages, services.Lodestone, services.Holdem, services.CasinoVenue,
-            services.CasinoTrade, services.Report, services.CasinoFloor, services.Configuration));
+            services.CasinoTrade, services.Report, services.CasinoFloor, services.Configuration,
+            services.CasinoFameChoice));
         var appStore = new AppStoreApp(services.Installer, services.Confirm, apps);
         apps.Add(appStore);
         apps.Add(new HousingApp(services.Housing, services.Configuration, services.Confirm));

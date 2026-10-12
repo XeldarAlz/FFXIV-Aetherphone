@@ -108,7 +108,8 @@ internal sealed class RaffleComposer
         var width = ScrollLayout.NativeScrollContentWidth();
         var origin = ImGui.GetCursorScreenPos();
         var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + Button.LargeHeight * scale));
-        if (Button.Draw(rect, Loc.T(L.Venue.RaffleStart), ui.Ink, ButtonStyle.Prominent, id: "venue.raffle.start"))
+        if (Button.Draw(rect, Loc.T(L.Venue.RaffleStart), ui.Ink, ButtonStyle.Prominent, overlay: true,
+                id: "venue.raffle.start"))
         {
             Submit();
         }

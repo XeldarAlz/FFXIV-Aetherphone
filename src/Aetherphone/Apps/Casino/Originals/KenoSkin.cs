@@ -228,6 +228,8 @@ internal sealed class KenoSkin : IOriginalsSkin
     {
     }
 
+    public long UnshownPayout => playback.UnshownPayout;
+
     public bool TakeSettled(out OriginalsOutcome outcome) => playback.TakeSettled(out outcome);
 
     public bool TakeNotice(out LocString message)

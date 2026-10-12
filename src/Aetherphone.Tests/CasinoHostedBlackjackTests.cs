@@ -1,6 +1,7 @@
 using Aetherphone.Apps.Casino.Tables;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Casino;
+using Aetherphone.Core.Localization;
 using Xunit;
 
 namespace Aetherphone.Tests;
@@ -29,10 +30,11 @@ public sealed class CasinoHostedBlackjackTests
     public void AHostDealtTableWaitsForTheDealTap()
     {
         var waiting = new CasinoBlackjackRoomStateDto(Currency: CasinoCurrencies.Gil, DealerMode: CasinoDealerModes.Host,
-            Phase: BlackjackPhases.Betting, DeadlineUnixMs: 0);
+            Phase: BlackjackPhases.Betting, DeadlineUnixMs: 0, AutoDeal: false);
 
         Assert.True(BlackjackHosting.HostDeals(waiting));
         Assert.True(BlackjackHosting.AwaitsDeal(waiting));
+        Assert.False(BlackjackHosting.AwaitsDeal(waiting with { AutoDeal = true }));
         Assert.False(BlackjackHosting.AwaitsDeal(waiting with { DeadlineUnixMs = 1 }));
         Assert.False(BlackjackHosting.AwaitsDeal(waiting with { Paused = true }));
         Assert.False(BlackjackHosting.AwaitsDeal(waiting with { Phase = BlackjackPhases.PlayerTurns }));
@@ -45,11 +47,53 @@ public sealed class CasinoHostedBlackjackTests
         var board = new CasinoBlackjackRoomStateDto(Practice: true, Currency: CasinoCurrencies.Practice,
             PracticeRebuy: true, MinBet: 500, Phase: BlackjackPhases.Betting, PracticeStack: 100_000);
 
-        Assert.True(BlackjackHosting.CanRebuy(board, 400));
-        Assert.False(BlackjackHosting.CanRebuy(board, 500));
-        Assert.False(BlackjackHosting.CanRebuy(board with { PracticeRebuy = false }, 0));
-        Assert.False(BlackjackHosting.CanRebuy(board with { Phase = BlackjackPhases.PlayerTurns }, 0));
-        Assert.False(BlackjackHosting.CanRebuy(board with { Currency = CasinoCurrencies.Gil, Practice = false }, 0));
+        Assert.True(BlackjackHosting.CanRebuy(board, 400, 0));
+        Assert.False(BlackjackHosting.CanRebuy(board, 500, 0));
+        Assert.False(BlackjackHosting.CanRebuy(board with { PracticeRebuy = false }, 0, 0));
+        Assert.False(BlackjackHosting.CanRebuy(board with { Phase = BlackjackPhases.PlayerTurns }, 0, 0));
+        Assert.False(BlackjackHosting.CanRebuy(board with { Currency = CasinoCurrencies.Gil, Practice = false }, 0, 0));
+    }
+
+    [Fact]
+    public void ABrokeSeatIsToldWhyItCannotRebuy()
+    {
+        var board = new CasinoBlackjackRoomStateDto(Practice: true, Currency: CasinoCurrencies.Practice,
+            PracticeRebuy: false, MinBet: 500, Phase: BlackjackPhases.Betting, PracticeStack: 100_000);
+
+        Assert.True(BlackjackHosting.Broke(board, 400, 0));
+        Assert.False(BlackjackHosting.Broke(board, 500, 0));
+        Assert.False(BlackjackHosting.Broke(board, 400, 100));
+        Assert.True(BlackjackHosting.Broke(board with { Currency = CasinoCurrencies.Gil, Practice = false }, 0, 0));
+        Assert.False(BlackjackHosting.Broke(board with { Currency = CasinoCurrencies.Chips, Practice = false }, 0, 0));
+        Assert.Equal(L.Tables.ReasonRebuyOff.Key, BlackjackHosting.BrokeStatus(board, "me").Key);
+
+        var standings = new[] { new CasinoBlackjackStandingDto("me", "Mira", 0, true, 2) };
+        var tournament = board with
+        {
+            PracticeRebuy = true,
+            Tournament = new CasinoBlackjackTournamentDto(Live: true, Standings: standings),
+        };
+        Assert.Equal(L.Venue.TournamentYouAreOut.Key, BlackjackHosting.BrokeStatus(tournament, "me").Key);
+        Assert.Equal(L.Tables.RebuysTournamentNote.Key, BlackjackHosting.BrokeStatus(tournament, "late").Key);
+    }
+
+    [Fact]
+    public void RebuyIsOfferedOnlyWhenTheServerWouldTakeIt()
+    {
+        var board = new CasinoBlackjackRoomStateDto(Practice: true, Currency: CasinoCurrencies.Practice,
+            PracticeRebuy: true, MinBet: 500, Phase: BlackjackPhases.Betting, PracticeStack: 100_000);
+
+        Assert.False(BlackjackHosting.CanRebuy(board with { Phase = BlackjackPhases.Settlement }, 0, 0));
+        Assert.False(BlackjackHosting.CanRebuy(board with { Phase = BlackjackPhases.Intermission }, 0, 0));
+        Assert.False(BlackjackHosting.CanRebuy(board, 0, 500));
+        Assert.False(BlackjackHosting.CanRebuy(board with
+        {
+            Tournament = new CasinoBlackjackTournamentDto(Live: true),
+        }, 0, 0));
+        Assert.True(BlackjackHosting.CanRebuy(board with
+        {
+            Tournament = new CasinoBlackjackTournamentDto(WinnerUserId: "winner"),
+        }, 0, 0));
     }
 
     [Fact]

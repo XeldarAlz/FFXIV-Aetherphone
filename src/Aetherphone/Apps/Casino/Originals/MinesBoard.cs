@@ -217,6 +217,8 @@ internal sealed class MinesBoard
         return true;
     }
 
+    public long UnshownPayout => settlePending ? payout : 0;
+
     public bool TakeSettled(out OriginalsOutcome outcome)
     {
         outcome = default;

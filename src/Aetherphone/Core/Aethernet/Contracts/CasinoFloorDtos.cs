@@ -78,6 +78,8 @@ internal sealed record CasinoFameBoardDto(
     CasinoFameMeDto? Me = null,
     CasinoFameEntryDto? Champion = null);
 
+internal sealed record UpdateCasinoPrivacyRequest(bool? ShowInHallOfFame = null);
+
 internal sealed record CasinoFeedItemDto(
     string RoundId = "",
     string GameKind = "",

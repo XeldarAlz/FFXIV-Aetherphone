@@ -61,6 +61,7 @@ Aethernet opened on 2 July 2026. By the end of the season, players on 113 worlds
         <li>For You and Latest timelines, with a Following filter</li>
         <li>Rechirps, quotes, replies and hashtags</li>
         <li>Photos, GIFs and thirteen reactions</li>
+        <li>Paste an image with Ctrl+V or drag one in from File Explorer (GIFs keep their animation when copied or dragged as a file)</li>
         <li>Chirps in other languages translated with one tap</li>
       </ul>
     </td>
@@ -69,7 +70,7 @@ Aethernet opened on 2 July 2026. By the end of the season, players on 113 worlds
       <h3><img src="docs/media/readme/icons/aethergram.png" width="28" align="top" alt="" /> Aethergram</h3>
       <em>Shot in game. Shared on Aethergram.</em>
       <ul>
-        <li>Up to eight photos straight from your gallery</li>
+        <li>Up to eight photos straight from your gallery, or pasted and dragged in</li>
         <li>Stories that last a day</li>
         <li>Tag the people in frame</li>
         <li>A built-in photo editor before you share</li>
@@ -87,6 +88,7 @@ Aethernet opened on 2 July 2026. By the end of the season, players on 113 worlds
       <ul>
         <li>Message players on any world or data center</li>
         <li>Voice notes, photos and group chats</li>
+        <li>Paste or drag in a photo and add a caption before it sends</li>
         <li>Voice calls, one-on-one or in groups</li>
         <li>End-to-end encrypted</li>
       </ul>
@@ -172,7 +174,7 @@ One Aethernet account signs you in to every social app, and each app can keep it
 
 ## Built like the phone in your pocket
 
-**Lives in your HUD.** Drag it anywhere, resize it, or shrink it to a mini phone with the clock, widgets, music and calls. Keep it on screen through Group Pose and cutscenes if it lives on a second monitor.
+**Lives in your HUD.** Drag it anywhere, resize it, or shrink it to a mini phone with the clock, widgets, music, calls and an optional FPS counter. Keep it on screen through Group Pose and cutscenes if it lives on a second monitor.
 
 **Widgets and Smart Stacks.** Widgets for most apps, resized from the corner and stacked by dropping one onto another.
 

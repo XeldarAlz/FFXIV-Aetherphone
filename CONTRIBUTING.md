@@ -41,6 +41,7 @@ The full developer documentation lives in [`docs/`](docs/README.md): the archite
 5. If your change affects what a user sees or types (commands, layout, settings), update the README.
 6. If you used AI beyond autocomplete, say which level in the PR description; if you added an asset, say where it came from. Both are one line, and [docs/ai-usage.md](docs/ai-usage.md) explains the level names and why we ask.
 7. Open the PR against `dev`, the default branch. `master` only moves when a release is cut.
+8. Title the PR like a commit: `type(scope): lowercase summary`. CI checks the title, and a workflow sets the labels from it and from the files you touched, so there is nothing to pick by hand.
 
 ## Translations
 

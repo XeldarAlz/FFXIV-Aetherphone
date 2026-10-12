@@ -39,6 +39,17 @@ public sealed class TradeSyncTests
     }
 
     [Fact]
+    public void GilThatLandsBeforeTheWindowClosesStillCounts()
+    {
+        var tracker = new TradeSyncTracker();
+        Assert.Null(tracker.Observe(Open(MiraWindow, 0, 500_000, 1_000_000), 0));
+        Assert.Null(tracker.Observe(Open(MiraWindow, 0, 500_000, 1_500_000), 10));
+        var done = tracker.Observe(Closed(1_500_000), 20);
+        Assert.NotNull(done);
+        Assert.Equal(500_000, done!.Value.Received);
+    }
+
+    [Fact]
     public void SwappedOfferSidesStillMatchTheWallet()
     {
         var tracker = new TradeSyncTracker();
@@ -57,6 +68,20 @@ public sealed class TradeSyncTests
         Assert.Null(tracker.Observe(Closed(1_000_000), TradeSyncTracker.SettleWindowMilliseconds + 20));
         Assert.Equal(TradeTrackerStage.Idle, tracker.Stage);
         Assert.Null(tracker.Observe(Closed(1_200_000), TradeSyncTracker.SettleWindowMilliseconds + 40));
+    }
+
+    [Fact]
+    public void APartnerReadFromTheTradeArraysRidesOnToTheCompletion()
+    {
+        var tracker = new TradeSyncTracker();
+        tracker.Observe(new TradeWindowSample(true, MiraWindow, 0, 500_000, 1_000_000, true), 0);
+        tracker.Observe(Open(MiraWindow, 0, 500_000, 1_000_000), 5);
+        var done = tracker.Observe(Closed(1_500_000), 10);
+        Assert.True(done!.Value.PartnerRead);
+
+        tracker.Observe(Open(MiraWindow, 0, 500_000, 1_500_000), 20);
+        var plain = tracker.Observe(Closed(2_000_000), 30);
+        Assert.False(plain!.Value.PartnerRead);
     }
 
     [Fact]

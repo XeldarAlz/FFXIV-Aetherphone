@@ -10,6 +10,7 @@ internal sealed partial class CasinoClient
     internal const string ChallengesPath = "/casino/challenges";
     internal const string FamePath = "/casino/fame";
     internal const string FeedPath = "/casino/feed";
+    internal const string PrivacyPath = "/me/casino-privacy";
 
     internal static string MissionClaimPath(string missionId)
     {
@@ -55,5 +56,13 @@ internal sealed partial class CasinoClient
     public Task<CasinoFeedDto?> FeedAsync(string tab, CancellationToken token, Action<AepFailure>? onFailure = null)
     {
         return net.GetAsync(FeedTabPath(tab), AethernetJsonContext.Default.CasinoFeedDto, token, null, onFailure);
+    }
+
+    public Task<UserDto?> SetShowInHallOfFameAsync(bool show, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.PostAsync(PrivacyPath, new UpdateCasinoPrivacyRequest(show),
+            AethernetJsonContext.Default.UpdateCasinoPrivacyRequest, AethernetJsonContext.Default.UserDto, token,
+            null, onFailure);
     }
 }

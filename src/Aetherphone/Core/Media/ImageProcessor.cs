@@ -210,10 +210,11 @@ internal static class ImageProcessor
         return DecodeRgba32(bytes, 0);
     }
 
-    public static (byte[] Pixels, int Width, int Height) DecodeRgba32(byte[] bytes, int maxDimension)
+    public static (byte[] Pixels, int Width, int Height) DecodeRgba32(byte[] bytes, int maxDimension,
+        long maxPixels = MaxDecodePixels)
     {
         using var stream = new MemoryStream(bytes);
-        using var image = LoadRgba32(stream, MaxDecodePixels, maxDimension, out var length);
+        using var image = LoadRgba32(stream, maxPixels, maxDimension, out var length);
         var pixels = new byte[length];
         image.CopyPixelDataTo(pixels);
         return (pixels, image.Width, image.Height);

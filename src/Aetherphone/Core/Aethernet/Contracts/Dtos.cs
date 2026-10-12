@@ -90,7 +90,8 @@ internal sealed record UserDto(
     string? BioLang = null,
     string? BannerUrl = null,
     int PendingPhotoTags = 0,
-    bool ShowOnLeaderboards = false) : IIdentified;
+    bool ShowOnLeaderboards = false,
+    bool ShowInHallOfFame = false) : IIdentified;
 
 internal sealed record UpdateProfileRequest(string? DisplayName, string? Handle, string? Bio, string? AvatarUrl = null,
     string? BannerUrl = null);

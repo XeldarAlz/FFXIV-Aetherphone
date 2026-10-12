@@ -53,6 +53,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
     private readonly Dictionary<string, string> sessionDrafts = new(StringComparer.Ordinal);
     private volatile string? failedSendThreadId;
     private volatile string? failedSendText;
+    private volatile string? failedSendImage;
     private AepFailure failedSendFailure;
     private static readonly TimeSpan VoiceFailureRetryFor = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan SyncBannerFloor = TimeSpan.FromSeconds(2);
@@ -66,6 +67,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
     private readonly Action<string, string, string?> sendText;
     private readonly Action<string, string, string> editText;
     private readonly Action<string, byte[], int> sendVoice;
+    private readonly Action<string, string, string> sendImage;
     private readonly Func<int> resolveVoiceInput;
     private string? pendingPrefill;
     private readonly Func<string, bool> canRevealBody;
@@ -123,6 +125,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         sendText = ComposerSendText;
         editText = ComposerEditText;
         sendVoice = ComposerSendVoice;
+        sendImage = ComposerSendImage;
         resolveVoiceInput = ResolveVoiceInput;
         canRevealBody = CanRevealBody;
     }
@@ -346,6 +349,12 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         var composerRect = new Rect(new Vector2(area.Min.X - composerBleed, area.Max.Y - composerHeight),
             new Vector2(area.Max.X + composerBleed, area.Max.Y));
         var keyStatusPending = store.KeyStatusPending;
+        var composerBlocked = keyStatusPending || store.SendWouldDowngrade;
+        if (!composerBlocked)
+        {
+            composer.AcceptImageDrop(library, Accent);
+        }
+
         composer.Draw(composerRect, new ChatComposerModel
         {
             Ui = ui,
@@ -359,7 +368,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
             CanVoice = true,
             CanLocation = true,
             CanHandleEscape = !searchController.Open,
-            Blocked = keyStatusPending || store.SendWouldDowngrade,
+            Blocked = composerBlocked,
             BlockedNotice = keyStatusPending ? Loc.T(L.Encryption.ComposerChecking) : Loc.T(L.Encryption.ComposerBlocked),
             OnBlockedTap = keyStatusPending ? null : () => OpenEncryptionInfo(threadId),
             ResolveVoiceInput = resolveVoiceInput,
@@ -368,6 +377,9 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
             OnSendText = sendText,
             OnEditText = editText,
             OnSendVoice = sendVoice,
+            OnSendImage = sendImage,
+            Library = library,
+            Thumbnails = wallpaperImages,
         });
         DrawMessageMenu(area);
     }
@@ -789,6 +801,15 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         OnDraftConsumed(threadId);
     }
 
+    private void ComposerSendImage(string threadId, string path, string caption)
+    {
+        store.SendImageMessage(threadId, path, caption,
+            succeeded => NoteSendOutcome(succeeded, threadId, caption, path));
+        transcript.RequestSnapToBottom();
+        lastTypingDraft = string.Empty;
+        OnDraftConsumed(threadId);
+    }
+
     private void ComposerEditText(string threadId, string editId, string text)
     {
         store.EditMessage(threadId, editId, text, _ => { });
@@ -796,7 +817,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         OnDraftConsumed(threadId);
     }
 
-    private void NoteSendOutcome(bool succeeded, string threadId, string text)
+    private void NoteSendOutcome(bool succeeded, string threadId, string text, string? imagePath = null)
     {
         if (succeeded)
         {
@@ -805,6 +826,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
 
         failedSendThreadId = threadId;
         failedSendFailure = store.LastSendFailure;
+        failedSendImage = imagePath;
         failedSendText = text;
     }
 
@@ -816,12 +838,24 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
             return;
         }
 
+        var image = failedSendImage;
         failedSendText = null;
         failedSendThreadId = null;
+        failedSendImage = null;
         var reason = FailureText.Resolve(failedSendFailure);
         ShellToast.Show(reason.Length == 0
             ? Loc.T(L.Message.SendFailed)
             : Loc.T(L.Message.SendFailedReason, reason));
+        if (image is not null)
+        {
+            composer.AttachImage(image);
+        }
+
+        if (text.Length == 0)
+        {
+            return;
+        }
+
         var draft = composer.Draft;
         composer.Draft = draft.Length == 0 ? text : $"{text} {draft}";
     }
@@ -1106,9 +1140,18 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         var importHeight = 46f * scale;
         var importRect = new Rect(new Vector2(area.Min.X + 16f * scale, top + 8f * scale),
             new Vector2(area.Max.X - 16f * scale, top + 8f * scale + importHeight));
+        var canPaste = composer.OfferPaste(ref importRect, out var pasteRect);
         if (ui.PillButton(importRect, ImportLabel, true))
         {
             FilePicker.PickImage(PickerTitle, path => Interlocked.Exchange(ref pendingPickedPath, path));
+        }
+
+        if (canPaste && ui.PillButton(pasteRect, Loc.T(L.Common.PasteImage), true))
+        {
+            composer.PasteImage(library);
+            pickerThreadId = null;
+            PopScreen();
+            return;
         }
 
         var gridTop = importRect.Max.Y + 12f * scale;

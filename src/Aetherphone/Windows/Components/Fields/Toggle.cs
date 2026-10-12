@@ -13,11 +13,13 @@ internal static class Toggle
     private static readonly Dictionary<string, Spring> Knobs = new(StringComparer.Ordinal);
 
     public static bool Draw(string id, Rect bounds, bool value, PhoneTheme theme, float alpha = 1f,
-        bool interactive = true)
+        bool interactive = true, bool overlay = false)
     {
         var scale = UiScale.Current;
         var result = value;
-        var hovered = interactive && UiInteract.Hover(bounds.Min, bounds.Max);
+        var hovered = interactive && (overlay
+            ? UiInteract.HoverWindowOnly(bounds.Min, bounds.Max)
+            : UiInteract.Hover(bounds.Min, bounds.Max));
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

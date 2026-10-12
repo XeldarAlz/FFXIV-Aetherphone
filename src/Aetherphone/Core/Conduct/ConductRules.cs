@@ -3,241 +3,232 @@ using Dalamud.Interface;
 
 namespace Aetherphone.Core.Conduct;
 
-internal enum ConductTone
+internal enum ConductTone : byte
 {
-    Encouraged,
-    Prohibited,
-    Restricted,
-    Neutral,
+    Allowed,
+    Rule,
+    Veiled,
+    Removed,
+    ZeroTolerance,
+    Info,
 }
 
-internal readonly record struct ConductSection(ConductTone Tone, LocString? Heading, LocString? Lead, LocString[] Items,
-    FontAwesomeIcon? Icon = null, LocString? Note = null);
+internal enum ConductPill : byte
+{
+    None,
+    Fine,
+    Veiled,
+    Removed,
+    Suspended,
+}
+
+internal readonly record struct ConductSection(ConductTone Tone, LocString Heading, LocString? Lead,
+    LocString[] Items, FontAwesomeIcon Icon, ConductPill Pill = ConductPill.None, LocString? Note = null);
 
 internal sealed class ConductGate
 {
     public required string AppId { get; init; }
     public required int Version { get; init; }
     public required FontAwesomeIcon Icon { get; init; }
+    public required LocString AppName { get; init; }
     public required LocString Title { get; init; }
     public required LocString Intro { get; init; }
     public required ConductSection[] Sections { get; init; }
+    public bool GatesOnOpen { get; init; } = true;
 }
 
 internal static class ConductRules
 {
+    private static readonly LocString[] LadderWithVeil = Concat(new[] { L.Conduct.LadderVeil }, L.Conduct.LadderItems);
+
     public static readonly ConductGate Chirper = new()
     {
         AppId = "chirper",
-        Version = 7,
+        Version = 8,
         Icon = FontAwesomeIcon.Comments,
+        AppName = L.Apps.Chirper,
         Title = L.Conduct.ChirperTitle,
         Intro = L.Conduct.ChirperIntro,
         Sections = new[]
         {
-            new ConductSection(ConductTone.Encouraged, L.Conduct.ChirperAllowedTitle,
-                L.Conduct.ChirperAllowedLead, L.Conduct.ChirperAllowedItems),
-            new ConductSection(ConductTone.Neutral, L.Conduct.ChirperSfwTitle,
-                L.Conduct.ChirperSfwLead, L.Conduct.ChirperSfwItems, FontAwesomeIcon.EyeSlash),
-            new ConductSection(ConductTone.Prohibited, L.Conduct.ChirperNotAllowedTitle,
-                null, L.Conduct.ChirperNotAllowedItems, Note: L.Conduct.ChirperRemovalAppeal),
-            new ConductSection(ConductTone.Prohibited, L.Conduct.ChirperAiTitle, L.Conduct.ChirperAiBody,
-                Array.Empty<LocString>(), FontAwesomeIcon.Robot, L.Conduct.ChirperRemovalAppeal),
-            new ConductSection(ConductTone.Restricted, L.Conduct.ChirperPoliticsTitle,
-                L.Conduct.ChirperPoliticsBody, Array.Empty<LocString>(), FontAwesomeIcon.Landmark),
-            new ConductSection(ConductTone.Restricted, L.Conduct.ChirperRespectTitle,
-                L.Conduct.ChirperRespectLead, L.Conduct.ChirperRespectItems, FontAwesomeIcon.Handshake),
-            new ConductSection(ConductTone.Restricted, L.Conduct.ChirperSpamTitle,
-                L.Conduct.ChirperSpamLead, L.Conduct.ChirperSpamItems, FontAwesomeIcon.Bullhorn),
-            new ConductSection(ConductTone.Neutral, L.Conduct.ChirperPrivacyTitle,
-                L.Conduct.ChirperPrivacyBody, Array.Empty<LocString>(), FontAwesomeIcon.Lock),
-            new ConductSection(ConductTone.Restricted, L.Conduct.ChirperCreatorsTitle,
-                L.Conduct.ChirperCreatorsLead, L.Conduct.ChirperCreatorsItems, FontAwesomeIcon.Copyright),
-            new ConductSection(ConductTone.Prohibited, L.Conduct.ChirperChildSafetyTitle,
-                L.Conduct.ChirperChildSafetyBody, Array.Empty<LocString>(), FontAwesomeIcon.Child),
-            new ConductSection(ConductTone.Neutral, L.Conduct.ChirperDiscretionTitle,
-                L.Conduct.ChirperDiscretionBody, Array.Empty<LocString>(), FontAwesomeIcon.Gavel),
+            Allowed(L.Conduct.ChirperAllowedItems),
+            Veiled(L.Conduct.ChirperVeiledNote),
+            Removed(L.Conduct.RemovedNudity, L.Conduct.RemovedErp, L.Conduct.RemovedFetish, L.Conduct.RemovedGore,
+                L.Conduct.RemovedAi, L.Conduct.RemovedCreators, L.Conduct.RemovedPolitics, L.Conduct.RemovedHarassment,
+                L.Conduct.RemovedPrivateChat, L.Conduct.RemovedImpersonation, L.Conduct.ChirperSpam),
+            ZeroTolerance(L.Conduct.ZeroChildSafety),
+            Moderation(true),
         },
     };
 
     public static readonly ConductGate Aethergram = new()
     {
         AppId = "aethergram",
-        Version = 7,
+        Version = 8,
         Icon = FontAwesomeIcon.Camera,
+        AppName = L.Apps.Aethergram,
         Title = L.Conduct.AethergramTitle,
         Intro = L.Conduct.AethergramIntro,
         Sections = new[]
         {
-            new ConductSection(ConductTone.Encouraged, L.Conduct.AethergramAllowedTitle,
-                L.Conduct.AethergramAllowedLead, L.Conduct.AethergramAllowedItems),
-            new ConductSection(ConductTone.Neutral, L.Conduct.AethergramSfwTitle,
-                L.Conduct.AethergramSfwLead, L.Conduct.AethergramSfwItems, FontAwesomeIcon.EyeSlash),
-            new ConductSection(ConductTone.Prohibited, L.Conduct.AethergramNotAllowedTitle,
-                null, L.Conduct.AethergramNotAllowedItems, Note: L.Conduct.AethergramRemovalAppeal),
-            new ConductSection(ConductTone.Prohibited, L.Conduct.AethergramAiTitle, L.Conduct.AethergramAiBody,
-                Array.Empty<LocString>(), FontAwesomeIcon.Robot, L.Conduct.AethergramRemovalAppeal),
-            new ConductSection(ConductTone.Restricted, L.Conduct.AethergramIrlTitle,
-                L.Conduct.AethergramIrlBody, Array.Empty<LocString>(), FontAwesomeIcon.Gamepad),
-            new ConductSection(ConductTone.Restricted, L.Conduct.AethergramPoliticsTitle,
-                L.Conduct.AethergramPoliticsBody, Array.Empty<LocString>(), FontAwesomeIcon.Landmark),
-            new ConductSection(ConductTone.Restricted, L.Conduct.AethergramRespectTitle,
-                L.Conduct.AethergramRespectLead, L.Conduct.AethergramRespectItems, FontAwesomeIcon.Handshake),
-            new ConductSection(ConductTone.Restricted, L.Conduct.AethergramSpamTitle,
-                L.Conduct.AethergramSpamLead, L.Conduct.AethergramSpamItems, FontAwesomeIcon.Bullhorn),
-            new ConductSection(ConductTone.Neutral, L.Conduct.AethergramPrivacyTitle,
-                L.Conduct.AethergramPrivacyBody, Array.Empty<LocString>(), FontAwesomeIcon.Lock),
-            new ConductSection(ConductTone.Restricted, L.Conduct.AethergramCreatorsTitle,
-                L.Conduct.AethergramCreatorsLead, L.Conduct.AethergramCreatorsItems, FontAwesomeIcon.Copyright),
-            new ConductSection(ConductTone.Prohibited, L.Conduct.AethergramChildlikeTitle,
-                L.Conduct.AethergramChildlikeBody, Array.Empty<LocString>(), FontAwesomeIcon.Child),
-            new ConductSection(ConductTone.Neutral, L.Conduct.AethergramDiscretionTitle,
-                L.Conduct.AethergramDiscretionBody, Array.Empty<LocString>(), FontAwesomeIcon.Gavel),
+            Allowed(L.Conduct.AethergramAllowedItems),
+            Rule(L.Conduct.AethergramInGameTitle, L.Conduct.AethergramInGameLead, L.Conduct.AethergramInGameItems,
+                FontAwesomeIcon.Gamepad, ConductPill.Removed),
+            Veiled(null),
+            Removed(L.Conduct.RemovedNudity, L.Conduct.RemovedErp, L.Conduct.RemovedFetish, L.Conduct.RemovedGore,
+                L.Conduct.RemovedAi, L.Conduct.RemovedCreators, L.Conduct.RemovedPolitics, L.Conduct.RemovedHarassment,
+                L.Conduct.RemovedPrivateChat, L.Conduct.RemovedImpersonation, L.Conduct.AethergramSpam),
+            ZeroTolerance(L.Conduct.ZeroChildSafety),
+            Moderation(true),
         },
     };
 
     public static readonly ConductGate Velvet = new()
     {
         AppId = "velvet",
-        Version = 4,
+        Version = 5,
         Icon = FontAwesomeIcon.Heart,
+        AppName = L.Apps.Velvet,
         Title = L.Conduct.VelvetTitle,
         Intro = L.Conduct.VelvetIntro,
         Sections = new[]
         {
-            new ConductSection(ConductTone.Prohibited, L.Conduct.VelvetAdultsTitle, L.Conduct.VelvetAdultsBody,
-                Array.Empty<LocString>(), FontAwesomeIcon.IdCard),
-            new ConductSection(ConductTone.Encouraged, L.Conduct.VelvetAllowedTitle, L.Conduct.VelvetAllowedLead,
-                L.Conduct.VelvetAllowedItems),
-            new ConductSection(ConductTone.Restricted, L.Conduct.VelvetLimitsTitle, L.Conduct.VelvetLimitsLead,
-                L.Conduct.VelvetLimitsItems, FontAwesomeIcon.Ban),
-            new ConductSection(ConductTone.Restricted, L.Conduct.VelvetConsentTitle, L.Conduct.VelvetConsentLead,
-                L.Conduct.VelvetConsentItems, FontAwesomeIcon.HandPaper),
-            new ConductSection(ConductTone.Restricted, L.Conduct.VelvetBoundariesTitle, L.Conduct.VelvetBoundariesLead,
-                L.Conduct.VelvetBoundariesItems, FontAwesomeIcon.DoorClosed),
-            new ConductSection(ConductTone.Prohibited, L.Conduct.VelvetIllegalTitle, L.Conduct.VelvetIllegalLead,
-                L.Conduct.VelvetIllegalItems),
-            new ConductSection(ConductTone.Restricted, L.Conduct.VelvetPrivacyTitle, L.Conduct.VelvetPrivacyLead,
-                L.Conduct.VelvetPrivacyItems, FontAwesomeIcon.Lock),
-            new ConductSection(ConductTone.Restricted, L.Conduct.VelvetCreatorsTitle, L.Conduct.VelvetCreatorsLead,
-                L.Conduct.VelvetCreatorsItems, FontAwesomeIcon.Copyright),
-            new ConductSection(ConductTone.Prohibited, L.Conduct.VelvetAiTitle, L.Conduct.VelvetAiBody,
-                Array.Empty<LocString>(), FontAwesomeIcon.Robot, L.Conduct.VelvetRemovalAppeal),
-            new ConductSection(ConductTone.Restricted, L.Conduct.VelvetSpamTitle, L.Conduct.VelvetSpamLead,
-                L.Conduct.VelvetSpamItems, FontAwesomeIcon.Bullhorn),
-            new ConductSection(ConductTone.Restricted, L.Conduct.VelvetRespectTitle, L.Conduct.VelvetRespectLead,
-                L.Conduct.VelvetRespectItems, FontAwesomeIcon.Handshake),
-            new ConductSection(ConductTone.Neutral, L.Conduct.VelvetModerationTitle, L.Conduct.VelvetModerationBody,
-                Array.Empty<LocString>(), FontAwesomeIcon.Gavel),
+            Rule(L.Conduct.VelvetAdultsTitle, null, L.Conduct.VelvetAdultsItems, FontAwesomeIcon.IdCard,
+                ConductPill.Suspended),
+            Allowed(L.Conduct.VelvetAllowedItems),
+            Rule(L.Conduct.VelvetConsentTitle, null, L.Conduct.VelvetConsentItems, FontAwesomeIcon.HandPaper,
+                ConductPill.Removed),
+            Removed(L.Conduct.VelvetAdultCommerce, L.Conduct.RemovedAi, L.Conduct.RemovedGore,
+                L.Conduct.RemovedCreators, L.Conduct.RemovedHarassmentStalking, L.Conduct.RemovedPrivateChat,
+                L.Conduct.RemovedImpersonation),
+            ZeroTolerance(L.Conduct.VelvetZeroItems),
+            Moderation(false),
+        },
+    };
+
+    public static readonly ConductGate Message = new()
+    {
+        AppId = "message",
+        Version = 1,
+        Icon = FontAwesomeIcon.Comment,
+        AppName = L.Apps.Message,
+        Title = L.Conduct.MessageTitle,
+        Intro = L.Conduct.MessageIntro,
+        Sections = new[]
+        {
+            Allowed(L.Conduct.MessageAllowedItems),
+            Rule(L.Conduct.MessageContactTitle, null, L.Conduct.MessageContactItems, FontAwesomeIcon.HandPaper,
+                ConductPill.Removed),
+            Removed(L.Conduct.RemovedHarassmentStalking, L.Conduct.MessageSpam, L.Conduct.RemovedImpersonation),
+            ZeroTolerance(L.Conduct.ZeroChildSafety),
+            Moderation(false),
+        },
+    };
+
+    public static readonly ConductGate Music = new()
+    {
+        AppId = "music",
+        Version = 1,
+        Icon = FontAwesomeIcon.Music,
+        AppName = L.Apps.Music,
+        Title = L.Conduct.MusicTitle,
+        Intro = L.Conduct.MusicIntro,
+        GatesOnOpen = false,
+        Sections = new[]
+        {
+            Allowed(L.Conduct.MusicAllowedItems),
+            Removed(L.Conduct.MusicExplicit, L.Conduct.RemovedHarassment, L.Conduct.MusicSpam,
+                L.Conduct.RemovedImpersonation),
+            ZeroTolerance(L.Conduct.ZeroChildSafety),
+            Moderation(false),
         },
     };
 
     public static readonly ConductGate Muster = new()
     {
         AppId = "muster",
-        Version = 2,
+        Version = 3,
         Icon = FontAwesomeIcon.Bullhorn,
+        AppName = L.Apps.Muster,
         Title = L.Conduct.MusterTitle,
         Intro = L.Conduct.MusterIntro,
         Sections = new[]
         {
-            new ConductSection(ConductTone.Encouraged, L.Conduct.MusterAllowedTitle, L.Conduct.MusterAllowedLead,
-                L.Conduct.MusterAllowedItems),
-            new ConductSection(ConductTone.Restricted, L.Conduct.MusterHostingTitle, L.Conduct.MusterHostingLead,
-                L.Conduct.MusterHostingItems, FontAwesomeIcon.CalendarCheck),
-            new ConductSection(ConductTone.Restricted, L.Conduct.MusterAppropriateTitle,
-                L.Conduct.MusterAppropriateLead, L.Conduct.MusterAppropriateItems, FontAwesomeIcon.EyeSlash),
-            new ConductSection(ConductTone.Prohibited, L.Conduct.MusterChildSafetyTitle,
-                L.Conduct.MusterChildSafetyBody, Array.Empty<LocString>(), FontAwesomeIcon.Child),
-            new ConductSection(ConductTone.Restricted, L.Conduct.MusterInGameTitle, L.Conduct.MusterInGameBody,
-                Array.Empty<LocString>(), FontAwesomeIcon.MapMarkerAlt),
-            new ConductSection(ConductTone.Restricted, L.Conduct.MusterRespectTitle, L.Conduct.MusterRespectLead,
-                L.Conduct.MusterRespectItems, FontAwesomeIcon.Handshake),
-            new ConductSection(ConductTone.Restricted, L.Conduct.MusterSpamTitle, L.Conduct.MusterSpamLead,
-                L.Conduct.MusterSpamItems, FontAwesomeIcon.Bullhorn),
-            new ConductSection(ConductTone.Neutral, L.Conduct.MusterPrivacyTitle, L.Conduct.MusterPrivacyBody,
-                Array.Empty<LocString>(), FontAwesomeIcon.Lock),
-            new ConductSection(ConductTone.Neutral, L.Conduct.MusterDiscretionTitle, L.Conduct.MusterDiscretionBody,
-                Array.Empty<LocString>(), FontAwesomeIcon.Gavel),
+            Allowed(L.Conduct.MusterAllowedItems),
+            Rule(L.Conduct.MusterHostingTitle, null, L.Conduct.MusterHostingItems, FontAwesomeIcon.CalendarCheck,
+                ConductPill.Removed),
+            Removed(Concat(L.Conduct.MusterRemovedItems, new[] { L.Conduct.RemovedImpersonation })),
+            ZeroTolerance(L.Conduct.ZeroChildSafety),
+            Moderation(false),
         },
     };
 
     public static readonly ConductGate YellowPages = new()
     {
         AppId = "yellowpages",
-        Version = 2,
+        Version = 3,
         Icon = FontAwesomeIcon.AddressBook,
+        AppName = L.Apps.YellowPages,
         Title = L.Conduct.YellowPagesTitle,
         Intro = L.Conduct.YellowPagesIntro,
         Sections = new[]
         {
-            new ConductSection(ConductTone.Encouraged, L.Conduct.YellowPagesAllowedTitle,
-                L.Conduct.YellowPagesAllowedLead, L.Conduct.YellowPagesAllowedItems),
-            new ConductSection(ConductTone.Prohibited, L.Conduct.YellowPagesGilTitle, L.Conduct.YellowPagesGilLead,
-                L.Conduct.YellowPagesGilItems, FontAwesomeIcon.Coins),
-            new ConductSection(ConductTone.Restricted, L.Conduct.YellowPagesHonestTitle,
-                L.Conduct.YellowPagesHonestLead, L.Conduct.YellowPagesHonestItems, FontAwesomeIcon.ClipboardCheck),
-            new ConductSection(ConductTone.Restricted, L.Conduct.YellowPagesAppropriateTitle,
-                L.Conduct.YellowPagesAppropriateLead, L.Conduct.YellowPagesAppropriateItems,
-                FontAwesomeIcon.EyeSlash),
-            new ConductSection(ConductTone.Prohibited, L.Conduct.YellowPagesChildSafetyTitle,
-                L.Conduct.YellowPagesChildSafetyBody, Array.Empty<LocString>(), FontAwesomeIcon.Child),
-            new ConductSection(ConductTone.Restricted, L.Conduct.YellowPagesRespectTitle,
-                L.Conduct.YellowPagesRespectLead, L.Conduct.YellowPagesRespectItems, FontAwesomeIcon.Handshake),
-            new ConductSection(ConductTone.Restricted, L.Conduct.YellowPagesSpamTitle, L.Conduct.YellowPagesSpamLead,
-                L.Conduct.YellowPagesSpamItems, FontAwesomeIcon.Bullhorn),
-            new ConductSection(ConductTone.Neutral, L.Conduct.YellowPagesPrivacyTitle,
-                L.Conduct.YellowPagesPrivacyBody, Array.Empty<LocString>(), FontAwesomeIcon.Lock),
-            new ConductSection(ConductTone.Restricted, L.Conduct.YellowPagesCreatorsTitle,
-                L.Conduct.YellowPagesCreatorsLead, L.Conduct.YellowPagesCreatorsItems, FontAwesomeIcon.Copyright),
-            new ConductSection(ConductTone.Neutral, L.Conduct.YellowPagesDiscretionTitle,
-                L.Conduct.YellowPagesDiscretionBody, Array.Empty<LocString>(), FontAwesomeIcon.Gavel),
+            Allowed(L.Conduct.YellowPagesAllowedItems),
+            Rule(L.Conduct.YellowPagesPostingTitle, null, L.Conduct.YellowPagesPostingItems, FontAwesomeIcon.Bullhorn,
+                ConductPill.None, L.Conduct.YellowPagesPostingNote),
+            Removed(L.Conduct.YellowPagesRemovedItems),
+            ZeroTolerance(L.Conduct.ZeroChildSafety),
+            Moderation(false),
         },
     };
 
     public static readonly ConductGate Casino = new()
     {
         AppId = "casino",
-        Version = 1,
+        Version = 2,
         Icon = FontAwesomeIcon.Dice,
+        AppName = L.Apps.Casino,
         Title = L.Conduct.CasinoTitle,
         Intro = L.Conduct.CasinoIntro,
         Sections = new[]
         {
-            new ConductSection(ConductTone.Neutral, L.Conduct.CasinoPlayMoneyTitle, L.Conduct.CasinoPlayMoneyBody,
-                Array.Empty<LocString>(), FontAwesomeIcon.Coins),
-            new ConductSection(ConductTone.Prohibited, L.Conduct.CasinoRmtTitle, L.Conduct.CasinoRmtLead,
-                L.Conduct.CasinoRmtItems, FontAwesomeIcon.ExchangeAlt),
-            new ConductSection(ConductTone.Restricted, L.Conduct.CasinoOneSeatTitle, L.Conduct.CasinoOneSeatLead,
-                L.Conduct.CasinoOneSeatItems, FontAwesomeIcon.Users),
-            new ConductSection(ConductTone.Encouraged, L.Conduct.CasinoMannersTitle, L.Conduct.CasinoMannersLead,
-                L.Conduct.CasinoMannersItems, FontAwesomeIcon.Handshake),
-            new ConductSection(ConductTone.Neutral, L.Conduct.CasinoSelfCareTitle, L.Conduct.CasinoSelfCareBody,
-                Array.Empty<LocString>(), FontAwesomeIcon.Heart),
+            Info(L.Conduct.CasinoMoneyTitle, L.Conduct.CasinoMoneyItems, FontAwesomeIcon.Coins),
+            new ConductSection(ConductTone.Allowed, L.Conduct.CasinoMannersTitle, null, L.Conduct.CasinoMannersItems,
+                FontAwesomeIcon.Handshake, ConductPill.Fine),
+            Rule(L.Conduct.CasinoFairPlayTitle, null, L.Conduct.CasinoFairPlayItems, FontAwesomeIcon.Users,
+                ConductPill.None, L.Conduct.CasinoFairPlayNote),
+            Rule(L.Conduct.CasinoGilTablesTitle, null, L.Conduct.CasinoGilTablesItems, FontAwesomeIcon.Landmark),
+            ZeroTolerance(L.Conduct.CasinoZeroItems),
+            Info(L.Conduct.CasinoSelfCareTitle, L.Conduct.CasinoSelfCareItems, FontAwesomeIcon.Heart),
+            Moderation(false),
         },
     };
 
     public static readonly ConductGate Coin = new()
     {
         AppId = "coin",
-        Version = 1,
+        Version = 2,
         Icon = FontAwesomeIcon.Coins,
+        AppName = L.Apps.Coin,
         Title = L.Conduct.CoinTitle,
         Intro = L.Conduct.CoinIntro,
         Sections = new[]
         {
-            new ConductSection(ConductTone.Neutral, L.Conduct.CoinPlayMoneyTitle, L.Conduct.CoinPlayMoneyBody,
-                Array.Empty<LocString>(), FontAwesomeIcon.Coins),
-            new ConductSection(ConductTone.Prohibited, L.Conduct.CoinRmtTitle, L.Conduct.CoinRmtLead,
-                L.Conduct.CoinRmtItems, FontAwesomeIcon.ExchangeAlt),
-            new ConductSection(ConductTone.Restricted, L.Conduct.CoinFairPlayTitle, L.Conduct.CoinFairPlayLead,
-                L.Conduct.CoinFairPlayItems, FontAwesomeIcon.Robot),
-            new ConductSection(ConductTone.Restricted, L.Conduct.CoinScamsTitle, L.Conduct.CoinScamsLead,
-                L.Conduct.CoinScamsItems, FontAwesomeIcon.ShieldAlt),
+            Info(L.Conduct.CoinHowTitle, L.Conduct.CoinHowItems, FontAwesomeIcon.Coins),
+            Rule(L.Conduct.CoinFairPlayTitle, null, L.Conduct.CoinFairPlayItems, FontAwesomeIcon.Robot,
+                ConductPill.None, L.Conduct.CoinFairPlayNote),
+            Info(L.Conduct.CoinScamsTitle, L.Conduct.CoinScamsItems, FontAwesomeIcon.ShieldAlt),
+            ZeroTolerance(L.Conduct.CoinZeroItems),
+            Moderation(false),
         },
     };
 
-    private static readonly ConductGate[] All = { Chirper, Aethergram, Velvet, Muster, YellowPages, Casino, Coin };
+    private static readonly ConductGate[] All =
+    {
+        Chirper, Aethergram, Velvet, Message, Music, Muster, YellowPages, Casino, Coin,
+    };
+
+    public static ReadOnlySpan<ConductGate> Gates => All;
 
     public static ConductGate? For(string appId)
     {
@@ -250,5 +241,38 @@ internal static class ConductRules
         }
 
         return null;
+    }
+
+    private static ConductSection Allowed(LocString[] items) =>
+        new(ConductTone.Allowed, L.Conduct.AllowedTitle, null, items, FontAwesomeIcon.Check, ConductPill.Fine);
+
+    private static ConductSection Veiled(LocString? note) =>
+        new(ConductTone.Veiled, L.Conduct.VeiledTitle, L.Conduct.VeiledLead, L.Conduct.VeiledItems,
+            FontAwesomeIcon.EyeSlash, ConductPill.Veiled, note);
+
+    private static ConductSection Removed(params LocString[] items) =>
+        new(ConductTone.Removed, L.Conduct.RemovedTitle, null, items, FontAwesomeIcon.Ban, ConductPill.Removed);
+
+    private static ConductSection ZeroTolerance(params LocString[] appItems) =>
+        new(ConductTone.ZeroTolerance, L.Conduct.ZeroTitle, L.Conduct.ZeroLead, Concat(appItems, L.Conduct.ZeroItems),
+            FontAwesomeIcon.ExclamationTriangle, ConductPill.Suspended);
+
+    private static ConductSection Moderation(bool veils) =>
+        new(ConductTone.Info, L.Conduct.LadderTitle, L.Conduct.LadderLead, veils ? LadderWithVeil : L.Conduct.LadderItems,
+            FontAwesomeIcon.Gavel);
+
+    private static ConductSection Rule(LocString heading, LocString? lead, LocString[] items, FontAwesomeIcon icon,
+        ConductPill pill = ConductPill.None, LocString? note = null) =>
+        new(ConductTone.Rule, heading, lead, items, icon, pill, note);
+
+    private static ConductSection Info(LocString heading, LocString[] items, FontAwesomeIcon icon) =>
+        new(ConductTone.Info, heading, null, items, icon);
+
+    private static LocString[] Concat(LocString[] first, LocString[] second)
+    {
+        var combined = new LocString[first.Length + second.Length];
+        Array.Copy(first, combined, first.Length);
+        Array.Copy(second, 0, combined, first.Length, second.Length);
+        return combined;
     }
 }

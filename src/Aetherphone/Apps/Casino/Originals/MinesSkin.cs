@@ -290,6 +290,8 @@ internal sealed class MinesSkin : IOriginalsSkin
         CashOut(originals);
     }
 
+    public long UnshownPayout => board.UnshownPayout;
+
     public bool TakeSettled(out OriginalsOutcome outcome)
     {
         if (!board.TakeSettled(out outcome))

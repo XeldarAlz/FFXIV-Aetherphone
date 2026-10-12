@@ -1,0 +1,40 @@
+# Posts a maintainer-written note (what changed in a beta, a QA checklist) to a channel on the
+# private staff Discord server as the Aetherphone bot. docs/testing-and-release.md, section
+# "Staff post", explains it. The channel id is a secret because the logs of this repository are public.
+
+name: Staff post
+
+on:
+  workflow_dispatch:
+    inputs:
+      title:
+        description: "Title of the first embed"
+        required: true
+        type: string
+      body:
+        description: "Markdown body; a long body is split into several embeds"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  post:
+    name: Post to the staff server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the script
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      - name: Post the message
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_STAFF_POST_CHANNEL_ID: ${{ secrets.DISCORD_STAFF_POST_CHANNEL_ID }}
+          POST_TITLE: ${{ inputs.title }}
+          POST_BODY: ${{ inputs.body }}
+        run: node .github/scripts/staff-post.mjs

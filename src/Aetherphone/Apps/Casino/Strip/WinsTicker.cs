@@ -16,7 +16,7 @@ internal sealed class WinsTicker
     public const string Separator = "     ·     ";
 
     private const float Pad = 14f;
-    private const float EyebrowShare = 0.35f;
+    private const float EyebrowShare = 0.45f;
     private const string MarqueeKey = "casino.floor.ticker";
 
     private readonly StringBuilder builder = new();

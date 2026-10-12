@@ -1,0 +1,57 @@
+# Mirrors every pull request into a Discord forum post: one post per pull request, one message per
+# event, status tags, and the right people pinged. docs/testing-and-release.md, section "Pull request
+# forum on Discord", explains the setup and the ping rules.
+#
+# pull_request_target instead of pull_request on purpose: contributor pull requests come from forks,
+# and fork-triggered pull_request runs get no secrets, so the bot token would be empty exactly when
+# it is needed. pull_request_target runs with this repository's secrets, which is safe here only
+# because the job never checks out or executes anything from the pull request: it checks out the
+# script from the default branch and reads the event payload. Keep it that way.
+
+name: Pull request forum
+
+on:
+  pull_request_target:
+    types: [opened, reopened, closed, synchronize, ready_for_review, converted_to_draft, review_requested, edited]
+  pull_request_review:
+    types: [submitted]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pull_request_number:
+        description: "Pull request to (re)sync into the forum; leave empty to only check the Discord connection"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  mirror:
+    name: Mirror to Discord
+    runs-on: ubuntu-latest
+    if: >-
+      github.actor != 'github-actions[bot]' &&
+      (github.event_name != 'issue_comment' || github.event.issue.pull_request)
+
+    steps:
+      - name: Check out the script from the default branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      # All four are secrets, not variables: this repository is public, its workflow logs are
+      # public, and GitHub prints variable values into them while secrets are masked.
+      - name: Mirror the event
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_PULL_REQUEST_FORUM_ID: ${{ secrets.DISCORD_PULL_REQUEST_FORUM_ID }}
+          DISCORD_MAINTAINERS_ROLE_ID: ${{ secrets.DISCORD_MAINTAINERS_ROLE_ID }}
+          DISCORD_GITHUB_USERS: ${{ secrets.DISCORD_GITHUB_USERS }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
+        run: node .github/scripts/pull-request-forum.mjs

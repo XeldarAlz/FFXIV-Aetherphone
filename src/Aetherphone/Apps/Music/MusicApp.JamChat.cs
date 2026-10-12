@@ -27,6 +27,7 @@ internal sealed partial class MusicApp
 
     private void DrawJamChat(float scale)
     {
+        conduct.NotifyFeatureOpened(Id);
         var transcript = JamTranscript;
         if (!string.Equals(jamTranscriptJamCode, jam.Code, StringComparison.Ordinal))
         {

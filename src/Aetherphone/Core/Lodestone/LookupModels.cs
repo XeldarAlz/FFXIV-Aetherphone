@@ -15,7 +15,12 @@ internal enum LookupState : byte
     Failed,
 }
 
-internal sealed class CharacterMatch
+internal interface ILookupMatch
+{
+    string Name { get; }
+}
+
+internal sealed class CharacterMatch : ILookupMatch
 {
     public CharacterMatch(string id, string name, string world)
     {
@@ -29,7 +34,7 @@ internal sealed class CharacterMatch
     public string World { get; }
 }
 
-internal sealed class FreeCompanyMatch
+internal sealed class FreeCompanyMatch : ILookupMatch
 {
     public FreeCompanyMatch(string id, string name, string world, string subtitle, bool recruiting, Uri? crest,
         string crestKey)

@@ -40,6 +40,8 @@ internal sealed class CasinoRoomSession
 
     private const long UnreachableAfterMilliseconds = 12_000;
 
+    private const long ReattachAfterMilliseconds = 4_000;
+
     private readonly RealtimeSignalBus signals;
     private readonly object gate = new();
 
@@ -50,9 +52,11 @@ internal sealed class CasinoRoomSession
     private volatile bool attached;
     private volatile bool awaitingSnapshot;
     private volatile bool handedOff;
+    private volatile bool restarting;
     private long skewMilliseconds;
     private long resyncAskedAtUnixMs;
     private long touchedAtTick;
+    private long reattachDueTick;
     private bool skewAnchored;
 
     public CasinoRoomSession(RealtimeSignalBus signals)
@@ -74,11 +78,25 @@ internal sealed class CasinoRoomSession
 
     public bool HandedOff => handedOff;
 
+    public bool Restarting => restarting;
+
     public long SkewMilliseconds => Volatile.Read(ref skewMilliseconds);
 
     public bool Unreachable(long nowTick)
     {
-        return Unreachable(attached, Volatile.Read(ref touchedAtTick), nowTick);
+        return restarting || Unreachable(attached, Volatile.Read(ref touchedAtTick), nowTick);
+    }
+
+    internal static bool Resumes(string reason)
+    {
+        return string.Equals(reason, CasinoReasons.Restarting, StringComparison.Ordinal)
+            || string.Equals(reason, CasinoReasons.Draining, StringComparison.Ordinal)
+            || string.Equals(reason, CasinoReasons.Cooldown, StringComparison.Ordinal);
+    }
+
+    internal static bool ReattachDue(long dueTick, bool socketAttached, long nowTick)
+    {
+        return dueTick != 0 && !socketAttached && nowTick >= dueTick;
     }
 
     internal static bool Unreachable(bool socketAttached, long touchedAtTick, long nowTick)
@@ -132,7 +150,9 @@ internal sealed class CasinoRoomSession
             closedReason = string.Empty;
             attached = false;
             awaitingSnapshot = true;
+            restarting = false;
             resyncAskedAtUnixMs = 0;
+            reattachDueTick = 0;
             Touch();
             Send(SignalType.CasinoAttach, nextRoomId);
         }
@@ -171,6 +191,21 @@ internal sealed class CasinoRoomSession
 
             handedOff = false;
             Send(SignalType.CasinoClaim, current);
+        }
+    }
+
+    public void RetryAttach(long nowTick)
+    {
+        lock (gate)
+        {
+            var current = roomId;
+            if (current.Length == 0 || !ReattachDue(reattachDueTick, attached, nowTick))
+            {
+                return;
+            }
+
+            reattachDueTick = nowTick + ReattachAfterMilliseconds;
+            Send(SignalType.CasinoAttach, current);
         }
     }
 
@@ -216,6 +251,8 @@ internal sealed class CasinoRoomSession
         {
             case SignalType.CasinoAttached:
                 attached = true;
+                restarting = false;
+                Volatile.Write(ref reattachDueTick, 0);
                 closedReason = string.Empty;
                 AbsorbSnapshot(payload, localNowUnixMs);
                 return;
@@ -234,7 +271,7 @@ internal sealed class CasinoRoomSession
                 return;
             case SignalType.CasinoDeclined:
             case SignalType.CasinoEnded:
-                Close(payload.RoomId, signal.Reason ?? string.Empty);
+                Answered(payload.RoomId, signal.Reason ?? string.Empty);
                 return;
         }
     }
@@ -247,6 +284,7 @@ internal sealed class CasinoRoomSession
             return;
         }
 
+        restarting = false;
         Touch();
         AbsorbServerTime(fresh.ServerNowUnixMs, localNowUnixMs);
         Absorb(requestedRoomId, fresh.Epoch, fresh.Seq, fresh);
@@ -560,6 +598,34 @@ internal sealed class CasinoRoomSession
         }
     }
 
+    private void Answered(string answeredRoomId, string reason)
+    {
+        if (!Resumes(reason))
+        {
+            Close(answeredRoomId, reason);
+            return;
+        }
+
+        lock (gate)
+        {
+            if (!string.Equals(roomId, answeredRoomId, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            if (attached && string.Equals(reason, CasinoReasons.Cooldown, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            attached = false;
+            awaitingSnapshot = true;
+            restarting = !string.Equals(reason, CasinoReasons.Cooldown, StringComparison.Ordinal);
+            resyncAskedAtUnixMs = 0;
+            reattachDueTick = Environment.TickCount64 + ReattachAfterMilliseconds;
+        }
+    }
+
     private void Close(string closingRoomId, string reason)
     {
         lock (gate)
@@ -583,7 +649,9 @@ internal sealed class CasinoRoomSession
         attached = false;
         awaitingSnapshot = false;
         handedOff = false;
+        restarting = false;
         resyncAskedAtUnixMs = 0;
+        reattachDueTick = 0;
         Volatile.Write(ref touchedAtTick, 0);
     }
 

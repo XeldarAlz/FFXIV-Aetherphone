@@ -2,8 +2,10 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Conduct;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Moderation;
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -14,13 +16,16 @@ internal sealed class SafetyPage : ISettingsPage
 {
     private readonly AethernetSession session;
     private readonly ModerationNoticeArchive archive;
+    private readonly ConductGateService conduct;
     private readonly ISettingsNavigator navigator;
     private readonly SafetyNoticePage detail = new();
 
-    public SafetyPage(AethernetSession session, ModerationNoticeArchive archive, ISettingsNavigator navigator)
+    public SafetyPage(AethernetSession session, ModerationNoticeArchive archive, ConductGateService conduct,
+        ISettingsNavigator navigator)
     {
         this.session = session;
         this.archive = archive;
+        this.conduct = conduct;
         this.navigator = navigator;
     }
 
@@ -37,53 +42,79 @@ internal sealed class SafetyPage : ISettingsPage
 
     public void Draw(in PhoneContext context, Rect body)
     {
-        var scale = UiScale.Current;
         var theme = context.Theme;
         using (AppSurface.Begin(body))
         {
-            if (!session.IsSignedIn)
-            {
-                SettingsSection.Hint(Loc.T(L.Safety.SignInPrompt), theme);
-                return;
-            }
+            DrawNotices(theme);
+            DrawGuidelines(theme);
+        }
+    }
 
-            archive.EnsureFresh();
-            SettingsSection.Header(Loc.T(L.Safety.Title), theme, Loc.T(L.Safety.RetentionHint));
+    private void DrawNotices(PhoneTheme theme)
+    {
+        var scale = UiScale.Current;
+        if (!session.IsSignedIn)
+        {
+            SettingsSection.Hint(Loc.T(L.Safety.SignInPrompt), theme);
+            return;
+        }
 
-            var items = archive.Items;
-            if (items.Length == 0)
-            {
-                SettingsSection.Hint(archive.Loaded ? Loc.T(L.Safety.Empty) : Loc.T(L.Common.Loading), theme);
-                return;
-            }
+        archive.EnsureFresh();
+        SettingsSection.Header(Loc.T(L.Safety.Title), theme, Loc.T(L.Safety.RetentionHint));
 
-            var card = GroupCard.Begin(theme, items.Length);
-            for (var index = 0; index < items.Length; index++)
-            {
-                var notice = items[index];
-                if (SettingsRow.Link(card.NextRow(), IconFor(notice), Tint,
-                        ModerationNoticeText.Title(notice), TimeText.Short(notice.CreatedAtUnix), theme,
-                        !notice.Acknowledged, "safety:" + notice.Id))
-                {
-                    detail.Show(notice);
-                    navigator.Open(detail);
-                }
-            }
+        var items = archive.Items;
+        if (items.Length == 0)
+        {
+            SettingsSection.Hint(archive.Loaded ? Loc.T(L.Safety.Empty) : Loc.T(L.Common.Loading), theme);
+            return;
+        }
 
-            card.End();
-            if (archive.HasMore)
+        var card = GroupCard.Begin(theme, items.Length);
+        for (var index = 0; index < items.Length; index++)
+        {
+            var notice = items[index];
+            if (SettingsRow.Link(card.NextRow(), IconFor(notice), Tint,
+                    ModerationNoticeText.Title(notice), TimeText.Short(notice.CreatedAtUnix), theme,
+                    !notice.Acknowledged, "safety:" + notice.Id))
             {
-                ImGui.Dummy(new Vector2(0f, 6f * scale));
-                var moreCard = GroupCard.Begin(theme, 1);
-                var loadOlder = SettingsRow.Disclosure(moreCard.NextRow(), Loc.T(L.Safety.LoadOlder),
-                    string.Empty, theme);
-                moreCard.End();
-                if (loadOlder)
-                {
-                    archive.LoadMore();
-                }
+                detail.Show(notice);
+                navigator.Open(detail);
             }
         }
+
+        card.End();
+        if (!archive.HasMore)
+        {
+            return;
+        }
+
+        ImGui.Dummy(new Vector2(0f, 6f * scale));
+        var moreCard = GroupCard.Begin(theme, 1);
+        var loadOlder = SettingsRow.Disclosure(moreCard.NextRow(), Loc.T(L.Safety.LoadOlder), string.Empty, theme);
+        moreCard.End();
+        if (loadOlder)
+        {
+            archive.LoadMore();
+        }
+    }
+
+    private void DrawGuidelines(PhoneTheme theme)
+    {
+        var gates = ConductRules.Gates;
+        ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * UiScale.Current));
+        SettingsSection.Header(Loc.T(L.Safety.GuidelinesTitle), theme, Loc.T(L.Safety.GuidelinesHint));
+        var card = GroupCard.Begin(theme, gates.Length);
+        for (var index = 0; index < gates.Length; index++)
+        {
+            var gate = gates[index];
+            if (SettingsRow.Link(card.NextRow(), gate.Icon, AppAccents.For(gate.AppId), Loc.T(gate.AppName),
+                    string.Empty, theme, false, gate.AppId))
+            {
+                conduct.ShowRules(gate.AppId);
+            }
+        }
+
+        card.End();
     }
 
     private static FontAwesomeIcon IconFor(ModerationNoticeDto notice)

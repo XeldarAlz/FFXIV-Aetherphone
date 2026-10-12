@@ -71,6 +71,7 @@ using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.MoogleClicker;
 using Aetherphone.Core.Onboarding;
+using Aetherphone.Core.Platform;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;

@@ -2,7 +2,6 @@ using Aetherphone.Apps.Casino.Stage;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Notifications;
-using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -14,6 +13,7 @@ internal sealed class VenueCheer
 
     private const int ConfettiCount = 48;
     private const float Sweep = 0.4f;
+    private const float BannerShare = 0.86f;
 
     private string text = string.Empty;
     private float progress = 1f;
@@ -49,9 +49,7 @@ internal sealed class VenueCheer
         }
 
         progress = GameBanner.Advance(progress, deltaSeconds, BannerSeconds);
-        var style = TextStyles.Title2;
-        var fitted = Typography.FitText(text, safe.Width * 0.86f, style);
-        GameBanner.Draw(drawList, new Vector2(safe.Center.X, safe.Min.Y + safe.Height * 0.38f), fitted,
-            CasinoColors.Money, PhoneTheme.Default, MathF.Max(0.001f, progress), style);
+        GameBanner.DrawWrapped(drawList, new Vector2(safe.Center.X, safe.Min.Y + safe.Height * 0.38f), text,
+            safe.Width * BannerShare, CasinoColors.Money, MathF.Max(0.001f, progress), TextStyles.Title2);
     }
 }

@@ -28,6 +28,7 @@ internal static class CasinoGameNames
         CasinoGames.DiceTable => L.Venue.GameDiceTable,
         CasinoGames.Deathroll => L.Venue.GameDeathroll,
         CasinoGames.Raffle => L.Venue.GameRaffle,
+        CasinoGames.Book => L.Book.Game,
         _ => L.Apps.Casino,
     };
 }

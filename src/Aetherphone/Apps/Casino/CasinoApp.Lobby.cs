@@ -56,13 +56,14 @@ internal sealed partial class CasinoApp
 
             cursorY = DrawHeroBlock(drawList, new Vector2(origin.X, cursorY), width, delta, scale) + gap;
             cursorY = DrawResume(drawList, new Vector2(origin.X, cursorY), width, scale);
+            cursorY = DrawFloorExtras(drawList, new Vector2(origin.X, cursorY), width, scale);
             cursorY = DrawCarousel(drawList, new Vector2(origin.X, cursorY), width, delta, scale);
             var tickerBottom = winsTicker.Draw(drawList, floor.Ticker, floor.TickerVersion,
                 new Vector2(origin.X, cursorY), width, scale);
             cursorY = tickerBottom > cursorY ? tickerBottom + gap : cursorY;
-            cursorY = DrawNearbyTables(drawList, cursorY, origin.X, width, scale);
+            cursorY = venueSection.Draw(drawList, ui, new Vector2(origin.X, cursorY), width, scale);
             cursorY = DrawLiveNow(drawList, new Vector2(origin.X, cursorY), width, scale);
-            cursorY = DrawFloorExtras(drawList, new Vector2(origin.X, cursorY), width, scale);
+            cursorY = DrawRecentGames(drawList, new Vector2(origin.X, cursorY), width, delta, scale);
             cursorY += FloorSectionGap * scale * 0.5f;
             var shelvesBottom = shelves.Draw(drawList, ui, this, new Vector2(origin.X, cursorY), width, stage.Phase,
                 delta, !router.IsTransitioning && !LaunchActive, scale, out var tapped, out var source);
@@ -74,7 +75,7 @@ internal sealed partial class CasinoApp
             cursorY = DrawFloorTail(drawList, new Vector2(origin.X, shelvesBottom + FloorSectionGap * scale), width,
                 scale);
             cursorY = DrawRecordsRow(drawList, new Vector2(origin.X, cursorY), width, scale);
-            if (!cashier.IsOpen)
+            if (!cashier.IsOpen && !missionsSheet.IsOpen)
             {
                 bonusShelf.DrawShower(drawList, scale);
             }
@@ -83,20 +84,7 @@ internal sealed partial class CasinoApp
         }
     }
 
-    private void OpenEntry(in Strip.StripEntry entry, Rect source)
-    {
-        switch (entry.Action)
-        {
-            case Strip.StripAction.HostTable:
-                OpenHostSheet();
-                return;
-            case Strip.StripAction.HostVenue:
-                OpenVenueHostSheet(entry.Venue);
-                return;
-        }
-
-        OpenGame(entry.GameId, source);
-    }
+    private void OpenEntry(in Strip.StripEntry entry, Rect source) => OpenGame(entry.GameId, source);
 
     private float DrawHeroBlock(ImDrawListPtr drawList, Vector2 origin, float width, float delta, float scale)
     {
@@ -110,10 +98,11 @@ internal sealed partial class CasinoApp
         }
 
         var bonuses = casino.HasFeature(CasinoFeatures.Bonus);
+        var spinReady = DailySpinStatus.OffersWheel(DailySpinStatus.Of(casinoSpin.Answer));
         var model = new Strip.StripHeroModel(FloorBalance(), state?.Sitting is not null, progress?.Level ?? 1,
             levelFraction, casino.Ceiling.LevelCap, progress is not null,
             bonuses ? casino.BonusFor(CasinoBonusKinds.Timed) : null,
-            bonuses ? casino.BonusFor(CasinoBonusKinds.Streak) : null, casino.ClaimingBonus.Length > 0,
+            bonuses ? casino.BonusFor(CasinoBonusKinds.Streak) : null, spinReady, casino.ClaimingBonus.Length > 0,
             DateTimeOffset.UtcNow.ToUnixTimeSeconds(), casino.Rate);
         var action = stripHero.Draw(drawList, ui, model, origin, width, delta, scale, out var bottom);
         switch (action)
@@ -127,6 +116,9 @@ internal sealed partial class CasinoApp
                 break;
             case Strip.StripHeroAction.ClaimStreak:
                 bonusShelf.Claim(CasinoBonusKinds.Streak, stripHero.StreakCenter);
+                break;
+            case Strip.StripHeroAction.FreeSpin:
+                OpenGame(CasinoGames.DailySpin, stripHero.SpinSource);
                 break;
         }
 

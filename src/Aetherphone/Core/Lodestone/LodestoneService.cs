@@ -119,8 +119,45 @@ internal sealed class LodestoneService : IDisposable
         return new AvatarHandle(result.Texture, state, cacheKey);
     }
 
-    public async Task<IDisposable> ThrottleAsync(CancellationToken token) =>
-        await throttle.EnterAsync(token).ConfigureAwait(false);
+    public AvatarHandle AvatarById(string id, float drawnPixels)
+    {
+        if (!configuration.ShowLodestonePortraits || gameData.IsChineseGameClient() || id.Length == 0)
+        {
+            return AvatarHandle.Disabled;
+        }
+
+        var key = string.Concat("lodestone:", ImageKeyVersion, ":avatar:id:", id);
+        var result = media.GetOrRequest(key, token => FetchByIdAsync(id, token), drawnPixels);
+        var state = result.Texture is not null ? AvatarLoadState.Ready :
+            result.Loading ? AvatarLoadState.Loading : AvatarLoadState.Failed;
+        return new AvatarHandle(result.Texture, state, key);
+    }
+
+    public void RememberId(string name, string world, string id)
+    {
+        if (name.Length == 0 || world.Length == 0 || id.Length == 0)
+        {
+            return;
+        }
+
+        EnsureIdsLoaded();
+        var key = $"{name}@{world}";
+        lock (idSync)
+        {
+            if (resolvedIds.TryGetValue(key, out var known) && string.Equals(known, id, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            resolvedIds[key] = id;
+            unresolvedAt.Remove(key);
+        }
+
+        AppendIdIndex(key, id);
+    }
+
+    public Task<IDisposable> ThrottleAsync(CancellationToken token, bool priority) =>
+        throttle.EnterAsync(token, priority);
 
     public Task<LodestoneClient?> ClientAsync(CancellationToken token) => EnsureClientAsync(token);
 
@@ -149,21 +186,34 @@ internal sealed class LodestoneService : IDisposable
                 return null;
             }
 
-            var ready = await EnsureClientAsync(token).ConfigureAwait(false);
-            if (ready is null)
-            {
-                return null;
-            }
-
-            var character = await ready.GetCharacter(id).WaitAsync(NetStoneTimeout, token).ConfigureAwait(false);
-            var uri = fullBody ? character?.Portrait : character?.Avatar;
-            if (uri is null)
-            {
-                return null;
-            }
-
-            return await http.GetBytesAsync(uri, token).ConfigureAwait(false);
+            return await DownloadImageAsync(id, fullBody, token).ConfigureAwait(false);
         }
+    }
+
+    private async Task<byte[]?> FetchByIdAsync(string id, CancellationToken token)
+    {
+        using (await throttle.EnterAsync(token).ConfigureAwait(false))
+        {
+            return await DownloadImageAsync(id, false, token).ConfigureAwait(false);
+        }
+    }
+
+    private async Task<byte[]?> DownloadImageAsync(string id, bool fullBody, CancellationToken token)
+    {
+        var ready = await EnsureClientAsync(token).ConfigureAwait(false);
+        if (ready is null)
+        {
+            return null;
+        }
+
+        var character = await ready.GetCharacter(id).WaitAsync(NetStoneTimeout, token).ConfigureAwait(false);
+        var uri = fullBody ? character?.Portrait : character?.Avatar;
+        if (uri is null)
+        {
+            return null;
+        }
+
+        return await http.GetBytesAsync(uri, token).ConfigureAwait(false);
     }
 
     private async Task<string?> ResolveIdAsync(string name, string world, CancellationToken token)

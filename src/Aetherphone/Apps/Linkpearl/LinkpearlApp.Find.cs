@@ -83,14 +83,19 @@ internal sealed partial class LinkpearlApp
         }
 
         var hintWorld = submittedRegionIsDataCenter ? string.Empty : submittedRegion;
+        var avatarPixels = FindResultAvatarRadius * 2f * scale;
+        var rowSize = new Vector2(1f, FindResultRowHeight * scale);
         using (AppSurface.BeginEdgeToEdge(body))
         {
             for (var index = 0; index < matches.Length; index++)
             {
                 var match = matches[index];
                 var world = match.World.Length > 0 ? match.World : hintWorld;
-                if (DrawLookupRow(match.Name, world, lodestone.Avatar(match.Name, world,
-                        FindResultAvatarRadius * 2f * scale)))
+                var rowOrigin = ImGui.GetCursorScreenPos();
+                var avatar = ImGui.IsRectVisible(rowOrigin, rowOrigin + rowSize)
+                    ? lodestone.AvatarById(match.Id, avatarPixels)
+                    : AvatarHandle.Disabled;
+                if (DrawLookupRow(match.Name, world, avatar))
                 {
                     router.Push(LinkpearlRoute.Character(match.Id, match.Name, world));
                 }

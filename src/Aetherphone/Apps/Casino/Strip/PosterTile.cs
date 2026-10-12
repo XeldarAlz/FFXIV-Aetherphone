@@ -24,6 +24,7 @@ internal static class PosterTile
     public const float GlyphFraction = 0.22f;
     public const float CrowdHeight = 24f;
     public const float IconScale = 2.4f;
+    public const float SignFade = 14f;
 
     private const float SkyLuminance = 0.20f;
     private const float RimAlpha = 0.45f;
@@ -45,6 +46,21 @@ internal static class PosterTile
         Pad * scale * 2f + headlineHeight * TitleLines + footnoteHeight * DetailLines;
 
     public static float SignBandTop(float scale) => (Pad * 0.6f + CrowdHeight + CapsuleGap) * scale;
+
+    public static float SignBandBottom(float scale) => SignBandTop(scale) + (SignHeight + CapsuleGap) * scale;
+
+    public static void DrawSignScrim(ImDrawListPtr drawList, Rect tile, float scale)
+    {
+        var bottom = tile.Min.Y + SignBandBottom(scale);
+        drawList.PushClipRect(tile.Min, new Vector2(tile.Max.X, bottom), true);
+        Squircle.Fill(drawList, tile.Min, tile.Max, Metrics.Radius.Widget * scale,
+            ImGui.GetColorU32(Night with { W = ScrimAlpha }));
+        drawList.PopClipRect();
+        var solid = ImGui.GetColorU32(Night with { W = ScrimAlpha });
+        var clear = ImGui.GetColorU32(Night with { W = 0f });
+        drawList.AddRectFilledMultiColor(new Vector2(tile.Min.X, bottom),
+            new Vector2(tile.Max.X, bottom + SignFade * scale), solid, solid, clear, clear);
+    }
 
     public static Vector2 ArtCenter(Rect tile, float textBlock, float scale)
     {
@@ -102,39 +118,33 @@ internal static class PosterTile
         var titleCount = Math.Min(titleLines.Length, TitleLines);
         var titleHeight = Typography.LineHeight(titleStyle);
         var footnoteHeight = Typography.LineHeight(TextStyles.Footnote);
-        var metaLines = info.Meta.Length > 0 && info.Return.Length == 0
+        var detailBudget = DetailLines + TitleLines - titleCount;
+        var returnLines = info.Return.Length > 0
+            ? Typography.WrapText(info.Return, TextStyles.FootnoteEmphasized, width)
+            : Array.Empty<string>();
+        var returnCount = Math.Min(returnLines.Length, detailBudget);
+        var metaLines = info.Meta.Length > 0
             ? Typography.WrapText(info.Meta, TextStyles.Footnote, width)
             : Array.Empty<string>();
-        var metaCount = info.Return.Length > 0
-            ? (info.Meta.Length > 0 ? 1 : 0) + 1
-            : Math.Min(metaLines.Length, DetailLines);
-        var top = tile.Max.Y - pad - titleCount * titleHeight - metaCount * footnoteHeight;
+        var metaCount = Math.Min(metaLines.Length, detailBudget - returnCount);
+        var top = tile.Max.Y - pad - titleCount * titleHeight - (metaCount + returnCount) * footnoteHeight;
         for (var line = 0; line < titleCount; line++)
         {
             Typography.Draw(drawList, new Vector2(left, top), titleLines[line], CasinoColors.InkTitle, titleStyle);
             top += titleHeight;
         }
 
-        if (info.Return.Length > 0)
-        {
-            if (info.Meta.Length > 0)
-            {
-                Typography.Draw(drawList, new Vector2(left, top),
-                    Typography.FitText(info.Meta, width, TextStyles.Footnote), CasinoColors.InkBody,
-                    TextStyles.Footnote);
-                top += footnoteHeight;
-            }
-
-            Typography.Draw(drawList, new Vector2(left, top),
-                Typography.FitText(info.Return, width, TextStyles.FootnoteEmphasized), CasinoColors.Money,
-                TextStyles.FootnoteEmphasized);
-            return;
-        }
-
         for (var line = 0; line < metaCount; line++)
         {
             Typography.Draw(drawList, new Vector2(left, top), metaLines[line], CasinoColors.InkBody,
                 TextStyles.Footnote);
+            top += footnoteHeight;
+        }
+
+        for (var line = 0; line < returnCount; line++)
+        {
+            Typography.Draw(drawList, new Vector2(left, top), returnLines[line], CasinoColors.Money,
+                TextStyles.FootnoteEmphasized);
             top += footnoteHeight;
         }
     }

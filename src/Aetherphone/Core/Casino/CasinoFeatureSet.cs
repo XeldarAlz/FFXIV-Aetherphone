@@ -23,6 +23,7 @@ internal sealed class CasinoFeatureSet
         CasinoFeatures.Race,
         CasinoFeatures.Plinko,
         CasinoFeatures.Originals,
+        CasinoFeatures.VenueBook,
     };
 
     private readonly ulong mask;

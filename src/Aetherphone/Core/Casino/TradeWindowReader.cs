@@ -1,7 +1,10 @@
+using System.Text;
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.UI.Arrays;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using Lumina.Text.ReadOnly;
 
 namespace Aetherphone.Core.Casino;
 
@@ -17,10 +20,12 @@ internal sealed unsafe class TradeWindowReader : ITradeWindowReader
     private const int MaxNameCandidates = 12;
     private const int MaxNodeDepth = 4;
     private const int MinNameLength = 3;
+    private const char MacroBreak = '\uE000';
 
     private readonly List<string> names = new(MaxNameCandidates);
     private string[] candidates = Array.Empty<string>();
     private bool open;
+    private bool partnerRead;
     private long leftOffer;
     private long rightOffer;
 
@@ -34,13 +39,14 @@ internal sealed unsafe class TradeWindowReader : ITradeWindowReader
 
     public TradeWindowSample Sample()
     {
-        return new TradeWindowSample(open, candidates, leftOffer, rightOffer, WalletGil());
+        return new TradeWindowSample(open, candidates, leftOffer, rightOffer, WalletGil(), partnerRead);
     }
 
     private void OnOpened(AddonEvent type, AddonArgs args)
     {
         open = true;
         candidates = Array.Empty<string>();
+        partnerRead = false;
         leftOffer = 0;
         rightOffer = 0;
         Read(args);
@@ -67,6 +73,13 @@ internal sealed unsafe class TradeWindowReader : ITradeWindowReader
         }
 
         names.Clear();
+        var partner = PartnerName();
+        if (partner.Length > 0)
+        {
+            names.Add(partner);
+            partnerRead = true;
+        }
+
         var left = 0L;
         var right = 0L;
         var middle = addon->X + addon->RootNode->Width * addon->Scale * 0.5f;
@@ -74,6 +87,12 @@ internal sealed unsafe class TradeWindowReader : ITradeWindowReader
         if (names.Count > 0)
         {
             candidates = names.ToArray();
+        }
+
+        if (TryOfferedGil(out var sent, out var received))
+        {
+            left = sent;
+            right = received;
         }
 
         leftOffer = left;
@@ -139,6 +158,52 @@ internal sealed unsafe class TradeWindowReader : ITradeWindowReader
         {
             names.Add(text);
         }
+    }
+
+    private static string PartnerName()
+    {
+        var strings = TradeStringArray.Instance();
+        if (strings == null || !strings->TradePartnerName.HasValue)
+        {
+            return string.Empty;
+        }
+
+        return PlainText(new ReadOnlySeStringSpan(strings->TradePartnerName.AsSpan()));
+    }
+
+    private static string PlainText(ReadOnlySeStringSpan text)
+    {
+        var builder = new StringBuilder();
+        foreach (var payload in text)
+        {
+            if (payload.Type == ReadOnlySePayloadType.Text)
+            {
+                builder.Append(Encoding.UTF8.GetString(payload.Body));
+                continue;
+            }
+
+            if (builder.Length > 0 && builder[^1] != MacroBreak)
+            {
+                builder.Append(MacroBreak);
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    private static bool TryOfferedGil(out long sent, out long received)
+    {
+        var numbers = TradeNumberArray.Instance();
+        if (numbers == null)
+        {
+            sent = 0;
+            received = 0;
+            return false;
+        }
+
+        sent = numbers->SendGilCount;
+        received = numbers->ReceiveGilCount;
+        return sent > 0 || received > 0;
     }
 
     private static long WalletGil()

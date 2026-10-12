@@ -314,6 +314,12 @@ internal sealed partial class MachineCabinet
     {
         if (!round.Granted)
         {
+            if (Composer.Auto.WaitsOut(round.Reason))
+            {
+                autoPause = AutoBetPlan.PacingRetrySeconds;
+                return;
+            }
+
             inlineReason = round.Reason.Length > 0 ? round.Reason : CasinoReasons.Unreachable;
             Composer.Auto.Stop(AutoStop.Refused);
             return;

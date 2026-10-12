@@ -2,6 +2,7 @@ using Aetherphone.Apps.Casino.Stage;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
@@ -31,12 +32,14 @@ internal sealed class ScratchCabinet : ICabinetIdle
     private const float TicketMaxWidth = 360f;
     private const float KioskInset = 12f;
     private const float CellGap = 6f;
-    private const float AutoPauseSeconds = 0.8f;
+    private const float AutoPauseSeconds = 1.6f;
+    private const float AutoRevealStepSeconds = 0.09f;
     private const float RubTickSeconds = 0.06f;
     private const float StatusGap = 10f;
     private const float IdleThemeSeconds = 3f;
     private const int FlakesPerTick = 3;
     private const int RevealSparkles = 6;
+    private const float OutOfReachAlpha = 0.4f;
     private const string MalformedReason = "malformed";
 
     private readonly CasinoStore store;
@@ -47,7 +50,8 @@ internal sealed class ScratchCabinet : ICabinetIdle
     private readonly BetComposer composer = new("##scratchBuy");
 
     private int tierIndex;
-    private ScratchPhase seenPhase;
+    private string settledRoundId = string.Empty;
+    private float autoRevealClock;
     private string inlineReason = string.Empty;
     private string roundId = string.Empty;
     private bool roundCapped;
@@ -58,7 +62,6 @@ internal sealed class ScratchCabinet : ICabinetIdle
     private float idleTime;
     private float stampSeconds = -1f;
     private int rasp;
-    private bool stroked;
 
     public ScratchCabinet(CasinoStore store, CasinoPlayStore play)
     {
@@ -77,6 +80,8 @@ internal sealed class ScratchCabinet : ICabinetIdle
     public bool OddsOpen => oddsSheet.IsOpen;
 
     public static float DeckHeight => BetComposer.DeckHeightFor(true, true);
+
+    public long DisplayStack(long stack) => Math.Max(0, stack - playback.PrizeStillUnderFoil);
 
     public void OpenOdds()
     {
@@ -114,10 +119,9 @@ internal sealed class ScratchCabinet : ICabinetIdle
         composer.Auto.Acknowledge();
         inlineReason = string.Empty;
         roundId = string.Empty;
-        seenPhase = ScratchPhase.Idle;
+        settledRoundId = string.Empty;
         autoPause = 0f;
         stampSeconds = -1f;
-        stroked = false;
     }
 
     public void Draw(CasinoStage stage, in CasinoStageFrame frame, AppSkin ui)
@@ -146,7 +150,8 @@ internal sealed class ScratchCabinet : ICabinetIdle
         LayoutTicket(safe, safe.Max.Y - statusHeight, scale);
         DrawKiosk(drawList, stage, frame, scale);
         DrawTicket(drawList, stage, ui, frame, scale);
-        var status = new Rect(new Vector2(safe.Min.X, ticketArea.Max.Y + StatusGap * scale), safe.Max);
+        var status = new Rect(
+            new Vector2(safe.Min.X, StatusTop(ticketArea, KioskInset * scale, StatusGap * scale)), safe.Max);
         DrawStatus(drawList, stage, ui, line, showRun, status, scale);
         DrawDeck(stage, frame, ui, state, sitting ?? CasinoWire.NoBankroll, scale);
     }
@@ -184,13 +189,17 @@ internal sealed class ScratchCabinet : ICabinetIdle
                 inlineReason = string.Empty;
                 roundId = card.RoundId;
                 roundCapped = card.Capped;
-                stroked = false;
                 stampSeconds = -1f;
                 stage.Celebration.Clear();
-                if (frame.Instant || composer.Auto.Running)
+                autoRevealClock = 0f;
+                if (frame.Instant)
                 {
                     playback.RevealAll();
                 }
+            }
+            else if (!card.Granted && composer.Auto.WaitsOut(card.Reason))
+            {
+                autoPause = AutoBetPlan.PacingRetrySeconds;
             }
             else
             {
@@ -212,6 +221,8 @@ internal sealed class ScratchCabinet : ICabinetIdle
             stampSeconds += frame.DeltaSeconds;
         }
 
+        RevealOnAuto(frame.DeltaSeconds);
+
         if (playback.TakeWinCelebration(out var prize))
         {
             var price = ScratchRules.Prices[playback.Tier];
@@ -221,12 +232,13 @@ internal sealed class ScratchCabinet : ICabinetIdle
             stampSeconds = 0f;
         }
 
-        var settledNow = seenPhase == ScratchPhase.Scratching && playback.Phase == ScratchPhase.Settled;
-        seenPhase = playback.Phase;
-        if (!settledNow)
+        if (playback.Phase != ScratchPhase.Settled || roundId.Length == 0
+            || string.Equals(roundId, settledRoundId, StringComparison.Ordinal))
         {
             return;
         }
+
+        settledRoundId = roundId;
 
         var stake = ScratchRules.Prices[playback.Tier];
         var payout = playback.PrizeOnceRevealed;
@@ -240,17 +252,38 @@ internal sealed class ScratchCabinet : ICabinetIdle
         }
     }
 
+    private void RevealOnAuto(float deltaSeconds)
+    {
+        if (!composer.Auto.Running || playback.Phase != ScratchPhase.Scratching)
+        {
+            return;
+        }
+
+        autoRevealClock += deltaSeconds;
+        while (autoRevealClock >= AutoRevealStepSeconds && playback.Phase == ScratchPhase.Scratching)
+        {
+            autoRevealClock -= AutoRevealStepSeconds;
+            playback.RevealNext();
+        }
+    }
+
     private void LayoutTicket(Rect safe, float bottom, float scale)
     {
-        var available = MathF.Max(0f, bottom - safe.Min.Y);
-        var width = MathF.Min(MathF.Min(safe.Width - KioskInset * 2f * scale, TicketMaxWidth * scale),
-            available / (1f + ScratchTicketArt.HeaderShare) - KioskInset * scale);
-        width = MathF.Max(0f, width);
-        var height = width * (1f + ScratchTicketArt.HeaderShare);
-        var left = safe.Center.X - width * 0.5f;
-        var top = safe.Min.Y + MathF.Max(0f, (available - height) * 0.5f);
-        ticketArea = new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
+        ticketArea = TicketRect(safe, bottom, KioskInset * scale, TicketMaxWidth * scale, ScratchTicketArt.HeaderShare);
     }
+
+    internal static Rect TicketRect(Rect safe, float bottom, float kioskInset, float maxWidth, float headerShare)
+    {
+        var available = MathF.Max(0f, bottom - safe.Min.Y - kioskInset * 2f);
+        var width = MathF.Min(MathF.Min(safe.Width - kioskInset * 2f, maxWidth), available / (1f + headerShare));
+        width = MathF.Max(0f, width);
+        var height = width * (1f + headerShare);
+        var left = safe.Center.X - width * 0.5f;
+        var top = safe.Min.Y + kioskInset + MathF.Max(0f, (available - height) * 0.5f);
+        return new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
+    }
+
+    internal static float StatusTop(Rect ticket, float kioskInset, float gap) => ticket.Max.Y + kioskInset + gap;
 
     private int DisplayTier => playback.Phase == ScratchPhase.Idle ? tierIndex : playback.Tier;
 
@@ -318,7 +351,6 @@ internal sealed class ScratchCabinet : ICabinetIdle
             }
 
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            stroked = true;
             playback.Rub(cellIndex, frame.DeltaSeconds * RubHoldPerSecond + drag / MathF.Max(cell, 1f) * RubDragFactor);
             if (rubTick <= 0f)
             {
@@ -397,7 +429,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
 
         if (playback.Phase == ScratchPhase.Scratching)
         {
-            return stroked && !composer.Auto.Running ? ScratchStatusLine.RevealAll : ScratchStatusLine.Hint;
+            return composer.Auto.Running ? ScratchStatusLine.Hint : ScratchStatusLine.RevealAll;
         }
 
         return playback.RevealComplete && playback.PrizeOnceRevealed <= 0
@@ -454,8 +486,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
             case ScratchStatusLine.RevealAll:
                 if (SmallButton(drawList, ui, Loc.T(L.Casino.ScratchRevealAll), centerX, top, area.Width, scale))
                 {
-                    playback.RevealAll();
-                    CasinoSfx.Play(UiSound.TileSafe);
+                    RevealAll();
                 }
 
                 return;
@@ -509,10 +540,23 @@ internal sealed class ScratchCabinet : ICabinetIdle
     private void DrawDeck(CasinoStage stage, in CasinoStageFrame frame, AppSkin ui, CasinoStateDto state,
         CasinoSittingDto sitting, float scale)
     {
+        var scratching = playback.Phase == ScratchPhase.Scratching;
+        var changeable = !scratching && !play.RoundInFlight && !composer.Auto.Running;
+        var ceiling = TierCeiling(store.Ceiling.MaxBet);
+        if (changeable)
+        {
+            tierIndex = ClampTier(tierIndex, ceiling);
+        }
+
         var price = CurrentPrice;
         composer.Reset(price);
         var blocked = state.StakesPaused || state.Draining || frame.Blocked;
-        var scratching = playback.Phase == ScratchPhase.Scratching;
+        var repeat = stage.RepeatPressed();
+        if (repeat && scratching && !composer.Auto.Running && !frame.Blocked)
+        {
+            RevealAll();
+        }
+
         if (autoPause > 0f)
         {
             autoPause -= frame.DeltaSeconds;
@@ -520,9 +564,9 @@ internal sealed class ScratchCabinet : ICabinetIdle
 
         var enabled = !play.RoundInFlight && !scratching && !blocked;
         var model = new BetComposerModel(price, price, sitting.Stack, L.Strip.BuyFor, enabled, AutoAvailable: true,
-            FixedAmount: true, Knob: true, Repeat: stage.RepeatPressed(), Busy: play.RoundInFlight || scratching);
+            FixedAmount: true, Knob: true, Repeat: repeat, Busy: play.RoundInFlight || scratching);
         var action = composer.Draw(stage, ui, frame.Deck, model, frame.DeltaSeconds);
-        DrawTierKnob(ui, composer.KnobRect, !scratching && !play.RoundInFlight && !composer.Auto.Running, scale);
+        DrawTierKnob(ui, composer.KnobRect, changeable, ceiling, scale);
         if (blocked && composer.Auto.Running)
         {
             composer.Auto.Stop(AutoStop.Manual);
@@ -536,18 +580,38 @@ internal sealed class ScratchCabinet : ICabinetIdle
         }
     }
 
+    private void RevealAll()
+    {
+        playback.RevealAll();
+        CasinoSfx.Play(UiSound.TileSafe);
+    }
+
     private void Buy(CasinoStage stage)
     {
         inlineReason = string.Empty;
         stage.Celebration.Clear();
         playback.Clear();
-        seenPhase = ScratchPhase.Idle;
         stampSeconds = -1f;
         play.BuyScratch(tierIndex);
         CasinoSfx.Play(UiSound.ChipSlide);
     }
 
-    private void DrawTierKnob(AppSkin ui, Rect rect, bool changeable, float scale)
+    internal static long TierCeiling(long maxBet) => Math.Max(maxBet, ScratchRules.Prices[0]);
+
+    internal static bool TierReachable(int tier, long ceiling) => ScratchRules.Prices[tier] <= ceiling;
+
+    internal static int ClampTier(int tier, long ceiling)
+    {
+        var clamped = tier;
+        while (clamped > 0 && !TierReachable(clamped, ceiling))
+        {
+            clamped--;
+        }
+
+        return clamped;
+    }
+
+    private void DrawTierKnob(AppSkin ui, Rect rect, bool changeable, long ceiling, float scale)
     {
         if (rect.Width <= 0f)
         {
@@ -561,7 +625,9 @@ internal sealed class ScratchCabinet : ICabinetIdle
         {
             var chipMin = new Vector2(rect.Min.X + tier * (chipWidth + gap), rect.Min.Y);
             var chipRect = new Rect(chipMin, new Vector2(chipMin.X + chipWidth, rect.Max.Y));
-            var hovered = changeable && UiInteract.Hover(chipRect.Min, chipRect.Max);
+            var reachable = TierReachable(tier, ceiling);
+            var hovered = changeable && reachable && UiInteract.Hover(chipRect.Min, chipRect.Max);
+            var firstVertex = drawList.VtxBuffer.Size;
             ChipRail.PaintChip(drawList, chipRect, NumberText.Compact(ScratchRules.Prices[tier]), tier == tierIndex,
                 hovered, ui.Ink);
             var underline = chipRect.Height * 0.5f;
@@ -569,11 +635,16 @@ internal sealed class ScratchCabinet : ICabinetIdle
                 new Vector2(chipRect.Max.X - underline, chipRect.Max.Y - scale),
                 ImGui.GetColorU32(ScratchTicketArt.For(tier).Accent with { W = tier == tierIndex ? 1f : 0.45f }),
                 MathF.Max(1f, 2f * scale));
+            if (!reachable)
+            {
+                LayerCompositor.Fade(drawList, firstVertex, OutOfReachAlpha);
+            }
+
             if (UiInteract.Click(chipRect.Min, chipRect.Max, hovered) && tier != tierIndex)
             {
                 tierIndex = tier;
+                inlineReason = string.Empty;
                 playback.Clear();
-                seenPhase = ScratchPhase.Idle;
                 stampSeconds = -1f;
                 CasinoSfx.Play(UiSound.ChipSlide);
             }

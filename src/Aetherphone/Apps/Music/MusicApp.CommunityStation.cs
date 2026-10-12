@@ -87,6 +87,7 @@ internal sealed partial class MusicApp
 
     private void DrawCommunityStation(in PhoneContext context, in MusicRoute route)
     {
+        conduct.NotifyFeatureOpened(Id);
         var scale = UiScale.Current;
         community.EnsureFresh(true);
         var station = ViewedStation(route.Key);

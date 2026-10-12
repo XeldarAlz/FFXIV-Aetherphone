@@ -1,10 +1,10 @@
+using System.Globalization;
 using System.Text;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Casino;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
@@ -22,13 +22,14 @@ internal readonly record struct LedgerRowView(string Name, string BuyIns, string
     long NetValue, bool Seated);
 
 internal readonly record struct LedgerEntryView(string EntryId, string Title, string Parties, string Amount,
-    string State, LedgerTone Tone, bool CanConfirm, string ConfirmLabel, bool CanDispute, string DisputeLabel);
+    string State, LedgerTone Tone, bool CanConfirm, string ConfirmLabel, bool CanDispute, string DisputeLabel,
+    string Tag = "");
 
 internal sealed class TableLedger
 {
     public static readonly Vector4 Amber = new(1f, 0.71f, 0.22f, 1f);
 
-    private static readonly Vector4 SettledInk = new(0.36f, 0.84f, 0.52f, 1f);
+    internal static readonly Vector4 SettledInk = new(0.36f, 0.84f, 0.52f, 1f);
 
     private static readonly LocString[] ColumnLabels =
         { L.Tables.ColumnBuyIns, L.Tables.ColumnStack, L.Tables.ColumnNet };
@@ -38,34 +39,49 @@ internal sealed class TableLedger
     private const int AmountDigits = 11;
 
     private readonly CasinoTablesStore tables;
+    private readonly CasinoStore chips;
     private readonly ConfirmService confirm;
+    private readonly CasinoTradeSync trade;
     private readonly ChipRail playerRail = new();
+    private readonly LedgerEntryCards cards = new();
     private readonly string[] kindOptions = new string[2];
 
     private CasinoTableLedgerDto? viewSource;
     private LanguageInfo? viewLanguage;
+    private TradeMiss? missSource;
+    private LanguageInfo? missLanguage;
+    private CasinoTableLedgerDto? missLedger;
+    private string missText = string.Empty;
+    private string missAction = string.Empty;
+    private string totalsText = string.Empty;
     private string viewMe = string.Empty;
+    private bool viewGuests;
     private LedgerRowView[] rows = Array.Empty<LedgerRowView>();
-    private LedgerEntryView[] entries = Array.Empty<LedgerEntryView>();
     private string[] playerNames = Array.Empty<string>();
     private string[] playerIds = Array.Empty<string>();
-    private bool[] playerActive = Array.Empty<bool>();
+    private string[] choiceNames = Array.Empty<string>();
+    private bool[] choiceActive = Array.Empty<bool>();
     private string waitingNote = string.Empty;
     private string roomId = string.Empty;
     private string amountBuffer = string.Empty;
+    private string guestBuffer = string.Empty;
     private int proposeKind;
     private int playerIndex;
+    private bool revealRecord;
 
-    public TableLedger(CasinoTablesStore tables, ConfirmService confirm)
+    public TableLedger(CasinoTablesStore tables, CasinoStore chips, ConfirmService confirm, CasinoTradeSync trade)
     {
         this.tables = tables;
+        this.chips = chips;
         this.confirm = confirm;
+        this.trade = trade;
     }
 
     public void Enter(string tableId)
     {
         roomId = tableId;
         amountBuffer = string.Empty;
+        guestBuffer = string.Empty;
         proposeKind = 0;
         playerIndex = 0;
         viewSource = null;
@@ -89,6 +105,13 @@ internal sealed class TableLedger
         }
 
         tables.EnsureLedgerFresh(roomId);
+        if (tables.TakeIntentFailure())
+        {
+            Toast(new CasinoStakeOutcome(false, CasinoReasons.Unreachable));
+        }
+
+        Toast(tables.TakeNoticeOutcome());
+        Toast(tables.TakeGuestOutcome());
         var ledger = tables.LedgerFor(roomId);
         if (ledger is null)
         {
@@ -96,15 +119,22 @@ internal sealed class TableLedger
             return;
         }
 
-        Refresh(ledger, myUserId);
-        DrawHeading(ui, ledger, scale);
-        DrawRows(ui, ledger.Currency, scale);
+        Refresh(ledger, myUserId, chips.HasFeature(CasinoFeatures.VenueBook));
+        var book = CasinoBookRules.IsBook(tables.CardFor(roomId)?.GameKind);
+        DrawHeading(ui, ledger, book, scale);
+        if (!book)
+        {
+            DrawRows(ui, ledger.Currency, scale);
+        }
+
         if (ledger.Currency != CasinoCurrencies.Gil)
         {
             return;
         }
 
         ui.SectionHeading(Loc.T(L.Tables.GilLedgerHeading), Metrics.Space.Md);
+        TradeSyncCard.Draw(ui, trade, scale, false, ledger.Owner);
+        DrawMiss(ui, ledger, scale);
         if (waitingNote.Length > 0)
         {
             Note(ui, waitingNote, Amber, scale);
@@ -112,6 +142,18 @@ internal sealed class TableLedger
 
         DrawEntries(ui, scale);
         DrawPropose(ui, ledger, myUserId, hostUserId, scale);
+    }
+
+    public static void Toast(CasinoStakeOutcome? outcome)
+    {
+        if (outcome is null)
+        {
+            return;
+        }
+
+        ShellToast.Show(outcome.Granted
+            ? Loc.T(L.Tables.LedgerUpdated)
+            : Loc.T(CasinoReasons.MessageFor(outcome.Reason)));
     }
 
     internal static LedgerTone ToneOf(CasinoLedgerEntryDto entry)
@@ -145,6 +187,11 @@ internal sealed class TableLedger
 
     internal static string StateText(CasinoLedgerEntryDto entry)
     {
+        if (entry.Guest)
+        {
+            return Loc.T(L.Book.GuestRecorded);
+        }
+
         switch (ToneOf(entry))
         {
             case LedgerTone.Settled:
@@ -183,18 +230,39 @@ internal sealed class TableLedger
         var gil = ledger.Entries ?? Array.Empty<CasinoLedgerEntryDto>();
         for (var index = 0; index < gil.Length; index++)
         {
-            var entry = gil[index];
-            builder.Append(Loc.T(L.Tables.CopyEntry, Loc.T(KindLabel(entry.Kind)), entry.PayerName, entry.PayeeName,
-                AmountText(entry.Amount, ledger.Currency), StateText(entry))).Append('\n');
+            builder.Append(EntryLine(gil[index], ledger.Currency)).Append('\n');
+        }
+
+        var totals = GilLedgerTotals.Of(gil, viewMe);
+        if (totals.Settled > 0)
+        {
+            builder.Append(TotalsText(totals)).Append('\n');
         }
 
         return builder.ToString();
     }
 
-    private void Refresh(CasinoTableLedgerDto ledger, string myUserId)
+    internal static string EntryLine(CasinoLedgerEntryDto entry, int currency)
+    {
+        return Loc.T(L.Tables.CopyEntry, Loc.T(KindLabel(entry.Kind)), SideName(entry, entry.PayerUserId,
+            entry.PayerName), SideName(entry, entry.PayeeUserId, entry.PayeeName), AmountText(entry.Amount, currency),
+            StateText(entry));
+    }
+
+    internal static string SideName(CasinoLedgerEntryDto entry, string userId, string name)
+    {
+        return entry.Guest && userId.Length == 0 ? Loc.T(L.Book.GuestNamed, name) : name;
+    }
+
+    internal static string TotalsText(in GilLedgerTotals totals)
+    {
+        return Loc.T(L.Book.NightTotals, NumberText.Group(totals.In), NumberText.Group(totals.Out));
+    }
+
+    private void Refresh(CasinoTableLedgerDto ledger, string myUserId, bool guestsOpen)
     {
         if (ReferenceEquals(ledger, viewSource) && ReferenceEquals(viewLanguage, Loc.Current)
-            && string.Equals(myUserId, viewMe, StringComparison.Ordinal))
+            && string.Equals(myUserId, viewMe, StringComparison.Ordinal) && guestsOpen == viewGuests)
         {
             return;
         }
@@ -202,6 +270,7 @@ internal sealed class TableLedger
         viewSource = ledger;
         viewLanguage = Loc.Current;
         viewMe = myUserId;
+        viewGuests = guestsOpen;
         kindOptions[0] = Loc.T(L.Tables.KindBuyIn);
         kindOptions[1] = Loc.T(L.Tables.KindPayout);
         var source = ledger.Rows ?? Array.Empty<CasinoTableLedgerRowDto>();
@@ -221,7 +290,6 @@ internal sealed class TableLedger
 
         playerNames = new string[seated];
         playerIds = new string[seated];
-        playerActive = new bool[seated];
         var next = 0;
         for (var index = 0; index < source.Length; index++)
         {
@@ -233,30 +301,98 @@ internal sealed class TableLedger
             }
         }
 
-        playerIndex = Math.Clamp(playerIndex, 0, Math.Max(0, seated - 1));
-        var gil = ledger.Entries ?? Array.Empty<CasinoLedgerEntryDto>();
-        entries = new LedgerEntryView[gil.Length];
-        for (var index = 0; index < gil.Length; index++)
+        var choices = ChoiceCount(seated, guestsOpen);
+        choiceNames = new string[choices];
+        choiceActive = new bool[choices];
+        Array.Copy(playerNames, choiceNames, seated);
+        if (guestsOpen)
         {
-            var entry = gil[index];
-            var side = CasinoGilLedger.SideOf(entry, myUserId);
-            var confirmLabel = side == LedgerSide.Payer ? Loc.T(L.Tables.IPaid) : Loc.T(L.Tables.IReceived);
-            var disputeLabel = entry.Kind is CasinoLedgerKinds.Payout or CasinoLedgerKinds.CashOut
-                or CasinoLedgerKinds.Prize or CasinoLedgerKinds.Stake
-                ? Loc.T(L.Tables.PayoutNotReceived)
-                : Loc.T(L.Tables.GilNotReceived);
-            entries[index] = new LedgerEntryView(entry.EntryId, Loc.T(KindLabel(entry.Kind)),
-                Loc.T(L.Tables.EntryParties, entry.PayerName, entry.PayeeName),
-                AmountText(entry.Amount, ledger.Currency), StateText(entry), ToneOf(entry),
-                CasinoGilLedger.CanConfirm(entry, myUserId), confirmLabel, CasinoGilLedger.CanDispute(entry, myUserId),
-                disputeLabel);
+            choiceNames[seated] = Loc.T(L.Book.GuestTag);
         }
 
+        playerIndex = Math.Clamp(playerIndex, 0, Math.Max(0, choices - 1));
+        var gil = ledger.Entries ?? Array.Empty<CasinoLedgerEntryDto>();
+        cards.Refresh(gil, myUserId, ledger.Currency);
         var unsettled = CasinoGilLedger.UnsettledCount(gil);
         waitingNote = unsettled > 0 ? Loc.T(L.Tables.EntriesWaiting, unsettled.ToString(Loc.Culture)) : string.Empty;
+        var totals = GilLedgerTotals.Of(gil, myUserId);
+        totalsText = totals.Settled > 0 ? TotalsText(totals) : string.Empty;
     }
 
-    private void DrawHeading(AppSkin ui, CasinoTableLedgerDto ledger, float scale)
+    internal static LocString MissLine(TradeMiss miss)
+    {
+        if (miss.Kind != TradeMissKind.NotAtTable)
+        {
+            return L.Venue.TradeMissUnchecked;
+        }
+
+        return miss.Incoming ? L.Venue.TradeMissReceived : L.Venue.TradeMissSent;
+    }
+
+    internal static bool OffersGuest(TradeMiss miss, bool owner, bool guestsOpen)
+    {
+        return owner && guestsOpen && miss.GuestEligible;
+    }
+
+    private void DrawMiss(AppSkin ui, CasinoTableLedgerDto ledger, float scale)
+    {
+        var miss = trade.LastMiss;
+        if (miss is null || !trade.Enabled || !miss.ShownAt(roomId, Environment.TickCount64))
+        {
+            return;
+        }
+
+        if (!ReferenceEquals(miss, missSource) || !ReferenceEquals(missLanguage, Loc.Current)
+            || !ReferenceEquals(ledger, missLedger))
+        {
+            missSource = miss;
+            missLanguage = Loc.Current;
+            missLedger = ledger;
+            missText = Loc.T(MissLine(miss), NumberText.Group(miss.Amount));
+            missAction = Loc.T(GuestLedger.RecordLabel(GuestLedger.KindOf(miss,
+                ledger.Entries ?? Array.Empty<CasinoLedgerEntryDto>())));
+        }
+
+        Note(ui, missText, Amber, scale);
+        if (!OffersGuest(miss, ledger.Owner, viewGuests))
+        {
+            return;
+        }
+
+        var width = ScrollLayout.StableContentWidth();
+        var origin = ImGui.GetCursorScreenPos();
+        var buttonHeight = Button.RegularHeight * scale;
+        var buttonWidth = MathF.Min(width, Button.WidthFor(missAction, ButtonSize.Regular));
+        var rect = new Rect(origin, new Vector2(origin.X + buttonWidth, origin.Y + buttonHeight));
+        if (Button.Draw(ImGui.GetWindowDrawList(), rect, missAction, ui.Ink, ButtonStyle.Tinted,
+                enabled: !tables.IntentInFlight, id: "ledger.missGuest"))
+        {
+            Prefill(miss);
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, buttonHeight + Metrics.Space.Sm * scale));
+    }
+
+    internal void Prefill(TradeMiss miss)
+    {
+        playerIndex = playerIds.Length;
+        proposeKind = miss.Incoming ? 0 : 1;
+        amountBuffer = miss.Amount.ToString(CultureInfo.InvariantCulture);
+        if (miss.PartnerName.Length > 0)
+        {
+            guestBuffer = miss.PartnerName;
+        }
+
+        revealRecord = true;
+    }
+
+    internal static bool CanCopy(CasinoTableLedgerDto ledger, bool book)
+    {
+        return (ledger.Rows?.Length ?? 0) > 0 || (book && (ledger.Entries?.Length ?? 0) > 0);
+    }
+
+    private void DrawHeading(AppSkin ui, CasinoTableLedgerDto ledger, bool book, float scale)
     {
         var width = ScrollLayout.StableContentWidth();
         var origin = ImGui.GetCursorScreenPos();
@@ -273,7 +409,7 @@ internal sealed class TableLedger
         var buttonTop = top + (height - buttonHeight) * 0.5f;
         var rect = new Rect(new Vector2(origin.X + width - buttonWidth, buttonTop),
             new Vector2(origin.X + width, buttonTop + buttonHeight));
-        if (Button.Draw(drawList, rect, copyLabel, ui.Ink, ButtonStyle.Tinted, enabled: (ledger.Rows?.Length ?? 0) > 0,
+        if (Button.Draw(drawList, rect, copyLabel, ui.Ink, ButtonStyle.Tinted, enabled: CanCopy(ledger, book),
                 id: "ledger.copy"))
         {
             ImGui.SetClipboardText(CopyText());
@@ -366,126 +502,70 @@ internal sealed class TableLedger
 
     private void DrawEntries(AppSkin ui, float scale)
     {
-        if (entries.Length == 0)
+        if (cards.Count == 0)
         {
             Note(ui, Loc.T(L.Tables.EntriesEmpty), ui.MutedInk, scale);
             return;
         }
 
-        var width = ScrollLayout.StableContentWidth();
-        var drawList = ImGui.GetWindowDrawList();
-        var pad = Pad * scale;
-        for (var index = 0; index < entries.Length; index++)
+        var action = cards.Draw(ui, !tables.IntentInFlight, scale);
+        if (totalsText.Length > 0)
         {
-            using var entryId = ImRaii.PushId(index);
-            var view = entries[index];
-            var origin = ImGui.GetCursorScreenPos();
-            var titleLine = Typography.LineHeight(TextStyles.SubheadlineEmphasized);
-            var partiesLine = Typography.LineHeight(TextStyles.Footnote);
-            var stateLine = Typography.LineHeight(TextStyles.FootnoteEmphasized);
-            var confirmWidth = view.CanConfirm ? Button.WidthFor(view.ConfirmLabel, ButtonSize.Large) : 0f;
-            var disputeWidth = view.CanDispute ? Button.WidthFor(view.DisputeLabel, ButtonSize.Large) : 0f;
-            var buttonRows = LedgerEntryLayout.ButtonRows(width - pad * 2f, confirmWidth, disputeWidth, scale);
-            var height = LedgerEntryLayout.Height(titleLine, partiesLine, stateLine, buttonRows, scale);
-            var max = new Vector2(origin.X + width, origin.Y + height);
-            var card = new Rect(origin, max);
-            var tone = view.Tone switch
-            {
-                LedgerTone.Waiting => Amber,
-                LedgerTone.Disputed => ui.Accent,
-                _ => SettledInk,
-            };
-            ui.Card(drawList, origin, max, Metrics.Radius.Grouped * scale);
-            if (view.Tone != LedgerTone.Settled)
-            {
-                Squircle.Stroke(drawList, origin, max, Metrics.Radius.Grouped * scale,
-                    ImGui.GetColorU32(Palette.WithAlpha(tone, 0.65f)), 1.2f * scale);
-            }
+            Note(ui, totalsText, ui.BodyInk, scale);
+        }
 
-            var top = origin.Y + pad;
-            var amountSize = Typography.Measure(view.Amount, TextStyles.SubheadlineEmphasized);
-            Typography.Draw(drawList, new Vector2(max.X - pad - amountSize.X, top), view.Amount,
-                TableRow.CurrencyTint(CasinoCurrencies.Gil, ui.Accent), TextStyles.SubheadlineEmphasized);
-            var textWidth = MathF.Max(1f, width - pad * 3f - amountSize.X);
-            Typography.Draw(drawList, new Vector2(origin.X + pad, top),
-                Typography.FitText(view.Title, textWidth, TextStyles.SubheadlineEmphasized), ui.TitleInk,
-                TextStyles.SubheadlineEmphasized);
-            Typography.Draw(drawList, new Vector2(origin.X + pad, top + titleLine + LedgerEntryLayout.LineGap * scale),
-                Typography.FitText(view.Parties, width - pad * 2f, TextStyles.Footnote), ui.BodyInk,
-                TextStyles.Footnote);
-            Typography.Draw(drawList,
-                new Vector2(origin.X + pad, LedgerEntryLayout.StateTop(origin.Y, titleLine, partiesLine, scale)),
-                Typography.FitText(view.State, width - pad * 2f, TextStyles.FootnoteEmphasized), tone,
-                TextStyles.FootnoteEmphasized);
-            DrawEntryButtons(drawList, ui, view, card, buttonRows, confirmWidth, disputeWidth, scale);
-            ImGui.SetCursorScreenPos(origin);
-            ImGui.Dummy(new Vector2(width, height + Metrics.Space.Sm * scale));
+        if (action.Press == LedgerEntryPress.Confirm)
+        {
+            tables.ConfirmLedgerEntry(roomId, action.EntryId);
+            return;
+        }
+
+        if (action.Press == LedgerEntryPress.Dispute)
+        {
+            AskDispute(action);
         }
     }
 
-    private void DrawEntryButtons(ImDrawListPtr drawList, AppSkin ui, in LedgerEntryView view, in Rect card,
-        int buttonRows, float confirmWidth, float disputeWidth, float scale)
+    internal static bool BarsReader(CasinoTableRowDto card, bool owner)
     {
-        if (buttonRows == 0)
-        {
-            return;
-        }
+        return !owner && !card.Admitted;
+    }
 
-        var stacked = buttonRows > 1;
-        var right = card.Max.X - LedgerEntryLayout.Pad * scale;
-        if (view.CanDispute)
-        {
-            var rect = stacked
-                ? LedgerEntryLayout.StackedButton(card, 1, buttonRows, scale)
-                : LedgerEntryLayout.RowButton(card, right, disputeWidth, scale);
-            if (Button.Draw(drawList, rect, view.DisputeLabel, ui.Ink, ButtonStyle.Gray, ButtonRole.Destructive,
-                    !tables.IntentInFlight, id: "ledger.dispute"))
-            {
-                AskDispute(view);
-            }
+    internal static bool ShowsRecord(bool host, int players, bool guestsOpen, string hostUserId)
+    {
+        return host ? players > 0 || guestsOpen : hostUserId.Length > 0;
+    }
 
-            right = rect.Min.X - LedgerEntryLayout.ButtonGap * scale;
-        }
+    internal static int ChoiceCount(int players, bool guestsOpen)
+    {
+        return players + (guestsOpen ? 1 : 0);
+    }
 
-        if (!view.CanConfirm)
-        {
-            return;
-        }
-
-        var confirmRect = stacked
-            ? LedgerEntryLayout.StackedButton(card, 0, buttonRows, scale)
-            : LedgerEntryLayout.RowButton(card, right, confirmWidth, scale);
-        if (Button.Draw(drawList, confirmRect, view.ConfirmLabel, ui.Ink, ButtonStyle.Prominent,
-                enabled: !tables.IntentInFlight, id: "ledger.confirm"))
-        {
-            tables.ConfirmLedgerEntry(roomId, view.EntryId);
-        }
+    internal static bool IsGuestChoice(int index, int players, bool guestsOpen)
+    {
+        return guestsOpen && index >= players;
     }
 
     private void DrawPropose(AppSkin ui, CasinoTableLedgerDto ledger, string myUserId, string hostUserId,
         float scale)
     {
         var host = ledger.Owner;
-        if (host && playerNames.Length == 0)
-        {
-            return;
-        }
-
-        if (!host && hostUserId.Length == 0)
+        if (!ShowsRecord(host, playerIds.Length, viewGuests, hostUserId))
         {
             return;
         }
 
         ui.SectionHeading(Loc.T(host ? L.Tables.RecordHeading : L.Tables.RecordPaidHeading), Metrics.Space.Md);
         var width = ScrollLayout.StableContentWidth();
+        var guest = false;
         if (host)
         {
-            for (var index = 0; index < playerActive.Length; index++)
+            for (var index = 0; index < choiceActive.Length; index++)
             {
-                playerActive[index] = index == playerIndex;
+                choiceActive[index] = index == playerIndex;
             }
 
-            var tapped = playerRail.Draw(ui, playerNames, playerActive);
+            var tapped = playerRail.Draw(ui, choiceNames, choiceActive);
             if (tapped >= 0)
             {
                 playerIndex = tapped;
@@ -495,6 +575,11 @@ internal sealed class TableLedger
             var segmentRect = new Rect(segment, new Vector2(segment.X + width, segment.Y + 34f * scale));
             proposeKind = SegmentStrip.Draw("##ledgerKind", segmentRect, kindOptions, proposeKind, ui.Palette);
             ImGui.Dummy(new Vector2(width, 34f * scale + Metrics.Space.Sm * scale));
+            guest = IsGuestChoice(playerIndex, playerIds.Length, viewGuests);
+            if (guest)
+            {
+                DrawGuestName(ui, width, scale);
+            }
         }
 
         var origin = ImGui.GetCursorScreenPos();
@@ -520,19 +605,63 @@ internal sealed class TableLedger
         var buttonTop = field.Center.Y - buttonHeight * 0.5f;
         var rect = new Rect(new Vector2(origin.X + width - buttonWidth, buttonTop),
             new Vector2(origin.X + width, buttonTop + buttonHeight));
-        var ready = amount > 0 && amount <= CasinoHostingRules.MaxGil && !tables.IntentInFlight;
+        var ready = amount > 0 && amount <= CasinoHostingRules.MaxGil && !tables.IntentInFlight
+                    && (!guest || CasinoBookRules.HasGuestName(guestBuffer));
         if (Button.Draw(drawList, rect, buttonLabel, ui.Ink, ButtonStyle.Prominent, enabled: ready, id: "ledger.record"))
         {
-            Propose(ledger, myUserId, hostUserId, amount);
+            Propose(ledger, myUserId, hostUserId, amount, guest);
         }
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, FieldHeight * scale + Metrics.Space.Sm * scale));
-        Note(ui, Loc.T(host ? L.Tables.RecordHostHint : L.Tables.RecordPlayerHint), ui.MutedInk, scale);
+        RevealRecord();
+        var hint = guest ? L.Book.ReasonGuestEntry : host ? L.Tables.RecordHostHint : L.Tables.RecordPlayerHint;
+        Note(ui, Loc.T(hint), ui.MutedInk, scale);
     }
 
-    private void Propose(CasinoTableLedgerDto ledger, string myUserId, string hostUserId, long amount)
+    private void RevealRecord()
     {
+        if (!revealRecord)
+        {
+            return;
+        }
+
+        revealRecord = false;
+        if (ImGui.GetCursorScreenPos().Y > ImGui.GetWindowPos().Y + ImGui.GetWindowHeight())
+        {
+            ImGui.SetScrollHereY(1f);
+        }
+    }
+
+    private void DrawGuestName(AppSkin ui, float width, float scale)
+    {
+        var origin = ImGui.GetCursorScreenPos();
+        var drawList = ImGui.GetWindowDrawList();
+        var field = new Rect(origin, new Vector2(origin.X + width, origin.Y + FieldHeight * scale));
+        SearchBar.Surface(drawList, field, ui.Ink);
+        var capsule = SearchBar.Capsule(field);
+        var inset = capsule.Height * 0.4f;
+        ImGui.SetCursorScreenPos(new Vector2(capsule.Min.X + inset, field.Center.Y - ImGui.GetFrameHeight() * 0.5f));
+        ImGui.SetNextItemWidth(capsule.Width - inset * 2f);
+        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
+        {
+            ImGui.InputTextWithHint("##ledgerGuest", Loc.T(L.Book.GuestNameHint), ref guestBuffer,
+                CasinoHostingRules.GuestNameMaxLength + 1, ImGuiInputTextFlags.None);
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, FieldHeight * scale + Metrics.Space.Sm * scale));
+    }
+
+    private void Propose(CasinoTableLedgerDto ledger, string myUserId, string hostUserId, long amount, bool guest)
+    {
+        if (guest)
+        {
+            ProposeGuest(ledger, amount);
+            return;
+        }
+
         if (ledger.Owner)
         {
             if (playerIds.Length == 0)
@@ -550,6 +679,20 @@ internal sealed class TableLedger
         amountBuffer = string.Empty;
     }
 
+    private void ProposeGuest(CasinoTableLedgerDto ledger, long amount)
+    {
+        var offer = GuestLedger.Typed(roomId, guestBuffer, proposeKind != 0, amount,
+            ledger.Entries ?? Array.Empty<CasinoLedgerEntryDto>());
+        if (offer is null)
+        {
+            return;
+        }
+
+        tables.ProposeGuestEntry(offer.TableId, offer.LedgerKind, offer.GuestName, offer.Amount,
+            CasinoLedgerKinds.Manual);
+        amountBuffer = string.Empty;
+    }
+
     internal static string BuyInKindFor(CasinoTableLedgerDto ledger, string playerId)
     {
         var source = ledger.Rows ?? Array.Empty<CasinoTableLedgerRowDto>();
@@ -564,15 +707,15 @@ internal sealed class TableLedger
         return CasinoLedgerKinds.BuyIn;
     }
 
-    private void AskDispute(in LedgerEntryView view)
+    private void AskDispute(in LedgerEntryAction action)
     {
         var targetRoom = roomId;
-        var entryId = view.EntryId;
+        var entryId = action.EntryId;
         confirm.Ask(new ConfirmRequest
         {
-            Title = view.DisputeLabel,
+            Title = action.DisputeLabel,
             Message = Loc.T(L.Tables.DisputeBody),
-            ConfirmLabel = view.DisputeLabel,
+            ConfirmLabel = action.DisputeLabel,
             CancelLabel = Loc.T(L.Common.Cancel),
             Sheet = true,
             Danger = true,
@@ -580,7 +723,7 @@ internal sealed class TableLedger
         });
     }
 
-    private static void Note(AppSkin ui, string text, Vector4 ink, float scale)
+    internal static void Note(AppSkin ui, string text, Vector4 ink, float scale)
     {
         var width = ScrollLayout.StableContentWidth();
         var origin = ImGui.GetCursorScreenPos();

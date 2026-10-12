@@ -57,6 +57,7 @@ internal sealed partial class MinimizedPhone : IDisposable
     private const float CalmWallpaperScrim = 0.30f;
     private const float HarshWallpaperScrim = 0.58f;
     private const float MutedInk = 0.72f;
+    private const float FpsRefreshSeconds = 0.5f;
     private const string MusicAppId = "music";
     private const string CallAppId = "message";
     private static readonly TimeSpan ShowingGrace = TimeSpan.FromSeconds(0.5);
@@ -120,7 +121,11 @@ internal sealed partial class MinimizedPhone : IDisposable
     private int timeKey = -1;
     private int timeFormat = -1;
     private int dateKey = -1;
+    private string fpsLabel = string.Empty;
+    private int fpsValue = -1;
+    private float fpsDue;
     private float measuredWidth = -1f;
+    private int fontGeneration = -1;
     private CultureInfo? textCulture;
     private float clockScale;
     private float mapClockScale;
@@ -696,8 +701,8 @@ internal sealed partial class MinimizedPhone : IDisposable
                         ChassisGeometry.PuckBand(MinimizedShapes.BodyWidth * scale, CaseKind) -
                         HeroInset * 2f * scale;
         var dayKey = now.Year * 400 + now.DayOfYear;
-        var widthChanged = MathF.Abs(textWidth - measuredWidth) > 0.5f;
-        if (dayKey != dateKey || cultureChanged || widthChanged)
+        var layoutChanged = FontsChanged() || MathF.Abs(textWidth - measuredWidth) > 0.5f;
+        if (dayKey != dateKey || cultureChanged || layoutChanged)
         {
             dateKey = dayKey;
             dateLabel = now.ToString("dddd d", Loc.Culture);
@@ -709,8 +714,19 @@ internal sealed partial class MinimizedPhone : IDisposable
             dateSize = Typography.Measure(dateLabel, MinimizedPhoneRenderer.DateStyle());
         }
 
+        if (layout.IsEnabled(MinimizedPart.Fps) && (clock >= fpsDue || cultureChanged))
+        {
+            fpsDue = clock + FpsRefreshSeconds;
+            var fps = (int)MathF.Round(ImGui.GetIO().Framerate);
+            if (fps != fpsValue || cultureChanged)
+            {
+                fpsValue = fps;
+                fpsLabel = Loc.T(L.Minimized.FpsValue, fps);
+            }
+        }
+
         textCulture = Loc.Culture;
-        if (!timeChanged && !widthChanged)
+        if (!timeChanged && !layoutChanged)
         {
             return;
         }
@@ -720,6 +736,18 @@ internal sealed partial class MinimizedPhone : IDisposable
             FontWeight.Bold);
         mapClockScale = Typography.FitScale(timeLabel, textWidth, TextScale(MapClockMaxScale),
             TextScale(MapClockMinScale), FontWeight.Bold);
+    }
+
+    private bool FontsChanged()
+    {
+        var generation = Plugin.Fonts.Generation;
+        if (generation == fontGeneration)
+        {
+            return false;
+        }
+
+        fontGeneration = generation;
+        return true;
     }
 
     private string DurationLabel(in CallView view)

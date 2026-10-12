@@ -35,7 +35,7 @@ internal sealed class VenueCasinoPill
     }
 
     public bool Draw(ImDrawListPtr drawList, Rect card, float heroHeight, VenueAddress address, INavigator navigation,
-        float scale)
+        float scale, bool trailing = false)
     {
         var table = casino.LiveTableAt(address);
         if (table is null)
@@ -50,7 +50,8 @@ internal sealed class VenueCasinoPill
         var maxWidth = card.Width - inset * 2f;
         var fitted = Typography.FitText(text, maxWidth - PadX * 2f * scale - DotRadius * 3f * scale, style);
         var width = Typography.Measure(fitted, style).X + PadX * 2f * scale + DotRadius * 3f * scale;
-        var min = new Vector2(card.Min.X + inset, card.Min.Y + heroHeight - inset - height);
+        var left = trailing ? card.Max.X - inset - width : card.Min.X + inset;
+        var min = new Vector2(left, card.Min.Y + heroHeight - inset - height);
         var max = new Vector2(min.X + width, min.Y + height);
         var hovered = UiInteract.Hover(min, max);
         Material.LiquidGlass(drawList, min, max, height * 0.5f, scale, GlassTone.Dark, hovered ? 0.2f : 0f);

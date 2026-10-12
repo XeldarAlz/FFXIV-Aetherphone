@@ -60,6 +60,17 @@ internal sealed partial class ChirperApp
             AddComposeAttachment(pickedPath);
         }
 
+        while (composeIntake.TryTake(out var taken))
+        {
+            AddComposeAttachment(taken);
+        }
+
+        if ((composeFieldActive || UiInteract.Hover(area.Min, area.Max)) && GameFocus.Active
+            && ImageIntake.PasteRequested())
+        {
+            composeIntake.Paste(library);
+        }
+
         if (composePicking)
         {
             DrawComposePicker(area);
@@ -134,6 +145,7 @@ internal sealed partial class ChirperApp
             {
                 SoftWrapField.Paragraphs("##chirpBody", ref draft, MaxPostLength,
                     new Vector2(inputWidth, inputHeight), composeWrapWidth, composeMentions);
+                composeFieldActive = ImGui.IsItemActive();
             }
 
             var pickedMention = mentionPopup.Draw(composeMentions, area, theme, images, lodestone);
@@ -185,6 +197,8 @@ internal sealed partial class ChirperApp
 
             DrawComposeToolbar(area, toolbarHeight);
         }
+
+        composeIntake.AcceptDrop(library, ChirperInk.Accent);
     }
 
     private void DrawComposeHeader(Rect area)
@@ -401,10 +415,16 @@ internal sealed partial class ChirperApp
         var importHeight = Button.LargeHeight * scale;
         var importRect = new Rect(new Vector2(area.Min.X + 16f * scale, top + 8f * scale),
             new Vector2(area.Max.X - 16f * scale, top + 8f * scale + importHeight));
+        var canPaste = composeIntake.OfferPaste(ref importRect, out var pasteRect);
         if (Button.Draw(importRect, Loc.T(L.Chirper.ImportFromPc), ui.Ink, ButtonStyle.Prominent))
         {
             FilePicker.PickImage(Loc.T(L.Chirper.AddPhotos),
                 path => Interlocked.Exchange(ref pendingComposePickedPath, path));
+        }
+
+        if (canPaste && Button.Draw(pasteRect, Loc.T(L.Common.PasteImage), ui.Ink, ButtonStyle.Tinted))
+        {
+            composeIntake.Paste(library);
         }
 
         var gridTop = importRect.Max.Y + 12f * scale;

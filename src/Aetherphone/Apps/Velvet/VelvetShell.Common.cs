@@ -224,6 +224,7 @@ internal sealed partial class VelvetShell
         if (store.Me?.UserId == user.UserId)
         {
             AddProfileMenuItem(ProfileMenuAction.Settings, Loc.T(L.Velvet.Settings), false);
+            AddProfileMenuItem(ProfileMenuAction.Liked, Loc.T(L.Social.LikedTitle), false);
             AddProfileMenuItem(ProfileMenuAction.Archive, Loc.T(L.Social.ArchiveTitle), false);
             AddProfileMenuItem(ProfileMenuAction.Rules, Loc.T(L.Conduct.Eyebrow), false);
         }
@@ -272,6 +273,9 @@ internal sealed partial class VelvetShell
             case ProfileMenuAction.Settings:
                 settingsLoaded = false;
                 router.Push(VelvetView.Settings);
+                break;
+            case ProfileMenuAction.Liked:
+                OpenLiked();
                 break;
             case ProfileMenuAction.Archive:
                 OpenArchive();

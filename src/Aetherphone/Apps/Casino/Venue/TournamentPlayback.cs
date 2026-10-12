@@ -18,6 +18,7 @@ internal sealed class TournamentPlayback
     private bool primed;
     private bool live;
     private string winnerUserId = string.Empty;
+    private string winnerName = string.Empty;
     private string noticeName = string.Empty;
     private float noticeSeconds = NoticeSeconds;
     private TournamentEvent pending;
@@ -25,6 +26,8 @@ internal sealed class TournamentPlayback
     public bool Live => live;
 
     public string WinnerUserId => winnerUserId;
+
+    public string WinnerName => winnerName;
 
     public string NoticeName => noticeName;
 
@@ -38,6 +41,7 @@ internal sealed class TournamentPlayback
         primed = false;
         live = false;
         winnerUserId = string.Empty;
+        winnerName = string.Empty;
         noticeName = string.Empty;
         noticeSeconds = NoticeSeconds;
         pending = TournamentEvent.None;
@@ -67,6 +71,7 @@ internal sealed class TournamentPlayback
 
             live = tournament.Live;
             winnerUserId = tournament.WinnerUserId;
+            winnerName = tournament.WinnerName;
             return;
         }
 
@@ -87,10 +92,11 @@ internal sealed class TournamentPlayback
             && !string.Equals(tournament.WinnerUserId, winnerUserId, StringComparison.Ordinal))
         {
             winnerUserId = tournament.WinnerUserId;
+            winnerName = tournament.WinnerName;
+            noticeName = string.Empty;
+            noticeSeconds = NoticeSeconds;
             if (!snap)
             {
-                noticeName = tournament.WinnerName;
-                noticeSeconds = 0f;
                 pending = TournamentEvent.Won;
             }
         }

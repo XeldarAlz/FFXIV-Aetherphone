@@ -344,8 +344,9 @@ internal sealed partial class MarketApp
 
         var textLeft = row.Min.X + pad + iconSize + MarketArt.TextGap * scale;
         var subtitle = series is { Hq: true } ? MarketText.HqCategory(item.Category) : item.Category;
-        MarketArt.Labels(drawList, textLeft, sparkLeft - MarketArt.ValueGap * scale, row.Center.Y, item.Name, subtitle,
-            ui.TitleInk, ui.MutedInk, scale);
+        MarketArt.Labels(drawList, new MarqueeId("market.watch.", item.Id), textLeft,
+            sparkLeft - MarketArt.ValueGap * scale, row.Center.Y, item.Name, subtitle,
+            ui.TitleInk, ui.MutedInk, hovered, scale);
         return hovered && UiInteract.Click(row.Min, row.Max, hovered);
     }
 
@@ -480,8 +481,9 @@ internal sealed partial class MarketApp
                 row.Center.Y - Typography.LineHeight(TextStyles.Headline) * 0.5f, price, ui.TitleInk,
                 TextStyles.Headline);
             var textLeft = row.Min.X + pad + iconSize + MarketArt.TextGap * scale;
-            MarketArt.Labels(drawList, textLeft, row.Max.X - pad - priceWidth - MarketArt.ValueGap * scale,
-                row.Center.Y, item.Name, item.Category, ui.TitleInk, ui.MutedInk, scale);
+            MarketArt.Labels(drawList, new MarqueeId("market.search.", item.Id), textLeft,
+                row.Max.X - pad - priceWidth - MarketArt.ValueGap * scale, row.Center.Y, item.Name,
+                item.Category, ui.TitleInk, ui.MutedInk, hovered, scale);
             if (UiInteract.Click(row.Min, row.Max, hovered))
             {
                 OpenItem(item);

@@ -16,7 +16,6 @@ internal sealed partial class CasinoApp
     private const float HeroOverlayPad = 16f;
     private const float HeroScrimFrom = 0.38f;
     private const float JackpotSignHeight = 24f;
-    private const string HeroMarqueeKey = "casino.hero.line";
 
     private static readonly Vector4 JackpotCrown = new(0.36f, 0.06f, 0.16f, 1f);
     private static readonly Vector4 JackpotBed = new(0.07f, 0.02f, 0.05f, 1f);
@@ -68,7 +67,7 @@ internal sealed partial class CasinoApp
             heroCards.DrawDots(drawList, dotsCenter, width, ui.TitleInk);
         }
 
-        return origin.Y + StripCarousel.BlockHeight(width, scale) + CardGap * scale;
+        return origin.Y + StripCarousel.BlockHeight(width, heroCards.Count, scale) + CardGap * scale;
     }
 
     private void BuildHeroPages()
@@ -236,28 +235,21 @@ internal sealed partial class CasinoApp
     {
         var pad = HeroOverlayPad * scale;
         var radius = Metrics.Radius.Widget * scale;
-        var scrimTop = card.Min.Y + card.Height * HeroScrimFrom;
+        var width = card.Width - pad * 2f;
+        var left = card.Min.X + pad;
+        var block = Tables.PitText.Height(eyebrow, TextStyles.FootnoteEmphasized, width)
+                    + Tables.PitText.Height(title, TextStyles.Title2, width)
+                    + Tables.PitText.Height(line, TextStyles.Subheadline, width);
+        var top = card.Max.Y - pad - block;
+        var scrimTop = MathF.Max(card.Min.Y, MathF.Min(card.Min.Y + card.Height * HeroScrimFrom, top - pad));
         drawList.PushClipRect(new Vector2(card.Min.X, scrimTop), card.Max, true);
         Squircle.FillVerticalGradient(drawList, new Vector2(card.Min.X, scrimTop), card.Max, radius,
             ImGui.GetColorU32(HeroScrim with { W = 0f }), ImGui.GetColorU32(HeroScrim));
         drawList.PopClipRect();
-        var width = card.Width - pad * 2f;
-        var lineHeight = line.Length > 0 ? Typography.LineHeight(TextStyles.Subheadline) : 0f;
-        var top = card.Max.Y - pad - lineHeight - Typography.LineHeight(TextStyles.Title2)
-                  - Typography.LineHeight(TextStyles.FootnoteEmphasized);
-        Typography.Draw(drawList, new Vector2(card.Min.X + pad, top),
-            Typography.FitText(eyebrow, width, TextStyles.FootnoteEmphasized), CasinoColors.Money,
-            TextStyles.FootnoteEmphasized);
-        top += Typography.LineHeight(TextStyles.FootnoteEmphasized);
-        Typography.Draw(drawList, new Vector2(card.Min.X + pad, top), Typography.FitText(title, width, TextStyles.Title2),
-            CasinoColors.InkTitle, TextStyles.Title2);
-        top += Typography.LineHeight(TextStyles.Title2);
-        if (line.Length > 0)
-        {
-            Marquee.DrawLeftAuto(drawList, HeroMarqueeKey, line, card.Min.X + pad, top, width, TextStyles.Subheadline,
-                CasinoColors.InkBody);
-        }
-
+        top = Tables.PitText.Draw(drawList, eyebrow, TextStyles.FootnoteEmphasized, CasinoColors.Money, left, top,
+            width, false);
+        top = Tables.PitText.Draw(drawList, title, TextStyles.Title2, CasinoColors.InkTitle, left, top, width, false);
+        Tables.PitText.Draw(drawList, line, TextStyles.Subheadline, CasinoColors.InkBody, left, top, width, false);
         LivePreview.Rim(drawList, card, radius, scale);
     }
 
@@ -281,15 +273,22 @@ internal sealed partial class CasinoApp
         var size = Typography.Measure(amount, amountScale, style.Weight);
         var glyph = size.Y * CurrencyGlyph.GlyphFraction;
         var total = CurrencyGlyph.Reserve(size.Y) + size.X;
-        var amountTop = card.Center.Y - size.Y * 0.5f + 4f * scale;
+        var hint = Loc.T(L.Strip.HeroJackpotHint);
+        var hintWidth = card.Width - HeroOverlayPad * 2f * scale;
+        var hintHeight = Tables.PitText.Height(hint, TextStyles.Subheadline, hintWidth);
+        var amountSlot = Typography.LineHeight(style);
+        var gap = Metrics.Space.Sm * scale;
+        var signBottom = signCenter.Y + signHeight * 0.5f;
+        var floorY = card.Max.Y - HeroOverlayPad * scale;
+        var stackTop = MathF.Max(signBottom, (signBottom + floorY - amountSlot - gap - hintHeight) * 0.5f);
+        var amountTop = stackTop + (amountSlot - size.Y) * 0.5f;
         var amountLeft = card.Center.X - total * 0.5f;
         CurrencyGlyph.Draw(drawList, CurrencyKind.Chips, new Vector2(amountLeft + glyph * 0.5f, amountTop + size.Y * 0.5f),
             glyph);
         Typography.Draw(drawList, new Vector2(amountLeft + CurrencyGlyph.Reserve(size.Y), amountTop), amount,
             CasinoColors.Money, amountScale, style.Weight);
-        var hintTop = amountTop + size.Y + Metrics.Space.Sm * scale;
-        Marquee.DrawCenteredAuto(drawList, "casino.hero.jackpot", Loc.T(L.Strip.HeroJackpotHint), card.Center.X,
-            hintTop, card.Width - HeroOverlayPad * 2f * scale, TextStyles.Subheadline, CasinoColors.InkTitle);
+        Tables.PitText.Draw(drawList, hint, TextStyles.Subheadline, CasinoColors.InkTitle,
+            card.Center.X - hintWidth * 0.5f, stackTop + amountSlot + gap, hintWidth, true);
     }
 
     private string RaceLine()
@@ -323,7 +322,7 @@ internal sealed partial class CasinoApp
         var next = namedNext;
         namedNext = (namedNext + 1) % NamedTableSlots;
         namedTables[next] = row;
-        namedTableTexts[next] = Tables.TableBrowser.ViewOf(row, string.Empty).Name;
+        namedTableTexts[next] = Tables.TableBrowser.NameOf(row);
         return namedTableTexts[next];
     }
 }

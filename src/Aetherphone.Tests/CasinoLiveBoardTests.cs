@@ -98,6 +98,22 @@ public sealed class CasinoLiveBoardTests
         Assert.Equal("b", into[0].RoomId);
     }
 
+    [Fact]
+    public void AListedBookNeverJoinsTheLiveBoard()
+    {
+        var rows = new LiveRow[LiveBoard.Capacity];
+        var book = Table("book-1", CasinoTableKinds.Private, seated: 0, seats: 0, currency: CasinoCurrencies.Gil,
+            owner: "Ciri", gameKind: CasinoWire.BookKind);
+        var listed = new[] { book, Table("mine", CasinoTableKinds.Private) };
+        var features = CasinoFeatureSet.From(new[] { CasinoFeatures.Venue, CasinoFeatures.VenueBook });
+        var count = LiveBoard.Collect(Array.Empty<CasinoRoomListItemDto>(), Array.Empty<CasinoTableRowDto>(), listed,
+            Array.Empty<CasinoTableRowDto>(), features, rows);
+
+        Assert.Equal(1, count);
+        Assert.Equal("mine", rows[0].RoomId);
+        Assert.Equal(CasinoGames.Book, LiveBoard.TableGameOf(CasinoWire.BookKind));
+    }
+
     private static CasinoRoomListItemDto[] Rooms() =>
         new[]
         {

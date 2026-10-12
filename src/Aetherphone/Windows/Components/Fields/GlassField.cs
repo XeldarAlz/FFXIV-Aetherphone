@@ -42,8 +42,8 @@ internal static class GlassField
             var inputWidth = ImGui.CalcTextSize(shown).X + ImGui.GetStyle().FramePadding.X * 2f +
                              CaretSlackUnits * scale;
             var inset = MathF.Max(TextInsetUnits * scale, (field.Width - inputWidth) * 0.5f);
-            return Input(field, imguiId, hint, ref text, theme.TextStrong, theme.TextStrong, inset, inset, maxLength,
-                false, flags);
+            return Input(field, imguiId, hint, ref text, theme.TextStrong, theme.TextStrong, inset,
+                TextInsetUnits * scale, maxLength, false, flags);
         }
     }
 

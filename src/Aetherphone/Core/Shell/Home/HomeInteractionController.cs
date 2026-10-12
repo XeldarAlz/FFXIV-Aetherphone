@@ -14,7 +14,7 @@ internal sealed class HomeInteractionController
     private const float LongPressSeconds = 0.42f;
     private const float TapSlop = 6f;
     private const float SwipeThreshold = 12f;
-    private const float DragThreshold = 7f;
+    internal const float DragThreshold = 7f;
     private const float EdgeZone = 0.09f;
     private const float EdgeFlipSeconds = 0.45f;
     private const float IconLift = 1.16f;

@@ -309,6 +309,18 @@ internal sealed class VelvetClient
         return net.GetAsync(path, AethernetJsonContext.Default.VelvetFeedPage, token, null, onFailure);
     }
 
+    public Task<VelvetFeedPage?> LikedPostsAsync(string? cursor, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        var path = "/velvet/me/liked";
+        if (cursor is not null)
+        {
+            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return net.GetAsync(path, AethernetJsonContext.Default.VelvetFeedPage, token, null, onFailure);
+    }
+
     public Task<VelvetPostDto?> ReactAsync(string postId, int kind, CancellationToken token,
         Action<AepFailure>? onFailure = null)
     {

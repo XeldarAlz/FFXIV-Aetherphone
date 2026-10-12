@@ -20,9 +20,9 @@ internal static class SegmentStrip
             theme.TextMuted, White, out pressed);
 
     public static int Draw(string id, Rect row, IReadOnlyList<string> options, int selected, in AppPalette palette,
-        float trackHeight = TrackHeight, float textScale = 0.82f) =>
+        float trackHeight = TrackHeight, float textScale = 0.82f, bool overlay = false) =>
         Draw(id, row, options, selected, Surfaces.Fill(palette.TitleInk, FillLevel.Tertiary), palette.Accent,
-            palette.MutedInk, White, out _, trackHeight, textScale);
+            palette.MutedInk, White, out _, trackHeight, textScale, overlay);
 
     public static int Draw(string id, Rect row, IReadOnlyList<string> options, int selected, Vector4 track,
         Vector4 accent, Vector4 mutedInk, Vector4 activeInk, float trackHeight = TrackHeight, float textScale = 0.82f,

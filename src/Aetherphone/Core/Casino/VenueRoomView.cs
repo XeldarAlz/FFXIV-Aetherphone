@@ -33,6 +33,14 @@ internal sealed record VenueRoomView(
         _ => string.Empty,
     };
 
+    public bool Paused => Kind switch
+    {
+        VenueRoomKind.Dice => Dice?.Paused ?? false,
+        VenueRoomKind.Deathroll => Deathroll?.Paused ?? false,
+        VenueRoomKind.Raffle => Raffle?.Paused ?? false,
+        _ => false,
+    };
+
     public bool Ready => Kind switch
     {
         VenueRoomKind.Dice => Dice is not null,

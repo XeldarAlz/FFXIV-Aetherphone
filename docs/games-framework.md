@@ -298,7 +298,7 @@ Each frame the host builds the `GameContext`:
 | `Fx` | The host-owned `ScreenFx` |
 | `Backdrop` | The `StageBackdrop`, for `SetSky` and `Ink` |
 
-`GameFocus.Active` (src/Aetherphone/Apps/Games/Framework/GameFocus.cs) is false while the phone window is unfocused or the game's own text input is active. A clocked stage game whose session is Playing is paused into the pause menu the moment focus is lost; a turn-based game (`Clocked = false`) simply receives a zero delta and stands still. Because the phone UI is Dear ImGui (an immediate-mode UI where everything is redrawn from scratch every frame), `Draw` runs every frame and the game keeps its own state in fields between frames.
+`GameFocus.Active` (src/Aetherphone/Core/Platform/GameFocus.cs) is false while the phone window is unfocused or the game's own text input is active. A clocked stage game whose session is Playing is paused into the pause menu the moment focus is lost; a turn-based game (`Clocked = false`) simply receives a zero delta and stands still. Because the phone UI is Dear ImGui (an immediate-mode UI where everything is redrawn from scratch every frame), `Draw` runs every frame and the game keeps its own state in fields between frames.
 
 ### Checklist for registering a new game
 

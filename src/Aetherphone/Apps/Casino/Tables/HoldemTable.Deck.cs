@@ -662,11 +662,8 @@ internal sealed partial class HoldemTable
         }
     }
 
-    private long TopUpCeiling(CasinoHoldemRoomStateDto board, CasinoHoldemSeatDto hero)
-    {
-        var room = HoldemRules.TopUpRoom(hero.Stack, MaxBuyIn(board));
-        return Math.Min(room, Bankroll());
-    }
+    private long TopUpCeiling(CasinoHoldemRoomStateDto board, CasinoHoldemSeatDto hero) =>
+        HoldemRules.TopUpCeiling(hero.Stack, MaxBuyIn(board), Bankroll(), chips.Ceiling.MaxBet);
 
     private void DrawTopUpDeck(AppSkin ui, Rect deck, CasinoHoldemRoomStateDto board, CasinoHoldemSeatDto hero,
         bool blocked, float scale)

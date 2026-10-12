@@ -26,6 +26,7 @@ internal enum CasinoScreen
     VenueRoom,
     Broadcast,
     Fame,
+    GilLedger,
 }
 
 internal readonly record struct CasinoRoute(
@@ -35,4 +36,20 @@ internal readonly record struct CasinoRoute(
     string TableId = "")
 {
     public static readonly CasinoRoute Floor = new(CasinoScreen.Floor);
+
+    public bool Is(CasinoScreen screen, string tableId)
+    {
+        return Screen == screen && tableId.Length > 0 && string.Equals(TableId, tableId, StringComparison.Ordinal);
+    }
+
+    public static bool KeepsSeat(CasinoRoute leaving, CasinoRoute below)
+    {
+        return leaving.Screen == CasinoScreen.Table && below.Is(CasinoScreen.TableDoor, leaving.TableId);
+    }
+
+    public static bool ReturnsToTable(CasinoRoute door, CasinoRoute below)
+    {
+        return door.Screen == CasinoScreen.TableDoor
+            && (below.Is(CasinoScreen.Table, door.TableId) || below.Is(CasinoScreen.VenueRoom, door.TableId));
+    }
 }

@@ -28,7 +28,15 @@ internal sealed partial class CasinoApp
     private const float RecordsTileHeight = 84f;
     private const float RecordsIcon = 34f;
 
+    internal const int RecentGamesCap = 4;
+
+    internal static readonly string[] LiveRooms = { CasinoGames.Race, CasinoGames.Wheel, CasinoGames.Bingo };
+
     private readonly LiveNowItem[] liveNow = new LiveNowItem[LiveNowCapacity];
+    private readonly int[] recentPicks = new int[RecentGamesCap];
+    private readonly StripEntry[] recentEntries = new StripEntry[RecentGamesCap];
+    private CasinoRoundHistoryDto[]? recentRounds;
+    private int recentCount;
     private readonly TileRail liveNowRail = new();
     private readonly Dictionary<int, string> returnLabels = new();
     private LanguageInfo? returnLanguage;
@@ -48,7 +56,7 @@ internal sealed partial class CasinoApp
         navTabs[0] = new TabItem(Loc.T(L.Strip.TabFloor), IconGlyph.Of(FontAwesomeIcon.DiceD20));
         navTabs[1] = new TabItem(Loc.T(L.Casino.TabLive), IconGlyph.Of(FontAwesomeIcon.BroadcastTower),
             Badge: LiveHeadcount(), AnchorKey: "casino.tab.live");
-        navTabs[2] = new TabItem(Loc.T(L.Casino.TablesTitle), IconGlyph.Of(FontAwesomeIcon.Couch),
+        navTabs[2] = new TabItem(Loc.T(L.VenueHub.Tab), IconGlyph.Of(FontAwesomeIcon.Store),
             AnchorKey: "casino.tab.tables");
         navTabs[3] = new TabItem(Loc.T(L.Casino.TabCashier), IconGlyph.Of(FontAwesomeIcon.CashRegister));
         var current = (int)routes.Tab;
@@ -202,24 +210,7 @@ internal sealed partial class CasinoApp
 
     public PosterInfo Describe(in StripEntry entry)
     {
-        var features = casino.Features;
-        switch (entry.Action)
-        {
-            case StripAction.HostTable:
-                return new PosterInfo(true, 0, Loc.T(L.Strip.HostMeta), string.Empty, string.Empty);
-            case StripAction.HostVenue:
-                return new PosterInfo(CasinoGameGate.IsOpen(features, entry.GameId), 0, Loc.T(L.Strip.VenueMeta),
-                    string.Empty, string.Empty);
-        }
-
-        var open = CasinoGameGate.IsOpen(features, entry.GameId);
-        if (string.Equals(entry.GameId, CasinoGames.DailySpin, StringComparison.Ordinal))
-        {
-            var ready = DailySpinStatus.OffersWheel(DailySpinStatus.Of(casinoSpin.Answer));
-            return new PosterInfo(open, 0, Loc.T(L.Strip.DailySpinMeta), string.Empty,
-                ready ? Loc.T(L.Casino.SpinReadyBadge) : string.Empty);
-        }
-
+        var open = CasinoGameGate.IsOpen(casino.Features, entry.GameId);
         var room = RoomOf(entry.GameId);
         var meta = room.Length > 0 ? RoomPhaseLine(entry.GameId, room, out _) : string.Empty;
         if (meta.Length == 0)
@@ -228,25 +219,56 @@ internal sealed partial class CasinoApp
         }
 
         return new PosterInfo(open, CrowdAt(entry.GameId), meta, ReturnLabel(ReturnTenthsOf(entry.GameId)),
-            string.Empty);
+            StripCatalog.WearsSkillBadge(entry.GameId) ? Loc.T(L.Floor.SkillBadge) : string.Empty);
     }
 
     public ICabinetIdle? IdleFor(string gameId) => machines.IdleFor(gameId);
 
-    private float DrawLiveNow(ImDrawListPtr drawList, Vector2 origin, float width, float scale)
+    private float DrawRecentGames(ImDrawListPtr drawList, Vector2 origin, float width, float delta, float scale)
     {
-        var count = CollectLiveNow();
-        if (count == 0)
+        RefreshRecentGames();
+        if (recentCount == 0)
         {
             return origin.Y;
         }
 
+        var top = origin.Y + FloorSectionGap * scale * 0.5f;
+        var bottom = shelves.DrawRecent(drawList, ui, this, new Vector2(origin.X, top), width, stage.Phase, delta,
+            !router.IsTransitioning && !LaunchActive, scale, recentEntries.AsSpan(0, recentCount), out var tapped,
+            out var source);
+        if (tapped.GameId is not null)
+        {
+            OpenEntry(tapped, source);
+        }
+
+        return bottom + CardGap * scale;
+    }
+
+    private void RefreshRecentGames()
+    {
+        var rounds = history.Rounds;
+        if (ReferenceEquals(rounds, recentRounds))
+        {
+            return;
+        }
+
+        recentRounds = rounds;
+        recentCount = CasinoRecentGames.Collect(rounds, StripCatalog.PlayableIds, recentPicks);
+        for (var index = 0; index < recentCount; index++)
+        {
+            recentEntries[index] = StripCatalog.Playable[recentPicks[index]];
+        }
+    }
+
+    private float DrawLiveNow(ImDrawListPtr drawList, Vector2 origin, float width, float scale)
+    {
+        var count = CollectLiveNow();
         var top = SectionTitle(drawList, origin, width, Loc.T(L.Casino.LiveHeading), scale);
         var cardWidth = LiveNowWidth * scale;
-        var cardHeight = LiveNowHeight * scale;
+        var cardHeight = LiveNowCardHeight(count, cardWidth - LiveNowPad * 2f * scale, scale);
         var gap = CardGap * scale;
-        var contentWidth = Strip.StripShelves.RowWidth(count, cardWidth, gap);
         var pad = Strip.StripShelves.RailPad * scale;
+        var contentWidth = Strip.StripShelves.RailContentWidth(count, cardWidth, gap, pad);
         var row = new Rect(new Vector2(origin.X - pad, top - pad), new Vector2(origin.X + width + pad, top + cardHeight + pad));
         liveNowRail.Begin(drawList, "##casino.livenow", row, row, contentWidth);
         var interactive = liveNowRail.TapAllowed;
@@ -276,19 +298,15 @@ internal sealed partial class CasinoApp
     {
         var count = 0;
         var features = casino.Features;
-        if (CasinoGameGate.IsOpen(features, CasinoGames.Race) && RoomLive(CasinoRoomIds.RaceTrack))
+        for (var index = 0; index < LiveRooms.Length; index++)
         {
-            liveNow[count++] = new LiveNowItem(CasinoGames.Race, string.Empty, CasinoRoomIds.RaceTrack, null);
-        }
+            var gameId = LiveRooms[index];
+            if (!CasinoGameGate.IsOpen(features, gameId))
+            {
+                continue;
+            }
 
-        if (RoomLive(CasinoRoomIds.WheelFloor))
-        {
-            liveNow[count++] = new LiveNowItem(CasinoGames.Wheel, string.Empty, CasinoRoomIds.WheelFloor, null);
-        }
-
-        if (RoomLive(CasinoRoomIds.BingoHall))
-        {
-            liveNow[count++] = new LiveNowItem(CasinoGames.Bingo, string.Empty, CasinoRoomIds.BingoHall, null);
+            liveNow[count++] = new LiveNowItem(gameId, string.Empty, RoomOf(gameId), null);
         }
 
         count = CollectTables(casinoTables.Listed, count, features);
@@ -300,7 +318,7 @@ internal sealed partial class CasinoApp
         for (var index = 0; index < rows.Length && count < LiveNowCapacity; index++)
         {
             var row = rows[index];
-            if (row.SeatedCount <= 0 || row.Paused || !CasinoGameGate.RoomOpen(features, row.GameKind)
+            if (CasinoTableFilters.PlayersOf(row) <= 0 || row.Paused || !CasinoGameGate.RoomOpen(features, row.GameKind)
                 || ContainsTable(count, row.TableId))
             {
                 continue;
@@ -344,7 +362,55 @@ internal sealed partial class CasinoApp
         var tile = LiveNowTile * scale;
         var tileCenter = new Vector2(pressed.Min.X + pad + tile * 0.5f, pressed.Min.Y + pad + tile * 0.5f);
         CasinoArt.GameTile(drawList, item.GameId, tileCenter, tile);
-        var crowd = item.Row is { } row ? row.SeatedCount : casinoRooms.OccupancyOf(item.RoomId);
+        var live = item.Row is not null || RoomLive(item.RoomId);
+        if (live)
+        {
+            DrawLiveNowCrowd(drawList, item, pressed, tileCenter, tile, pad, scale);
+        }
+
+        var textWidth = card.Width - pad * 2f;
+        var left = pressed.Min.X + pad;
+        var nameTop = tileCenter.Y + tile * 0.5f + Metrics.Space.Sm * scale;
+        var lineTop = Tables.PitText.Draw(drawList, LiveNowName(item), TextStyles.Headline, ui.TitleInk, left, nameTop,
+            textWidth, false);
+        Tables.PitText.Draw(drawList, LiveNowLine(item, live), TextStyles.Footnote, ui.BodyInk, left, lineTop, textWidth,
+            false);
+        return interactive && UiInteract.Click(card.Min, card.Max, hovered);
+    }
+
+    private float LiveNowCardHeight(int count, float textWidth, float scale)
+    {
+        var height = LiveNowHeight * scale;
+        var chrome = (LiveNowPad * 2f + LiveNowTile) * scale + Metrics.Space.Sm * scale;
+        for (var index = 0; index < count; index++)
+        {
+            ref readonly var item = ref liveNow[index];
+            var live = item.Row is not null || RoomLive(item.RoomId);
+            height = MathF.Max(height, chrome
+                + Tables.PitText.Height(LiveNowName(item), TextStyles.Headline, textWidth)
+                + Tables.PitText.Height(LiveNowLine(item, live), TextStyles.Footnote, textWidth));
+        }
+
+        return height;
+    }
+
+    private string LiveNowName(in LiveNowItem item) =>
+        item.Row is { } table ? TableName(table) : Loc.T(CasinoGameNames.Of(item.GameId));
+
+    private string LiveNowLine(in LiveNowItem item, bool live)
+    {
+        if (item.Row is { } stakes)
+        {
+            return texts.Compacts(L.Casino.TableStakes, stakes.MinBet, stakes.MaxBet);
+        }
+
+        return live ? RoomPhaseLine(item.GameId, item.RoomId, out _) : Loc.T(L.Casino.RoomIdle);
+    }
+
+    private void DrawLiveNowCrowd(ImDrawListPtr drawList, in LiveNowItem item, Rect pressed, Vector2 tileCenter,
+        float tile, float pad, float scale)
+    {
+        var crowd = item.Row is { } row ? CasinoTableFilters.PlayersOf(row) : casinoRooms.OccupancyOf(item.RoomId);
         var crowdText = texts.Count(L.Casino.LivePlayers, crowd);
         var crowdStyle = TextStyles.FootnoteEmphasized;
         var crowdLeft = tileCenter.X + tile * 0.5f + Metrics.Space.Sm * scale;
@@ -354,21 +420,6 @@ internal sealed partial class CasinoApp
         Typography.Draw(drawList, new Vector2(crowdX, tileCenter.Y - Typography.LineHeight(crowdStyle) * 0.5f),
             Typography.FitText(crowdText, MathF.Max(1f, pressed.Max.X - pad - crowdX), crowdStyle),
             CasinoColors.InkTitle, crowdStyle);
-        var textWidth = pressed.Width - pad * 2f;
-        var nameTop = tileCenter.Y + tile * 0.5f + Metrics.Space.Sm * scale;
-        var name = item.Row is { } table ? TableName(table) : Loc.T(CasinoGameNames.Of(item.GameId));
-        Typography.Draw(drawList, new Vector2(pressed.Min.X + pad, nameTop),
-            Typography.FitText(name, textWidth, TextStyles.Headline), ui.TitleInk, TextStyles.Headline);
-        var line = item.Row is { } stakes
-            ? texts.Compacts(L.Casino.TableStakes, stakes.MinBet, stakes.MaxBet)
-            : RoomPhaseLine(item.GameId, item.RoomId, out _);
-        if (line.Length > 0)
-        {
-            Typography.Draw(drawList, new Vector2(pressed.Min.X + pad, nameTop + Typography.LineHeight(TextStyles.Headline)),
-                Typography.FitText(line, textWidth, TextStyles.Footnote), ui.BodyInk, TextStyles.Footnote);
-        }
-
-        return interactive && UiInteract.Click(card.Min, card.Max, hovered);
     }
 
     private void EnterLive(in LiveNowItem item, Rect source)

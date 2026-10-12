@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Casino;
+using Aetherphone.Core.Localization;
 using Xunit;
 
 namespace Aetherphone.Tests;
@@ -175,8 +176,92 @@ public sealed class CasinoHostingWireContractTests
         var propose = JsonSerializer.Serialize(new CasinoLedgerProposeRequest("x1", CasinoLedgerKinds.Payout, "u1",
             250000), AethernetJsonContext.Default.CasinoLedgerProposeRequest);
         Assert.Equal(
-            "{\"clientEntryId\":\"x1\",\"kind\":\"payout\",\"counterpartyUserId\":\"u1\",\"amount\":250000,\"source\":\"manual\"}",
+            "{\"clientEntryId\":\"x1\",\"kind\":\"payout\",\"counterpartyUserId\":\"u1\",\"amount\":250000,\"source\":\"manual\",\"guestName\":\"\"}",
             propose);
+    }
+
+    [Fact]
+    public void AGuestEntryCarriesTheRecordedNameAndArrivesSettled()
+    {
+        const string json = """
+        { "granted": true, "reason": "",
+          "entry": { "entryId": "7c0d", "tableId": "table-9b2e", "kind": "buyin", "amount": 50000,
+            "payerUserId": "", "payerName": "Chea Thorne", "payeeUserId": "u_host", "payeeName": "Ciri",
+            "proposedBy": "host", "source": "trade", "payerConfirmed": true, "payeeConfirmed": true,
+            "settled": true, "disputed": false, "disputeResolved": false,
+            "createdAtUnixMs": 1760227200000, "settledAtUnixMs": 1760227200000,
+            "guest": true, "guestName": "Chea Thorne" } }
+        """;
+
+        var answer = JsonSerializer.Deserialize(json, AethernetJsonContext.Default.CasinoLedgerResultDto);
+
+        Assert.NotNull(answer);
+        Assert.True(answer!.Granted);
+        var entry = answer.Entry!;
+        Assert.True(entry.Guest);
+        Assert.Equal("Chea Thorne", entry.GuestName);
+        Assert.Equal("Chea Thorne", entry.PayerName);
+        Assert.Equal(string.Empty, entry.PayerUserId);
+        Assert.Equal("u_host", entry.PayeeUserId);
+        Assert.True(entry.Settled);
+        Assert.True(entry.PayerConfirmed);
+        Assert.True(entry.PayeeConfirmed);
+        Assert.Equal(CasinoLedgerKinds.Trade, entry.Source);
+
+        var registered = JsonSerializer.Deserialize(
+            "{\"entryId\":\"e1\",\"kind\":\"payout\",\"amount\":10,\"payerUserId\":\"u1\",\"payeeUserId\":\"u2\"}",
+            AethernetJsonContext.Default.CasinoLedgerEntryDto);
+        Assert.False(registered!.Guest);
+        Assert.Equal(string.Empty, registered.GuestName);
+
+        var propose = JsonSerializer.Serialize(new CasinoLedgerProposeRequest("3f1c", CasinoLedgerKinds.BuyIn,
+            string.Empty, 50000, CasinoLedgerKinds.Trade, "Chea Thorne"),
+            AethernetJsonContext.Default.CasinoLedgerProposeRequest);
+        Assert.Equal(
+            "{\"clientEntryId\":\"3f1c\",\"kind\":\"buyin\",\"counterpartyUserId\":\"\",\"amount\":50000,\"source\":\"trade\",\"guestName\":\"Chea Thorne\"}",
+            propose);
+    }
+
+    [Fact]
+    public void TheBookIsAHostedGilKindBehindTheVenueBookFlag()
+    {
+        Assert.Equal("casino.book", CasinoWire.BookKind);
+        Assert.Equal("venue.book", CasinoFeatures.VenueBook);
+        Assert.True(CasinoFeatureSet.From(new[] { "venue.book" }).Has(CasinoFeatures.VenueBook));
+        Assert.False(CasinoFeatureSet.Empty.Has(CasinoFeatures.VenueBook));
+        Assert.Equal("guest_entry", CasinoReasons.GuestEntry);
+        Assert.Equal(L.Book.ReasonGuestEntry.Key, CasinoReasons.MessageFor(CasinoReasons.GuestEntry).Key);
+
+        const string json = """
+        { "tableId": "table-9b2e", "gameKind": "casino.book", "kind": 2, "stakeTier": 0,
+          "ownerUserId": "u_host", "ownerName": "Ciri", "minBet": 0, "maxBet": 0, "minBuyIn": 0,
+          "maxBuyIn": 0, "maxSeats": 0, "seatedCount": 0, "occupancy": 0, "admitted": true, "reason": "",
+          "inviteToken": "[aep.casino.v1:table-9b2e]", "name": "Mist Lounge", "listing": 2,
+          "practice": false, "paused": false,
+          "config": { "gameKind": "casino.book", "name": "Mist Lounge", "seats": 0, "minBet": 0,
+            "maxBet": 0, "minBuyIn": 0, "maxBuyIn": 0, "practice": false, "practiceStack": 100000,
+            "practiceRebuy": false, "turnSeconds": 20, "timeBankUses": 3, "listing": 2,
+            "spectators": false, "faceUp": false, "dealerMode": 0, "coDealers": [], "autoDeal": false,
+            "houseRules": null, "location": { "world": 73, "territory": 641, "ward": 18, "plot": 42,
+            "apartmentWing": 0, "room": 0 }, "poker": null, "dice": null, "deathroll": null,
+            "currency": 2, "bank": 5000000, "maxPayout": 1000000 },
+          "currency": 2,
+          "reputation": { "gilTablesHosted": 3, "payoutsConfirmed": 41, "disputesOpen": 0, "frozen": false },
+          "joinCode": "KXRPMW" }
+        """;
+
+        var card = JsonSerializer.Deserialize(json, AethernetJsonContext.Default.CasinoTableRowDto);
+
+        Assert.NotNull(card);
+        Assert.True(CasinoBookRules.IsBook(card!.GameKind));
+        Assert.Equal(CasinoTableKinds.Private, card.Kind);
+        Assert.Equal(0, card.MaxSeats);
+        Assert.Equal(CasinoCurrencies.Gil, CasinoCurrencies.Of(card));
+        Assert.Equal(5_000_000, card.Config!.Bank);
+        Assert.Equal(1_000_000, card.Config.MaxPayout);
+        Assert.Equal(18, card.Config.Location!.Ward);
+        Assert.Equal("KXRPMW", card.JoinCode);
+        Assert.Equal(string.Empty, CasinoHostingRules.Check(card.Config));
     }
 
     [Fact]

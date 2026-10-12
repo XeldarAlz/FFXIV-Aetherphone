@@ -4,6 +4,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Onboarding;
+using Aetherphone.Core.Platform;
 using Aetherphone.Core.Sharing;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
@@ -120,6 +121,7 @@ internal sealed partial class AethergramApp
         captionEmoji.Close();
         personPicker.Close();
         composeSession.Open(avatarMode || storyMode, !avatarMode && !storyMode);
+        composeIntake.Discard();
         router.Push(AethergramRoute.Compose);
     }
 
@@ -151,6 +153,11 @@ internal sealed partial class AethergramApp
         }
 
         composeSession.ConsumePendingImport();
+        while (composeIntake.TryTake(out var taken))
+        {
+            composeSession.TakeImported(taken);
+        }
+
         switch (composeSession.Stage)
         {
             case PhotoComposeStage.Edit:
@@ -217,6 +224,11 @@ internal sealed partial class AethergramApp
 
     private void DrawComposePick(Rect area)
     {
+        if (UiInteract.Hover(area.Min, area.Max) && GameFocus.Active && ImageIntake.PasteRequested())
+        {
+            composeIntake.Paste(library);
+        }
+
         var scale = UiScale.Current;
         var actionLabel = composeAvatarMode
             ? (store.Posting ? Loc.T(L.Aethergram.Saving) : Loc.T(L.Aethergram.Use))
@@ -251,9 +263,14 @@ internal sealed partial class AethergramApp
         UiAnchors.Report("aethergram.compose.grid", gridRect);
         using (AppSurface.BeginEdgeToEdge(gridRect))
         {
-            composeSession.DrawPickGrid(gridRect, scale, ComposeStyle, true, Loc.T(L.Aethergram.ImportFromPc),
-                ComposeTitle);
+            if (composeSession.DrawPickGrid(gridRect, scale, ComposeStyle, true, Loc.T(L.Aethergram.ImportFromPc),
+                    ComposeTitle, composeIntake.ClipboardHasImage() ? Loc.T(L.Common.PasteImage) : null))
+            {
+                composeIntake.Paste(library);
+            }
         }
+
+        composeIntake.AcceptDrop(library, Accent);
     }
 
     private void PickAdvance()

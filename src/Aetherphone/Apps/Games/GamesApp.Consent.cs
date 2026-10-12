@@ -29,8 +29,6 @@ internal sealed partial class GamesApp
     private const float ConsentGhostNameFraction = 0.42f;
     private const float ConsentGhostHandleFraction = 0.26f;
     private const float ConsentGhostValueWidth = 46f;
-    private const float ConsentInfoGlyphBox = 32f;
-    private const float ConsentInfoGlyphSize = 20f;
     private const float ConsentTopGap = Metrics.Space.Xxl;
     private const float ConsentBlockGap = Metrics.Space.Xl;
     private const float ConsentLineGap = Metrics.Space.Sm;
@@ -111,12 +109,12 @@ internal sealed partial class GamesApp
             ui.MutedInk, TextStyles.FootnoteEmphasized);
         y += Typography.LineHeight(TextStyles.FootnoteEmphasized) + Metrics.Space.Xs * scale;
         y = DrawConsentPreview(drawList, user, left, y, width, scale) + ConsentBlockGap * scale;
-        y = DrawConsentInfo(drawList, PhoneIcons.Eye, Loc.T(L.Leaderboard.ConsentShown), left, y, width, scale)
-            + ConsentLineGap * scale * 2f;
-        y = DrawConsentInfo(drawList, PhoneIcons.DeviceMobile, Loc.T(L.Leaderboard.ConsentOff), left, y, width,
-            scale) + ConsentLineGap * scale * 2f;
-        y = DrawConsentInfo(drawList, PhoneIcons.Settings, Loc.T(L.Leaderboard.ConsentSettings), left, y, width,
-            scale);
+        y = InfoLine.Draw(drawList, PhoneIcons.Eye, Loc.T(L.Leaderboard.ConsentShown), ui.Accent, ui.BodyInk, left,
+            y, width, scale) + ConsentLineGap * scale * 2f;
+        y = InfoLine.Draw(drawList, PhoneIcons.DeviceMobile, Loc.T(L.Leaderboard.ConsentOff), ui.Accent, ui.BodyInk,
+            left, y, width, scale) + ConsentLineGap * scale * 2f;
+        y = InfoLine.Draw(drawList, PhoneIcons.Settings, Loc.T(L.Leaderboard.ConsentSettings), ui.Accent,
+            ui.BodyInk, left, y, width, scale);
         return y + ConsentBlockGap * scale;
     }
 
@@ -170,23 +168,6 @@ internal sealed partial class GamesApp
         var valueSize = Typography.Measure(value, TextStyles.Headline);
         Typography.Draw(drawList, new Vector2(row.Max.X - valueSize.X, row.Center.Y - valueSize.Y * 0.5f), value,
             ghost, TextStyles.Headline);
-    }
-
-    private float DrawConsentInfo(ImDrawListPtr drawList, string glyph, string text, float left, float top,
-        float width, float scale)
-    {
-        var box = ConsentInfoGlyphBox * scale;
-        var textLeft = left + box + Metrics.Space.Md * scale;
-        var textWidth = MathF.Max(1f, left + width - textLeft);
-        var block = Typography.MeasureWrappedBlock(text, TextStyles.Subheadline, textWidth);
-        var height = MathF.Max(box, block.Y);
-        var firstLine = MathF.Min(block.Y, Typography.LineHeight(TextStyles.Subheadline));
-        PhoneIcon.Draw(drawList, new Vector2(left + box * 0.5f, top + box * 0.5f), glyph, ui.Accent,
-            ConsentInfoGlyphSize * scale);
-        var textTop = top + MathF.Max(0f, (box - firstLine) * 0.5f);
-        Typography.DrawWrappedLeft(new Vector2(textLeft, textTop), text, ui.BodyInk, TextStyles.Subheadline,
-            textWidth);
-        return top + MathF.Max(height, textTop - top + block.Y);
     }
 
     private void DrawConsentButtons(Vector2 topLeft, float width, string failure, float scale)

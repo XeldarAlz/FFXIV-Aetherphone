@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Apps.Casino.Stage;
 using Aetherphone.Apps.Casino.Tables;
 using Aetherphone.Core;
 using Aetherphone.Core.Casino;
@@ -14,7 +15,15 @@ public sealed class BlackjackTableLayoutTests
     private const float ShoeCardWidth = 22f;
     private const float ShoeLift = 2.5f;
 
+    private const float FloorSlack = 60f;
+
     private static readonly float[] Scales = { 0.75f, 1f, 1.5f };
+
+    private static readonly float[] FloorScales = { 0.75f, 1f, 1.25f, 1.5f };
+
+    private static readonly float[] PhoneWidths = { 256f, 272f, 300f, 336f };
+
+    public static TheoryData<float> ScaleData => new() { 0.75f, 1f, 1.25f, 1.5f };
 
     private static readonly Vector2[] FeltSizes =
     {
@@ -287,6 +296,241 @@ public sealed class BlackjackTableLayoutTests
         Assert.True(pairs.X - half >= layout.Felt.Min.X - Epsilon);
         Assert.True(three.X + half <= layout.Felt.Max.X + Epsilon);
         Assert.True(layout.SideCaptionWidth >= 56f * scale);
+    }
+
+    public static TheoryData<float, float, int, bool> FloorTables()
+    {
+        var data = new TheoryData<float, float, int, bool>();
+        for (var scaleIndex = 0; scaleIndex < FloorScales.Length; scaleIndex++)
+        {
+            for (var widthIndex = 0; widthIndex < PhoneWidths.Length; widthIndex++)
+            {
+                for (var railCount = 0; railCount <= BlackjackRules.SeatCount; railCount++)
+                {
+                    data.Add(FloorScales[scaleIndex], PhoneWidths[widthIndex], railCount, false);
+                    if (railCount < BlackjackRules.SeatCount)
+                    {
+                        data.Add(FloorScales[scaleIndex], PhoneWidths[widthIndex], railCount, true);
+                    }
+                }
+            }
+        }
+
+        return data;
+    }
+
+    [Theory]
+    [MemberData(nameof(FloorTables))]
+    public void EverySeatCountLaysOutWithoutOverlapDownToTheFeltFloor(float scale, float width, int railCount,
+        bool seated)
+    {
+        var floor = BlackjackTableLayout.MinimumHeight(width * scale, railCount, seated, scale) / scale;
+        for (var extra = 0f; extra <= FloorSlack; extra += FloorSlack * 0.5f)
+        {
+            var layout = Compute(scale, width, floor + extra, railCount, seated);
+            AssertZonesStack(layout, railCount, seated);
+            AssertRailSeatsStayApart(layout, railCount);
+            if (!seated)
+            {
+                continue;
+            }
+
+            for (var handCount = 1; handCount <= BlackjackRules.MaxHandsPerSeat; handCount++)
+            {
+                AssertHeroHandsClearTheRail(layout, railCount, handCount);
+            }
+
+            AssertBetSpotsClearTheRailAndTheTotals(layout, railCount);
+        }
+    }
+
+    [Fact]
+    public void TheOwnersHostedGilTableKeepsItsSeatsOffTheSplitHands()
+    {
+        const float scale = 1f;
+        const float width = 285f;
+        const float safeHeight = 465f;
+        const float rowGap = 6f;
+        const float ledgerWidth = 75f;
+        const int railCount = BlackjackRules.SeatCount - 1;
+        var floor = BlackjackTableLayout.MinimumHeight(width, railCount, true, scale);
+        var buttonRow = Button.LargeHeight + rowGap;
+        var bankAndRules = rowGap + StageText.MinimumCapsuleHeight + rowGap + StageText.MinimumCapsuleHeight * 1.5f;
+        var mode = HostedInfoLayout.Mode(bankAndRules, rowGap + StageText.MinimumCapsuleHeight,
+            safeHeight - rowGap - Button.LargeHeight - floor, width - ledgerWidth - rowGap, scale);
+        Assert.Equal(HostedInfoMode.Beside, mode);
+
+        var feltHeight = safeHeight - buttonRow;
+        Assert.True(feltHeight >= floor);
+        var layout = Compute(scale, width, feltHeight, railCount, true);
+        AssertZonesStack(layout, railCount, true);
+        AssertRailSeatsStayApart(layout, railCount);
+        AssertHeroHandsClearTheRail(layout, railCount, 2);
+    }
+
+    [Fact]
+    public void BelowItsFloorTheRailWouldRunIntoTheHero()
+    {
+        const int railCount = BlackjackRules.SeatCount - 1;
+        var floor = BlackjackTableLayout.MinimumHeight(285f, railCount, true, 1f);
+        var squeezed = Compute(1f, 285f, floor - 40f, railCount, true);
+
+        Assert.True(squeezed.RailBottom > squeezed.HeroTop);
+    }
+
+    [Theory]
+    [MemberData(nameof(ScaleData))]
+    public void AKnockOrANoticeOverlaysTheFeltRatherThanSqueezeItUnderItsFloor(float scale)
+    {
+        var floor = 400f * scale;
+        var safeBottom = 520f * scale;
+        var rowBottom = 60f * scale;
+        var knock = 120f * scale;
+
+        Assert.Equal(rowBottom + knock, BlackjackTableLayout.FeltTop(rowBottom, knock, 2000f * scale, floor), 3);
+        var feltTop = BlackjackTableLayout.FeltTop(rowBottom, knock, safeBottom, floor);
+        Assert.Equal(safeBottom - floor, feltTop, 3);
+        Assert.True(feltTop >= rowBottom);
+        Assert.Equal(rowBottom, BlackjackTableLayout.FeltTop(rowBottom, knock, rowBottom + floor * 0.5f, floor), 3);
+
+        var notice = 80f * scale;
+        Assert.Equal(safeBottom, BlackjackTableLayout.FeltBottom(feltTop, safeBottom, notice, floor), 3);
+        Assert.Equal(safeBottom - notice, BlackjackTableLayout.FeltBottom(0f, safeBottom, notice, floor), 3);
+        Assert.Equal(safeBottom, BlackjackTableLayout.FeltBottom(0f, safeBottom, 0f, floor), 3);
+    }
+
+    [Theory]
+    [MemberData(nameof(ScaleData))]
+    public void TheHostedInfoYieldsItsBlocksBeforeTheFeltLosesItsFloor(float scale)
+    {
+        var blocks = 84f * scale;
+        var line = 34f * scale;
+        var beside = HostedInfoLayout.MinimumBesideWidth * scale;
+
+        Assert.Equal(HostedInfoMode.Blocks, HostedInfoLayout.Mode(blocks, line, blocks, 0f, scale));
+        Assert.Equal(HostedInfoMode.Beside, HostedInfoLayout.Mode(blocks, line, blocks - 1f, beside, scale));
+        Assert.Equal(HostedInfoMode.Line, HostedInfoLayout.Mode(blocks, line, line, beside - 1f, scale));
+        Assert.Equal(HostedInfoMode.Hidden, HostedInfoLayout.Mode(blocks, line, line - 1f, beside - 1f, scale));
+        Assert.Equal(HostedInfoMode.Hidden, HostedInfoLayout.Mode(blocks, line, -50f * scale, 0f, scale));
+    }
+
+    private static void AssertZonesStack(BlackjackTableLayout layout, int railCount, bool seated)
+    {
+        var felt = layout.Felt;
+        var scale = layout.Scale;
+        var dealerCardHalf = PlayingCards.HeightFor(layout.DealerCardPixels) * 0.5f;
+        var pillHalf = BlackjackTableLayout.PillHeight * 0.5f * scale;
+        Assert.True(layout.DealerPuck.Y - layout.DealerPuckPixels >= felt.Min.Y - Epsilon);
+        Assert.True(layout.DealerPuck.Y + layout.DealerPuckPixels <= layout.DealerFanCenter.Y - dealerCardHalf
+            + Epsilon);
+        Assert.True(layout.DealerTotalY + pillHalf <= layout.StateBand.Min.Y + Epsilon);
+        if (railCount > 0)
+        {
+            Assert.True(layout.StateBand.Max.Y <= layout.RailTop + Epsilon);
+            Assert.True(layout.RailBottom <= layout.HeroTop + Epsilon);
+        }
+        else
+        {
+            Assert.True(layout.StateBand.Max.Y <= layout.HeroTop + Epsilon);
+        }
+
+        var cardHalf = PlayingCards.HeightFor(layout.HeroCardPixels(1)) * 0.5f;
+        Assert.True(layout.HeroFanY - cardHalf >= layout.HeroTop - Epsilon);
+        if (seated)
+        {
+            Assert.True(layout.CapsuleCenter.Y + layout.CapsulePixels * 0.5f <= felt.Max.Y + Epsilon);
+            return;
+        }
+
+        Assert.True(layout.HeroFanY + cardHalf <= felt.Max.Y + Epsilon);
+    }
+
+    private static void AssertRailSeatsStayApart(BlackjackTableLayout layout, int railCount)
+    {
+        var felt = layout.Felt;
+        var scale = layout.Scale;
+        for (var slot = 0; slot < railCount; slot++)
+        {
+            var puck = layout.RailPuckCenter(slot);
+            var seat = layout.RailSeatRect(slot);
+            var plate = layout.RailPlateRect(slot);
+            var betPlate = new Rect(new Vector2(seat.Min.X, puck.Y - layout.RailBetLift - BetPlateHalf(scale)),
+                new Vector2(seat.Max.X, puck.Y - layout.RailBetLift + BetPlateHalf(scale)));
+            var cards = new Rect(new Vector2(seat.Min.X, seat.Min.Y),
+                new Vector2(seat.Max.X, puck.Y - layout.RailCardsLift + RailHandHalf(scale)));
+            Assert.True(seat.Min.X >= felt.Min.X - Epsilon && seat.Max.X <= felt.Max.X + Epsilon);
+            Assert.True(puck.X - layout.SpotRadius >= felt.Min.X - Epsilon);
+            Assert.True(puck.X + layout.SpotRadius <= felt.Max.X + Epsilon);
+            Assert.True(seat.Min.Y >= layout.StateBand.Max.Y - Epsilon);
+            Assert.True(seat.Max.Y <= layout.HeroTop + Epsilon);
+            Assert.True(Contains(seat, plate) && Contains(seat, betPlate) && Contains(seat, cards));
+            Assert.False(Overlaps(cards, betPlate));
+            Assert.False(Overlaps(betPlate, PuckBox(puck, layout.PuckRadius)));
+            Assert.False(Overlaps(plate, PuckBox(puck, layout.PuckRadius)));
+            for (var other = slot + 1; other < railCount; other++)
+            {
+                Assert.False(Overlaps(seat, layout.RailSeatRect(other)));
+                Assert.True(Vector2.Distance(puck, layout.RailPuckCenter(other)) >= layout.SpotRadius * 2f - Epsilon);
+            }
+        }
+    }
+
+    private static void AssertHeroHandsClearTheRail(BlackjackTableLayout layout, int railCount, int handCount)
+    {
+        var felt = layout.Felt;
+        var scale = layout.Scale;
+        var cardHalf = PlayingCards.HeightFor(layout.HeroCardPixels(handCount)) * 0.5f;
+        var fanHalf = (layout.HeroSlotWidth(handCount) - BlackjackTableLayout.HeroSlotPad * scale) * 0.5f;
+        for (var handIndex = 0; handIndex < handCount; handIndex++)
+        {
+            var center = layout.HeroHandCenter(handCount, handIndex);
+            var fan = new Rect(new Vector2(center.X - fanHalf, center.Y - cardHalf - layout.RaisePixels),
+                new Vector2(center.X + fanHalf, center.Y + cardHalf));
+            Assert.True(fan.Min.X >= felt.Min.X - Epsilon && fan.Max.X <= felt.Max.X + Epsilon);
+            Assert.True(fan.Min.Y >= layout.HeroTop - Epsilon);
+            for (var slot = 0; slot < railCount; slot++)
+            {
+                Assert.False(Overlaps(fan, layout.RailSeatRect(slot)));
+            }
+
+            if (handIndex > 0)
+            {
+                var previous = layout.HeroHandCenter(handCount, handIndex - 1);
+                Assert.True(center.X - previous.X >= fanHalf * 2f - Epsilon);
+            }
+        }
+    }
+
+    private static void AssertBetSpotsClearTheRailAndTheTotals(BlackjackTableLayout layout, int railCount)
+    {
+        var scale = layout.Scale;
+        var radius = layout.BetSpotPixels;
+        var totalsBottom = layout.HeroTotalY + BlackjackTableLayout.TotalCapsuleHeight * 0.5f * scale;
+        var spots = new[]
+        {
+            layout.BetSpot, layout.SideSpot(BlackjackSideBet.PerfectPairs),
+            layout.SideSpot(BlackjackSideBet.TwentyOnePlusThree),
+        };
+        for (var index = 0; index < spots.Length; index++)
+        {
+            var spot = PuckBox(spots[index], radius);
+            Assert.True(spot.Min.Y >= totalsBottom - Epsilon);
+            for (var slot = 0; slot < railCount; slot++)
+            {
+                Assert.False(Overlaps(spot, layout.RailSeatRect(slot)));
+            }
+        }
+    }
+
+    private static float BetPlateHalf(float scale) => BlackjackTableLayout.BetPlateHeight * 0.5f * scale;
+
+    private static float RailHandHalf(float scale) =>
+        PlayingCards.HeightFor(BlackjackTableLayout.RailCardWidth * scale) * 0.5f;
+
+    private static bool Contains(in Rect outer, in Rect inner)
+    {
+        return inner.Min.X >= outer.Min.X - Epsilon && inner.Max.X <= outer.Max.X + Epsilon
+            && inner.Min.Y >= outer.Min.Y - Epsilon && inner.Max.Y <= outer.Max.Y + Epsilon;
     }
 
     private static BlackjackTableLayout Compute(float scale, float width, float height, int railCount, bool seated)

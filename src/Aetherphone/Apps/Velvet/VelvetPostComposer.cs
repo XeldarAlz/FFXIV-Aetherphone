@@ -6,6 +6,7 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Photos;
+using Aetherphone.Core.Platform;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
@@ -61,6 +62,8 @@ internal sealed class VelvetPostComposer
     private readonly MentionAutocomplete captionMentions;
     private readonly EmojiComposer captionEmoji = new();
     private readonly PhotoComposeSession session;
+    private readonly PhotoLibrary library;
+    private readonly ImageIntake intake = new();
     private readonly PhotoCarousel carousel = new();
     private readonly Action<ImDrawListPtr, Vector2, Vector2, float, string?> editPreviewPage;
     private readonly Action openTags;
@@ -86,6 +89,7 @@ internal sealed class VelvetPostComposer
         this.images = images;
         this.lodestone = lodestone;
         this.openTags = openTags;
+        this.library = library;
         captionMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         session = new PhotoComposeSession(library, wallpaperImages);
         editPreviewPage = DrawEditPreviewPage;
@@ -172,6 +176,7 @@ internal sealed class VelvetPostComposer
         ClearTags();
         captionEmoji.Close();
         session.Open(story);
+        intake.Discard();
     }
 
     public void OpenEdit(VelvetPostDto post)
@@ -222,6 +227,11 @@ internal sealed class VelvetPostComposer
         }
 
         session.ConsumePendingImport();
+        while (intake.TryTake(out var taken))
+        {
+            session.TakeImported(taken);
+        }
+
         switch (session.Stage)
         {
             case PhotoComposeStage.Edit:
@@ -250,6 +260,11 @@ internal sealed class VelvetPostComposer
 
     private void DrawPick(Rect area, AppSkin ui)
     {
+        if (UiInteract.Hover(area.Min, area.Max) && GameFocus.Active && ImageIntake.PasteRequested())
+        {
+            intake.Paste(library);
+        }
+
         var scale = UiScale.Current;
         if (VHeader.Push(area, Title, HeaderActionSlots))
         {
@@ -284,8 +299,14 @@ internal sealed class VelvetPostComposer
         var gridRect = new Rect(new Vector2(area.Min.X, gridTop), area.Max);
         using (AppSurface.BeginEdgeToEdge(gridRect))
         {
-            session.DrawPickGrid(gridRect, scale, Style, true, Loc.T(L.Velvet.ImportFromPc), Title);
+            if (session.DrawPickGrid(gridRect, scale, Style, true, Loc.T(L.Velvet.ImportFromPc), Title,
+                    intake.ClipboardHasImage() ? Loc.T(L.Common.PasteImage) : null))
+            {
+                intake.Paste(library);
+            }
         }
+
+        intake.AcceptDrop(library, VelvetTheme.Rose);
     }
 
     private void DrawEdit(Rect area)

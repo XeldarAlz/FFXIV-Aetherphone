@@ -201,6 +201,7 @@ internal sealed partial class BlackjackTable
         var shoe = layout.ShoeAnchor;
         var dealerAnchor = layout.DealerFanCenter;
         var seated = BlackjackRules.IsSeat(mySeat);
+        var canSit = !seated && !dealing;
         var currency = CasinoCurrencies.Of(board);
         var limit = SeatLimit(board);
         var tapped = -1;
@@ -217,8 +218,8 @@ internal sealed partial class BlackjackTable
             var view = seatViews[seatIndex];
             if (view.Phase == SeatPhase.Empty)
             {
-                if (SeatSpot.DrawEmpty(drawList, puck, layout.SpotRadius, seated ? string.Empty : sitLabel,
-                        CasinoColors.Money, !seated, layout.SpotScale))
+                if (SeatSpot.DrawEmpty(drawList, puck, layout.SpotRadius, canSit ? sitLabel : string.Empty,
+                        CasinoColors.Money, canSit, layout.SpotScale))
                 {
                     tapped = seatIndex;
                 }
@@ -269,7 +270,7 @@ internal sealed partial class BlackjackTable
         Material.LiquidGlass(drawList, min, max, rounding, scale, GlassTone.Dark, 0f);
         var inner = width - 6f * scale;
         var lineHeight = (max.Y - min.Y) * 0.5f;
-        var name = Typography.FitText(view.DisplayName, inner, TextStyles.Footnote);
+        var name = Typography.FitText(RailName(view.SeatIndex, view.DisplayName, inner), inner, TextStyles.Footnote);
         Typography.DrawCentered(drawList, new Vector2(puck.X, min.Y + lineHeight * 0.55f), name,
             dimmed ? StageText.Body : StageText.Strong, TextStyles.Footnote);
         var stack = StackLabel(currency, view.Stack, true);
@@ -278,6 +279,22 @@ internal sealed partial class BlackjackTable
         Typography.DrawCentered(drawList, new Vector2(puck.X, min.Y + lineHeight * 1.45f),
             Typography.FitText(stack, inner, fit, style.Weight), dimmed ? StageText.Body : StackInk(currency), fit,
             style.Weight);
+    }
+
+    private string RailName(int seatIndex, string displayName, float width)
+    {
+        if (Typography.Measure(displayName, TextStyles.Footnote).X <= width)
+        {
+            return displayName;
+        }
+
+        if (!ReferenceEquals(railNameSources[seatIndex], displayName))
+        {
+            railNameSources[seatIndex] = displayName;
+            railForenames[seatIndex] = PitText.Forename(displayName);
+        }
+
+        return railForenames[seatIndex];
     }
 
     private static void DrawBalanceTitle(ImDrawListPtr drawList, int currency, long stack, Vector2 puck,
@@ -302,7 +319,7 @@ internal sealed partial class BlackjackTable
     {
         if (currency == CasinoCurrencies.Gil)
         {
-            return hostedText.Gil(amount);
+            return compact ? hostedText.GilCompact(amount) : hostedText.Gil(amount);
         }
 
         return compact ? NumberText.Compact(amount) : NumberText.Group(amount);
@@ -397,7 +414,11 @@ internal sealed partial class BlackjackTable
     {
         if (!BlackjackRules.IsSeat(mySeat))
         {
-            DrawHeroGhostSlots(drawList, scale);
+            if (!dealing)
+            {
+                DrawHeroGhostSlots(drawList, scale);
+            }
+
             return;
         }
 
@@ -442,9 +463,8 @@ internal sealed partial class BlackjackTable
             var outcomeText = OutcomeLabel(hand);
             if (hand.Outcome != BlackjackOutcomes.Pending && outcomeText.Length > 0)
             {
-                var won = hand.Delta > 0;
-                BlackjackTableArt.DrawOutcomeBadge(drawList, fanCenter, outcomeText,
-                    won ? CasinoColors.Money : ui.TitleInk, won ? CasinoColors.Money : ui.BodyInk,
+                var ink = hand.Delta > 0 ? CasinoColors.Money : StageText.Strong;
+                BlackjackTableArt.DrawOutcomeBadge(drawList, fanCenter, outcomeText, ink, ink,
                     BadgeEntrance(mySeat), slotWidth, scale);
             }
         }
@@ -596,7 +616,9 @@ internal sealed partial class BlackjackTable
 
         if (hand.Outcome == BlackjackOutcomes.Blackjack)
         {
-            return Loc.T(L.Casino.BlackjackSeatNatural);
+            return hand.Delta > 0
+                ? text.Number(L.Blackjack.NaturalPays, hand.Delta)
+                : Loc.T(L.Casino.BlackjackSeatNatural);
         }
 
         if (hand.Outcome == BlackjackOutcomes.Push)

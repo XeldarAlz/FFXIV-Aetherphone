@@ -1,6 +1,6 @@
 # Aetherphone Privacy Policy
 
-**Last updated:** 6 October 2026
+**Last updated:** 12 October 2026
 
 This policy explains how personal data is handled when you use the Aetherphone plugin, the Aetherphone companion app, and Aethernet, the online service behind their social features. Features of the plugin that work offline, such as wallpapers, timers and notes, keep their data on your computer.
 
@@ -22,7 +22,7 @@ For any privacy question or request, write to **privacy@aetherphone.net**. A pos
 
 **Velvet.** If you use Velvet: your Velvet profile, posts, connections and messages, when you confirmed that you are 18 or older, and your character's race. Your Velvet profile shows that race to other Velvet users, or another race you choose to show. On the global client we confirm the race from the character's public Lodestone profile and check it again about once a week while you use Velvet. On the Chinese client we use the race the plugin reports.
 
-**Activity.** When you were last active, when you read a conversation, and your time zone; you can hide these from other players in your settings. Which posts your feeds showed you, whether you opened or shared them, and which stories you viewed. How long you listened to community radio stations or played mini-games, for Aether Coin quests. Your current zone and world while you host or look for nearby MogCast streams and Jams. What you are listening to, if you turn on sharing it with friends. Your calls: who took part, when and for how long. Your Aether Coin and Gamba history, used to run games and detect cheating.
+**Activity.** When you were last active, when you read a conversation, and your time zone; you can hide these from other players in your settings. Which posts your feeds showed you, whether you opened or shared them, and which stories you viewed. How long you listened to community radio stations or played mini-games, for Aether Coin quests. Your current zone and world while you host or look for nearby MogCast streams and Jams. What you are listening to, if you turn on sharing it with friends. Your calls: who took part, when and for how long. Your Aether Coin and Gamba history, used to run games and detect cheating. If you turn on Gamba's trade sync, the character name shown in your in-game trade window is sent to the server only to match it against the gil table you are hosting or playing at, and a guest entry a host records for a patron without an account stores the character name the host recorded.
 
 **Reports and moderation.** Reports you make and reports about you, notes moderators write, notices we send you, and any action taken on your account or content, including suspensions.
 

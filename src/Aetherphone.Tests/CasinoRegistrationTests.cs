@@ -17,17 +17,19 @@ public sealed class CasinoRegistrationTests
     }
 
     [Fact]
-    public void CasinoConductGateShipsAllFiveSections()
+    public void CasinoConductGateShipsAllSevenSections()
     {
         var gate = ConductRules.For("casino");
         Assert.NotNull(gate);
-        Assert.Equal(1, gate!.Version);
-        Assert.Equal(5, gate.Sections.Length);
-        Assert.Equal(ConductTone.Neutral, gate.Sections[0].Tone);
-        Assert.Equal(ConductTone.Prohibited, gate.Sections[1].Tone);
-        Assert.Equal(ConductTone.Restricted, gate.Sections[2].Tone);
-        Assert.Equal(ConductTone.Encouraged, gate.Sections[3].Tone);
-        Assert.Equal(ConductTone.Neutral, gate.Sections[4].Tone);
+        Assert.Equal(2, gate!.Version);
+        Assert.Equal(7, gate.Sections.Length);
+        Assert.Equal(ConductTone.Info, gate.Sections[0].Tone);
+        Assert.Equal(ConductTone.Allowed, gate.Sections[1].Tone);
+        Assert.Equal(ConductTone.Rule, gate.Sections[2].Tone);
+        Assert.Equal(ConductTone.Rule, gate.Sections[3].Tone);
+        Assert.Equal(ConductTone.ZeroTolerance, gate.Sections[4].Tone);
+        Assert.Equal(ConductTone.Info, gate.Sections[5].Tone);
+        Assert.Equal(ConductTone.Info, gate.Sections[6].Tone);
     }
 
     [Fact]

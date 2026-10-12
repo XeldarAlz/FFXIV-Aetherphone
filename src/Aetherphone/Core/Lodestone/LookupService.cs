@@ -168,7 +168,7 @@ internal sealed class LookupService : IDisposable
         try
         {
             var token = cancellation.Token;
-            using (await lodestone.ThrottleAsync(token).ConfigureAwait(false))
+            using (await lodestone.ThrottleAsync(token, priority: true).ConfigureAwait(false))
             {
                 var client = await lodestone.ClientAsync(token).ConfigureAwait(false);
                 if (client is null)
@@ -192,7 +192,12 @@ internal sealed class LookupService : IDisposable
 
                 var page = await client.SearchCharacter(query).WaitAsync(LodestoneService.NetStoneTimeout, token)
                     .ConfigureAwait(false);
-                var matches = MapCharacterMatches(page);
+                var matches = MapCharacterMatches(page, name);
+                if (region.Length > 0 && !regionIsDataCenter)
+                {
+                    RememberIds(matches, region);
+                }
+
                 target.Matches = matches;
                 target.State = matches.Length > 0 ? LookupState.Ready : LookupState.Empty;
             }
@@ -207,7 +212,7 @@ internal sealed class LookupService : IDisposable
         }
     }
 
-    private static CharacterMatch[] MapCharacterMatches(CharacterSearchPage? page)
+    private static CharacterMatch[] MapCharacterMatches(CharacterSearchPage? page, string query)
     {
         if (page?.Results is null)
         {
@@ -223,13 +228,29 @@ internal sealed class LookupService : IDisposable
             }
 
             list.Add(new CharacterMatch(entry.Id, entry.Name, string.Empty));
-            if (list.Count >= MaxResults)
-            {
-                break;
-            }
         }
 
-        return list.ToArray();
+        return RankAndTrim(list, query);
+    }
+
+    private static TMatch[] RankAndTrim<TMatch>(List<TMatch> list, string query) where TMatch : ILookupMatch
+    {
+        var matches = list.ToArray();
+        LookupRanking.SortByRank(matches, query);
+        if (matches.Length > MaxResults)
+        {
+            Array.Resize(ref matches, MaxResults);
+        }
+
+        return matches;
+    }
+
+    private void RememberIds(CharacterMatch[] matches, string world)
+    {
+        for (var index = 0; index < matches.Length; index++)
+        {
+            lodestone.RememberId(matches[index].Name, world, matches[index].Id);
+        }
     }
 
     private async Task RunFreeCompanySearchAsync(FreeCompanySearchResult target, string name, string region,
@@ -238,7 +259,7 @@ internal sealed class LookupService : IDisposable
         try
         {
             var token = cancellation.Token;
-            using (await lodestone.ThrottleAsync(token).ConfigureAwait(false))
+            using (await lodestone.ThrottleAsync(token, priority: true).ConfigureAwait(false))
             {
                 var client = await lodestone.ClientAsync(token).ConfigureAwait(false);
                 if (client is null)
@@ -262,7 +283,7 @@ internal sealed class LookupService : IDisposable
 
                 var page = await client.SearchFreeCompany(query).WaitAsync(LodestoneService.NetStoneTimeout, token)
                     .ConfigureAwait(false);
-                var matches = MapFreeCompanyMatches(page);
+                var matches = MapFreeCompanyMatches(page, name);
                 target.Matches = matches;
                 target.State = matches.Length > 0 ? LookupState.Ready : LookupState.Empty;
             }
@@ -277,7 +298,7 @@ internal sealed class LookupService : IDisposable
         }
     }
 
-    private static FreeCompanyMatch[] MapFreeCompanyMatches(FreeCompanySearchPage? page)
+    private static FreeCompanyMatch[] MapFreeCompanyMatches(FreeCompanySearchPage? page, string query)
     {
         if (page?.Results is null)
         {
@@ -301,13 +322,9 @@ internal sealed class LookupService : IDisposable
             list.Add(new FreeCompanyMatch(entry.Id, entry.Name, world, subtitle, entry.RecruitmentOpen,
                 entry.CrestLayers?.TopLayer ?? entry.CrestLayers?.MiddleLayer ?? entry.CrestLayers?.BottomLayer,
                 CrestKey(entry.Id)));
-            if (list.Count >= MaxResults)
-            {
-                break;
-            }
         }
 
-        return list.ToArray();
+        return RankAndTrim(list, query);
     }
 
     private async Task RunCharacterDetailAsync(CharacterDetailResult target, string id, string fallbackName,
@@ -316,7 +333,7 @@ internal sealed class LookupService : IDisposable
         try
         {
             var token = cancellation.Token;
-            using (await lodestone.ThrottleAsync(token).ConfigureAwait(false))
+            using (await lodestone.ThrottleAsync(token, priority: true).ConfigureAwait(false))
             {
                 var client = await lodestone.ClientAsync(token).ConfigureAwait(false);
                 if (client is null)
@@ -488,7 +505,7 @@ internal sealed class LookupService : IDisposable
         try
         {
             var token = cancellation.Token;
-            using (await lodestone.ThrottleAsync(token).ConfigureAwait(false))
+            using (await lodestone.ThrottleAsync(token, priority: true).ConfigureAwait(false))
             {
                 var client = await lodestone.ClientAsync(token).ConfigureAwait(false);
                 if (client is null)
@@ -550,7 +567,7 @@ internal sealed class LookupService : IDisposable
         try
         {
             var token = cancellation.Token;
-            using (await lodestone.ThrottleAsync(token).ConfigureAwait(false))
+            using (await lodestone.ThrottleAsync(token, priority: true).ConfigureAwait(false))
             {
                 await LoadRosterPageAsync(target, id, page, token).ConfigureAwait(false);
             }

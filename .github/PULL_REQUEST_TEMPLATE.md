@@ -4,6 +4,7 @@ Title: conventional commit style with a scope and a lowercase summary, e.g.
   fix(net): cap the rate-limit pause at 30 seconds
 One concern per PR. If the title needs an "and", split the PR.
 Target dev, the default branch; master only moves when a release is cut.
+Labels are set for you from the title and the files you touched; leave them alone.
 
 Translation-only PR (editing one JSON under src/Aetherphone/Localization/)?
 Fill in "What" and open it; CI runs the lockstep check for you and the rest

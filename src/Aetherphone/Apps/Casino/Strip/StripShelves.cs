@@ -2,12 +2,10 @@ using Aetherphone.Apps.Casino.Stage;
 using Aetherphone.Apps.Games;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
-using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino.Strip;
@@ -26,7 +24,10 @@ internal sealed class StripShelves
     public const float TitleGap = 8f;
     public const float ShelfGap = 22f;
 
+    private const string RecentRailId = "##casino.recent";
+
     private readonly TileRail[] rails = new TileRail[StripCatalog.Shelves.Length];
+    private readonly TileRail recentRail = new();
     private readonly CabinetPreview[] previews = new CabinetPreview[Machines.MachineCabinet.MachineIds.Length];
     private readonly string[] railIds = new string[StripCatalog.Shelves.Length];
 
@@ -50,6 +51,8 @@ internal sealed class StripShelves
         {
             rails[index].Reset();
         }
+
+        recentRail.Reset();
     }
 
     public static float ShelfHeight(float width, float scale) =>
@@ -64,15 +67,15 @@ internal sealed class StripShelves
     public static float RowWidth(int count, float tileWidth, float gap) =>
         count <= 0 ? 0f : count * tileWidth + (count - 1) * gap;
 
+    public static float RailContentWidth(int count, float tileWidth, float gap, float pad) =>
+        count <= 0 ? 0f : RowWidth(count, tileWidth, gap) + pad * 2f;
+
     public float Draw(ImDrawListPtr drawList, AppSkin ui, IStripFloor floor, Vector2 origin, float width, float phase,
         float deltaSeconds, bool live, float scale, out StripEntry tapped, out Rect source)
     {
         tapped = default;
         source = default;
         var top = origin.Y;
-        var gap = TileGap * scale;
-        var tileWidth = PosterTile.Width(width, gap, scale);
-        var tileHeight = PosterTile.Height(tileWidth, PosterTile.TextBlock(scale));
         for (var shelfIndex = 0; shelfIndex < StripCatalog.Shelves.Length; shelfIndex++)
         {
             var shelf = StripCatalog.Shelves[shelfIndex];
@@ -82,50 +85,76 @@ internal sealed class StripShelves
                     new Rect(new Vector2(origin.X, top), new Vector2(origin.X + width, top + ShelfHeight(width, scale))));
             }
 
-            Typography.Draw(drawList, new Vector2(origin.X, top),
-                Typography.FitText(Loc.T(StripCatalog.TitleOf(shelf)), width, TextStyles.Title3),
-                CasinoColors.InkTitle, TextStyles.Title3);
-            top += Typography.LineHeight(TextStyles.Title3) + TitleGap * scale;
-            var entries = StripCatalog.EntriesOf(shelf);
-            var contentWidth = RowWidth(entries.Length, tileWidth, gap);
-            var rail = rails[shelfIndex];
-            var row = new Rect(new Vector2(origin.X - RailPad * scale, top - RailPad * scale),
-                new Vector2(origin.X + width + RailPad * scale, top + tileHeight + RailPad * scale));
-            rail.Begin(drawList, railIds[shelfIndex], row, row, contentWidth);
-            var interactive = rail.TapAllowed;
-            for (var index = 0; index < entries.Length; index++)
+            top = DrawRail(drawList, ui, floor, new Vector2(origin.X, top), width, Loc.T(StripCatalog.TitleOf(shelf)),
+                StripCatalog.EntriesOf(shelf), rails[shelfIndex], railIds[shelfIndex], phase, deltaSeconds, live, scale,
+                out var railTapped, out var railSource);
+            if (railTapped.GameId is not null)
             {
-                var left = origin.X + index * (tileWidth + gap) - rail.Offset;
-                if (left > row.Max.X || left + tileWidth < row.Min.X)
-                {
-                    continue;
-                }
-
-                var tile = new Rect(new Vector2(left, top), new Vector2(left + tileWidth, top + tileHeight));
-                using (ImRaii.PushId(railIds[shelfIndex]))
-                {
-                    if (DrawEntry(drawList, floor, entries[index], index, tile, phase, deltaSeconds, live, interactive,
-                            scale, out var pressed))
-                    {
-                        tapped = entries[index];
-                        source = pressed;
-                    }
-                }
+                tapped = railTapped;
+                source = railSource;
             }
 
-            rail.End(drawList, row, contentWidth, ui, tileWidth + gap);
-            top += tileHeight + ShelfGap * scale;
+            top += ShelfGap * scale;
         }
 
         return top - ShelfGap * scale;
     }
 
-    private bool DrawEntry(ImDrawListPtr drawList, IStripFloor floor, in StripEntry entry, int index, Rect tile,
-        float phase, float deltaSeconds, bool live, bool interactive, float scale, out Rect pressed)
+    public float DrawRecent(ImDrawListPtr drawList, AppSkin ui, IStripFloor floor, Vector2 origin, float width,
+        float phase, float deltaSeconds, bool live, float scale, ReadOnlySpan<StripEntry> entries,
+        out StripEntry tapped, out Rect source) =>
+        DrawRail(drawList, ui, floor, origin, width, Loc.T(L.Floor.JumpBackIn), entries, recentRail, RecentRailId,
+            phase, deltaSeconds, live, scale, out tapped, out source);
+
+    private float DrawRail(ImDrawListPtr drawList, AppSkin ui, IStripFloor floor, Vector2 origin, float width,
+        string title, ReadOnlySpan<StripEntry> entries, TileRail rail, string railId, float phase, float deltaSeconds,
+        bool live, float scale, out StripEntry tapped, out Rect source)
+    {
+        tapped = default;
+        source = default;
+        var gap = TileGap * scale;
+        var tileWidth = PosterTile.Width(width, gap, scale);
+        var tileHeight = PosterTile.Height(tileWidth, PosterTile.TextBlock(scale));
+        Typography.Draw(drawList, origin, Typography.FitText(title, width, TextStyles.Title3), CasinoColors.InkTitle,
+            TextStyles.Title3);
+        var top = origin.Y + Typography.LineHeight(TextStyles.Title3) + TitleGap * scale;
+        var pad = RailPad * scale;
+        var contentWidth = RailContentWidth(entries.Length, tileWidth, gap, pad);
+        var row = new Rect(new Vector2(origin.X - pad, top - pad),
+            new Vector2(origin.X + width + pad, top + tileHeight + pad));
+        rail.Begin(drawList, railId, row, row, contentWidth);
+        var interactive = rail.TapAllowed;
+        for (var index = 0; index < entries.Length; index++)
+        {
+            var left = origin.X + index * (tileWidth + gap) - rail.Offset;
+            if (left > row.Max.X || left + tileWidth < row.Min.X)
+            {
+                continue;
+            }
+
+            var tile = new Rect(new Vector2(left, top), new Vector2(left + tileWidth, top + tileHeight));
+            using (ImRaii.PushId(railId))
+            using (ImRaii.PushId(index))
+            {
+                if (DrawEntry(drawList, floor, entries[index], tile, phase, deltaSeconds, live, interactive, scale,
+                        out var pressed))
+                {
+                    tapped = entries[index];
+                    source = pressed;
+                }
+            }
+        }
+
+        rail.End(drawList, row, contentWidth, ui, tileWidth + gap);
+        return top + tileHeight;
+    }
+
+    private bool DrawEntry(ImDrawListPtr drawList, IStripFloor floor, in StripEntry entry, Rect tile, float phase,
+        float deltaSeconds, bool live, bool interactive, float scale, out Rect pressed)
     {
         var info = floor.Describe(entry);
         var tint = CasinoArt.TintOf(entry.GameId);
-        var id = ImGui.GetID($"tile{index}");
+        var id = ImGui.GetID("tile");
         var hovered = CasinoArt.PressCard(id, tile.Min, tile.Max, out var pressedMin, out var pressedMax, interactive);
         pressed = new Rect(pressedMin, pressedMax);
         PosterTile.DrawFrame(drawList, pressed, tint, scale);
@@ -136,14 +165,11 @@ internal sealed class StripShelves
             preview.Prepare(idle);
             var art = new Rect(pressed.Min, new Vector2(pressed.Max.X, pressed.Max.Y - PosterTile.TextBlock(scale)));
             preview.Draw(drawList, art, Metrics.Radius.Widget * scale, tint, live, hovered, deltaSeconds, scale);
-        }
-        else if (entry.Action == StripAction.Game && entry.Venue == VenueRoomKind.None)
-        {
-            PosterTile.DrawGlyph(drawList, pressed, entry.GameId, scale);
+            PosterTile.DrawSignScrim(drawList, pressed, scale);
         }
         else
         {
-            PosterTile.DrawIcon(drawList, pressed, IconOf(entry), scale);
+            PosterTile.DrawGlyph(drawList, pressed, entry.GameId, scale);
         }
 
         PosterTile.DrawSign(drawList, pressed, entry.Sign, phase, scale, PosterTile.SignBandTop(scale));
@@ -158,12 +184,4 @@ internal sealed class StripShelves
         PosterTile.DrawRim(drawList, pressed, tint, hovered, scale);
         return interactive && UiInteract.Click(tile.Min, tile.Max, hovered);
     }
-
-    private static FontAwesomeIcon IconOf(in StripEntry entry) => entry.Venue switch
-    {
-        VenueRoomKind.Dice => FontAwesomeIcon.Dice,
-        VenueRoomKind.Deathroll => FontAwesomeIcon.Skull,
-        VenueRoomKind.Raffle => FontAwesomeIcon.Ticket,
-        _ => FontAwesomeIcon.PlusCircle,
-    };
 }

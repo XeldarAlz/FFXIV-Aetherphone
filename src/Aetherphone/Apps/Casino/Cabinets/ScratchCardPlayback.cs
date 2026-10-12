@@ -124,6 +124,26 @@ internal sealed class ScratchCardPlayback
         }
     }
 
+    public void RevealNext()
+    {
+        if (phase != ScratchPhase.Scratching)
+        {
+            return;
+        }
+
+        for (var cellIndex = 0; cellIndex < ScratchRules.CellCount; cellIndex++)
+        {
+            if (revealed[cellIndex])
+            {
+                continue;
+            }
+
+            foil[cellIndex] = 0f;
+            Reveal(cellIndex);
+            return;
+        }
+    }
+
     public bool TakeWinCelebration(out long prize)
     {
         if (!winCelebrationPending)

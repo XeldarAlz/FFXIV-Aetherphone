@@ -17,6 +17,7 @@ internal sealed class CommentAttachment
     private const float StripHeightUnits = 64f;
     private const int PickerColumns = 4;
 
+    private readonly ImageIntake intake = new();
     private string? path;
     private bool panelOpen;
     private string[] pickerPaths = Array.Empty<string>();
@@ -32,6 +33,7 @@ internal sealed class CommentAttachment
         path = null;
         panelOpen = false;
         notice = string.Empty;
+        intake.Discard();
     }
 
     public void Restore(string restoredPath)
@@ -56,6 +58,22 @@ internal sealed class CommentAttachment
         {
             Take(picked);
         }
+
+        if (intake.TryTake(out var taken))
+        {
+            Take(taken);
+            intake.Discard();
+        }
+    }
+
+    public void AcceptPasteAndDrop(PhotoLibrary library, bool fieldActive, Vector4 highlight)
+    {
+        if (fieldActive && ImageIntake.PasteRequested())
+        {
+            intake.Paste(library);
+        }
+
+        intake.AcceptDrop(library, highlight);
     }
 
     public void DrawToggle(in AppSkin ui, Vector2 center, float radius, Vector4 activeColor, Vector4 idleColor,
@@ -160,7 +178,8 @@ internal sealed class CommentAttachment
         }
     }
 
-    public void DrawPanel(Rect panel, in AppSkin ui, PhoneTheme theme, WallpaperImageCache wallpaperImages)
+    public void DrawPanel(Rect panel, in AppSkin ui, PhoneTheme theme, WallpaperImageCache wallpaperImages,
+        PhotoLibrary library)
     {
         if (!panelOpen)
         {
@@ -189,10 +208,16 @@ internal sealed class CommentAttachment
             var importHeight = 34f * scale;
             var importRect = new Rect(new Vector2(panel.Min.X + pad, panel.Min.Y + pad),
                 new Vector2(panel.Max.X - pad, panel.Min.Y + pad + importHeight));
-            if (DrawImportPill(drawList, importRect, ui, theme))
+            var canPaste = intake.OfferPaste(ref importRect, out var pasteRect);
+            if (DrawPill(drawList, importRect, Loc.T(L.Common.ImportFromPc), ui, theme))
             {
                 FilePicker.PickImage(Loc.T(L.Common.AddPhoto),
                     picked => Interlocked.Exchange(ref pendingImport, picked));
+            }
+
+            if (canPaste && DrawPill(drawList, pasteRect, Loc.T(L.Common.PasteImage), ui, theme))
+            {
+                intake.Paste(library);
             }
 
             var noticeHeight = notice.Length > 0 ? 18f * scale : 0f;
@@ -279,13 +304,12 @@ internal sealed class CommentAttachment
         return panelOpen ? PanelHeightUnits * scale : 0f;
     }
 
-    private static bool DrawImportPill(ImDrawListPtr drawList, Rect rect, AppSkin ui, PhoneTheme theme)
+    private static bool DrawPill(ImDrawListPtr drawList, Rect rect, string text, AppSkin ui, PhoneTheme theme)
     {
         var hovered = !UiInteract.InputBlocked && UiInteract.HoverWindowOnly(rect.Min, rect.Max);
         var fill = hovered ? Palette.Mix(ui.Accent, theme.TextStrong, 0.12f) : ui.Accent;
         Squircle.Fill(drawList, rect.Min, rect.Max, rect.Height * 0.5f, ImGui.GetColorU32(fill));
-        var label = Typography.FitText(Loc.T(L.Common.ImportFromPc), MathF.Max(1f, rect.Width - rect.Height), 0.95f,
-            FontWeight.SemiBold);
+        var label = Typography.FitText(text, MathF.Max(1f, rect.Width - rect.Height), 0.95f, FontWeight.SemiBold);
         var labelSize = Typography.Measure(label, 0.95f, FontWeight.SemiBold);
         Typography.Draw(drawList, rect.Center - labelSize * 0.5f, label, new Vector4(1f, 1f, 1f, 1f), 0.95f,
             FontWeight.SemiBold);
@@ -302,6 +326,11 @@ internal sealed class CommentAttachment
         if (GifMedia.IsGif(picked) && !GifMedia.FitsSizeCap(picked))
         {
             notice = Loc.T(L.Common.GifTooLarge);
+            if (!panelOpen)
+            {
+                ShellToast.Show(notice);
+            }
+
             return;
         }
 

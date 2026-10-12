@@ -84,6 +84,7 @@ public sealed class OriginalsPlaybackTests
         var playback = new DiceRollPlayback();
         Assert.True(playback.Begin(Dice(7312, true, 2000), false));
         Assert.True(playback.Rolling);
+        Assert.Equal(2000, playback.UnshownPayout);
         Assert.False(playback.TakeSettled(out _));
         var ticks = 0;
         for (var frame = 0; frame < 60; frame++)
@@ -100,6 +101,7 @@ public sealed class OriginalsPlaybackTests
         Assert.True(ticks > 0);
         Assert.True(playback.TakeSettled(out var outcome));
         Assert.Equal(2000, outcome.Payout);
+        Assert.Equal(0, playback.UnshownPayout);
         Assert.False(playback.TakeSettled(out _));
     }
 

@@ -105,7 +105,7 @@ internal sealed partial class AethergramApp
     }
 
     private void DrawPostGrid(PostDto[] posts, LocString emptyMessage, bool hasMore, bool loadingMore,
-        Action loadMore, in PostGridStyle style, PostSource source)
+        in PostGridStyle style, PostSource source)
     {
         var scale = UiScale.Current;
         if (posts.Length == 0)
@@ -151,7 +151,7 @@ internal sealed partial class AethergramApp
         }
         else if (hasMore && InfiniteScroll.ReachedBottom())
         {
-            loadMore();
+            LoadMorePosts(source);
         }
 
         ImGui.Dummy(new Vector2(0f, 24f * scale));

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
+using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Casino;
 using Xunit;
 
@@ -17,6 +18,19 @@ public sealed class CasinoFloorWireContractTests
         Assert.Equal("/casino/fame?board=profit&span=last&limit=50",
             CasinoClient.FameBoardPath(CasinoFameBoards.Profit, CasinoFameSpans.Last, CasinoFloorRules.FameDefaultLimit));
         Assert.Equal("/casino/feed?tab=high", CasinoClient.FeedTabPath(CasinoFeedTabs.High));
+        Assert.Equal("/me/casino-privacy", CasinoClient.PrivacyPath);
+    }
+
+    [Fact]
+    public void ThePrivacyRequestCarriesTheHallOfFameChoice()
+    {
+        var shown = JsonSerializer.Serialize(new UpdateCasinoPrivacyRequest(true),
+            AethernetJsonContext.Default.UpdateCasinoPrivacyRequest);
+        Assert.Equal("{\"showInHallOfFame\":true}", shown);
+
+        var hidden = JsonSerializer.Serialize(new UpdateCasinoPrivacyRequest(false),
+            AethernetJsonContext.Default.UpdateCasinoPrivacyRequest);
+        Assert.Equal("{\"showInHallOfFame\":false}", hidden);
     }
 
     [Fact]

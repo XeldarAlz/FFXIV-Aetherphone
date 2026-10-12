@@ -60,6 +60,14 @@ internal sealed partial class VelvetStore
     public bool ArchivedLoadingMore => archivedLane.LoadingMore;
     public bool HasMoreArchived => archivedLane.HasMore;
 
+    private readonly FeedLane<VelvetPostDto> likedLane = new(ByNewestFirst);
+    private volatile bool likedLoaded;
+
+    public VelvetPostDto[] LikedPosts => likedLane.Items;
+    public bool LikedLoaded => likedLoaded;
+    public bool LikedLoadingMore => likedLane.LoadingMore;
+    public bool HasMoreLiked => likedLane.HasMore;
+
     public void EnsureUserPosts(string userId)
     {
         if (!session.IsSignedIn)
@@ -643,6 +651,7 @@ internal sealed partial class VelvetStore
 
         userPosts = CopyOnWrite.Replace(userPosts, post);
         tagLane.Items = CopyOnWrite.Replace(tagLane.Items, post);
+        likedLane.Items = CopyOnWrite.Replace(likedLane.Items, post);
         if (fetchedPost?.Id == post.Id)
         {
             fetchedPost = post;
@@ -720,6 +729,52 @@ internal sealed partial class VelvetStore
     {
         archivedLane.Clear();
         archivedLoaded = false;
+    }
+
+    public void RefreshLiked()
+    {
+        if (!session.IsSignedIn || likedLane.Loading)
+        {
+            return;
+        }
+
+        likedLane.Loading = true;
+        work.Run("liked refresh", async token =>
+        {
+            var page = await client.LikedPostsAsync(null, token).ConfigureAwait(false);
+            if (page is null)
+            {
+                return;
+            }
+
+            likedLane.ApplyRefresh(page.Items, page.NextCursor);
+            likedLoaded = true;
+        }, () => likedLane.Loading = false);
+    }
+
+    public void LoadMoreLiked()
+    {
+        var cursor = likedLane.Cursor;
+        if (!session.IsSignedIn || cursor is null || likedLane.LoadingMore || likedLane.Loading)
+        {
+            return;
+        }
+
+        likedLane.LoadingMore = true;
+        work.Run("liked more", async token =>
+        {
+            var page = await client.LikedPostsAsync(cursor, token).ConfigureAwait(false);
+            if (page is not null)
+            {
+                likedLane.ApplyMore(page.Items, page.NextCursor);
+            }
+        }, () => likedLane.LoadingMore = false);
+    }
+
+    private void ResetLiked()
+    {
+        likedLane.Clear();
+        likedLoaded = false;
     }
 
     public void PinPost(string postId, bool replace, Action<PinOutcome> onComplete)

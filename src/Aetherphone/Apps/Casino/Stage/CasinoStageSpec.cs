@@ -18,7 +18,8 @@ internal readonly record struct CasinoStageSpec(
     float Warmth = 0f,
     float LampPool = 0f,
     bool Rail = true,
-    bool HouseBanked = true)
+    bool HouseBanked = true,
+    LocString History = default)
 {
     public bool Deck => DeckHeight > 0f;
 }
@@ -35,6 +36,7 @@ internal enum CasinoInfoRequest : byte
     None,
     Rules,
     Extra,
+    History,
     Fairness,
 }
 

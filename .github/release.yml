@@ -1,0 +1,29 @@
+changelog:
+  exclude:
+    authors:
+      - dependabot
+  categories:
+    - title: Translations
+      labels:
+        - translation
+    - title: Features
+      labels:
+        - enhancement
+    - title: Fixes
+      labels:
+        - bug
+    - title: Performance
+      labels:
+        - performance
+    - title: Refactoring
+      labels:
+        - refactor
+    - title: Documentation
+      labels:
+        - documentation
+    - title: Dependencies
+      labels:
+        - dependencies
+    - title: Other changes
+      labels:
+        - "*"

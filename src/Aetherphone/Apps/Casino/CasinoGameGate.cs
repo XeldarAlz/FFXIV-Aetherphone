@@ -15,6 +15,7 @@ internal static class CasinoGameGate
             CasinoFeatures.Originals,
         CasinoGames.Race => CasinoFeatures.Race,
         CasinoGames.DiceTable or CasinoGames.Deathroll or CasinoGames.Raffle => CasinoFeatures.Venue,
+        CasinoGames.Book => CasinoFeatures.VenueBook,
         _ => string.Empty,
     };
 
@@ -34,6 +35,11 @@ internal static class CasinoGameGate
         if (string.Equals(gameKind, CasinoWire.RaceKind, StringComparison.Ordinal))
         {
             return features.Has(CasinoFeatures.Race);
+        }
+
+        if (CasinoBookRules.IsBook(gameKind))
+        {
+            return features.Has(CasinoFeatures.VenueBook);
         }
 
         return !VenueKinds.IsVenue(gameKind) || features.Has(CasinoFeatures.Venue);

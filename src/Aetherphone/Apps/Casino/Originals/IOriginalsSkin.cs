@@ -97,6 +97,8 @@ internal interface IOriginalsSkin : ICabinetIdle
 
     void Step(CasinoOriginalsStore originals, bool auto);
 
+    long UnshownPayout { get; }
+
     bool TakeSettled(out OriginalsOutcome outcome);
 
     bool TakeNotice(out LocString notice);

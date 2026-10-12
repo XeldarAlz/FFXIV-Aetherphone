@@ -11,8 +11,10 @@ internal sealed class PhotoLibrary
     private const int FreeNameAttempts = 100;
 
     private static readonly string[] Extensions = { ".png", ".jpg", ".jpeg", ".gif" };
+    private static readonly TimeSpan PastedLifetime = TimeSpan.FromDays(1);
     private readonly string directory;
     private readonly string trashDirectory;
+    private readonly string pastedDirectory;
     private readonly LaunchIntent openRequest = new();
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> pendingWrites =
         new(StringComparer.OrdinalIgnoreCase);
@@ -22,6 +24,7 @@ internal sealed class PhotoLibrary
     {
         directory = Path.Combine(configDirectory.FullName, "Photos");
         trashDirectory = Path.Combine(directory, ".trash");
+        pastedDirectory = Path.Combine(directory, ".pasted");
         Directory.CreateDirectory(directory);
     }
 
@@ -35,7 +38,7 @@ internal sealed class PhotoLibrary
 
     public string? Save(byte[] pixels, int width, int height)
     {
-        var path = FreePath(DateTime.Now, ".png");
+        var path = FreePath(directory, DateTime.Now, ".png");
         if (path is null)
         {
             return null;
@@ -112,7 +115,7 @@ internal sealed class PhotoLibrary
 
     public string? SaveEdited(byte[] pixels, int width, int height)
     {
-        var path = FreePath(DateTime.Now, ".png");
+        var path = FreePath(directory, DateTime.Now, ".png");
         if (path is null)
         {
             return null;
@@ -127,11 +130,37 @@ internal sealed class PhotoLibrary
         return path;
     }
 
-    private string? FreePath(DateTime stamp, string extension)
+    public string? SavePasted(byte[] pixels, int width, int height)
+    {
+        Directory.CreateDirectory(pastedDirectory);
+        PrunePasted();
+        var path = FreePath(pastedDirectory, DateTime.Now, ".png");
+        return path is not null && Write(path, pixels, width, height) ? path : null;
+    }
+
+    private void PrunePasted()
+    {
+        if (!Directory.Exists(pastedDirectory))
+        {
+            return;
+        }
+
+        var cutoff = DateTime.UtcNow - PastedLifetime;
+        var files = Directory.GetFiles(pastedDirectory);
+        for (var index = 0; index < files.Length; index++)
+        {
+            if (File.GetLastWriteTimeUtc(files[index]) < cutoff)
+            {
+                TryDelete(files[index]);
+            }
+        }
+    }
+
+    private static string? FreePath(string folder, DateTime stamp, string extension)
     {
         for (var attempt = 0; attempt < FreeNameAttempts; attempt++)
         {
-            var candidate = Path.Combine(directory,
+            var candidate = Path.Combine(folder,
                 $"AEP_{stamp.AddMilliseconds(attempt):yyyyMMdd_HHmmss_fff}{extension}");
             if (!File.Exists(candidate))
             {
@@ -304,6 +333,8 @@ internal sealed class PhotoLibrary
                 DeletePermanently(trashed[index]);
             }
         }
+
+        PrunePasted();
     }
 
     private static string FreeSibling(string folder, string fileName)

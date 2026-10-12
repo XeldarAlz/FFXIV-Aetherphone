@@ -207,7 +207,7 @@ internal sealed class HoldemHistorySheet
             var hand = hands[index];
             var origin = ImGui.GetCursorScreenPos();
             var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + RowHeight * scale));
-            var hovered = UiInteract.Hover(rect.Min, rect.Max);
+            var hovered = sheet.IsOpen && UiInteract.HoverWindowOnly(rect.Min, rect.Max);
             ui.Card(drawList, rect.Min, rect.Max, Metrics.Radius.Grouped * scale);
             if (hovered)
             {
@@ -293,7 +293,7 @@ internal sealed class HoldemHistorySheet
         var backHeight = Button.RegularHeight * scale;
         var backRect = new Rect(origin, new Vector2(origin.X + MathF.Min(width * 0.6f,
             Button.WidthFor(backLabel, ButtonSize.Regular)), origin.Y + backHeight));
-        if (Button.Draw(drawList, backRect, backLabel, ui.Ink, ButtonStyle.Gray))
+        if (Button.Draw(drawList, backRect, backLabel, ui.Ink, ButtonStyle.Gray, overlay: true))
         {
             selected = -1;
             playing = false;
@@ -308,7 +308,8 @@ internal sealed class HoldemHistorySheet
 
         var stripOrigin = ImGui.GetCursorScreenPos();
         var strip = new Rect(stripOrigin, new Vector2(stripOrigin.X + width, stripOrigin.Y + 30f * scale));
-        var picked = SegmentStrip.Draw("##holdemReplaySteps", strip, StepsUpTo(last), (int)step, ui.Palette);
+        var picked = SegmentStrip.Draw("##holdemReplaySteps", strip, StepsUpTo(last), (int)step, ui.Palette,
+            overlay: true);
         if (picked != (int)step)
         {
             step = (HoldemReplayStep)Math.Clamp(picked, 0, (int)last);
@@ -443,7 +444,7 @@ internal sealed class HoldemHistorySheet
         var center = new Vector2(origin.X + width * 0.5f, origin.Y + radius);
         if (RoundButton.Icon(drawList, center - new Vector2(radius * 2.6f, 0f), radius,
                 IconGlyph.Of(FontAwesomeIcon.ChevronLeft), ui.Ink, ButtonStyle.Gray, Loc.T(L.Holdem.ReplayBack),
-                HoverLabelSide.Above, step > HoldemReplayStep.Preflop))
+                HoverLabelSide.Above, step > HoldemReplayStep.Preflop, overlay: true))
         {
             step = HoldemReplay.Advance(step, -1, last);
             playing = false;
@@ -451,7 +452,7 @@ internal sealed class HoldemHistorySheet
 
         if (RoundButton.Icon(drawList, center, radius,
                 IconGlyph.Of(playing ? FontAwesomeIcon.Pause : FontAwesomeIcon.Play), ui.Ink, ButtonStyle.Tinted,
-                Loc.T(playing ? L.Holdem.ReplayPause : L.Holdem.ReplayPlay), HoverLabelSide.Above))
+                Loc.T(playing ? L.Holdem.ReplayPause : L.Holdem.ReplayPlay), HoverLabelSide.Above, overlay: true))
         {
             playing = !playing;
             autoClock = 0f;
@@ -463,7 +464,7 @@ internal sealed class HoldemHistorySheet
 
         if (RoundButton.Icon(drawList, center + new Vector2(radius * 2.6f, 0f), radius,
                 IconGlyph.Of(FontAwesomeIcon.ChevronRight), ui.Ink, ButtonStyle.Gray, Loc.T(L.Holdem.ReplayNext),
-                HoverLabelSide.Above, step < last))
+                HoverLabelSide.Above, step < last, overlay: true))
         {
             step = HoldemReplay.Advance(step, 1, last);
             playing = false;

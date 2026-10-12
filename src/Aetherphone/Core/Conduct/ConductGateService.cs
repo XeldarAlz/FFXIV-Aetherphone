@@ -15,11 +15,26 @@ internal sealed class ConductGateService
 
     public void NotifyAppOpened(string appId)
     {
+        if (ConductRules.For(appId) is not { GatesOnOpen: true } gate)
+        {
+            return;
+        }
+
+        RequireAcknowledged(gate);
+    }
+
+    public void NotifyFeatureOpened(string appId)
+    {
         if (ConductRules.For(appId) is not { } gate)
         {
             return;
         }
 
+        RequireAcknowledged(gate);
+    }
+
+    private void RequireAcknowledged(ConductGate gate)
+    {
         if (configuration.HasAcknowledgedConduct(gate.AppId, gate.Version))
         {
             return;

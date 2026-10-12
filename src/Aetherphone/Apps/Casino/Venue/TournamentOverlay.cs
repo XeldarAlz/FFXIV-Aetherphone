@@ -4,7 +4,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
-using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -60,25 +59,28 @@ internal sealed class TournamentOverlay
         React(stage, frame, me, safe);
         var strip = new Rect(safe.Min, new Vector2(safe.Max.X, safe.Min.Y + StripHeight * scale));
         DrawStrip(drawList, tournament, strip, scale);
-        if (UiInteract.Click(strip.Min, strip.Max, UiInteract.Hover(strip.Min, strip.Max)))
+        if (UiInteract.Click(strip.Min, strip.Max, UiInteract.HoverOverlay(strip)))
         {
             expanded = !expanded;
             CasinoSfx.Play(UiSound.CardSnap);
         }
 
-        if (expanded || (!tournament.Live && tournament.WinnerUserId.Length > 0))
+        if (expanded)
         {
-            DrawBoard(drawList, tournament,
+            var panel = DrawBoard(drawList, tournament,
                 new Rect(new Vector2(safe.Min.X, strip.Max.Y + StripGap * scale), safe.Max), me, scale);
+            if (panel.Height > 0f && UiInteract.Click(panel.Min, panel.Max, UiInteract.HoverOverlay(panel)))
+            {
+                expanded = false;
+                CasinoSfx.Play(UiSound.CardSnap);
+            }
         }
 
         if (playback.NoticeShowing)
         {
-            var text = Typography.FitText(texts.Named(L.Venue.TournamentOut, playback.NoticeName),
-                safe.Width * BannerShare, TextStyles.Title2);
-            GameBanner.Draw(drawList, new Vector2(safe.Center.X, safe.Min.Y + safe.Height * 0.45f), text,
-                CasinoColors.LightB, PhoneTheme.Default, MathF.Max(0.001f, playback.NoticeProgress),
-                TextStyles.Title2);
+            GameBanner.DrawWrapped(drawList, new Vector2(safe.Center.X, safe.Min.Y + safe.Height * 0.45f),
+                texts.Named(L.Venue.TournamentOut, playback.NoticeName), safe.Width * BannerShare,
+                CasinoColors.LightB, MathF.Max(0.001f, playback.NoticeProgress), TextStyles.Title2);
         }
 
         cheer.Draw(drawList, safe, frame.DeltaSeconds);
@@ -92,7 +94,8 @@ internal sealed class TournamentOverlay
                 CasinoSfx.Play(UiSound.Bust);
                 break;
             case TournamentEvent.Won:
-                var winner = texts.Named(L.Venue.TournamentWinner, playback.NoticeName);
+                expanded = true;
+                var winner = texts.Named(L.Venue.TournamentWinner, playback.WinnerName);
                 if (me.Length > 0 && string.Equals(playback.WinnerUserId, me, StringComparison.Ordinal))
                 {
                     cheer.Show(stage, winner, safe.Center, frame.Instant);
@@ -115,7 +118,7 @@ internal sealed class TournamentOverlay
         var left = tournament.Live
             ? texts.Count(L.Venue.HandsLeft, Math.Max(0, tournament.Hands - tournament.HandsPlayed))
             : Loc.T(L.Venue.TournamentOver);
-        var leader = Leader(tournament);
+        var leader = tournament.Live ? Leader(tournament) : null;
         var right = leader is null ? string.Empty : texts.NamedNumber(L.Venue.TournamentLeader, leader.DisplayName,
             leader.Chips);
         var rightWidth = Typography.Measure(right, TextStyles.SubheadlineEmphasized).X;
@@ -134,7 +137,7 @@ internal sealed class TournamentOverlay
         }
     }
 
-    private void DrawBoard(ImDrawListPtr drawList, CasinoBlackjackTournamentDto tournament, Rect area, string me,
+    private Rect DrawBoard(ImDrawListPtr drawList, CasinoBlackjackTournamentDto tournament, Rect area, string me,
         float scale)
     {
         var standings = tournament.Standings ?? Array.Empty<CasinoBlackjackStandingDto>();
@@ -142,7 +145,7 @@ internal sealed class TournamentOverlay
         var count = Math.Min(Math.Min(standings.Length, MaxRows), (int)((area.Height - Pad * scale) / rowHeight));
         if (count <= 0)
         {
-            return;
+            return new Rect(area.Min, area.Min);
         }
 
         var pad = Pad * scale;
@@ -171,6 +174,8 @@ internal sealed class TournamentOverlay
             VenueArt.LeftLine(drawList, standing.DisplayName, new Vector2(nameLeft, lineTop),
                 MathF.Max(1f, panel.Max.X - pad - chipsWidth - 8f * scale - nameLeft), ink, TextStyles.Headline);
         }
+
+        return panel;
     }
 
     private static float PlaceColumnWidth(CasinoBlackjackStandingDto[] standings, int count, string eliminated,

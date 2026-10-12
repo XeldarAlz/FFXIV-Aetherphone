@@ -114,6 +114,26 @@ public sealed class ScratchPlaybackTests
     }
 
     [Fact]
+    public void RevealNextUncoversOneCellAtATimeAndSettlesOnTheLast()
+    {
+        var playback = new ScratchCardPlayback();
+        Assert.True(playback.Begin(Card(WinnerCells, prize: 50)));
+        for (var step = 1; step < ScratchRules.CellCount; step++)
+        {
+            playback.RevealNext();
+            Assert.True(playback.IsRevealed(step - 1));
+            Assert.False(playback.IsRevealed(step));
+            Assert.Equal(ScratchPhase.Scratching, playback.Phase);
+        }
+
+        playback.RevealNext();
+        Assert.Equal(ScratchPhase.Settled, playback.Phase);
+        Assert.True(playback.TakeWinCelebration(out _));
+        playback.RevealNext();
+        Assert.Equal(ScratchPhase.Settled, playback.Phase);
+    }
+
+    [Fact]
     public void MatchedCellHighlightsOnlyLightAfterTheThirdMatch()
     {
         var playback = new ScratchCardPlayback();

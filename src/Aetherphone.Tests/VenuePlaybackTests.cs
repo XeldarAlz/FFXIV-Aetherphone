@@ -7,6 +7,8 @@ namespace Aetherphone.Tests;
 
 public sealed class VenuePlaybackTests
 {
+    private const string Me = "u1";
+
     private static CasinoVenueRollDto Roll(long seq, long value, string userId = "u1", long bound = 1000) =>
         new(seq, userId, userId == "u1" ? "Mira" : "Rhan", bound, value, seq * 1000, "aa");
 
@@ -17,7 +19,7 @@ public sealed class VenuePlaybackTests
     public void JoiningMidLogShowsTheNewestRollWithoutATumble()
     {
         var playback = new DiceTablePlayback();
-        playback.Update(Dice(Roll(5, 777), Roll(4, 12)), 0.016f, false);
+        playback.Update(Dice(Roll(5, 777), Roll(4, 12)), Me, 0.016f, false);
         Assert.False(playback.Tumbling);
         Assert.Equal(777, playback.DisplayValue);
         Assert.Equal(5, playback.HeroSeq);
@@ -27,10 +29,10 @@ public sealed class VenuePlaybackTests
     public void ANewRollTumblesThenLandsOnTheServerValue()
     {
         var playback = new DiceTablePlayback();
-        playback.Update(Dice(Roll(5, 777)), 0.016f, false);
-        playback.Update(Dice(Roll(6, 42), Roll(5, 777)), 0.016f, false);
+        playback.Update(Dice(Roll(5, 777)), Me, 0.016f, false);
+        playback.Update(Dice(Roll(6, 42), Roll(5, 777)), Me, 0.016f, false);
         Assert.True(playback.Tumbling);
-        playback.Update(Dice(Roll(6, 42), Roll(5, 777)), DiceTablePlayback.TumbleSeconds, false);
+        playback.Update(Dice(Roll(6, 42), Roll(5, 777)), Me, DiceTablePlayback.TumbleSeconds, false);
         Assert.False(playback.Tumbling);
         Assert.Equal(42, playback.DisplayValue);
     }
@@ -39,15 +41,50 @@ public sealed class VenuePlaybackTests
     public void MyRollTumblesUntilTheAnswerArrivesAndNeverInventsAResult()
     {
         var playback = new DiceTablePlayback();
-        playback.Update(Dice(Roll(5, 777)), 0.016f, false);
+        playback.Update(Dice(Roll(5, 777)), Me, 0.016f, false);
         playback.BeginMine(1000);
-        playback.Update(Dice(Roll(5, 777)), 2f, false);
+        playback.Update(Dice(Roll(5, 777)), Me, 2f, false);
         Assert.True(playback.AwaitingMine);
         Assert.True(playback.Tumbling);
-        playback.Update(Dice(Roll(6, 3), Roll(5, 777)), 2f, false);
+        playback.Update(Dice(Roll(6, 3), Roll(5, 777)), Me, 2f, false);
         Assert.False(playback.AwaitingMine);
-        playback.Update(Dice(Roll(6, 3), Roll(5, 777)), DiceTablePlayback.TumbleSeconds, false);
+        playback.Update(Dice(Roll(6, 3), Roll(5, 777)), Me, DiceTablePlayback.TumbleSeconds, false);
         Assert.Equal(3, playback.DisplayValue);
+    }
+
+    [Fact]
+    public void AnotherPlayersRollDoesNotEndMyWait()
+    {
+        var playback = new DiceTablePlayback();
+        playback.Update(Dice(Roll(5, 777)), Me, 0.016f, false);
+        playback.BeginMine(1000);
+        playback.Update(Dice(Roll(6, 42, "u2"), Roll(5, 777)), Me, 0.016f, false);
+        Assert.True(playback.AwaitingMine);
+        playback.Update(Dice(Roll(7, 9), Roll(6, 42, "u2"), Roll(5, 777)), Me, 0.016f, false);
+        Assert.False(playback.AwaitingMine);
+    }
+
+    [Fact]
+    public void AGrantedAnswerEndsMyWaitOnceItsSeqIsOnTheBoard()
+    {
+        var playback = new DiceTablePlayback();
+        playback.Update(Dice(Roll(5, 777)), string.Empty, 0.016f, false);
+        playback.BeginMine(1000);
+        playback.Confirm(6);
+        Assert.True(playback.AwaitingMine);
+        playback.Update(Dice(Roll(6, 3), Roll(5, 777)), string.Empty, 0.016f, false);
+        Assert.False(playback.AwaitingMine);
+    }
+
+    [Fact]
+    public void OnlyAnOpenRoundIRolledInHoldsMyNextRoll()
+    {
+        var rolled = new[] { "u2", Me };
+        Assert.True(DiceRounds.Rolled(new CasinoDiceRoundDto(Index: 1, Rollers: rolled), Me));
+        Assert.False(DiceRounds.Rolled(new CasinoDiceRoundDto(Index: 1, Rollers: rolled, Closed: true), Me));
+        Assert.False(DiceRounds.Rolled(new CasinoDiceRoundDto(Index: 1, Rollers: new[] { "u2" }), Me));
+        Assert.False(DiceRounds.Rolled(null, Me));
+        Assert.False(DiceRounds.Rolled(new CasinoDiceRoundDto(Index: 1, Rollers: rolled), string.Empty));
     }
 
     [Fact]
@@ -55,10 +92,10 @@ public sealed class VenuePlaybackTests
     {
         var closed = new CasinoDiceRoundDto(Index: 3, WinnerUserId: "u1", Closed: true);
         var playback = new DiceTablePlayback();
-        playback.Update(Dice(Roll(5, 777)) with { LastRound = closed }, 0.016f, false);
+        playback.Update(Dice(Roll(5, 777)) with { LastRound = closed }, Me, 0.016f, false);
         Assert.False(playback.TakeRoundClose(out _));
         var next = new CasinoDiceRoundDto(Index: 4, WinnerUserId: "u1", Closed: true);
-        playback.Update(Dice(Roll(5, 777)) with { LastRound = next }, 0.016f, false);
+        playback.Update(Dice(Roll(5, 777)) with { LastRound = next }, Me, 0.016f, false);
         Assert.True(playback.TakeRoundClose(out var index));
         Assert.Equal(4, index);
         Assert.False(playback.TakeRoundClose(out _));
@@ -119,11 +156,24 @@ public sealed class VenuePlaybackTests
             with { LoserUserId = "u2" };
         var board = new CasinoDeathrollStateDto(Recent: new[] { finished });
         playback.Update(board, 0.016f, false);
+        Assert.True(playback.Rolling);
         Assert.False(playback.TakeFinish(out _));
         playback.Update(board, DeathrollPlayback.RollSeconds, false);
+        Assert.Equal(1, playback.Shown);
         Assert.True(playback.TakeFinish(out var loser));
         Assert.Equal("u2", loser);
         Assert.False(playback.TakeFinish(out _));
+    }
+
+    [Fact]
+    public void APracticeDuellistSeesTheirOwnStackOrTheStartingOne()
+    {
+        var board = new CasinoDeathrollStateDto(PracticeStack: 100_000,
+            Stacks: new[] { new CasinoVenueStackDto("u1", "Mira", 95_000), new CasinoVenueStackDto("u2", "Rhan", 105_000) });
+        Assert.Equal(95_000, DeathrollRoom.StackOf(board, "u1"));
+        Assert.Equal(105_000, DeathrollRoom.StackOf(board, "u2"));
+        Assert.Equal(100_000, DeathrollRoom.StackOf(board, "u3"));
+        Assert.Equal(100_000, DeathrollRoom.StackOf(board, string.Empty));
     }
 
     private static CasinoRaffleDto Drawn(string seed) =>

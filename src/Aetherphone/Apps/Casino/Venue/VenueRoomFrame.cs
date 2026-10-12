@@ -16,12 +16,14 @@ internal readonly ref struct VenueRoomFrame
     public readonly Rect World;
     public readonly string Me;
     public readonly bool Hosting;
+    public readonly bool Owner;
     public readonly bool Busy;
     public readonly long NowUnixMs;
     public readonly float Scale;
 
     public VenueRoomFrame(CasinoStage stage, in CasinoStageFrame frame, AppSkin ui, VenueRoomView view,
-        ImDrawListPtr drawList, Rect world, string me, bool hosting, bool busy, long nowUnixMs, float scale)
+        ImDrawListPtr drawList, Rect world, string me, bool hosting, bool owner, bool busy, long nowUnixMs,
+        float scale)
     {
         Stage = stage;
         Frame = frame;
@@ -31,6 +33,7 @@ internal readonly ref struct VenueRoomFrame
         World = world;
         Me = me;
         Hosting = hosting;
+        Owner = owner;
         Busy = busy;
         NowUnixMs = nowUnixMs;
         Scale = scale;

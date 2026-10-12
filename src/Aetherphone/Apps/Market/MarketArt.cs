@@ -95,22 +95,25 @@ internal static class MarketArt
     }
 
     public static void Labels(ImDrawListPtr drawList, float left, float right, float centerY, string title,
-        string subtitle, Vector4 titleInk, Vector4 subtitleInk, float scale)
+        string subtitle, Vector4 titleInk, Vector4 subtitleInk, float scale) =>
+        Labels(drawList, title, left, right, centerY, title, subtitle, titleInk, subtitleInk, false, scale);
+
+    public static void Labels(ImDrawListPtr drawList, MarqueeId id, float left, float right, float centerY, string title,
+        string subtitle, Vector4 titleInk, Vector4 subtitleInk, bool hovering, float scale)
     {
         var width = MathF.Max(1f, right - left);
-        var fittedTitle = Typography.FitText(title, width, TextStyles.BodyEmphasized);
         var titleHeight = Typography.LineHeight(TextStyles.BodyEmphasized);
         if (subtitle.Length == 0)
         {
-            Typography.Draw(drawList, new Vector2(left, centerY - titleHeight * 0.5f), fittedTitle, titleInk,
-                TextStyles.BodyEmphasized);
+            var soloTop = centerY - titleHeight * 0.5f;
+            Marquee.DrawLeft(drawList, id, title, left, soloTop, width, TextStyles.BodyEmphasized, titleInk, hovering);
             return;
         }
 
         var fittedSubtitle = Typography.FitText(subtitle, width, TextStyles.Footnote);
         var subtitleHeight = Typography.LineHeight(TextStyles.Footnote);
         var top = centerY - (titleHeight + LineGap * scale + subtitleHeight) * 0.5f;
-        Typography.Draw(drawList, new Vector2(left, top), fittedTitle, titleInk, TextStyles.BodyEmphasized);
+        Marquee.DrawLeft(drawList, id, title, left, top, width, TextStyles.BodyEmphasized, titleInk, hovering);
         Typography.Draw(drawList, new Vector2(left, top + titleHeight + LineGap * scale), fittedSubtitle,
             subtitleInk, TextStyles.Footnote);
     }

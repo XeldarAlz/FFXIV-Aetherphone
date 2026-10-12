@@ -60,6 +60,7 @@ internal static class CasinoRules
         L.Casino.RulesBlackjackStep3,
         L.Casino.RulesBlackjackStep4,
         L.Blackjack.RulesSideBets,
+        L.Blackjack.RulesPairsRank,
         L.Blackjack.RulesInsurance,
         L.Blackjack.RulesSurrender,
     };
@@ -146,7 +147,7 @@ internal static class CasinoRules
     private static readonly LocString[] DiceTableSteps =
     {
         L.Venue.HighestRollWins,
-        L.Venue.RoundFirstRollCounts,
+        L.Venue.RoundOneRollEach,
     };
 
     private static readonly LocString[] RaffleSteps =

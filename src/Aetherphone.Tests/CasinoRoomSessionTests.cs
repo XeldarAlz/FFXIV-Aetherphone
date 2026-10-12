@@ -305,16 +305,130 @@ public sealed class CasinoRoomSessionTests
         var session = Session(out var sent);
         session.Enter(Room);
 
-        session.Receive(new CasinoSignal(SignalType.CasinoDeclined, "draining", new CasinoPayload { RoomId = Room }),
+        session.Receive(new CasinoSignal(SignalType.CasinoDeclined, "private", new CasinoPayload { RoomId = Room }),
             Now);
 
-        Assert.Equal("draining", session.ClosedReason);
+        Assert.Equal("private", session.ClosedReason);
         Assert.Equal(string.Empty, session.RoomId);
         Assert.Null(session.State);
 
         session.OnRealtimeConnected(true);
+        session.RetryAttach(Environment.TickCount64 + 600_000);
 
         Assert.Single(sent);
+    }
+
+    [Theory]
+    [InlineData(SignalType.CasinoEnded, "restarting")]
+    [InlineData(SignalType.CasinoDeclined, "draining")]
+    public void ARestartKeepsTheRoomAndReattachesOnTheNextConnection(string type, string reason)
+    {
+        var session = Session(out var sent);
+        session.Enter(Room);
+        session.Receive(Attached(epoch: 1, seq: 5), Now);
+
+        session.Receive(new CasinoSignal(type, reason, new CasinoPayload { RoomId = Room }), Now);
+
+        Assert.Equal(string.Empty, session.ClosedReason);
+        Assert.Equal(Room, session.RoomId);
+        Assert.NotNull(session.State);
+        Assert.False(session.Attached);
+        Assert.True(session.AwaitingSnapshot);
+        Assert.True(session.Restarting);
+        Assert.True(session.Unreachable(Environment.TickCount64));
+
+        session.OnRealtimeConnected(false);
+        session.OnRealtimeConnected(true);
+
+        Assert.Equal(2, sent.Count);
+        Assert.Equal(SignalType.CasinoAttach, sent[1].Type);
+        Assert.Equal(Room, sent[1].Casino!.RoomId);
+
+        session.Receive(Attached(epoch: 2, seq: 1), Now);
+
+        Assert.True(session.Attached);
+        Assert.False(session.Restarting);
+        Assert.Equal(2, session.State!.Epoch);
+    }
+
+    [Fact]
+    public void ARestartWithoutADroppedSocketStillAsksAgainOnItsOwn()
+    {
+        var session = Session(out var sent);
+        session.Enter(Room);
+        session.Receive(Attached(epoch: 1, seq: 5), Now);
+        session.Receive(new CasinoSignal(SignalType.CasinoEnded, "restarting", new CasinoPayload { RoomId = Room }),
+            Now);
+
+        session.RetryAttach(Environment.TickCount64);
+        Assert.Single(sent);
+
+        session.RetryAttach(Environment.TickCount64 + 5_000);
+        Assert.Equal(2, sent.Count);
+        Assert.Equal(SignalType.CasinoAttach, sent[1].Type);
+
+        session.RetryAttach(Environment.TickCount64 + 5_500);
+        Assert.Equal(2, sent.Count);
+    }
+
+    [Fact]
+    public void AnAttachCooldownIsRetriedAndNeverEndsAnAttachedRoom()
+    {
+        var session = Session(out var sent);
+        session.Enter(Room);
+
+        session.Receive(new CasinoSignal(SignalType.CasinoDeclined, "cooldown", new CasinoPayload { RoomId = Room }),
+            Now);
+
+        Assert.Equal(Room, session.RoomId);
+        Assert.Equal(string.Empty, session.ClosedReason);
+        Assert.False(session.Restarting);
+        session.RetryAttach(Environment.TickCount64 + 5_000);
+        Assert.Equal(2, sent.Count);
+
+        session.Receive(Attached(epoch: 1, seq: 5), Now);
+        session.Receive(new CasinoSignal(SignalType.CasinoDeclined, "cooldown", new CasinoPayload { RoomId = Room }),
+            Now);
+
+        Assert.True(session.Attached);
+        Assert.False(session.AwaitingSnapshot);
+    }
+
+    [Fact]
+    public void APollThatLandsLiftsTheRestartVeil()
+    {
+        var session = Session(out _);
+        session.Enter(Room);
+        session.Receive(Attached(epoch: 1, seq: 5), Now);
+        session.Receive(new CasinoSignal(SignalType.CasinoEnded, "restarting", new CasinoPayload { RoomId = Room }),
+            Now);
+
+        session.AbsorbHttpState(Room, Polled(epoch: 2, seq: 30, occupancy: 3), Now);
+
+        Assert.False(session.Restarting);
+        Assert.False(session.Unreachable(Environment.TickCount64));
+        Assert.Equal(2, session.State!.Epoch);
+    }
+
+    [Fact]
+    public void ReattachIsDueOnlyOnceArmedAndOnlyWhileDetached()
+    {
+        Assert.False(CasinoRoomSession.ReattachDue(0, false, 10_000));
+        Assert.False(CasinoRoomSession.ReattachDue(5_000, true, 10_000));
+        Assert.False(CasinoRoomSession.ReattachDue(15_000, false, 10_000));
+        Assert.True(CasinoRoomSession.ReattachDue(5_000, false, 10_000));
+    }
+
+    [Theory]
+    [InlineData("restarting", true)]
+    [InlineData("draining", true)]
+    [InlineData("cooldown", true)]
+    [InlineData("ended", false)]
+    [InlineData("private", false)]
+    [InlineData("kicked", false)]
+    public void OnlyAPassingServerConditionKeepsTheRoom(string reason, bool resumes)
+    {
+        Assert.Equal(resumes, CasinoRoomSession.Resumes(reason));
     }
 
     [Fact]

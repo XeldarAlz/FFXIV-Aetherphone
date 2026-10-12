@@ -13,8 +13,9 @@ namespace Aetherphone.Apps.Casino.Strip;
 
 internal sealed class FameView
 {
+    public const float RowHeight = 56f;
+
     private const float SegmentHeight = 36f;
-    private const float RowHeight = 56f;
     private const float RankWidth = 36f;
     private const float ChampionHeight = 64f;
 
@@ -24,16 +25,29 @@ internal sealed class FameView
     private readonly string[] spanLabels = new string[2];
     private int board;
     private int span;
+    private bool consentRequested;
 
     public FameView(CasinoFloorStore floor)
     {
         this.floor = floor;
     }
 
-    public void Enter()
+    public void Enter(string boardKey)
     {
-        board = 0;
+        board = Math.Max(0, Array.IndexOf(CasinoFameBoards.All, boardKey));
         span = 0;
+        consentRequested = false;
+    }
+
+    public bool TakeConsentRequest()
+    {
+        if (!consentRequested)
+        {
+            return false;
+        }
+
+        consentRequested = false;
+        return true;
     }
 
     public void Draw(Rect body, AppSkin ui)
@@ -134,6 +148,11 @@ internal sealed class FameView
             return origin.Y;
         }
 
+        if (!me.OptedIn)
+        {
+            return DrawHidden(drawList, ui, origin, width, scale);
+        }
+
         var line = me.Rank > 0
             ? texts.Number(L.Club.FameYourRank, me.Rank)
             : Loc.T(L.Club.FameNotRanked);
@@ -149,14 +168,41 @@ internal sealed class FameView
         {
             Typography.Draw(drawList,
                 new Vector2(max.X - pad - valueWidth, origin.Y + (height - Typography.LineHeight(TextStyles.Headline)) * 0.5f),
-                value, CasinoColors.Money, TextStyles.Headline);
+                value, me.Value < 0 ? CasinoColors.Loss : CasinoColors.Money, TextStyles.Headline);
         }
 
         return max.Y;
     }
 
-    private void DrawEntry(ImDrawListPtr drawList, AppSkin ui, string boardKey, CasinoFameEntryDto entry, Rect row,
-        bool hairline, float scale)
+    private float DrawHidden(ImDrawListPtr drawList, AppSkin ui, Vector2 origin, float width, float scale)
+    {
+        var pad = Metrics.Space.Lg * scale;
+        var action = Loc.T(L.Club.FameShowMe);
+        var actionWidth = Typography.Measure(action, TextStyles.SubheadlineEmphasized).X;
+        var text = Loc.T(L.Club.FameHiddenLine);
+        var textWidth = MathF.Max(1f, width - pad * 3f - actionWidth);
+        var block = Typography.MeasureWrappedBlock(text, TextStyles.Headline, textWidth);
+        var height = MathF.Max(RowHeight * scale, block.Y + pad * 2f);
+        var max = new Vector2(origin.X + width, origin.Y + height);
+        var hovered = CasinoArt.PressCard(ImGui.GetID("casino.fame.hidden"), origin, max, out var min, out var shown);
+        ui.Card(drawList, min, shown, Metrics.Radius.Grouped * scale);
+        var centerY = (min.Y + shown.Y) * 0.5f;
+        Typography.DrawWrappedLeft(new Vector2(min.X + pad, centerY - block.Y * 0.5f), text, ui.TitleInk,
+            TextStyles.Headline, textWidth);
+        Typography.Draw(drawList,
+            new Vector2(shown.X - pad - actionWidth,
+                centerY - Typography.LineHeight(TextStyles.SubheadlineEmphasized) * 0.5f),
+            action, ui.Accent, TextStyles.SubheadlineEmphasized);
+        if (UiInteract.Click(origin, max, hovered))
+        {
+            consentRequested = true;
+        }
+
+        return max.Y;
+    }
+
+    internal static void DrawEntry(ImDrawListPtr drawList, AppSkin ui, string boardKey, CasinoFameEntryDto entry,
+        Rect row, bool hairline, float scale)
     {
         var pad = Metrics.Space.Lg * scale;
         if (hairline)

@@ -231,6 +231,16 @@ internal sealed class CasinoInfoSheet
             y += height + gap;
         }
 
+        if (spec.History.Key is not null)
+        {
+            if (DrawButton(left, y, width, height, Loc.T(spec.History), ButtonStyle.Gray))
+            {
+                Choose(CasinoInfoRequest.History);
+            }
+
+            y += height + gap;
+        }
+
         if (DrawButton(left, y, width, height, Loc.T(L.Casino.FairnessRow), ButtonStyle.Plain))
         {
             Choose(CasinoInfoRequest.Fairness);

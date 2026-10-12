@@ -54,8 +54,8 @@ internal sealed class StripCarousel
     public static float CardHeight(float width, float scale) =>
         Math.Clamp(width * CardAspect, MinCardHeight * scale, MaxCardHeight * scale);
 
-    public static float BlockHeight(float width, float scale) =>
-        CardHeight(width, scale) + (DotsGap + DotsRow) * scale;
+    public static float BlockHeight(float width, int pages, float scale) =>
+        CardHeight(width, scale) + (pages > 1 ? (DotsGap + DotsRow) * scale : 0f);
 
     public static float Stride(float width, float scale) => width + CardGap * scale;
 

@@ -1,3 +1,4 @@
+using Aetherphone.Core.Platform;
 using Aetherphone.Windows;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Keys;
@@ -43,7 +44,7 @@ internal sealed class LinkpearlHotkey
             return;
         }
 
-        Swallow(key);
+        GameKeys.Swallow(key);
         Open();
     }
 
@@ -84,15 +85,6 @@ internal sealed class LinkpearlHotkey
 
         popouts.SetSuppressed(false);
         popouts.Open(recent[cycleIndex].Key);
-    }
-
-    private static void Swallow(VirtualKey key)
-    {
-        var keyState = Plugin.KeyState;
-        if (keyState.IsVirtualKeyValid(key))
-        {
-            keyState[key] = false;
-        }
     }
 
     private static ImGuiKey ImGuiKeyFor(VirtualKey key) =>

@@ -4,6 +4,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Changelog;
+using Aetherphone.Core.Conduct;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Jam;
@@ -63,6 +64,7 @@ internal sealed partial class MusicApp : IResumableApp
     private readonly GameData gameData;
     private readonly LyricsService lyrics;
     private readonly WindowsMediaSessions windowsMedia;
+    private readonly ConductGateService conduct;
     private readonly AppSkin ui = new(AppPalettes.Music);
     private readonly MusicKit kit;
     private readonly MusicSongMenu songMenu = new();
@@ -80,7 +82,8 @@ internal sealed partial class MusicApp : IResumableApp
         SocialNotificationService socialNotifications, RolladeckService rolladeck, PcMediaSource pcMedia,
         JamSession jam, JamLauncher jamLauncher, ContactBook contacts,
         RadioRoomSession room, DownloadStore downloads,
-        LyricsService lyrics, WindowsMediaSessions windowsMedia, ListeningPresence listening)
+        LyricsService lyrics, WindowsMediaSessions windowsMedia, ListeningPresence listening,
+        ConductGateService conduct)
     {
         this.radio = radio;
         this.songSearch = songSearch;
@@ -111,6 +114,7 @@ internal sealed partial class MusicApp : IResumableApp
         this.lyrics = lyrics;
         this.windowsMedia = windowsMedia;
         this.listening = listening;
+        this.conduct = conduct;
         PastedLinkHandler = TryHandlePastedLink;
         community = new CommunityRadioService(aethernet, session);
         kit = new MusicKit(ui, images, playback, library) { Downloads = downloads };

@@ -34,6 +34,30 @@ public sealed class BlackjackHostedLayoutTests
         Assert.True(two > one);
     }
 
+    [Theory]
+    [MemberData(nameof(Scales))]
+    public void TheHostButtonsShareANarrowRowInsteadOfRunningOffIt(float scale)
+    {
+        var gap = 8f * scale;
+        var natural = new[] { 96f * scale, 84f * scale, 110f * scale };
+        var total = natural[0] + natural[1] + natural[2];
+
+        Assert.Equal(1f, HostedInfoLayout.ButtonSqueeze(total, natural.Length, total + gap * 2f, gap));
+        Assert.Equal(1f, HostedInfoLayout.ButtonSqueeze(0f, 0, 10f, gap));
+        var narrow = 240f * scale;
+        var squeeze = HostedInfoLayout.ButtonSqueeze(total, natural.Length, narrow, gap);
+        Assert.InRange(squeeze, 0f, 1f);
+        Assert.Equal(narrow, total * squeeze + gap * 2f, 3);
+    }
+
+    [Fact]
+    public void ARailPlateShortensANameToTheForename()
+    {
+        Assert.Equal("Chea", PitText.Forename("Chea Thorne"));
+        Assert.Equal("Ciri", PitText.Forename("Ciri"));
+        Assert.Equal(" Lead", PitText.Forename(" Lead"));
+    }
+
     [Fact]
     public void TheTournamentStripReservesItsBandOnlyWhileItShows()
     {

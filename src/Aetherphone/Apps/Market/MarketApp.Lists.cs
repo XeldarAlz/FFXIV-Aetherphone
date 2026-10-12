@@ -270,14 +270,14 @@ internal sealed partial class MarketApp
         }
 
         var result = MarketText.Format(L.Market.Quantity, quantity);
-        if (detail.Length > 0)
-        {
-            result = string.Concat(result, " · ", detail);
-        }
-
         if (world.Length > 0)
         {
             result = string.Concat(result, " · ", world);
+        }
+        
+        if (detail.Length > 0)
+        {
+            result = string.Concat(result, " · ", detail);
         }
 
         SubCache[key] = result;
@@ -388,9 +388,9 @@ internal sealed partial class MarketApp
                 ? MarketText.Format(L.Market.AlertHitNow, MarketText.Rule(alert), alert.LastSeenPrice)
                 : MarketText.Rule(alert);
             var textLeft = row.Min.X + pad + iconSize + MarketArt.TextGap * scale;
-            MarketArt.Labels(drawList, textLeft, right, row.Center.Y, alert.ItemName, subtitle,
-                alert.Enabled ? ui.TitleInk : ui.MutedInk, alert.Triggered && alert.Enabled ? ui.Accent : ui.MutedInk,
-                scale);
+            MarketArt.Labels(drawList, new MarqueeId("market.alert.", alertIndex), textLeft, right, row.Center.Y,
+                alert.ItemName, subtitle, alert.Enabled ? ui.TitleInk : ui.MutedInk,
+                alert.Triggered && alert.Enabled ? ui.Accent : ui.MutedInk, hovered, scale);
             if (UiInteract.Click(row.Min, row.Max, hovered))
             {
                 OpenItem(alert.ItemId);

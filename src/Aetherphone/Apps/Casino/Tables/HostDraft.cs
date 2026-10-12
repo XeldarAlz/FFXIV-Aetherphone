@@ -29,7 +29,7 @@ internal sealed class HostDraft
     public int TurnSeconds = CasinoHostingRules.DefaultTurnSeconds;
     public bool TimeBank = true;
     public int DealerMode = CasinoDealerModes.House;
-    public bool AutoDeal = true;
+    public bool AutoDeal;
     public int Pays = CasinoRuleSheet.PaysThreeToTwo;
     public bool HitsSoft17;
     public int Decks = DefaultDecks;
@@ -81,12 +81,12 @@ internal sealed class HostDraft
         _ => HostLadders.CoinBets,
     };
 
-    public LadderSpan PayoutSpan => new(MaxBet, Bank);
+    public LadderSpan PayoutSpan => new(Game == HostGame.Book ? 0 : MaxBet, Bank);
 
     public void Reset(HostGame game)
     {
         Game = game;
-        Currency = HostGames.IsVenue(game) ? CasinoCurrencies.Practice : CasinoCurrencies.Chips;
+        Currency = HostGames.DefaultCurrency(game);
         Seats = CasinoHostingRules.DefaultSeats;
         Listing = CasinoListings.Private;
         Spectators = true;
@@ -101,7 +101,7 @@ internal sealed class HostDraft
         TurnSeconds = CasinoHostingRules.DefaultTurnSeconds;
         TimeBank = true;
         DealerMode = CasinoDealerModes.House;
-        AutoDeal = true;
+        AutoDeal = false;
         Pays = CasinoRuleSheet.PaysThreeToTwo;
         HitsSoft17 = false;
         Decks = DefaultDecks;
@@ -174,8 +174,95 @@ internal sealed class HostDraft
             return BuildHoldem(location);
         }
 
+        if (Game == HostGame.Book)
+        {
+            return BuildBook(location);
+        }
+
         return HostGames.IsVenue(Game) ? BuildVenue(location) : BuildBlackjack(location);
     }
+
+    public CasinoHostDraftMemory Snapshot(bool pinLocation) => new()
+    {
+        Game = (int)Game,
+        Currency = Currency,
+        Seats = Seats,
+        Listing = Listing,
+        Spectators = Spectators,
+        FaceUp = FaceUp,
+        Name = Name,
+        MinBet = MinBet,
+        MaxBet = MaxBet,
+        BigBlind = BigBlind,
+        Ante = Ante,
+        Stack = Stack,
+        PracticeRebuy = PracticeRebuy,
+        Bank = Bank,
+        MaxPayout = MaxPayout,
+        PayoutCapped = PayoutCapped,
+        TurnSeconds = TurnSeconds,
+        TimeBank = TimeBank,
+        DealerMode = DealerMode,
+        AutoDeal = AutoDeal,
+        Pays = Pays,
+        HitsSoft17 = HitsSoft17,
+        Decks = Decks,
+        Splits = Splits,
+        Doubles = Doubles,
+        Charlie = Charlie,
+        Peek = Peek,
+        Sides = Sides,
+        HighestWins = HighestWins,
+        RoundSeconds = RoundSeconds,
+        StartAt = StartAt,
+        Stake = Stake,
+        PinLocation = pinLocation,
+    };
+
+    public static HostGame GameOf(CasinoHostDraftMemory memory) =>
+        (HostGame)Math.Clamp(memory.Game, 0, HostGames.All.Length - 1);
+
+    public static bool Reopens(CasinoHostDraftMemory memory, bool bookOpen) =>
+        bookOpen || !HostGames.IsBook(GameOf(memory));
+
+    public void Restore(CasinoHostDraftMemory memory)
+    {
+        Reset(GameOf(memory));
+        Currency = Math.Clamp(memory.Currency, CasinoCurrencies.Chips, CasinoCurrencies.Gil);
+        Seats = memory.Seats;
+        Listing = Math.Clamp(memory.Listing, 0, CasinoListings.All.Length - 1);
+        Spectators = memory.Spectators;
+        FaceUp = memory.FaceUp;
+        Name = memory.Name;
+        var rungs = BetRungs;
+        MinBet = LastIndexAtMost(memory.MinBet, rungs.Length);
+        MaxBet = LastIndexAtMost(memory.MaxBet, rungs.Length);
+        BigBlind = LastIndexAtMost(memory.BigBlind, HostLadders.Bets.Length);
+        Ante = LastIndexAtMost(memory.Ante, HostLadders.AnteTenths.Length);
+        Stack = LastIndexAtMost(memory.Stack, HostLadders.PracticeStacks.Length);
+        PracticeRebuy = memory.PracticeRebuy;
+        Bank = LastIndexAtMost(memory.Bank, HostLadders.Gil.Length);
+        MaxPayout = LastIndexAtMost(memory.MaxPayout, HostLadders.Gil.Length);
+        PayoutCapped = memory.PayoutCapped;
+        TurnSeconds = memory.TurnSeconds;
+        TimeBank = memory.TimeBank;
+        DealerMode = Math.Clamp(memory.DealerMode, CasinoDealerModes.House, CasinoDealerModes.Host);
+        AutoDeal = memory.AutoDeal;
+        Pays = Math.Clamp(memory.Pays, CasinoRuleSheet.PaysThreeToTwo, CasinoRuleSheet.PaysEven);
+        HitsSoft17 = memory.HitsSoft17;
+        Decks = memory.Decks;
+        Splits = Math.Clamp(memory.Splits, CasinoRuleSheet.SplitsOff, CasinoRuleSheet.SplitsToFour);
+        Doubles = Math.Clamp(memory.Doubles, CasinoRuleSheet.DoublesAny, CasinoRuleSheet.DoublesOff);
+        Charlie = memory.Charlie;
+        Peek = memory.Peek;
+        Sides = LastIndexAtMost(memory.Sides, HostLadders.DiceSides.Length);
+        HighestWins = memory.HighestWins;
+        RoundSeconds = LastIndexAtMost(memory.RoundSeconds, HostLadders.RoundSeconds.Length);
+        StartAt = LastIndexAtMost(memory.StartAt, HostLadders.StartNumbers.Length);
+        Stake = LastIndexAtMost(memory.Stake, rungs.Length);
+    }
+
+    private static int LastIndexAtMost(int index, int length) => Math.Clamp(index, 0, length - 1);
 
     private void ResetStakes()
     {
@@ -247,6 +334,30 @@ internal sealed class HostDraft
             Location: location,
             Poker: new CasinoPokerTableOptionsDto(bigBlind / 2, bigBlind * HostLadders.AnteTenths[Ante] / 10),
             Currency: Practice ? CasinoCurrencies.Practice : CasinoCurrencies.Chips);
+    }
+
+    private CasinoTableConfigDto BuildBook(CasinoTableLocationDto? location)
+    {
+        return new CasinoTableConfigDto(
+            GameKind: CasinoWire.BookKind,
+            Name: Name.Trim(),
+            Seats: 0,
+            Practice: false,
+            PracticeStack: CasinoHostingRules.DefaultPracticeStack,
+            PracticeRebuy: false,
+            TurnSeconds: CasinoHostingRules.DefaultTurnSeconds,
+            TimeBankUses: CasinoHostingRules.TimeBankUses,
+            Listing: Listing,
+            Spectators: false,
+            FaceUp: false,
+            DealerMode: CasinoDealerModes.House,
+            CoDealers: null,
+            AutoDeal: false,
+            HouseRules: null,
+            Location: location,
+            Currency: CasinoCurrencies.Gil,
+            Bank: BankValue,
+            MaxPayout: PayoutValue);
     }
 
     private CasinoTableConfigDto BuildVenue(CasinoTableLocationDto? location)

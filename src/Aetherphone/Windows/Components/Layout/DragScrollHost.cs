@@ -93,6 +93,14 @@ internal static class DragScrollHost
         }
     }
 
+    public static void CancelMomentum()
+    {
+        if (Regions.TryGetValue(ImGuiP.GetCurrentWindowRead().ChildId, out var region))
+        {
+            region.Scroller.CancelMomentum();
+        }
+    }
+
     public static ImGuiWindowFlags ScrollFlags(ImGuiWindowFlags baseFlags) =>
         Enabled ? baseFlags | ImGuiWindowFlags.NoScrollbar : baseFlags;
 

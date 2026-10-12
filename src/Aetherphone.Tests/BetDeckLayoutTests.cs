@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Apps.Casino.Machines;
 using Aetherphone.Apps.Casino.Stage;
 using Aetherphone.Core;
+using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Xunit;
@@ -231,6 +232,20 @@ public sealed class BetDeckLayoutTests
         Assert.True(plan.Running);
         Assert.Equal(3, plan.Remaining);
         Assert.Equal(2_500, plan.Next);
+    }
+
+    [Fact]
+    public void AutoWaitsOutAPacingRefusalAndStopsForAnyOther()
+    {
+        var plan = new AutoBetPlan();
+        Assert.False(plan.WaitsOut(CasinoReasons.Cooldown));
+        plan.Start(1_000);
+        Assert.True(plan.WaitsOut(CasinoReasons.Cooldown));
+        Assert.True(plan.WaitsOut(L.Casino.ReasonCooldown));
+        Assert.False(plan.WaitsOut(CasinoReasons.Unreachable));
+        Assert.False(plan.WaitsOut(string.Empty));
+        Assert.False(plan.WaitsOut(L.Originals.Resumed));
+        Assert.True(plan.Running);
     }
 
     internal static DeckQuickLabels Quick(string max, float scale) =>

@@ -19,6 +19,7 @@ internal sealed class DiceTablePlayback
     private bool awaitingMine;
     private float awaitSeconds;
     private long awaitBound;
+    private long awaitedSeq;
     private long celebratedRound = -1;
     private long closedRound = -1;
     private bool roundClosedLive;
@@ -71,6 +72,7 @@ internal sealed class DiceTablePlayback
         heroLive = false;
         awaitingMine = false;
         awaitSeconds = 0f;
+        awaitedSeq = 0;
         celebratedRound = -1;
         closedRound = -1;
         roundClosedLive = false;
@@ -81,6 +83,21 @@ internal sealed class DiceTablePlayback
         awaitingMine = true;
         awaitSeconds = 0f;
         awaitBound = Math.Max(1, sides);
+        awaitedSeq = 0;
+    }
+
+    public void Confirm(long seq)
+    {
+        if (!awaitingMine)
+        {
+            return;
+        }
+
+        awaitedSeq = seq;
+        if (seq > 0 && seq <= lastSeenSeq)
+        {
+            awaitingMine = false;
+        }
     }
 
     public void CancelMine()
@@ -88,7 +105,7 @@ internal sealed class DiceTablePlayback
         awaitingMine = false;
     }
 
-    public void Update(CasinoDiceTableStateDto? board, float deltaSeconds, bool snap)
+    public void Update(CasinoDiceTableStateDto? board, string me, float deltaSeconds, bool snap)
     {
         heroSeconds += deltaSeconds;
         awaitSeconds += deltaSeconds;
@@ -116,10 +133,17 @@ internal sealed class DiceTablePlayback
         if (newest is not null && newest.Seq > lastSeenSeq)
         {
             Hero(newest, !snap);
-            awaitingMine = false;
+            if (RolledSince(rolls, lastSeenSeq, me))
+            {
+                awaitingMine = false;
+            }
         }
 
         lastSeenSeq = Math.Max(lastSeenSeq, board.LastSeq);
+        if (awaitedSeq > 0 && awaitedSeq <= lastSeenSeq)
+        {
+            awaitingMine = false;
+        }
         var last = board.LastRound;
         if (last is not null && last.Closed && last.Index > closedRound)
         {
@@ -145,6 +169,19 @@ internal sealed class DiceTablePlayback
         var live = roundClosedLive;
         roundClosedLive = false;
         return live;
+    }
+
+    private static bool RolledSince(CasinoVenueRollDto[] rolls, long seenSeq, string me)
+    {
+        for (var index = 0; index < rolls.Length && rolls[index].Seq > seenSeq; index++)
+        {
+            if (me.Length > 0 && string.Equals(rolls[index].UserId, me, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void Hero(CasinoVenueRollDto roll, bool live)

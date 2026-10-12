@@ -1,6 +1,6 @@
 # Testing, CI, and releases
 
-This page explains how Aetherphone code gets validated and shipped: the unit test project, the GitHub Actions workflows that run on every pull request, the tag-and-release pipeline, the in-app changelog system, and the Discord announcement hooks. Read it before you open your first pull request, and again before you cut your first release as a maintainer. Everything here is about the plugin client; the Aethernet backend lives in a separate repository with its own pipeline.
+This page explains how Aetherphone code gets validated and shipped: the unit test project, the GitHub Actions workflows that run on every pull request, the tag-and-release pipeline, the in-app changelog system, the Discord announcement hooks, and the Discord pull request forum. Read it before you open your first pull request, and again before you cut your first release as a maintainer. Everything here is about the plugin client; the Aethernet backend lives in a separate repository with its own pipeline.
 
 ## Key files
 
@@ -8,13 +8,19 @@ This page explains how Aetherphone code gets validated and shipped: the unit tes
 | --- | --- |
 | src/Aetherphone.Tests/Aetherphone.Tests.csproj | xUnit test project, references the plugin and the Dalamud assembly |
 | .github/workflows/ci.yml | Validation on master and dev: guard checks, build, tests, artifacts |
+| .github/workflows/label-pull-request.yml | Checks every pull request title and sets its labels from the title and the changed paths; run it by hand from the Actions tab to label an older pull request |
+| .github/release.yml | Groups the auto-generated GitHub release notes by label and drops Dependabot's bumps |
 | .github/workflows/auto-tag.yml | Tags master automatically when Directory.Build.props gets a new version |
 | .github/workflows/release.yml | Builds latest.zip, publishes the GitHub release, announces it, updates repo.json |
 | .github/scripts/Get-ChangelogNotes.ps1 | Turns a version's changelog entry into the Discord release post text |
 | .github/workflows/announce-commits.yml | Posts commits pushed to dev to Discord, never pings anyone |
+| .github/workflows/pull-request-forum.yml | Mirrors every pull request into its own Discord forum post and pings reviewers and authors |
+| .github/scripts/pull-request-forum.mjs | The forum mirror's logic: posts, status tags, pings, locking on merge or close |
 | .github/workflows/update-issue-template-versions.yml | Backfills the version dropdown in issue templates after a release |
 | .github/ISSUE_TEMPLATE/bug_report.yml | Holds the "Plugin version" dropdown, bumped by hand in each release commit |
 | .github/dependabot.yml | Dependabot updates: Actions and NuGet weekly, the three npm tools monthly |
+| .github/workflows/staff-role-sync.yml | Every ten minutes, aligns the community server's staff roles with the staff server |
+| .github/scripts/staff-role-sync.mjs | The role sync's logic: role map, plan, removal brake, apply, report |
 | .github/workflows/uptime.yml | Polls the backend health endpoint every five minutes |
 | Directory.Build.props | Single source of truth for the plugin version; also turns CI warnings into errors |
 | repo.json | This plugin's Dalamud repository manifest entry: version, download links, install count |
@@ -125,7 +131,7 @@ Three details worth knowing:
 .github/workflows/release.yml fires on `v*.*.*` tag pushes (with a `workflow_dispatch` fallback that accepts a `tag` input). It:
 
 1. Checks out the tag, downloads Dalamud, restores in locked mode, and builds Release.
-2. Stages `src/Aetherphone/bin/Release/Aetherphone/latest.zip` and publishes it as a GitHub release with auto-generated release notes.
+2. Stages `src/Aetherphone/bin/Release/Aetherphone/latest.zip` and publishes it as a GitHub release with auto-generated release notes, grouped by label through .github/release.yml.
 3. Announces the release on Discord (see below).
 4. Rewrites repo.json on master: `AssemblyVersion`, `TestingAssemblyVersion`, a refreshed `DownloadCount` summed across all releases, and a new `LastUpdate` timestamp, then commits it with a rebase-and-retry loop.
 5. If the `HUB_REPO_PAT` secret is set, sends a `repository_dispatch` to the XeldarAlz/DalamudPlugins hub repo so the multi-plugin manifest regenerates immediately.
@@ -197,11 +203,80 @@ Two webhooks, two very different behaviors:
 
 Both scrub em and en dashes from the text they post (the changelog pages in release.yml, the commit subjects in announce-commits.yml); release.yml goes further and fails the step if one survives anywhere in the final payload. Both exit quietly when their webhook secret is unset, so forks run green without any configuration.
 
+## Pull request forum on Discord
+
+.github/workflows/pull-request-forum.yml mirrors every pull request into a Discord forum channel, so reviewers and contributors get pinged where they already talk. One forum post per pull request, one message per event, a status tag that follows the review state, and the post is locked and archived when the pull request is merged or closed. The logic lives in .github/scripts/pull-request-forum.mjs, a dependency-free Node script that calls the Discord and GitHub REST APIs; the workflow only wires events and secrets to it.
+
+### What it posts and who it pings
+
+| GitHub event | Forum post | Pinged |
+| --- | --- | --- |
+| Opened (not as a draft), marked ready for review, reopened | Post created on first contact, tagged Open | The requested reviewers; the maintainers role when nobody was requested |
+| Converted to draft | Tagged Draft | Nobody |
+| Review requested | Message | The requested reviewer |
+| Review submitted (approved, changes requested, or comments) | Message with the review text and the inline comment count; the tag follows the state | The author; the reviewers when the author reviews their own pull request |
+| New commits pushed | Message listing the commits | The reviewers when the author pushed; the author when someone else (a maintainer fixing nits on the branch) pushed |
+| Conversation comment | Message with the comment text | The same counterpart rule, plus anyone @mentioned in the comment |
+| Merged or closed | Tagged Merged or Closed, then locked and archived | The author |
+| Title edited | Post renamed | Nobody |
+
+"The reviewers" means the requested reviewers plus everyone who has already submitted a review on that pull request. The person who caused an event is never pinged for it. Pings only ever name people from the user map (below); everyone else appears in bold without a notification. Pull requests opened by Dependabot or other bots are not mirrored, and comments by bots are skipped.
+
+Posts are found again by name: every post is named `#N · title`, and later events look for the `#N ·` prefix among the forum's active and then archived posts. Nothing about the Discord server (no link, no id, no comment) is ever written to the public pull request, and the script never prints an id or a member name into the workflow log either, because a public repository's logs are public. Two events that fire in the same second may both create a post; the run whose post is not the oldest deletes its own again, so a pull request never keeps two.
+
+### Setup
+
+On Discord:
+
+1. Create a Forum channel, for example `#pull-requests` under the Development category. The six status tags (Draft, Open, Changes requested, Approved, Merged, Closed) are created by the bot on its first run when it may manage the channel; otherwise create them by hand with exactly those names and tick "moderated" so members cannot change them.
+2. In the Discord Developer Portal, create an application and add a Bot to it. Copy the bot token and give the bot a name and avatar (the Aetherphone emblem fits); the bot never needs to be online, every call goes through REST, so it will show as offline forever and that is fine.
+3. Invite the bot with the `bot` scope and these permissions: View Channels, Send Messages, Send Messages in Threads, Create Public Threads (shown as "Create Posts" on a forum), Embed Links, Manage Threads, plus Manage Channels if the bot should create the tags itself. The invite URL is `https://discord.com/oauth2/authorize?client_id=<application id>&scope=bot&permissions=326417533968` (use `326417533952` to leave out Manage Channels). If the forum sits in a private category, also give the bot's role access to it.
+4. Turn on Developer Mode (User Settings, Advanced) and copy the ids you need: right-click the forum channel for its id, right-click the maintainers role under Server Settings, Roles, and right-click each member who should be pingable for their user id.
+
+On GitHub (repository Settings, Secrets and variables, Actions), all four as secrets. Repository variables would work technically, but GitHub prints variable values into the workflow log, and this repository's logs are public; secrets are masked.
+
+| Name | Required | Value |
+| --- | --- | --- |
+| `DISCORD_BOT_TOKEN` | yes | The bot token |
+| `DISCORD_PULL_REQUEST_FORUM_ID` | yes | The forum channel id |
+| `DISCORD_MAINTAINERS_ROLE_ID` | optional | The role pinged for new pull requests that nobody was asked to review |
+| `DISCORD_GITHUB_USERS` | optional | A JSON object from GitHub login to Discord user id, for example `{"XeldarAlz": "123456789012345678", "t3sco": "234567890123456789"}` |
+
+Then run the workflow by hand (Actions, Pull request forum, Run workflow) with the pull request number left empty: the run confirms the token, the forum, every tag, the role, and that each mapped user is a member of the server, without printing any of their ids. Run it again with a pull request number to create or resync that pull request's post. Pull requests that were already open when the workflow landed get their post the first time anything happens on them, or when you sync them this way. A new contributor joins the map by sending you their Discord user id; until then their events still post, in bold and without a ping.
+
+The workflow skips cleanly when the secret or the forum id is unset, so forks run green without any configuration.
+
+### Why pull_request_target
+
+Contributor pull requests come from forks, and `pull_request` runs for forks get no secrets, so the bot token would be empty exactly when it matters. The workflow therefore listens to `pull_request_target`, which runs with this repository's secrets. That is safe only because the job never checks out or executes anything from the pull request: it checks out .github/scripts from the default branch and reads the event payload. Never add a checkout of the pull request head, a build, or a test step to this workflow; put those in ci.yml, which keeps using `pull_request`.
+
 ## Issue template version updater
 
 .github/workflows/update-issue-template-versions.yml also fires on `v*.*.*` tag pushes. It checks out the default branch (dev), scans every .github/ISSUE_TEMPLATE/*.yml, and rewrites each "Plugin version" dropdown it finds (today only bug_report.yml has one): the new version goes on top, the list keeps the five most recent versions, and the "Older / not sure" sentinel stays at the bottom. Any change is committed and pushed to dev with a rebase-and-retry loop.
 
 Maintainers now bump the dropdown by hand inside the release commit (see the checklist), so on a normal release the job finds nothing to change. It remains as a safety net and as a backfill: dispatch it manually with a version input.
+
+## Staff role sync
+
+.github/workflows/staff-role-sync.yml keeps the community Discord server's staff roles in step with the private staff server, using the same bot as the pull request forum. On a ten-minute schedule, on every push to dev, on a `repository_dispatch` poke of type `staff-role-sync`, and on demand, .github/scripts/staff-role-sync.mjs reads every member and their roles on both servers and reconciles the mapped roles: a community member holds a mapped role only while the same Discord account holds one of the matching roles on the staff server. Someone who holds a mapped role on the community without the staff counterpart, or who is not on the staff server at all, loses it. Roles outside the map, bots, and the staff server itself are never touched; staff is the only source of truth.
+
+The map is a JSON secret from community role name to one or more staff role names, resolved by name on both servers at run time, for example `{"Moderator": ["Moderator", "Moderator Intern"], "Developer": ["Developer"]}`. A name that does not resolve on either server aborts the run before anything is changed, so a renamed role can never strip everyone.
+
+### Modes and safety
+
+- **Dry run** is the default for a manual dispatch: the plan is posted to the report channel and nothing changes. Scheduled, push, and `repository_dispatch` runs stay dry too until the `DISCORD_ROLE_SYNC_ARMED` secret is set to `true`, and a dry automatic run posts nothing and only warns on a setup problem, so arming is a deliberate step after you have read a dry-run report.
+- **The schedule is slow here.** GitHub runs this repository's cron schedules only every four to seven hours whatever the interval says (uptime.yml asks for five minutes and gets four or five runs a day). The push trigger covers busy days; for a real cadence on quiet days, poke the workflow from outside with `POST /repos/XeldarAlz/FFXIV-Aetherphone/dispatches` and `{"event_type": "staff-role-sync"}` using a fine-grained token with Contents write, for example from a timer in the Aethernet backend.
+- **Removal brake**: when a run would strip a mapped role from more than half of its current holders (and from more than five people), it stops and reports instead of applying. The first real run on a server where many people already hold the roles will trip it; dispatch with `force` to apply that one.
+- **Hierarchy check**: the run aborts if the bot lacks Manage Roles on the community server or if its role sits below any mapped community role, because Discord refuses role edits from below. Fix it in the community's role list by dragging the bot's role above the mapped roles.
+- **Report channel**: everything that names a person (who gained or lost what, failures, abort reasons) is posted by the bot into the staff channel in `DISCORD_ROLE_SYNC_REPORT_CHANNEL_ID`. The public workflow log only carries counts and role names, with ids redacted from error text, for the same reason as the pull request forum. Every applied change carries "Staff role sync" as the audit log reason.
+
+### Setup
+
+Invite the bot to the community server with Manage Roles and View Channels, move its role above the mapped roles, then add these secrets next to the pull request forum ones: `DISCORD_STAFF_GUILD_ID`, `DISCORD_COMMUNITY_GUILD_ID`, `DISCORD_ROLE_SYNC_MAP`, `DISCORD_ROLE_SYNC_REPORT_CHANNEL_ID` (optional but strongly recommended), and finally `DISCORD_ROLE_SYNC_ARMED` once a dry run looks right. The bot needs the Server Members Intent enabled in the Developer Portal to list members. The workflow skips cleanly while the guild ids or the map are unset.
+
+## Staff post
+
+.github/workflows/staff-post.yml posts a note written by a maintainer, such as what changed in a beta build and the QA checklist for it, to a channel on the staff server as the same bot. Dispatch it with a `title` and a markdown `body`; .github/scripts/staff-post.mjs splits a long body into numbered embeds and never pings anyone. The channel id lives in the `DISCORD_STAFF_POST_CHANNEL_ID` secret, and the public log only says how many messages were posted. From a shell, `gh workflow run staff-post.yml --json` with `{"title": "...", "body": "..."}` on stdin keeps the line breaks.
 
 ## Uptime workflow
 
@@ -235,6 +310,10 @@ A maintainer cutting version X.Y.Z.W:
 - **A missing key fails CI, an untranslated value does not.** LocalizationParityTests fails the pull request when a key declared in L.cs is absent from any of the nine catalogs, or a catalog carries an orphaned key. What still ships silently is a key that exists in a catalog with its text left in English: nothing checks translation quality, so proofread the values themselves.
 - **`[skip auto-tag]` in any commit message of a push** disables tagging for that entire push, including other commits in it.
 - **Tests need Dalamud on disk.** src/Aetherphone.Tests/Aetherphone.Tests.csproj references the Dalamud assembly from the per-OS dev-hooks default (XIVLauncher on Windows, XLCore on Linux, XIV on Mac on macOS) or `DALAMUD_HOME`; a bare CI-less machine without either cannot build the test project.
+- **The forum workflow runs the default branch's script, never the pull request's.** A change to .github/scripts/pull-request-forum.mjs takes effect only after it lands on dev; a pull request that edits it still mirrors itself with the old script. Test a change with the manual dispatch after it merges.
+- **The forum workflow has no `concurrency` block on purpose.** GitHub keeps one pending run per concurrency group and cancels older pending ones, which would drop a review that fired while another event was still posting. Simultaneous runs are reconciled by post name instead; do not add a group to "fix" a duplicate you saw mid-run.
+- **The forum workflow must stay silent about the staff server.** Its logs are public, so the script prints pull request numbers and GitHub logins only, redacts ids and mention tokens from error text, and keeps every Discord id in a secret rather than a variable. Never add a log line with a channel, thread, role, or member id, and never write a Discord link or id into a pull request.
+- **Pings only fire from message content, never from inside an embed.** The mention line sits above the embed on purpose, and `allowed_mentions` lists exactly who may be notified, so quoted text containing `@everyone` or a stray mention cannot ping anyone.
 
 ## Related docs
 

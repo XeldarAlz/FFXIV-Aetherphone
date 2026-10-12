@@ -353,6 +353,18 @@ internal static class HoldemRules
 
     public static long TopUpRoom(long stack, long maxBuyIn) => maxBuyIn > stack ? maxBuyIn - stack : 0;
 
+    public static long TopUpCeiling(long stack, long maxBuyIn, long bankroll, long maxBet)
+    {
+        var room = TopUpRoom(stack, maxBuyIn);
+        if (maxBet > 0)
+        {
+            room = Math.Min(room, TopUpRoom(stack, maxBet * BuyInCeilingMultiple));
+        }
+
+        var top = Math.Min(room, bankroll);
+        return top < 0 ? 0 : top;
+    }
+
     public static int NextDealt(ReadOnlySpan<int> dealt, int after)
     {
         if (dealt.Length == 0)

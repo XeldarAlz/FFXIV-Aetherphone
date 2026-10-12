@@ -181,7 +181,7 @@ internal sealed partial class VelvetShell
             var width = ScrollLayout.StableContentWidth();
             var contentTop = ImGui.GetCursorPosY();
             var jumpY = -1f;
-            userPostsVirtualizer.BeginFrame();
+            userPostsVirtualizer.BeginFrame(arrowSteps: configuration.ArrowKeysStepPosts);
             for (var index = 0; index < posts.Length; index++)
             {
                 var post = posts[index];

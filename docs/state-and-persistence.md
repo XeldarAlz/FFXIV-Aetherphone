@@ -186,6 +186,7 @@ All user media lives under `<config>` next to the config file, along with the ot
 | `<config>/Photos/` | The photo library: camera saves and imported screenshots |
 | `<config>/Photos/.thumbs/` | JPEG thumbnails, one per photo (`PhotoLibrary.ThumbnailPathFor`) |
 | `<config>/Photos/.trash/` | Recently Deleted: `PhotoLibrary.Delete` moves photos here and stamps the file creation time; `PurgeExpired` removes them 30 days later, `Restore` moves them back |
+| `<config>/Photos/.pasted/` | Images pasted from the clipboard, saved as PNG by `PhotoLibrary.SavePasted` so a composer can attach them by path; kept out of the library and deleted after a day |
 | `<config>/Sounds/Ringtones/`, `<config>/Sounds/Notifications/` | User custom sounds (mp3, wav), copied in by `SoundLibrary.AddUserFile` |
 | `<config>/Wallpapers/` | Imported wallpapers, named `custom-<guid>` by `WallpaperLibrary.AddCustom` |
 | `<config>/ShortcutIcons/` | Custom Shortcuts icons (`ShortcutIconLibrary`), listed by `Configuration.CustomShortcutIconIds` |

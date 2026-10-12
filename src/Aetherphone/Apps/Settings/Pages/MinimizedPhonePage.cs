@@ -144,11 +144,12 @@ internal sealed class MinimizedPhonePage : ISettingsPage
 
     private void DrawPhoneSettings(PhoneTheme theme, float scale)
     {
-        var faceCard = GroupCard.Begin(theme, 3);
+        var faceCard = GroupCard.Begin(theme, 4);
         var wallpaper = SettingsRow.Bool(faceCard.NextRow(), Loc.T(L.Minimized.Wallpaper),
             configuration.MinimizedWallpaper, theme, "minimized.wallpaper");
         DrawPartToggle(faceCard.NextRow(), MinimizedPart.Clock, theme);
         DrawPartToggle(faceCard.NextRow(), MinimizedPart.Date, theme);
+        DrawPartToggle(faceCard.NextRow(), MinimizedPart.Fps, theme);
         faceCard.End();
         if (wallpaper != configuration.MinimizedWallpaper)
         {

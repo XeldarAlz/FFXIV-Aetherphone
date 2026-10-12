@@ -17,6 +17,7 @@ internal sealed partial class AethergramApp
     {
         Settings,
         Saved,
+        Liked,
         Archive,
         FollowRequests,
         Encryption,
@@ -43,7 +44,7 @@ internal sealed partial class AethergramApp
     private const float ProfileEmptyHeight = 250f;
     private const float ProfileCreateWidth = 132f;
     private const float PrivateLockRadius = 26f;
-    private const int ProfileMenuMaxItems = 7;
+    private const int ProfileMenuMaxItems = 8;
     private const int ProfileTabCount = 2;
 
     private static readonly TextStyle OwnProfileTitleStyle = TextStyles.Title3;
@@ -198,7 +199,7 @@ internal sealed partial class AethergramApp
             }
 
             DrawPostGrid(store.TaggedPosts, L.PhotoTag.NoTagged, store.HasMoreTagged, store.TaggedLoadingMore,
-                store.LoadMoreTaggedPosts, SquareGrid, PostSource.Tagged);
+                SquareGrid, PostSource.Tagged);
         }
     }
 
@@ -530,7 +531,7 @@ internal sealed partial class AethergramApp
         if (posts.Length > 0 || !user.IsMe || store.ProfileLoading)
         {
             DrawPostGrid(posts, L.Aethergram.Empty, store.HasMoreProfilePosts, store.ProfileLoadingMore,
-                store.LoadMoreProfilePosts, SquareGrid, PostSource.Profile);
+                SquareGrid, PostSource.Profile);
             return;
         }
 
@@ -600,37 +601,24 @@ internal sealed partial class AethergramApp
         router.Push(AethergramRoute.Archive);
     }
 
-    private void DrawArchive(Rect area)
+    private void DrawArchive(Rect area) =>
+        DrawPostGridScreen(area, PostSource.Archive, L.Social.ArchiveEmpty, L.Social.ArchiveEmptyHint);
+
+    private void OpenLiked()
     {
-        var scale = UiScale.Current;
-        DrawScreenHeader(area, Loc.T(L.Social.ArchiveTitle));
-        var listRect = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-        var posts = store.ArchivedPosts;
-        using (AppSurface.BeginEdgeToEdge(listRect))
-        {
-            if (posts.Length > 0)
-            {
-                ImGui.Dummy(new Vector2(0f, 2f * scale));
-                DrawPostGrid(posts, L.Social.ArchiveEmpty, store.HasMoreArchived, store.ArchivedLoadingMore,
-                    store.LoadMoreArchived, SquareGrid, PostSource.Archive);
-                return;
-            }
-
-            if (store.ArchivedLoading)
-            {
-                DrawEmptyState(listRect, Loc.T(L.Common.Loading), string.Empty);
-                return;
-            }
-
-            DrawEmptyState(listRect, Loc.T(L.Social.ArchiveEmpty), Loc.T(L.Social.ArchiveEmptyHint));
-        }
+        store.RefreshLiked();
+        router.Push(AethergramRoute.Liked);
     }
+
+    private void DrawLiked(Rect area) =>
+        DrawPostGridScreen(area, PostSource.Liked, L.Social.LikedEmpty, L.Social.LikedEmptyHint);
 
     private void OpenProfileMenu()
     {
         profileMenuCount = 0;
         AddProfileMenuItem(Loc.T(L.Aethergram.Settings), ProfileMenuAction.Settings);
         AddProfileMenuItem(Loc.T(L.Aethergram.SavedTitle), ProfileMenuAction.Saved);
+        AddProfileMenuItem(Loc.T(L.Social.LikedTitle), ProfileMenuAction.Liked);
         AddProfileMenuItem(Loc.T(L.Social.ArchiveTitle), ProfileMenuAction.Archive);
         AddProfileMenuItem(Loc.T(L.Social.BadgeProgress), ProfileMenuAction.BadgeProgress);
         var pending = store.PendingFollowRequestCount;
@@ -669,6 +657,9 @@ internal sealed partial class AethergramApp
                 break;
             case ProfileMenuAction.Saved:
                 OpenSaved();
+                break;
+            case ProfileMenuAction.Liked:
+                OpenLiked();
                 break;
             case ProfileMenuAction.Archive:
                 OpenArchive();

@@ -1,0 +1,57 @@
+# Keeps the community server's staff roles (moderator, developer, designer, tester) in step with the
+# staff server: a community member holds a mapped role only while the same account holds the matching
+# role on the staff server. docs/testing-and-release.md, section "Staff role sync", explains the map,
+# the dry run, the arming secret and the removal brake. It lives in this repository, like uptime.yml,
+# because public repositories get free Actions minutes; the ids and the map are secrets because the
+# logs are public.
+
+name: Staff role sync
+
+# GitHub runs this repository's schedules only every few hours whatever the cron says (uptime.yml's
+# five-minute cron fires four to five times a day), so the sync also runs on every push to dev and
+# on a repository_dispatch poke, which an external timer can send at a real cadence. The script treats
+# all three like a schedule: it applies only while DISCORD_ROLE_SYNC_ARMED is true.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  push:
+    branches: [dev]
+  repository_dispatch:
+    types: [staff-role-sync]
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Apply the changes (off: dry run, the report channel lists what would change)"
+        type: boolean
+        default: false
+      force:
+        description: "Apply even when the removal brake trips"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Sync roles
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the script
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      - name: Reconcile the community roles against the staff server
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_STAFF_GUILD_ID: ${{ secrets.DISCORD_STAFF_GUILD_ID }}
+          DISCORD_COMMUNITY_GUILD_ID: ${{ secrets.DISCORD_COMMUNITY_GUILD_ID }}
+          DISCORD_ROLE_SYNC_MAP: ${{ secrets.DISCORD_ROLE_SYNC_MAP }}
+          DISCORD_ROLE_SYNC_REPORT_CHANNEL_ID: ${{ secrets.DISCORD_ROLE_SYNC_REPORT_CHANNEL_ID }}
+          DISCORD_ROLE_SYNC_ARMED: ${{ secrets.DISCORD_ROLE_SYNC_ARMED }}
+          SYNC_APPLY: ${{ inputs.apply }}
+          SYNC_FORCE: ${{ inputs.force }}
+        run: node .github/scripts/staff-role-sync.mjs

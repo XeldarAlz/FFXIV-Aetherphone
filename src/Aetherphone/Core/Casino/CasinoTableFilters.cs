@@ -68,7 +68,8 @@ internal static class CasinoTableFilters
     {
         return string.Equals(row.GameKind, CasinoWire.BlackjackKind, StringComparison.Ordinal)
             || string.Equals(row.GameKind, HoldemKind, StringComparison.Ordinal)
-            || VenueKinds.IsVenue(row.GameKind);
+            || VenueKinds.IsVenue(row.GameKind)
+            || CasinoBookRules.IsBook(row.GameKind);
     }
 
     public static bool Matches(CasinoTableFilter filter, CasinoTableRowDto row, string myUserId)
@@ -117,6 +118,26 @@ internal static class CasinoTableFilters
         for (var index = 0; index < rows.Length; index++)
         {
             if (string.Equals(rows[index].GameKind, gameKind, StringComparison.Ordinal))
+            {
+                kept[next++] = rows[index];
+            }
+        }
+
+        return kept;
+    }
+
+    public static CasinoTableRowDto[] Without(CasinoTableRowDto[] rows, string tableId)
+    {
+        if (tableId.Length == 0 || !Contains(rows, tableId))
+        {
+            return rows;
+        }
+
+        var kept = new CasinoTableRowDto[rows.Length - 1];
+        var next = 0;
+        for (var index = 0; index < rows.Length; index++)
+        {
+            if (!string.Equals(rows[index].TableId, tableId, StringComparison.Ordinal))
             {
                 kept[next++] = rows[index];
             }
@@ -198,5 +219,10 @@ internal static class CasinoTableFilters
     {
         var watching = row.Occupancy - row.SeatedCount;
         return watching > 0 ? watching : 0;
+    }
+
+    public static int PlayersOf(CasinoTableRowDto row)
+    {
+        return VenueKinds.IsVenue(row.GameKind) ? row.Occupancy : row.SeatedCount;
     }
 }

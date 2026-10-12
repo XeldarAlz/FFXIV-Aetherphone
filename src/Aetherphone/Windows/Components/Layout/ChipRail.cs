@@ -181,7 +181,8 @@ internal sealed class ChipRail
         Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
         var labelInk = active ? White : ink.Ink;
         var fitted = Typography.FitText(label, MathF.Max(1f, LabelRoom(rect)), LabelStyle);
-        Typography.DrawCentered(drawList, rect.Center, fitted, labelInk, LabelStyle);
+        var fittedSize = Typography.Measure(fitted, LabelStyle);
+        Typography.Draw(drawList, rect.Center - fittedSize * 0.5f, fitted, labelInk, LabelStyle);
         if (highlighted)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

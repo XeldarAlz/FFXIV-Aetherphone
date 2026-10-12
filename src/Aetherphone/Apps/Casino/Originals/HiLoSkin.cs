@@ -268,6 +268,8 @@ internal sealed class HiLoSkin : IOriginalsSkin
     {
     }
 
+    public long UnshownPayout => chain.UnshownPayout;
+
     public bool TakeSettled(out OriginalsOutcome outcome) => chain.TakeSettled(out outcome);
 
     public bool TakeNotice(out LocString message)

@@ -272,6 +272,17 @@ internal sealed class RaffleRoom
 
         var held = MyTickets(live, room.Me);
         var maxed = held >= live.TicketsPerPerson;
+        if (room.Owner && room.Gil)
+        {
+            VenueArt.DeckCaption(drawList, deck, Loc.T(L.Tables.ReasonHostTicket), scale);
+            if (room.Stage.PrimaryAction(Loc.T(L.Venue.DrawNow), room.Enabled, room.Ui.Ink))
+            {
+                act(new VenueActDraft(VenueActions.RaffleDraw));
+            }
+
+            return;
+        }
+
         var caption = room.Gil && live.TicketPrice > 0
             ? texts.Number(L.Venue.TicketPriceGil, live.TicketPrice)
             : Loc.T(L.Venue.RaffleFree);

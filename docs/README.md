@@ -82,7 +82,7 @@ Two docs keep their own format without the standard sections: [accent colors](de
 
 | Doc | What it covers |
 | --- | --- |
-| [Testing, CI, and releases](testing-and-release.md) | The test project, the pull request workflows, the tag-and-release pipeline, and the changelog system |
+| [Testing, CI, and releases](testing-and-release.md) | The test project, the pull request workflows, the tag-and-release pipeline, the changelog system, and the Discord hooks (announcements, the pull request forum, the staff role sync) |
 
 ### Reference
 

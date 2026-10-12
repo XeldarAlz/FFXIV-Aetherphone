@@ -181,7 +181,6 @@ internal sealed class ShellOverlayCoordinator
 
         if (state.SetupActive)
         {
-            HoverTooltip.Flush();
             ShellToast.Draw(screen, theme);
             banOverlay.Draw(screen, theme);
             confirmOverlay.Draw(screen, theme);
@@ -242,8 +241,7 @@ internal sealed class ShellOverlayCoordinator
             !banOverlay.IsActive && navigation.Current?.Id != "camera" && !landscapeHeld &&
             !appSwitcher.IsActive,
             !director.CapturesPointer);
-            
-        HoverTooltip.Flush();
+
         ShellToast.Draw(screen, theme);
         shareSheet.Draw(screen, theme);
         reportOverlay.Draw(screen, theme);

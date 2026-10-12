@@ -2,7 +2,9 @@ using Aetherphone.Core;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Photos;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Wallpapers;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
@@ -38,6 +40,9 @@ internal struct ChatComposerModel
     public Action<string, string, string?> OnSendText;
     public Action<string, string, string> OnEditText;
     public Action<string, byte[], int> OnSendVoice;
+    public Action<string, string, string> OnSendImage;
+    public PhotoLibrary? Library;
+    public WallpaperImageCache? Thumbnails;
 }
 
 internal sealed class ChatComposer : IDisposable
@@ -45,6 +50,7 @@ internal sealed class ChatComposer : IDisposable
     private const int TextKind = 0;
     private const int MaxLines = 6;
     private const float AccessoryBarHeight = 46f;
+    private const float ImageBarHeight = 64f;
     private const float BarHeight = 56f;
     private const float PillComposerHeight = 66f;
     private const float PillEdgePad = 10f;
@@ -82,6 +88,8 @@ internal sealed class ChatComposer : IDisposable
     private readonly DropdownMenu attachMenu = new();
     private readonly DropdownMenu.Item[] attachItems = new DropdownMenu.Item[2];
     private readonly SoftWrapEditor editor = new();
+    private readonly ImageIntake intake = new();
+    private string? pendingImage;
     private float fieldGrowth;
     private bool focus;
     private bool emojiOpen;
@@ -107,9 +115,15 @@ internal sealed class ChatComposer : IDisposable
 
     public bool Recording => recorder.Recording;
 
-    public float AccessoryHeight => replyTargetId is not null || editTargetId is not null
+    public float AccessoryHeight => TargetBarHeight + ImageStripHeight;
+
+    private float TargetBarHeight => replyTargetId is not null || editTargetId is not null
         ? AccessoryBarHeight * UiScale.Current
         : 0f;
+
+    private float ImageStripHeight => pendingImage is not null ? ImageBarHeight * UiScale.Current : 0f;
+
+    private bool ReadyToSend => editor.HasContent || pendingImage is not null;
 
     private static float Height(ChatComposerStyle style) => style switch
     {
@@ -138,6 +152,7 @@ internal sealed class ChatComposer : IDisposable
     public void BeginEdit(string messageId, string body)
     {
         ClearReply();
+        pendingImage = null;
         editTargetId = messageId;
         editBarPreview = ChatText.QuotePreview(body, TextKind);
         editor.Adopt(body);
@@ -168,6 +183,32 @@ internal sealed class ChatComposer : IDisposable
         replyBarName = string.Empty;
         replyBarPreview = string.Empty;
         editTargetId = null;
+        pendingImage = null;
+        intake.Discard();
+    }
+
+    public bool OfferPaste(ref Rect importRect, out Rect pasteRect) =>
+        intake.OfferPaste(ref importRect, out pasteRect);
+
+    public void PasteImage(PhotoLibrary library) => intake.Paste(library);
+
+    public void AcceptImageDrop(PhotoLibrary library, Vector4 highlight) => intake.AcceptDrop(library, highlight);
+
+    public void AttachImage(string path)
+    {
+        if (editTargetId is not null)
+        {
+            return;
+        }
+
+        if (GifMedia.IsGif(path) && !GifMedia.FitsSizeCap(path))
+        {
+            ShellToast.Show(Loc.T(L.Common.GifTooLarge));
+            return;
+        }
+
+        pendingImage = path;
+        focus = true;
     }
 
     public void Clear()
@@ -194,7 +235,20 @@ internal sealed class ChatComposer : IDisposable
 
     public void Draw(Rect composerRect, in ChatComposerModel model)
     {
-        var accessory = AccessoryHeight;
+        if (intake.TryTake(out var taken))
+        {
+            AttachImage(taken);
+            intake.Discard();
+        }
+
+        if (pendingImage is { } image)
+        {
+            var stripTop = composerRect.Min.Y - AccessoryHeight;
+            DrawImageBar(new Rect(new Vector2(composerRect.Min.X, stripTop),
+                new Vector2(composerRect.Max.X, stripTop + ImageStripHeight)), image, model);
+        }
+
+        var accessory = TargetBarHeight;
         if (accessory > 0f)
         {
             var barRect = new Rect(new Vector2(composerRect.Min.X, composerRect.Min.Y - accessory),
@@ -264,6 +318,16 @@ internal sealed class ChatComposer : IDisposable
         using (ImRaii.PushColor(ImGuiCol.Text, model.Ui.Theme.TextStrong))
         {
             submitted = editor.Draw("##chatComposerInput", new Vector2(fieldWidth, fieldHeight), model.MaxLength, 0);
+        }
+
+        if (model.CanImage && editTargetId is null && model.Library is { } library)
+        {
+            if (ImGui.IsItemActive() && ImageIntake.PasteRequested())
+            {
+                intake.Paste(library);
+            }
+
+            intake.AcceptDrop(library, model.Ui.Accent);
         }
 
         if (editor.Text.Length == 0)
@@ -341,7 +405,7 @@ internal sealed class ChatComposer : IDisposable
         var textLeft = pillMin.X + PlusTextPad * scale;
         var textRight = emojiCenter.X - emojiRadius - 4f * scale;
         var submitted = DrawField(new Rect(pillMin, pillMax), textLeft, textRight, model);
-        var hasDraft = editor.HasContent;
+        var hasDraft = ReadyToSend;
         var canSend = hasDraft && !model.Sending;
         var sendExtent = new Vector2(sendRadius, sendRadius);
         var sendRect = new Rect(sendCenter - sendExtent, sendCenter + sendExtent);
@@ -568,7 +632,7 @@ internal sealed class ChatComposer : IDisposable
 
         var textLeft = emojiMax.X + 4f * scale;
         var submitted = DrawField(new Rect(pillMin, pillMax), textLeft, textRight, model);
-        var hasDraft = editor.HasContent;
+        var hasDraft = ReadyToSend;
         var canSend = hasDraft && !model.Sending;
         var sendRect = new Rect(sendCenter - new Vector2(buttonRadius, buttonRadius),
             sendCenter + new Vector2(buttonRadius, buttonRadius));
@@ -653,7 +717,7 @@ internal sealed class ChatComposer : IDisposable
         }
 
         var idleInk = Palette.WithAlpha(theme.TextStrong, PillIdleAlpha);
-        var hasDraft = editor.HasContent;
+        var hasDraft = ReadyToSend;
         var submitted = false;
         var rightEdge = pill.Max.X - PillIconEdge * scale;
         if (hasDraft)
@@ -710,7 +774,7 @@ internal sealed class ChatComposer : IDisposable
         var textRight = rightEdge - PillTextGap * scale;
         submitted |= DrawField(pill, textLeft, textRight, model);
 
-        if (submitted && editor.HasContent && !model.Sending)
+        if (submitted && ReadyToSend && !model.Sending)
         {
             Submit(model);
         }
@@ -756,7 +820,7 @@ internal sealed class ChatComposer : IDisposable
     private void Submit(in ChatComposerModel model)
     {
         var body = editor.Text.Trim();
-        if (body.Length == 0)
+        if (body.Length == 0 && pendingImage is null)
         {
             return;
         }
@@ -765,6 +829,14 @@ internal sealed class ChatComposer : IDisposable
         {
             model.OnEditText(model.ConversationId, editId, body);
             ClearEdit();
+        }
+        else if (pendingImage is { } image)
+        {
+            model.OnSendImage(model.ConversationId, image, body);
+            UiFeedback.Play(UiSound.MessageSent);
+            pendingImage = null;
+            editor.Adopt(string.Empty);
+            ClearReply();
         }
         else
         {
@@ -889,6 +961,45 @@ internal sealed class ChatComposer : IDisposable
             || (model.CanHandleEscape && ImGui.IsKeyPressed(ImGuiKey.Escape)))
         {
             ClearReply();
+        }
+    }
+
+    private void DrawImageBar(Rect area, string path, in ChatComposerModel model)
+    {
+        var ui = model.Ui;
+        var theme = ui.Theme;
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(BarFill));
+        drawList.AddLine(area.Min, new Vector2(area.Max.X, area.Min.Y), ImGui.GetColorU32(theme.Separator), 1f);
+        var pad = Metrics.Space.Sm * scale;
+        var tile = area.Height - pad * 2f;
+        var min = new Vector2(area.Min.X + 14f * scale, area.Min.Y + pad);
+        var max = min + new Vector2(tile, tile);
+        var rounding = Metrics.Radius.Sm * scale;
+        var texture = model.Thumbnails?.Get(path);
+        if (texture is null)
+        {
+            Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(theme.SurfaceMuted));
+        }
+        else
+        {
+            var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
+            drawList.AddImageRounded(texture.Handle, min, max, uv0, uv1, 0xFFFFFFFFu, rounding,
+                ImDrawFlags.RoundCornersAll);
+        }
+
+        if (GifMedia.IsGif(path))
+        {
+            GifBadge.Draw(drawList, new Rect(min, max));
+        }
+
+        var closeRadius = 13f * scale;
+        var closeCenter = new Vector2(area.Max.X - 14f * scale - closeRadius, area.Center.Y);
+        if (ui.IconButton(closeCenter, closeRadius, IconGlyph.Of(FontAwesomeIcon.Times), ui.MutedInk,
+                AppSkin.Transparent, 0.9f, Loc.T(L.Common.Cancel)))
+        {
+            pendingImage = null;
         }
     }
 

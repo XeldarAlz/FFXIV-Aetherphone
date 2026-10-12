@@ -45,6 +45,7 @@ internal sealed class CasinoFloorStore : IDisposable
     private long challengesServerSkewSeconds;
     private bool watching;
     private int epoch;
+    private int fameGeneration;
     private string? lastAccountId;
 
     public CasinoFloorStore(AethernetSession session, CasinoClient casino, CasinoStore chips, RealtimeSignalBus signals)
@@ -204,11 +205,12 @@ internal sealed class CasinoFloorStore : IDisposable
 
     private void LoadFame(string board, string span, int slot)
     {
+        var generation = Volatile.Read(ref fameGeneration);
         work.Run("fame", async token =>
         {
             var answer = await casino.FameAsync(board, span, CasinoFloorRules.FameDefaultLimit, token)
                 .ConfigureAwait(false);
-            if (answer is null)
+            if (answer is null || generation != Volatile.Read(ref fameGeneration))
             {
                 return;
             }
@@ -216,6 +218,24 @@ internal sealed class CasinoFloorStore : IDisposable
             Volatile.Write(ref fame[slot], answer);
             Interlocked.Exchange(ref fameLoadedAt[slot], Environment.TickCount64);
         }, () => Interlocked.Exchange(ref fameFetching[slot], 0));
+    }
+
+    public void RefreshFame() => ExpireFame(false);
+
+    public void ResetFame() => ExpireFame(true);
+
+    private void ExpireFame(bool forget)
+    {
+        Interlocked.Increment(ref fameGeneration);
+        for (var index = 0; index < fame.Length; index++)
+        {
+            if (forget)
+            {
+                Volatile.Write(ref fame[index], null);
+            }
+
+            Interlocked.Exchange(ref fameLoadedAt[index], 0);
+        }
     }
 
     public void EnsureFeed(string tab)
@@ -542,12 +562,7 @@ internal sealed class CasinoFloorStore : IDisposable
         Interlocked.Exchange(ref missionClaim, null);
         Interlocked.Exchange(ref completedMission, string.Empty);
         Interlocked.Exchange(ref rainAmount, 0);
-        for (var index = 0; index < fame.Length; index++)
-        {
-            Volatile.Write(ref fame[index], null);
-            Interlocked.Exchange(ref fameLoadedAt[index], 0);
-        }
-
+        ResetFame();
         for (var index = 0; index < feeds.Length; index++)
         {
             Volatile.Write(ref feeds[index], null);

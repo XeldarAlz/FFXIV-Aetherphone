@@ -40,6 +40,7 @@ internal sealed class CasinoVenueStore : IDisposable
     private volatile CasinoVenueActDto? actAnswer;
     private volatile CasinoTableRowDto[] nearby = Array.Empty<CasinoTableRowDto>();
     private volatile CasinoStakeOutcome? hostOutcome;
+    private volatile CasinoStakeOutcome? tradeOutcome;
     private volatile bool actInFlight;
     private volatile bool hostInFlight;
     private CasinoRoomState? absorbedState;
@@ -102,6 +103,11 @@ internal sealed class CasinoVenueStore : IDisposable
     public CasinoStakeOutcome? TakeHostOutcome()
     {
         return Interlocked.Exchange(ref hostOutcome, null);
+    }
+
+    public CasinoStakeOutcome? TakeTradeOutcome()
+    {
+        return Interlocked.Exchange(ref tradeOutcome, null);
     }
 
     public VenueRoomView? ViewFor(string roomId)
@@ -217,7 +223,7 @@ internal sealed class CasinoVenueStore : IDisposable
             work.Run("trade confirm", async token =>
             {
                 var answer = await casino.ConfirmLedgerEntryAsync(entryId, token).ConfigureAwait(false);
-                FinishLedger(tableId, answer);
+                FinishTrade(tableId, answer);
             }, () => hostInFlight = false);
             return;
         }
@@ -227,7 +233,7 @@ internal sealed class CasinoVenueStore : IDisposable
         work.Run("trade propose", async token =>
         {
             var answer = await casino.ProposeLedgerEntryAsync(tableId, request, token).ConfigureAwait(false);
-            FinishLedger(tableId, answer);
+            FinishTrade(tableId, answer);
         }, () => hostInFlight = false);
     }
 
@@ -376,9 +382,9 @@ internal sealed class CasinoVenueStore : IDisposable
         }, () => hostInFlight = false);
     }
 
-    private void FinishLedger(string tableId, CasinoLedgerResultDto? answer)
+    private void FinishTrade(string tableId, CasinoLedgerResultDto? answer)
     {
-        Interlocked.Exchange(ref hostOutcome, answer is null
+        Interlocked.Exchange(ref tradeOutcome, answer is null
             ? new CasinoStakeOutcome(false, CasinoReasons.Unreachable)
             : new CasinoStakeOutcome(answer.Granted, CasinoTablesStore.Named(answer.Reason)));
         tables.RefreshLedgerNow(tableId);
@@ -420,6 +426,7 @@ internal sealed class CasinoVenueStore : IDisposable
         nearbyFor = null;
         Interlocked.Exchange(ref actAnswer, null);
         Interlocked.Exchange(ref hostOutcome, null);
+        Interlocked.Exchange(ref tradeOutcome, null);
         Interlocked.Exchange(ref nearbyAtTick, 0);
         lock (intentGate)
         {

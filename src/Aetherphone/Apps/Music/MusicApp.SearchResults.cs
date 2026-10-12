@@ -305,7 +305,7 @@ internal sealed partial class MusicApp
         var title = Loc.T(L.Music.SourceSearch);
         for (var index = 0; index < count; index++)
         {
-            var action = SongRow.Draw(kit, songs[index]);
+            var action = SongRow.Draw(kit, songs[index], SearchContext, index);
             if (action == SongRowAction.Play)
             {
                 PlayFrom(songs, index, SearchContext, title);
@@ -558,7 +558,7 @@ internal sealed partial class MusicApp
         var title = Loc.T(L.Music.Search.FromLibrary);
         for (var index = 0; index < songCount; index++)
         {
-            var action = SongRow.Draw(kit, libraryMatches[index]);
+            var action = SongRow.Draw(kit, libraryMatches[index], SearchLibraryContext, index);
             if (action == SongRowAction.Play)
             {
                 PlayFrom(libraryMatches, index, SearchLibraryContext, title);

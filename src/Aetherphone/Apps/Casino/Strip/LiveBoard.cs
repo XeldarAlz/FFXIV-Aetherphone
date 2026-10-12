@@ -87,6 +87,11 @@ internal static class LiveBoard
             return CasinoGames.Holdem;
         }
 
+        if (CasinoBookRules.IsBook(gameKind))
+        {
+            return CasinoGames.Book;
+        }
+
         return VenueKinds.IsVenue(gameKind)
             ? Venue.VenueCabinet.GameIdOf(VenueKinds.Of(gameKind))
             : CasinoGames.Blackjack;
@@ -159,7 +164,7 @@ internal static class LiveBoard
         for (var index = 0; index < rows.Length && count < into.Length; index++)
         {
             var row = rows[index];
-            if (!CasinoTableFilters.Shown(row) || HouseBlackjack.Is(row)
+            if (!CasinoTableFilters.Shown(row) || HouseBlackjack.Is(row) || CasinoBookRules.IsBook(row.GameKind)
                 || !CasinoGameGate.RoomOpen(features, row.GameKind) || Contains(into, count, row.TableId))
             {
                 continue;

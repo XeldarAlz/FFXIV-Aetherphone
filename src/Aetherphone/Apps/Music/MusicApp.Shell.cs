@@ -322,7 +322,7 @@ internal sealed partial class MusicApp
     {
         for (var index = 0; index < songs.Length; index++)
         {
-            var action = SongRow.Draw(kit, songs[index]);
+            var action = SongRow.Draw(kit, songs[index], contextId, index);
             if (action == SongRowAction.Play)
             {
                 PlayFrom(songs, index, contextId, contextTitle);

@@ -1,3 +1,4 @@
+using Aetherphone.Apps.Casino.Stage;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
@@ -14,6 +15,9 @@ internal static class BlackjackTableArt
     private const float ChipDiscStep = 4.2f;
     private const float PlateDiscRadius = 6.5f;
     private const float FlightDiscRadius = 7.5f;
+    private const float OutcomeBadgeStrokeAlpha = 0.8f;
+
+    public static readonly Vector4 OutcomeBadgeFill = StageText.CapsuleFill with { W = 0.92f };
 
     private static readonly Vector4 PlateFill = new(0f, 0f, 0f, 0.42f);
     private static readonly Vector4 DiscShadow = new(0f, 0f, 0f, 0.30f);
@@ -71,9 +75,10 @@ internal static class BlackjackTableArt
         var max = bubble.Apply(center + half);
         var rounding = (max.Y - min.Y) * 0.5f;
         Squircle.Fill(drawList, min, max, rounding,
-            ImGui.GetColorU32(Palette.WithAlpha(tint, 0.22f * bubble.Alpha)));
+            ImGui.GetColorU32(Palette.WithAlpha(OutcomeBadgeFill, OutcomeBadgeFill.W * bubble.Alpha)));
         Squircle.Stroke(drawList, min, max, rounding,
-            ImGui.GetColorU32(Palette.WithAlpha(tint, 0.55f * bubble.Alpha)), Metrics.Stroke.Hairline * scale);
+            ImGui.GetColorU32(Palette.WithAlpha(tint, OutcomeBadgeStrokeAlpha * bubble.Alpha)),
+            Metrics.Stroke.Hairline * scale);
         Typography.DrawCentered(drawList, (min + max) * 0.5f, label, Palette.WithAlpha(ink, bubble.Alpha),
             TextStyles.FootnoteEmphasized);
     }

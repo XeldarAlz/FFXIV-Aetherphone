@@ -30,6 +30,7 @@ internal sealed class CasinoRoomsStore : IDisposable
     private readonly StoreWork work = new("CasinoRooms");
     private readonly object stakeGate = new();
     private readonly Action<int> roomStatusSink;
+    private readonly Action<int> doorStatusSink;
 
     private volatile CasinoRoomListItemDto[] rooms = Array.Empty<CasinoRoomListItemDto>();
     private volatile CasinoWheelBetsDto? wheelBets;
@@ -65,6 +66,7 @@ internal sealed class CasinoRoomsStore : IDisposable
     private int fetchingRoomState;
     private int fetchingPersonal;
     private int roomGoneStatus;
+    private int doorGoneStatus;
     private long roomsAttemptedAtTick;
     private long roomAttemptedAtTick;
     private long personalAttemptedAtTick;
@@ -81,6 +83,7 @@ internal sealed class CasinoRoomsStore : IDisposable
         roomCadence = new PollCadence(visibility, ForegroundRoomPollInterval, BackgroundRoomPollInterval);
         room = new CasinoRoomSession(signals);
         roomStatusSink = OnRoomStatus;
+        doorStatusSink = OnDoorStatus;
         session.Changed += OnSessionChanged;
         signals.CasinoReceived += OnCasinoSignal;
         signals.ConnectedChanged += OnRealtimeConnected;
@@ -455,6 +458,11 @@ internal sealed class CasinoRoomsStore : IDisposable
             Interlocked.Exchange(ref stakeResult, new CasinoStakeOutcome(result.Granted, result.Reason));
             if (!result.Granted)
             {
+                lock (stakeGate)
+                {
+                    chipRoundId = RoundAfterRefusal(chipRoundId, clientRoundId);
+                }
+
                 chips.RefreshNow();
                 InvalidatePersonal();
                 return;
@@ -468,6 +476,9 @@ internal sealed class CasinoRoomsStore : IDisposable
             InvalidatePersonal();
         }, () => stakeInFlight = false);
     }
+
+    internal static string RoundAfterRefusal(string heldRoundId, string refusedRoundId) =>
+        string.Equals(heldRoundId, refusedRoundId, StringComparison.Ordinal) ? string.Empty : heldRoundId;
 
     public void SendBlackjackAction(int action)
     {
@@ -703,6 +714,11 @@ internal sealed class CasinoRoomsStore : IDisposable
         }
 
         SyncPersonal();
+        if (signals.RealtimeActive)
+        {
+            room.RetryAttach(Environment.TickCount64);
+        }
+
         var nowUtc = DateTime.UtcNow;
         if (signals.RealtimeActive && room.Attached && !room.AwaitingSnapshot)
         {
@@ -862,6 +878,36 @@ internal sealed class CasinoRoomsStore : IDisposable
         }
     }
 
+    private void OnDoorStatus(int statusCode)
+    {
+        if (statusCode == NotFoundStatus)
+        {
+            Interlocked.Exchange(ref doorGoneStatus, 1);
+        }
+    }
+
+    internal static string DoorReason(CasinoTableRowDto? card, bool cardGone)
+    {
+        if (card is null)
+        {
+            return cardGone ? CasinoReasons.Ended : string.Empty;
+        }
+
+        if (card.Admitted)
+        {
+            return string.Empty;
+        }
+
+        return card.Reason.Length > 0 ? card.Reason : CasinoReasons.Ended;
+    }
+
+    private async Task<string> DoorReasonAsync(string target, CancellationToken token)
+    {
+        Interlocked.Exchange(ref doorGoneStatus, 0);
+        var card = await casino.TableAsync(target, doorStatusSink, token).ConfigureAwait(false);
+        return DoorReason(card, Interlocked.Exchange(ref doorGoneStatus, 0) != 0);
+    }
+
     private void RefreshRoomState()
     {
         var target = room.RoomId;
@@ -879,10 +925,16 @@ internal sealed class CasinoRoomsStore : IDisposable
             var fresh = await casino.RoomStateAsync(target, roomStatusSink, token).ConfigureAwait(false);
             if (fresh is null)
             {
-                if (Interlocked.Exchange(ref roomGoneStatus, 0) != 0)
+                if (Interlocked.Exchange(ref roomGoneStatus, 0) == 0)
                 {
-                    Interlocked.Exchange(ref roomAttemptedAtTick, 0);
-                    room.CloseFromHttp(target, CasinoReasons.Ended);
+                    return;
+                }
+
+                Interlocked.Exchange(ref roomAttemptedAtTick, 0);
+                var reason = await DoorReasonAsync(target, token).ConfigureAwait(false);
+                if (reason.Length > 0)
+                {
+                    room.CloseFromHttp(target, reason);
                 }
 
                 return;

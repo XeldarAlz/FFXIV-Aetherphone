@@ -130,10 +130,12 @@ internal sealed class PhoneServices : IDisposable
     public required Casino.HoldemStore Holdem { get; init; }
     public required Casino.CasinoSpinStore CasinoSpin { get; init; }
     public required Casino.CasinoTurnNotifier CasinoTurns { get; init; }
+    public required Casino.CasinoKnockNotifier CasinoKnocks { get; init; }
     public required Casino.CasinoVenueStore CasinoVenue { get; init; }
     public required Casino.CasinoTradeSync CasinoTrade { get; init; }
     public required Casino.CasinoLauncher CasinoLauncher { get; init; }
     public required Casino.CasinoFloorStore CasinoFloor { get; init; }
+    public required Casino.CasinoFameChoiceStore CasinoFameChoice { get; init; }
     public required Games.GameRoomsStore GameRooms { get; init; }
     public required Games.LeaderboardStore Leaderboard { get; init; }
     public required Video.AetherStreamLauncher AetherStreamLauncher { get; init; }
@@ -422,10 +424,14 @@ internal sealed class PhoneServices : IDisposable
         var holdem = new Casino.HoldemStore(aethernetSession, casinoApi.Casino, casino);
         var casinoTurns = new Casino.CasinoTurnNotifier(aethernetSession, casinoRooms, notifications,
             Apps.AppAccents.For("casino"));
+        var casinoKnocks = new Casino.CasinoKnockNotifier(aethernetSession, casinoApi.Casino, casinoTables,
+            notifications, Apps.AppAccents.For("casino"));
         var casinoVenue = new Casino.CasinoVenueStore(aethernetSession, casinoApi.Casino, casinoApi.Safety, casinoRooms,
             casinoTables, new Casino.HousingPositionReader(), Aetherphone.Core.Maps.LocationShare.WorldName);
         var casinoTrade = new Casino.CasinoTradeSync(configuration, aethernetSession, new Casino.TradeWindowReader(),
-            casinoRooms, casinoTables, casinoVenue, notifications, Apps.AppAccents.For("casino"));
+            casinoApi.Casino, casinoRooms, casinoTables, casinoVenue, casino, notifications,
+            Apps.AppAccents.For("casino"));
+        var casinoFloor = new Casino.CasinoFloorStore(aethernetSession, casinoApi.Casino, casino, realtimeSignals);
         var gameRooms = new Games.GameRoomsStore(aethernetSession, aethernet.Games, visibility,
             realtimeSignals);
         var leaderboard = new Games.LeaderboardStore(configuration, aethernetSession, aethernet.Scores,
@@ -538,10 +544,13 @@ internal sealed class PhoneServices : IDisposable
             Holdem = holdem,
             CasinoSpin = casinoSpin,
             CasinoTurns = casinoTurns,
+            CasinoKnocks = casinoKnocks,
             CasinoVenue = casinoVenue,
             CasinoTrade = casinoTrade,
             CasinoLauncher = new Casino.CasinoLauncher(),
-            CasinoFloor = new Casino.CasinoFloorStore(aethernetSession, casinoApi.Casino, casino, realtimeSignals),
+            CasinoFloor = casinoFloor,
+            CasinoFameChoice = new Casino.CasinoFameChoiceStore(configuration, aethernetSession, casinoApi.Casino,
+                casino, casinoFloor),
             GameRooms = gameRooms,
             Leaderboard = leaderboard,
             AetherStreamLauncher = new Video.AetherStreamLauncher(),
@@ -717,9 +726,11 @@ internal sealed class PhoneServices : IDisposable
         MoogleClicker.Dispose();
         Leaderboard.Dispose();
         GameRooms.Dispose();
+        CasinoFameChoice.Dispose();
         CasinoFloor.Dispose();
         CasinoTrade.Dispose();
         CasinoVenue.Dispose();
+        CasinoKnocks.Dispose();
         CasinoTurns.Dispose();
         Holdem.Dispose();
         CasinoTables.Dispose();

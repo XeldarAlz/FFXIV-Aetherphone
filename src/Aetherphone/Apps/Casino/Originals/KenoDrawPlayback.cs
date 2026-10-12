@@ -163,6 +163,8 @@ internal sealed class KenoDrawPlayback
         return Math.Clamp((elapsed - start) / PopSeconds, 0f, 1f);
     }
 
+    public long UnshownPayout => settlePending ? outcome.Payout : 0;
+
     public bool TakeSettled(out OriginalsOutcome settled)
     {
         settled = default;
