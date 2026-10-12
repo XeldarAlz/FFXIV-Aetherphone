@@ -63,8 +63,8 @@ internal static class ArrowKeyCapture
 
         var keyState = Plugin.KeyState;
         var pressed = keyState[VirtualKey.DOWN] ? 1 : keyState[VirtualKey.UP] ? -1 : 0;
-        keyState[VirtualKey.UP] = false;
-        keyState[VirtualKey.DOWN] = false;
+        GameKeys.Swallow(VirtualKey.UP);
+        GameKeys.Swallow(VirtualKey.DOWN);
         if (pressed != 0 && pressed != heldDirection)
         {
             pending = pressed;

@@ -83,14 +83,9 @@ internal static class GameInput
 
     private static void Consume(ReadOnlySpan<VirtualKey> consumedKeys)
     {
-        var keyState = Plugin.KeyState;
         for (var keyIndex = 0; keyIndex < consumedKeys.Length; keyIndex++)
         {
-            var key = consumedKeys[keyIndex];
-            if (keyState.IsVirtualKeyValid(key))
-            {
-                keyState[key] = false;
-            }
+            GameKeys.Swallow(consumedKeys[keyIndex]);
         }
     }
 
