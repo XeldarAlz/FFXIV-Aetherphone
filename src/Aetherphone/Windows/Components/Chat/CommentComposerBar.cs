@@ -101,6 +101,8 @@ internal static class CommentComposerBar
                         && !emoji.Suggesting;
         }
 
+        var fieldActive = ImGui.IsItemActive();
+
         if (attachmentActive)
         {
             attachment!.AcceptPasteAndDrop(library!, ImGui.IsItemActive(), style.SendEnabled);
@@ -161,6 +163,11 @@ internal static class CommentComposerBar
         if ((!attachmentActive || attachment!.PanelHeight(scale) <= 0f) && emoji.DrawSuggestions(
                 new Rect(new Vector2(bar.Min.X, overlayTop), bar.Max), screen, ui, ref draft, maxLength))
         {
+            if (fieldActive)
+            {
+                MentionField.Replace(inputId, draft);
+            }
+
             RefocusRequests.Add(inputId);
         }
 

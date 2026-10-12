@@ -9,6 +9,7 @@ internal static class MentionField
     private sealed class Editor
     {
         public string? PendingHandle;
+        public string? PendingText;
         public int MaxLength;
         public int Cursor;
         public bool TabRequested;
@@ -31,6 +32,19 @@ internal static class MentionField
 
             if (data.EventFlag != ImGuiInputTextFlags.CallbackAlways)
             {
+                return 0;
+            }
+
+            if (PendingText is { } pendingText)
+            {
+                PendingText = null;
+                CaretToEndRequested = false;
+                data.DeleteChars(0, data.BufTextLen);
+                data.InsertChars(0, pendingText);
+                data.CursorPos = data.BufTextLen;
+                data.SelectionStart = data.BufTextLen;
+                data.SelectionEnd = data.BufTextLen;
+                Cursor = pendingText.Length;
                 return 0;
             }
 
@@ -164,6 +178,11 @@ internal static class MentionField
     public static void CaretToEnd(string id)
     {
         GetEditor(id).CaretToEndRequested = true;
+    }
+
+    public static void Replace(string id, string value)
+    {
+        GetEditor(id).PendingText = value;
     }
 
     private static Editor GetEditor(string id)
