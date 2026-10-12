@@ -68,7 +68,7 @@ internal static class AppPalettes
     public static readonly AppPalette Venues = For("venues");
     public static readonly AppPalette Strats = For("strats");
     public static readonly AppPalette Games = Neutral(AppAccents.For("games"));
-    public static readonly AppPalette Housing = For("housing");
+    public static readonly AppPalette Housing = HousingChrome(AppAccents.For("housing"));
     public static readonly AppPalette Muster = For("muster");
     public static readonly AppPalette YellowPages = For("yellowpages");
     public static readonly AppPalette Feedback = For("feedback");
@@ -102,6 +102,26 @@ internal static class AppPalettes
         CardFill = new(0.125f, 0.173f, 0.200f, 1f),
         CardStroke = new(1f, 1f, 1f, 0.04f),
         FieldSurface = new(0.125f, 0.173f, 0.200f, 1f),
+        HoverTint = DefaultHover,
+        Hairline = new(1f, 1f, 1f, 0.07f),
+        HoverWash = DefaultHoverWash,
+    };
+
+    private static AppPalette HousingChrome(Vector4 accent) => new()
+    {
+        Accent = accent,
+        TitleInk = new(0.976f, 0.980f, 0.988f, 1f),
+        BodyInk = new(0.898f, 0.918f, 0.949f, 0.96f),
+        MutedInk = new(0.682f, 0.725f, 0.800f, 1f),
+        HeaderInk = Palette.WithAlpha(Palette.Lighten(accent, 0.55f), 0.95f),
+        HeadingInk = new(0.976f, 0.980f, 0.988f, 1f),
+        BackdropTop = new(0.063f, 0.122f, 0.220f, 1f),
+        BackdropBottom = new(0.031f, 0.059f, 0.110f, 1f),
+        BloomTop = Palette.WithAlpha(accent, 0.04f),
+        BloomBottom = new(0f, 0f, 0f, 0f),
+        CardFill = new(0.082f, 0.133f, 0.227f, 1f),
+        CardStroke = new(1f, 1f, 1f, 0.10f),
+        FieldSurface = new(0.110f, 0.169f, 0.267f, 1f),
         HoverTint = DefaultHover,
         Hairline = new(1f, 1f, 1f, 0.07f),
         HoverWash = DefaultHoverWash,

@@ -35,6 +35,8 @@ internal sealed partial class HousingApp : IPhoneApp
     private readonly List<HousingPlot> visible = new();
 
     private PhoneTheme frameTheme = PhoneTheme.Default;
+    private PhoneTheme? themeSource;
+    private Rect frameScreen;
     private INavigator frameNavigation = null!;
     private HousingTab activeTab;
     private MenuTarget menuTarget = MenuTarget.None;
@@ -102,12 +104,20 @@ internal sealed partial class HousingApp : IPhoneApp
 
     public void Draw(in PhoneContext context)
     {
-        frameTheme = context.Theme;
+        if (!ReferenceEquals(themeSource, context.Theme))
+        {
+            themeSource = context.Theme;
+            frameTheme = PhoneTheme.WithAccent(context.Theme, AppAccents.For(HousingService.AppId));
+        }
+
         frameNavigation = context.Navigation;
         ui.Theme = frameTheme;
         deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         var scale = UiScale.Current;
-        ui.Backdrop(SceneChrome.ScreenFrom(context.Content, frameTheme, scale));
+        frameScreen = SceneChrome.ScreenFrom(context.Content, frameTheme, scale);
+        ui.Backdrop(frameScreen);
+        UpdateDistrictBackdrop();
+        DrawAmbient(ImGui.GetWindowDrawList());
         menu.Gate();
         if (ModalOpen)
         {
@@ -121,9 +131,18 @@ internal sealed partial class HousingApp : IPhoneApp
         UpdateTourHold();
     }
 
+    private void DrawAmbient(ImDrawListPtr drawList)
+    {
+        var scale = UiScale.Current;
+        var rounding = frameTheme.ScreenRounding * scale;
+        DrawDistrictBackdrop(drawList, frameScreen, rounding);
+        HousingStarfield.Draw(drawList, frameScreen, rounding, scale);
+    }
+
     private void DrawView(HousingView view, Rect area, int depth)
     {
         ui.Body(area);
+        DrawAmbient(ImGui.GetWindowDrawList());
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         switch (view.Route)
         {

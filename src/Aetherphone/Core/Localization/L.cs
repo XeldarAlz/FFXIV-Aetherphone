@@ -1334,6 +1334,7 @@ internal static class L
         public static readonly LocString PhaseUnavailable = new("housing.phaseUnavailable", "Unavailable period");
         public static readonly LocString PhaseUnknown = new("housing.phaseUnknown", "Phase unknown");
         public static readonly LocString PhaseExpired = new("housing.phaseExpired", "Expired, refreshing");
+        public static readonly LocString PhaseOnWorld = new("housing.phaseOnWorld", "{0} · {1}");
         public static readonly LocString EligibilityPrivate = new("housing.eligibilityPrivate", "Private buyers");
         public static readonly LocString EligibilityFreeCompany =
             new("housing.eligibilityFreeCompany", "Free Companies");
@@ -1368,9 +1369,12 @@ internal static class L
             new("housing.countdownUnderMinute", "Under 1 minute");
         public static readonly LocString CountdownEnded = new("housing.countdownEnded", "Ended");
         public static readonly LocString ScannedJustNow = new("housing.scannedJustNow", "Scanned just now");
-        public static readonly LocString ScannedMinutes = new("housing.scannedMinutes", "Scanned {0} minutes ago");
-        public static readonly LocString ScannedHours = new("housing.scannedHours", "Scanned {0} hours ago");
-        public static readonly LocString ScannedDays = new("housing.scannedDays", "Scanned {0} days ago");
+        public static readonly LocPlural ScannedMinutes =
+            new("housing.scannedMinutes", "Scanned {0} minute ago", "Scanned {0} minutes ago");
+        public static readonly LocPlural ScannedHours =
+            new("housing.scannedHours", "Scanned {0} hour ago", "Scanned {0} hours ago");
+        public static readonly LocPlural ScannedDays =
+            new("housing.scannedDays", "Scanned {0} day ago", "Scanned {0} days ago");
         public static readonly LocString ScannedUnknown = new("housing.scannedUnknown", "Scan time unknown");
         public static readonly LocString AgeNow = new("housing.ageNow", "now");
         public static readonly LocString AgeMinutes = new("housing.ageMinutes", "{0}m");
@@ -1386,9 +1390,10 @@ internal static class L
         public static readonly LocString CachedBanner = new("housing.cachedBanner",
             "Live updates are unavailable. Showing housing data saved {0}.");
         public static readonly LocString AgeJustNow = new("housing.ageJustNow", "just now");
-        public static readonly LocString AgeMinutesAgo = new("housing.ageMinutesAgo", "{0} minutes ago");
-        public static readonly LocString AgeHoursAgo = new("housing.ageHoursAgo", "{0} hours ago");
-        public static readonly LocString AgeDaysAgo = new("housing.ageDaysAgo", "{0} days ago");
+        public static readonly LocPlural AgeMinutesAgo =
+            new("housing.ageMinutesAgo", "{0} minute ago", "{0} minutes ago");
+        public static readonly LocPlural AgeHoursAgo = new("housing.ageHoursAgo", "{0} hour ago", "{0} hours ago");
+        public static readonly LocPlural AgeDaysAgo = new("housing.ageDaysAgo", "{0} day ago", "{0} days ago");
 
         public static readonly LocString Watch = new("housing.watch", "Watch");
         public static readonly LocString Watching = new("housing.watching", "Watching");

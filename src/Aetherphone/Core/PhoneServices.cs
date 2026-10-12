@@ -383,8 +383,9 @@ internal sealed class PhoneServices : IDisposable
         var housingCacheRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "housing"));
         var housingGate = installer.Gate(HousingService.AppId);
         var housingGameMaps = new HousingGameMaps(dataManager, textures);
-        var housing = new HousingService(http, configuration, gameData, framework, housingGameMaps, visibility,
-            housingCacheRoot, housingGate);
+        var housingArt = new HousingDistrictArt(dataManager, textures);
+        var housing = new HousingService(http, configuration, gameData, framework, housingGameMaps, housingArt,
+            visibility, housingCacheRoot, housingGate);
         var fishing = new FishingCatalog(dataManager,
             Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty);
         var fishingAlerts = new FishingAlerts(configuration, fishing, notifications, clientState, framework,

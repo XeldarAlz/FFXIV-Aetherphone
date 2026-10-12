@@ -42,7 +42,8 @@ internal sealed class HousingService : IDisposable
     private volatile bool foreground;
 
     public HousingService(HttpService http, Configuration configuration, GameData gameData, IFramework framework,
-        HousingGameMaps gameMaps, PhoneVisibility visibility, DirectoryInfo cacheRoot, AppGate gate)
+        HousingGameMaps gameMaps, HousingDistrictArt art, PhoneVisibility visibility, DirectoryInfo cacheRoot,
+        AppGate gate)
     {
         this.http = http;
         this.configuration = configuration;
@@ -50,6 +51,7 @@ internal sealed class HousingService : IDisposable
         this.visibility = visibility;
         this.framework = framework;
         GameMaps = gameMaps;
+        Art = art;
         api = new HousingRestProvider(http, HousingProviderKind.Service, HousingEndpoints.DisplayName,
             () => HousingEndpoints.BaseUrl);
         chinaApi = new HousingRestProvider(http, HousingProviderKind.China, HousingEndpoints.ChinaDisplayName,
@@ -83,6 +85,8 @@ internal sealed class HousingService : IDisposable
     public HousingWatchStore Watch { get; }
 
     public HousingGameMaps GameMaps { get; }
+
+    public HousingDistrictArt Art { get; }
 
     public HousingGameDistrictMap? GameMap => GameMaps.For(DistrictId);
 
@@ -770,6 +774,7 @@ internal sealed class HousingService : IDisposable
     {
         ticker.Dispose();
         cancellation.Cancel();
+        Art.Dispose();
         api.Dispose();
         chinaApi.Dispose();
         refreshGate.Dispose();
