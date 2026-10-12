@@ -78,7 +78,7 @@ internal static unsafe class WalletReader
     {
         if (!GameMemory.Attached)
         {
-            return 0;
+            return GameMemory.Simulated?.Gil ?? 0;
         }
 
         var manager = InventoryManager.Instance();
@@ -89,7 +89,7 @@ internal static unsafe class WalletReader
     {
         if (!GameMemory.Attached)
         {
-            return 0;
+            return GameMemory.Simulated is { } simulated ? SimulatedEndgameTotal(simulated, tomestoneItemIds) : 0;
         }
 
         var manager = InventoryManager.Instance();
@@ -150,7 +150,7 @@ internal static unsafe class WalletReader
     {
         if (!GameMemory.Attached)
         {
-            return false;
+            return GameMemory.Simulated is not null;
         }
 
         var manager = InventoryManager.Instance();
@@ -167,6 +167,11 @@ internal static unsafe class WalletReader
     {
         if (!GameMemory.Attached)
         {
+            if (GameMemory.Simulated is { } simulated)
+            {
+                RefreshSimulated(simulated, gil, entries);
+            }
+
             return;
         }
 
@@ -204,7 +209,7 @@ internal static unsafe class WalletReader
     {
         if (!GameMemory.Attached)
         {
-            return 0;
+            return SealItemFor(GameMemory.Simulated?.GrandCompany ?? 0);
         }
 
         var playerState = PlayerState.Instance();
@@ -213,13 +218,50 @@ internal static unsafe class WalletReader
             return 0;
         }
 
-        return playerState->GrandCompany switch
+        return SealItemFor(playerState->GrandCompany);
+    }
+
+    private static uint SealItemFor(byte grandCompany) => grandCompany switch
+    {
+        1 => StormSealItemId,
+        2 => SerpentSealItemId,
+        3 => FlameSealItemId,
+        _ => 0,
+    };
+
+    private static long SimulatedEndgameTotal(SimulatedGame simulated, List<uint> tomestoneItemIds)
+    {
+        var total = 0L;
+        for (var index = 0; index < tomestoneItemIds.Count; index++)
         {
-            1 => StormSealItemId,
-            2 => SerpentSealItemId,
-            3 => FlameSealItemId,
-            _ => 0,
-        };
+            total += simulated.CurrencyAmount(tomestoneItemIds[index]);
+        }
+
+        for (var index = 0; index < EndgameScripItemIds.Length; index++)
+        {
+            total += simulated.CurrencyAmount(EndgameScripItemIds[index]);
+        }
+
+        return total;
+    }
+
+    private static void RefreshSimulated(SimulatedGame simulated, WalletEntry gil, WalletEntry[] entries)
+    {
+        gil.Amount = simulated.Gil;
+        for (var index = 0; index < entries.Length; index++)
+        {
+            var entry = entries[index];
+            entry.Amount = entry.Kind == CurrencyKind.Gil ? simulated.Gil : simulated.CurrencyAmount(entry.ItemId);
+            if (entry.Kind == CurrencyKind.GrandCompanySeal)
+            {
+                entry.Cap = simulated.CompanySealCap;
+            }
+            else if (entry.Kind == CurrencyKind.LimitedTomestone)
+            {
+                entry.WeeklyAmount = simulated.WeeklyTomestones;
+                entry.WeeklyCap = simulated.WeeklyTomestoneLimit;
+            }
+        }
     }
 
     private static void AddTomestones(List<WalletEntry> into, GameData gameData)

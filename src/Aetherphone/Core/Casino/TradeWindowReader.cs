@@ -211,7 +211,7 @@ internal sealed unsafe class TradeWindowReader : ITradeWindowReader
     {
         if (!GameMemory.Attached)
         {
-            return 0;
+            return GameMemory.Simulated?.Gil ?? 0;
         }
 
         var manager = InventoryManager.Instance();

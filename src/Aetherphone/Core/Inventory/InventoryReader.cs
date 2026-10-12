@@ -83,7 +83,7 @@ internal static unsafe class InventoryReader
     {
         if (!GameMemory.Attached)
         {
-            return 0;
+            return GameMemory.Simulated?.ContentId ?? 0;
         }
 
         var playerState = PlayerState.Instance();
@@ -97,12 +97,12 @@ internal static unsafe class InventoryReader
 
     public static bool ReadLocal(InventoryLocalRead into)
     {
+        into.Clear();
         if (!GameMemory.Attached)
         {
-            return false;
+            return GameMemory.Simulated is { } simulated && ReadSimulatedLocal(simulated, into);
         }
 
-        into.Clear();
         var manager = InventoryManager.Instance();
         if (manager is null)
         {
@@ -120,16 +120,15 @@ internal static unsafe class InventoryReader
 
     public static bool ReadActiveRetainer(InventoryReadBuffer into, out ulong retainerId, out string retainerName)
     {
-        if (!GameMemory.Attached)
-        {
-            retainerId = 0;
-            retainerName = string.Empty;
-            return false;
-        }
-
         into.Clear();
         retainerId = 0;
         retainerName = string.Empty;
+        if (!GameMemory.Attached)
+        {
+            return GameMemory.Simulated is { } simulated &&
+                   ReadSimulatedRetainer(simulated, into, out retainerId, out retainerName);
+        }
+
         var retainerManager = RetainerManager.Instance();
         if (retainerManager is null || !retainerManager->IsReady)
         {
@@ -161,12 +160,12 @@ internal static unsafe class InventoryReader
 
     public static bool ReadRetainerRoster(List<RetainerSummary> into)
     {
+        into.Clear();
         if (!GameMemory.Attached)
         {
-            return false;
+            return GameMemory.Simulated is { } simulated && ReadSimulatedRoster(simulated, into);
         }
 
-        into.Clear();
         var manager = RetainerManager.Instance();
         if (manager is null)
         {
@@ -191,16 +190,15 @@ internal static unsafe class InventoryReader
 
     public static bool ReadFreeCompany(InventoryReadBuffer into, out ulong freeCompanyId, out string freeCompanyName)
     {
-        if (!GameMemory.Attached)
-        {
-            freeCompanyId = 0;
-            freeCompanyName = string.Empty;
-            return false;
-        }
-
         into.Clear();
         freeCompanyId = 0;
         freeCompanyName = string.Empty;
+        if (!GameMemory.Attached)
+        {
+            return GameMemory.Simulated is { } simulated &&
+                   ReadSimulatedFreeCompany(simulated, into, out freeCompanyId, out freeCompanyName);
+        }
+
         var manager = InventoryManager.Instance();
         if (manager is null)
         {
@@ -237,12 +235,7 @@ internal static unsafe class InventoryReader
             }
 
             var size = container->Size;
-            into.LoadedPages |= (ushort)(1 << page);
-            if (page != crystalPage)
-            {
-                into.Capacity += size;
-            }
-
+            AddPage(into, page, size, crystalPage);
             for (var slot = 0; slot < size; slot++)
             {
                 var item = container->GetInventorySlot(slot);
@@ -255,5 +248,113 @@ internal static unsafe class InventoryReader
                 into.Stacks.Add(new InventoryStack(item->ItemId, item->Quantity, highQuality, slot, page));
             }
         }
+    }
+
+    private static void AddPage(InventoryReadBuffer into, int page, int size, int crystalPage)
+    {
+        into.LoadedPages |= (ushort)(1 << page);
+        if (page != crystalPage)
+        {
+            into.Capacity += size;
+        }
+    }
+
+    private static bool ReadSimulatedLocal(SimulatedGame simulated, InventoryLocalRead into)
+    {
+        ReadInto(simulated.Containers, BagTypes, NoCrystalPage, into.Bags);
+        ReadInto(simulated.Containers, ArmouryTypes, NoCrystalPage, into.Armoury);
+        ReadInto(simulated.Containers, CrystalTypes, NoCrystalPage, into.Crystals);
+        ReadInto(simulated.Containers, SaddlebagTypes, NoCrystalPage, into.Saddlebag);
+        ReadInto(simulated.Containers, EquippedTypes, NoCrystalPage, into.Equipped);
+        into.Gil = simulated.Gil;
+        return into.Bags.LoadedPages != 0;
+    }
+
+    private static bool ReadSimulatedRetainer(SimulatedGame simulated, InventoryReadBuffer into, out ulong retainerId,
+        out string retainerName)
+    {
+        retainerId = 0;
+        retainerName = string.Empty;
+        if (simulated.Retainer(simulated.ActiveRetainer) is not { } retainer)
+        {
+            return false;
+        }
+
+        ReadInto(retainer.Containers, RetainerBagTypes, InventoryPages.RetainerCrystalPage, into);
+        if (into.LoadedPages == 0)
+        {
+            return false;
+        }
+
+        retainerId = retainer.RetainerId;
+        retainerName = retainer.Name;
+        return true;
+    }
+
+    private static bool ReadSimulatedRoster(SimulatedGame simulated, List<RetainerSummary> into)
+    {
+        for (var index = 0; index < simulated.Retainers.Length; index++)
+        {
+            var retainer = simulated.Retainers[index];
+            into.Add(new RetainerSummary(retainer.RetainerId, retainer.Name, retainer.Gil,
+                CountStacks(retainer.Containers), retainer.MarketItemCount));
+        }
+
+        return into.Count > 0;
+    }
+
+    private static bool ReadSimulatedFreeCompany(SimulatedGame simulated, InventoryReadBuffer into,
+        out ulong freeCompanyId, out string freeCompanyName)
+    {
+        freeCompanyId = 0;
+        freeCompanyName = string.Empty;
+        if (simulated.FreeCompany is not { } freeCompany)
+        {
+            return false;
+        }
+
+        ReadInto(freeCompany.Containers, FreeCompanyBagTypes, InventoryPages.FreeCompanyCrystalPage, into);
+        if (into.LoadedPages == 0 || into.Stacks.Count == 0)
+        {
+            into.Clear();
+            return false;
+        }
+
+        freeCompanyId = freeCompany.Id;
+        freeCompanyName = freeCompany.Name;
+        return true;
+    }
+
+    private static void ReadInto(SimulatedContainer[] containers, InventoryType[] types, int crystalPage,
+        InventoryReadBuffer into)
+    {
+        for (var page = 0; page < types.Length; page++)
+        {
+            if (SimulatedGame.Find(containers, types[page]) is not { } container)
+            {
+                continue;
+            }
+
+            AddPage(into, page, container.Size, crystalPage);
+            for (var index = 0; index < container.Stacks.Length; index++)
+            {
+                var stack = container.Stacks[index];
+                into.Stacks.Add(new InventoryStack(stack.ItemId, stack.Quantity, stack.HighQuality, stack.Slot, page));
+            }
+        }
+    }
+
+    private static int CountStacks(SimulatedContainer[] containers)
+    {
+        var count = 0;
+        for (var index = 0; index < containers.Length; index++)
+        {
+            if (containers[index].Type != InventoryType.RetainerCrystals)
+            {
+                count += containers[index].Stacks.Length;
+            }
+        }
+
+        return count;
     }
 }

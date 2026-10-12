@@ -11,6 +11,7 @@ internal static unsafe class GameLinkActions
     {
         if (!GameMemory.Attached)
         {
+            GameMemory.SimulateAction($"try on item {itemId}");
             return;
         }
 
@@ -26,6 +27,7 @@ internal static unsafe class GameLinkActions
     {
         if (!GameMemory.Attached)
         {
+            GameMemory.SimulateAction($"compare item {itemId}");
             return;
         }
 
@@ -42,6 +44,7 @@ internal static unsafe class GameLinkActions
     {
         if (!GameMemory.Attached)
         {
+            GameMemory.SimulateAction($"search recipes using item {itemId}");
             return;
         }
 
@@ -58,6 +61,7 @@ internal static unsafe class GameLinkActions
     {
         if (!GameMemory.Attached)
         {
+            GameMemory.SimulateAction($"find item {itemId}");
             return;
         }
 
@@ -74,6 +78,7 @@ internal static unsafe class GameLinkActions
     {
         if (!GameMemory.Attached)
         {
+            GameMemory.SimulateAction($"link item {itemId} in chat");
             return;
         }
 

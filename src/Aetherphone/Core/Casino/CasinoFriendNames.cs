@@ -18,6 +18,7 @@ internal sealed unsafe class CasinoFriendNames
     {
         if (!GameMemory.Attached)
         {
+            RefreshSimulated();
             return;
         }
 
@@ -49,6 +50,20 @@ internal sealed unsafe class CasinoFriendNames
             {
                 names.Add(name);
             }
+        }
+    }
+
+    private void RefreshSimulated()
+    {
+        names.Clear();
+        if (GameMemory.Simulated is not { } simulated)
+        {
+            return;
+        }
+
+        for (var index = 0; index < simulated.Friends.Length; index++)
+        {
+            names.Add(simulated.Friends[index].Name);
         }
     }
 }

@@ -15,14 +15,14 @@ internal static unsafe class ChatSender
 
     private static bool Send(string message, bool requireClean)
     {
-        if (!GameMemory.Attached)
+        if (string.IsNullOrEmpty(message))
         {
             return false;
         }
 
-        if (string.IsNullOrEmpty(message))
+        if (!GameMemory.Attached)
         {
-            return false;
+            return Encoding.UTF8.GetByteCount(message) <= MaxBytes && GameMemory.SimulateAction("chat " + message);
         }
 
         var payload = requireClean ? message : Sanitise(message).Trim();

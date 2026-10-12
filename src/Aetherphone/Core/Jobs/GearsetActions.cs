@@ -50,7 +50,7 @@ internal static unsafe class GearsetActions
     {
         if (!GameMemory.Attached)
         {
-            return GearsetEquipResult.Failed;
+            return EquipSimulated(gearsetId);
         }
 
         try
@@ -68,5 +68,23 @@ internal static unsafe class GearsetActions
             Plugin.Log.Warning(exception, "Jobs: equipping gearset {0} failed", gearsetId);
             return GearsetEquipResult.Failed;
         }
+    }
+
+    private static GearsetEquipResult EquipSimulated(int gearsetId)
+    {
+        if (GameMemory.Simulated is not { } simulated)
+        {
+            return GearsetEquipResult.Failed;
+        }
+
+        if (!simulated.TryGetGearset(gearsetId, out var gearset))
+        {
+            return GearsetEquipResult.Missing;
+        }
+
+        simulated.ActiveGearsetId = gearset.Id;
+        simulated.CurrentClassJobId = gearset.ClassJobId;
+        GameMemory.SimulateAction($"equip gearset {gearset.Id} ({gearset.Name})");
+        return GearsetEquipResult.Sent;
     }
 }

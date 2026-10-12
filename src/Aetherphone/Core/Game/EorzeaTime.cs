@@ -18,7 +18,9 @@ internal readonly record struct EorzeaTime(int Hour, int Minute)
         var framework = GameMemory.Attached ? Framework.Instance() : null;
         if (framework == null)
         {
-            return DateTimeOffset.UtcNow.ToUnixTimeSeconds() * 144 / 7;
+            var natural = DateTimeOffset.UtcNow.ToUnixTimeSeconds() * 144 / 7;
+            var minute = GameMemory.Simulated?.EorzeaMinuteOverride ?? -1;
+            return minute < 0 ? natural : natural - natural % SecondsPerDay + minute * 60L;
         }
 
         var clock = framework->ClientTime;

@@ -35,6 +35,9 @@ internal static unsafe class LinkshellNames
     {
         if (!GameMemory.Attached)
         {
+            var simulated = GameMemory.Simulated;
+            CopySimulated(Local, simulated?.Linkshells);
+            CopySimulated(CrossWorld, simulated?.CrossWorldLinkshells);
             return;
         }
 
@@ -90,6 +93,14 @@ internal static unsafe class LinkshellNames
             }
 
             Store(CrossWorld, slot, name->ToString());
+        }
+    }
+
+    private static void CopySimulated(string[] slots, string[]? names)
+    {
+        for (var slot = 0; slot < slots.Length; slot++)
+        {
+            Store(slots, slot, names is not null && slot < names.Length ? names[slot] : null);
         }
     }
 

@@ -97,7 +97,7 @@ internal static class LocationShare
     {
         if (!GameMemory.Attached)
         {
-            return 0;
+            return GameMemory.Simulated is { Indoors: true } simulated ? simulated.HouseDistrict : 0;
         }
 
         try
@@ -165,7 +165,7 @@ internal static class LocationShare
     {
         if (!GameMemory.Attached)
         {
-            return false;
+            return GameMemory.Simulated?.Indoors ?? false;
         }
 
         try
@@ -406,7 +406,9 @@ internal static class LocationShare
     {
         if (!GameMemory.Attached)
         {
-            return default;
+            return GameMemory.Simulated is { } simulated
+                ? (simulated.Ward, simulated.Plot, simulated.Room)
+                : default;
         }
 
         try

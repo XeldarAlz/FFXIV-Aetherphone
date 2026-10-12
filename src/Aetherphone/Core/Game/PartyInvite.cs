@@ -28,14 +28,14 @@ internal static unsafe class PartyInvite
 
     public static bool Invite(string characterName, ushort worldId)
     {
-        if (!GameMemory.Attached)
+        if (characterName.Length == 0 || worldId == 0)
         {
             return false;
         }
 
-        if (characterName.Length == 0 || worldId == 0)
+        if (!GameMemory.Attached)
         {
-            return false;
+            return GameMemory.SimulateAction($"invite {characterName} on world {worldId} to the party");
         }
 
         var proxy = InfoProxyPartyInvite.Instance();

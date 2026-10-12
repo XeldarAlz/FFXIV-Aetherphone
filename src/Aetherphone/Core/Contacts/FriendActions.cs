@@ -10,6 +10,7 @@ internal static unsafe class FriendActions
     {
         if (!GameMemory.Attached)
         {
+            GameMemory.SimulateAction($"open adventurer plate of friend {contentId}");
             return;
         }
 
@@ -24,6 +25,7 @@ internal static unsafe class FriendActions
     {
         if (!GameMemory.Attached)
         {
+            GameMemory.SimulateAction($"invite friend {contentId} on world {worldId} to the party");
             return;
         }
 
@@ -38,6 +40,7 @@ internal static unsafe class FriendActions
     {
         if (!GameMemory.Attached)
         {
+            GameMemory.SimulateAction($"visit the estate of friend {contentId}");
             return;
         }
 
@@ -52,6 +55,7 @@ internal static unsafe class FriendActions
     {
         if (!GameMemory.Attached)
         {
+            GameMemory.SimulateAction($"open search info of friend {contentId}");
             return;
         }
 

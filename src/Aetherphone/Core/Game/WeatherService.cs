@@ -75,7 +75,7 @@ internal sealed class WeatherService
     {
         if (!GameMemory.Attached)
         {
-            return 0;
+            return GameMemory.Simulated?.WeatherId ?? 0;
         }
 
         var environment = EnvManager.Instance();

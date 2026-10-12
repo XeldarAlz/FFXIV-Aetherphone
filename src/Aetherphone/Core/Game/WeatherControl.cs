@@ -59,11 +59,6 @@ internal sealed class WeatherControl : IDisposable
 
     public unsafe void ClearWeather()
     {
-        if (!GameMemory.Attached)
-        {
-            return;
-        }
-
         if (weatherOverride == NoWeather)
         {
             return;
@@ -71,6 +66,16 @@ internal sealed class WeatherControl : IDisposable
 
         weatherOverride = NoWeather;
         var natural = weather.NaturalNow();
+        if (!GameMemory.Attached)
+        {
+            if (GameMemory.Simulated is { } simulated && natural != NoWeather)
+            {
+                simulated.WeatherId = natural;
+            }
+
+            return;
+        }
+
         var environment = EnvManager.Instance();
         if (environment != null && natural != NoWeather)
         {
@@ -81,12 +86,17 @@ internal sealed class WeatherControl : IDisposable
 
     public unsafe void ClearTime()
     {
+        timeOverride = NoTime;
         if (!GameMemory.Attached)
         {
+            if (GameMemory.Simulated is { } simulated)
+            {
+                simulated.EorzeaMinuteOverride = NoTime;
+            }
+
             return;
         }
 
-        timeOverride = NoTime;
         var instance = Framework.Instance();
         if (instance != null)
         {
@@ -102,11 +112,6 @@ internal sealed class WeatherControl : IDisposable
 
     private unsafe void OnUpdate(IFramework _)
     {
-        if (!GameMemory.Attached)
-        {
-            return;
-        }
-
         if (weatherOverride == NoWeather && timeOverride == NoTime)
         {
             return;
@@ -121,6 +126,12 @@ internal sealed class WeatherControl : IDisposable
         if (!CanControl)
         {
             ClearAll();
+            return;
+        }
+
+        if (!GameMemory.Attached)
+        {
+            ApplySimulated();
             return;
         }
 
@@ -144,6 +155,21 @@ internal sealed class WeatherControl : IDisposable
                 instance->ClientTime.EorzeaTimeOverride = days * EorzeaSecondsPerDay + timeOverride * 60L;
             }
         }
+    }
+
+    private void ApplySimulated()
+    {
+        if (GameMemory.Simulated is not { } simulated)
+        {
+            return;
+        }
+
+        if (weatherOverride != NoWeather)
+        {
+            simulated.WeatherId = weatherOverride;
+        }
+
+        simulated.EorzeaMinuteOverride = timeOverride;
     }
 
     private void OnTerritoryChanged(uint _)
