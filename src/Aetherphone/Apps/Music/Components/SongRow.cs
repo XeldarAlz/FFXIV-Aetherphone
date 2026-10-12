@@ -26,10 +26,12 @@ internal static class SongRow
     private const float NowPlayingVeilAlpha = 0.45f;
     private const float DownloadGlyphScale = 0.55f;
     private const float DownloadGlyphBox = 14f;
+    private const string TitleMarqueePrefix = "music.songRow.title.";
+    private const string SubtitleMarqueePrefix = "music.songRow.subtitle.";
     private static readonly Vector4 NowPlayingVeil = new(0f, 0f, 0f, NowPlayingVeilAlpha);
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
 
-    public static SongRowAction Draw(MusicKit kit, in Song song, bool showArt = true)
+    public static SongRowAction Draw(MusicKit kit, in Song song, string listKey, int index, bool showArt = true)
     {
         var scale = UiScale.Current;
         var height = Height * scale;
@@ -75,14 +77,12 @@ internal static class SongRow
         var titleHeight = Typography.LineHeight(TextStyles.Body);
         var subtitleHeight = Typography.LineHeight(TextStyles.Subheadline);
         var titleTop = min.Y + (height - titleHeight - subtitleHeight) * 0.5f;
-        var title = Typography.FitText(song.Title, textWidth, TextStyles.Body);
-        Typography.Draw(drawList, new Vector2(textLeft, titleTop), title, current ? ui.Accent : ui.TitleInk,
-            TextStyles.Body);
+        Marquee.DrawLeft(drawList, new MarqueeId(TitleMarqueePrefix, listKey, index), song.Title, textLeft, titleTop,
+            textWidth, TextStyles.Body, current ? ui.Accent : ui.TitleInk, cell.Hovered);
         if (song.Author.Length > 0)
         {
-            var subtitle = Typography.FitText(song.Author, textWidth, TextStyles.Subheadline);
-            Typography.Draw(drawList, new Vector2(textLeft, titleTop + titleHeight), subtitle, ui.MutedInk,
-                TextStyles.Subheadline);
+            Marquee.DrawLeft(drawList, new MarqueeId(SubtitleMarqueePrefix, listKey, index), song.Author, textLeft,
+                titleTop + titleHeight, textWidth, TextStyles.Subheadline, ui.MutedInk, cell.Hovered);
         }
 
         var trailingX = menuCenter.X - MenuReserve * scale * 0.5f;

@@ -22,6 +22,13 @@ internal readonly struct MarqueeId : IEquatable<MarqueeId>
         this.ordinal = ordinal;
     }
 
+    public MarqueeId(string prefix, string suffix, long ordinal)
+    {
+        this.prefix = prefix;
+        this.suffix = suffix;
+        this.ordinal = ordinal;
+    }
+
     public static implicit operator MarqueeId(string value) => new(value, string.Empty);
 
     public bool Equals(MarqueeId other) =>
