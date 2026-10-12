@@ -17,7 +17,7 @@ internal enum SongMenuOutcome : byte
 
 internal sealed class MusicSongMenu
 {
-    private const int MaxItems = 10;
+    private const int MaxItems = 12;
     private const string ShareLinkPrefix = "https://music.youtube.com/watch?v=";
     private const string StationContextPrefix = "station.";
 
