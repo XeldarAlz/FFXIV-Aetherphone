@@ -30,7 +30,7 @@ internal sealed class EmojiSuggestions
         selected = 0;
     }
 
-    public bool Draw(Rect bar, Rect host, PhoneTheme theme, ref string draft)
+    public bool Draw(Rect bar, Rect host, PhoneTheme theme, ref string draft, bool below = false)
     {
         var accepting = Showing && (ImGui.IsKeyPressed(ImGuiKey.Enter) || ImGui.IsKeyPressed(ImGuiKey.KeypadEnter) ||
                                     ImGui.IsKeyPressed(ImGuiKey.Tab));
@@ -46,9 +46,9 @@ internal sealed class EmojiSuggestions
         var scale = UiScale.Current;
         var rowHeight = SuggestionRowUnits * scale;
         var pad = SuggestionPadUnits * scale;
-        var bottom = bar.Min.Y - SuggestionGapUnits * scale;
-        var room = (int)((bottom - host.Min.Y - pad * 2f) / rowHeight);
-        var rows = Math.Min(suggestionCount, room);
+        var gap = SuggestionGapUnits * scale;
+        var space = below ? host.Max.Y - bar.Max.Y : bar.Min.Y - host.Min.Y;
+        var rows = Math.Min(suggestionCount, (int)((space - gap - pad * 2f) / rowHeight));
         if (rows <= 0)
         {
             return false;
@@ -66,8 +66,10 @@ internal sealed class EmojiSuggestions
             selected = (selected + rows - 1) % rows;
         }
 
-        var popup = new Rect(new Vector2(bar.Min.X + Metrics.Space.Md * scale, bottom - rows * rowHeight - pad * 2f),
-            new Vector2(bar.Max.X - Metrics.Space.Md * scale, bottom));
+        var height = rows * rowHeight + pad * 2f;
+        var top = below ? bar.Max.Y + gap : bar.Min.Y - gap - height;
+        var popup = new Rect(new Vector2(bar.Min.X + Metrics.Space.Md * scale, top),
+            new Vector2(bar.Max.X - Metrics.Space.Md * scale, top + height));
         var picked = DrawPopup(popup, theme, rows, rowHeight, pad);
         if (picked < 0 && accepting)
         {
@@ -79,7 +81,7 @@ internal sealed class EmojiSuggestions
             return false;
         }
 
-        draft = string.Concat(text[..start], labels[picked], text[(start + 1 + length)..]);
+        draft = string.Concat(text[..start], labels[picked], " ");
         Reset();
         return true;
     }

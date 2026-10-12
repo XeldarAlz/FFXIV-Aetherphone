@@ -85,7 +85,8 @@ internal sealed class EmojiComposer
         draft += picked;
     }
 
-    public bool DrawSuggestions(Rect bar, Rect host, in AppSkin ui, ref string draft, int maxLength)
+    public bool DrawSuggestions(Rect bar, Rect host, in AppSkin ui, ref string draft, int maxLength,
+        bool below = false)
     {
         if (open)
         {
@@ -93,7 +94,7 @@ internal sealed class EmojiComposer
         }
 
         var completed = draft;
-        if (!suggestions.Draw(bar, host, ui.Theme, ref completed) || completed.Length > maxLength)
+        if (!suggestions.Draw(bar, host, ui.Theme, ref completed, below) || completed.Length > maxLength)
         {
             return false;
         }
