@@ -10,6 +10,7 @@ internal sealed class EmojiComposer
     private const float PanelHeightUnits = 244f;
 
     private readonly EmojiPicker picker = new();
+    private readonly EmojiSuggestions suggestions = new();
     private int openedFrame = -1;
     private int closedFrame = -1;
     private bool open;
@@ -80,6 +81,23 @@ internal sealed class EmojiComposer
         }
 
         draft += picked;
+    }
+
+    public bool DrawSuggestions(Rect bar, Rect host, in AppSkin ui, ref string draft, int maxLength)
+    {
+        if (open)
+        {
+            return false;
+        }
+
+        var completed = draft;
+        if (!suggestions.Draw(bar, host, ui.Theme, ref completed) || completed.Length > maxLength)
+        {
+            return false;
+        }
+
+        draft = completed;
+        return true;
     }
 
     private void DismissOnOutsideClick(Rect panel)

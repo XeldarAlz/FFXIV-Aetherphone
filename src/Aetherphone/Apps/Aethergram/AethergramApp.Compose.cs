@@ -409,6 +409,11 @@ internal sealed partial class AethergramApp
         var field = new Rect(new Vector2(card.Min.X + pad, card.Min.Y + pad),
             new Vector2(card.Max.X - pad, card.Min.Y + pad + ComposeCaptionFieldHeight * scale));
         DrawCaptionField(field, screen, scale, fieldId, paragraphs, ref text, mentions);
+        if (captionEmoji.DrawSuggestions(card, screen, ui, ref text, MaxCaptionLength))
+        {
+            captionFocus = true;
+        }
+
         var metaTop = field.Max.Y + ComposeMetaGap * scale;
         DrawCaptionMetaRow(new Rect(new Vector2(field.Min.X, metaTop),
             new Vector2(field.Max.X, metaTop + ComposeMetaRowHeight * scale)), scale, text.Length);

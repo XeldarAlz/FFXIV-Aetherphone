@@ -154,6 +154,12 @@ internal static class CommentComposerBar
             }
         }
 
+        if ((!attachmentActive || attachment!.PanelHeight(scale) <= 0f) && emoji.DrawSuggestions(
+                new Rect(new Vector2(bar.Min.X, overlayTop), bar.Max), screen, ui, ref draft, maxLength))
+        {
+            focusPending = true;
+        }
+
         return submitted && canSend;
     }
 }

@@ -195,6 +195,12 @@ internal sealed partial class ChirperApp
                 composeEmoji.DrawPanel(panel, ui, ref draft, MaxPostLength);
             }
 
+            var toolbar = new Rect(new Vector2(area.Min.X, area.Max.Y - toolbarHeight), area.Max);
+            if (composeEmoji.DrawSuggestions(toolbar, area, ui, ref draft, MaxPostLength))
+            {
+                composeFocus = true;
+            }
+
             DrawComposeToolbar(area, toolbarHeight);
         }
 
