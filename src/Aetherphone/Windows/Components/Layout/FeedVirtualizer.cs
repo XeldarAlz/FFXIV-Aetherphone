@@ -12,7 +12,6 @@ internal sealed class FeedVirtualizer
     private const float ParkedAtTop = 1f;
     private const float StepEpsilon = 1f;
     private const float GlideRestEpsilon = 0.5f;
-    private const float HalfwayThrough = 0.5f;
 
     private readonly Dictionary<string, (float Height, int Revision)> rows = new();
     private readonly List<float> rowTops = new();
@@ -139,19 +138,15 @@ internal sealed class FeedVirtualizer
     private float NextStop(float from)
     {
         var maxY = ImGui.GetScrollMaxY();
+        var nearTop = Metrics.Space.Xxl * UiScale.Current;
         var count = rowTops.Count + 2;
-        var below = 0f;
         for (var index = 0; index < count; index++)
         {
             var stop = Stop(index, maxY);
-            if (stop <= from + StepEpsilon)
+            if (stop - from > nearTop || index + 1 == count)
             {
-                below = stop;
-                continue;
+                return stop;
             }
-
-            var pastHalfway = from - below > (stop - below) * HalfwayThrough;
-            return pastHalfway && index + 1 < count ? Stop(index + 1, maxY) : stop;
         }
 
         return maxY;
@@ -160,18 +155,14 @@ internal sealed class FeedVirtualizer
     private float PreviousStop(float from)
     {
         var maxY = ImGui.GetScrollMaxY();
-        var above = maxY;
+        var nearTop = Metrics.Space.Xxl * UiScale.Current;
         for (var index = rowTops.Count + 1; index >= 0; index--)
         {
             var stop = Stop(index, maxY);
-            if (stop >= from - StepEpsilon)
+            if (from - stop > nearTop || index == 0)
             {
-                above = stop;
-                continue;
+                return stop;
             }
-
-            var beforeHalfway = above - from > (above - stop) * HalfwayThrough;
-            return beforeHalfway && index > 0 ? Stop(index - 1, maxY) : stop;
         }
 
         return 0f;
