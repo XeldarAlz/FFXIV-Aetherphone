@@ -2345,6 +2345,7 @@
   "music.unlove": "Retirer des coups de cœur",
   "music.addToLibrary": "Ajouter à la bibliothèque",
   "music.removeFromLibrary": "Retirer de la bibliothèque",
+  "music.removeFromPlaylist": "Retirer de la playlist",
   "music.download": "Télécharger",
   "music.removeDownload": "Supprimer le téléchargement",
   "music.goToArtist": "Aller à l’artiste",

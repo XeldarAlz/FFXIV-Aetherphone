@@ -318,7 +318,7 @@ internal sealed partial class MusicApp
         playback.PlaySongs(songs, index, contextId, contextTitle);
     }
 
-    private void DrawSongRows(Song[] songs, string contextId, string contextTitle)
+    private void DrawSongRows(Song[] songs, string contextId, string contextTitle, string playlistId = "")
     {
         for (var index = 0; index < songs.Length; index++)
         {
@@ -329,7 +329,7 @@ internal sealed partial class MusicApp
             }
             else if (action == SongRowAction.Menu)
             {
-                songMenu.Open(songs[index]);
+                songMenu.Open(songs[index], playlistId);
             }
         }
     }

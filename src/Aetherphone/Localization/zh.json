@@ -2345,6 +2345,7 @@
   "music.unlove": "取消喜爱",
   "music.addToLibrary": "添加到资料库",
   "music.removeFromLibrary": "从资料库移除",
+  "music.removeFromPlaylist": "从歌单移除",
   "music.download": "下载",
   "music.removeDownload": "移除下载",
   "music.goToArtist": "前往艺人",

@@ -2345,6 +2345,7 @@
   "music.unlove": "Remover dos amados",
   "music.addToLibrary": "Adicionar à biblioteca",
   "music.removeFromLibrary": "Remover da biblioteca",
+  "music.removeFromPlaylist": "Remover da playlist",
   "music.download": "Baixar",
   "music.removeDownload": "Remover download",
   "music.goToArtist": "Ir para o artista",

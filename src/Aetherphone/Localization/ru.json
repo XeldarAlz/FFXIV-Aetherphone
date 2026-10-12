@@ -2345,6 +2345,7 @@
   "music.unlove": "Убрать из любимых",
   "music.addToLibrary": "Добавить в медиатеку",
   "music.removeFromLibrary": "Удалить из медиатеки",
+  "music.removeFromPlaylist": "Удалить из плейлиста",
   "music.download": "Скачать",
   "music.removeDownload": "Удалить загрузку",
   "music.goToArtist": "Перейти к исполнителю",

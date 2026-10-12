@@ -6160,6 +6160,7 @@ internal static class L
         public static readonly LocString Unlove = new("music.unlove", "Remove from loved");
         public static readonly LocString AddToLibrary = new("music.addToLibrary", "Add to library");
         public static readonly LocString RemoveFromLibrary = new("music.removeFromLibrary", "Remove from library");
+        public static readonly LocString RemoveFromPlaylist = new("music.removeFromPlaylist", "Remove from playlist");
         public static readonly LocString Download = new("music.download", "Download");
         public static readonly LocString RemoveDownload = new("music.removeDownload", "Remove download");
         public static readonly LocString GoToArtist = new("music.goToArtist", "Go to artist");

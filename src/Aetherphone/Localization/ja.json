@@ -2345,6 +2345,7 @@
   "music.unlove": "ラブを解除",
   "music.addToLibrary": "ライブラリに追加",
   "music.removeFromLibrary": "ライブラリから削除",
+  "music.removeFromPlaylist": "プレイリストから削除",
   "music.download": "ダウンロード",
   "music.removeDownload": "ダウンロードを削除",
   "music.goToArtist": "アーティストへ移動",

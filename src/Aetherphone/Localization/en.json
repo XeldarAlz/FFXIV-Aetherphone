@@ -2345,6 +2345,7 @@
   "music.unlove": "Remove from loved",
   "music.addToLibrary": "Add to library",
   "music.removeFromLibrary": "Remove from library",
+  "music.removeFromPlaylist": "Remove from playlist",
   "music.download": "Download",
   "music.removeDownload": "Remove download",
   "music.goToArtist": "Go to artist",
