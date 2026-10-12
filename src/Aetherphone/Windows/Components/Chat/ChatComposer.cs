@@ -886,6 +886,7 @@ internal sealed class ChatComposer : IDisposable
         }
 
         editor.Adopt(draft);
+        editor.MoveCursor(editor.Text.Length);
         focus = true;
     }
 

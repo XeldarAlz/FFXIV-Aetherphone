@@ -6,6 +6,9 @@ namespace Aetherphone.Windows.Components;
 internal static class SoftWrapField
 {
     private static readonly Dictionary<string, SoftWrapEditor> Editors = new(StringComparer.Ordinal);
+    private static readonly HashSet<string> CaretToEndRequests = new(StringComparer.Ordinal);
+
+    public static void CaretToEnd(string id) => CaretToEndRequests.Add(id);
 
     public static void Multiline(string id, ref string value, int maxLength, Vector2 size, float wrapWidth,
         MentionAutocomplete? mentions = null)
@@ -27,6 +30,11 @@ internal static class SoftWrapField
         if (!string.Equals(editor.Text, logical, StringComparison.Ordinal))
         {
             editor.Adopt(logical);
+        }
+
+        if (CaretToEndRequests.Count > 0 && CaretToEndRequests.Remove(id))
+        {
+            editor.MoveCursor(editor.Text.Length);
         }
 
         editor.Rewrap(wrapWidth);

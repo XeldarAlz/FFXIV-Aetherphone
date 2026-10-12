@@ -136,6 +136,7 @@ internal sealed partial class ChirperApp
             if (composeFocus)
             {
                 ImGui.SetKeyboardFocusHere();
+                SoftWrapField.CaretToEnd("##chirpBody");
                 composeFocus = false;
             }
 

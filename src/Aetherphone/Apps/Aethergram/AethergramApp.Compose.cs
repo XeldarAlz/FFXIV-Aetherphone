@@ -426,6 +426,7 @@ internal sealed partial class AethergramApp
         if (captionFocus)
         {
             ImGui.SetKeyboardFocusHere();
+            SoftWrapField.CaretToEnd(fieldId);
             captionFocus = false;
         }
 

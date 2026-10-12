@@ -442,6 +442,7 @@ internal sealed class VelvetPostComposer
         if (captionFocus)
         {
             ImGui.SetKeyboardFocusHere();
+            SoftWrapField.CaretToEnd(storyMode ? "##velvetStoryCaption" : "##velvetCaption");
             captionFocus = false;
         }
 
