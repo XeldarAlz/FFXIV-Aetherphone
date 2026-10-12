@@ -63,7 +63,7 @@ Dalamud is the plugin framework that loads Aetherphone inside FFXIV. It provides
 | `IUnlockState` | Mount, minion, emote, orchestrion, and other unlock checks |
 | `IGameInteropProvider` | The plugin's only function hook: the DXGI Present hook in src/Aetherphone/Core/Video/DxHandler.cs that drives video playback (falls back to the UI render pump when the hook fails) |
 | `IAetheryteList` | Which aetherytes the character is attuned to |
-| `IKeyState` | Clearing the game's key state for keys a mini-game or the Linkpearl hotkey consumes, so they never reach the character |
+| `IKeyState` | Clearing the game's key state for keys a mini-game, the Linkpearl hotkey or the feed arrow keys consume, so they never reach the character |
 | `IAddonLifecycle` | `PostSetup` and `PostRefresh` listeners on the `AreaMap` addon that redraw hunt markers when the native map opens or changes |
 | `IDragDropManager` | Image files dragged in from File Explorer onto the Chirper composer, the comment bars, chat threads and the Aethergram and Velvet photo pickers (`ImageIntake.AcceptDrop`) |
 

@@ -856,6 +856,8 @@
   "settings.marketContextMenuHint": "ゲーム内でアイテムを右クリックしたときに表示されるコンテキストメニューに「マーケットで検索」オプションを表示します。",
   "settings.linkpearlContextMenu": "コンテキストメニューでリンクパールチャット",
   "settings.linkpearlContextMenuHint": "ゲーム内でプレイヤーを右クリックしたときに表示されるコンテキストメニューに「リンクパールでチャットを開く」オプションを表示します。",
+  "settings.arrowKeysStepPosts": "矢印キーで投稿をスクロール",
+  "settings.arrowKeysStepPostsHint": "スマホにフォーカスがあるとき、上下キーでAethergramとChirperの前後の投稿へなめらかに移動します。",
   "settings.scrollWhileIdle": "待機中にスクロール",
   "settings.scrollWhileIdleHint": "電話を開いて立ち止まると、キャラクターが電話をスクロールするエモート（トームストーン）を実行します。移動したりエモートを中断した場合は、次に電話を開くまで再実行しません。エモートを解放していない場合は機能しません。",
   "settings.showInGpose": "グループポーズ中に表示",

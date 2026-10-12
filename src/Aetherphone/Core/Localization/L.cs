@@ -2005,6 +2005,8 @@ internal static class L
         public static readonly LocString MarketContextMenuHint = new("settings.marketContextMenuHint", "Shows \"Search the Market\" option in the in-game context menu when right-clicking on an item.");
         public static readonly LocString LinkpearlContextMenu = new("settings.linkpearlContextMenu", "Linkpearl chat in menus");
         public static readonly LocString LinkpearlContextMenuHint = new("settings.linkpearlContextMenuHint", "Shows \"Open a Linkpearl chat\" option in the in-game context menu when right-clicking on a player.");
+        public static readonly LocString ArrowKeysStepPosts = new("settings.arrowKeysStepPosts", "Arrow keys scroll posts");
+        public static readonly LocString ArrowKeysStepPostsHint = new("settings.arrowKeysStepPostsHint", "While the phone is focused, Up and Down glide to the previous or next post in Aethergram and Chirper.");
         public static readonly LocString ScrollWhileIdle = new("settings.scrollWhileIdle", "Scroll While Idle");
         public static readonly LocString ScrollWhileIdleHint = new("settings.scrollWhileIdleHint", "When you open your phone and stand still, your character scrolls through it (Tomescroll emote). Move or cancel the emote and it stays off until you open the phone again. Does nothing if you haven't unlocked the emote.");
         public static readonly LocString ShowInGpose = new("settings.showInGpose", "Show in Group Pose");

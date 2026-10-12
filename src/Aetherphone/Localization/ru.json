@@ -856,6 +856,8 @@
   "settings.marketContextMenuHint": "Показывает пункт «Искать на рынке» в контекстном меню при нажатии правой кнопкой мыши на предмет.",
   "settings.linkpearlContextMenu": "Чат Linkpearl в контекстном меню",
   "settings.linkpearlContextMenuHint": "Показывает пункт «Открыть чат Linkpearl» в контекстном меню при нажатии правой кнопкой мыши на игрока.",
+  "settings.arrowKeysStepPosts": "Стрелки листают публикации",
+  "settings.arrowKeysStepPostsHint": "Когда телефон в фокусе, стрелки вверх и вниз плавно переходят к предыдущей или следующей публикации в Aethergram и Chirper.",
   "settings.scrollWhileIdle": "Листать телефон на месте",
   "settings.scrollWhileIdleHint": "Когда вы открываете телефон и стоите на месте, ваш персонаж листает его (эмоция Tomescroll). Если вы двинетесь или отмените эмоцию, она не повторится до следующего открытия телефона. Не работает, если эмоция не разблокирована.",
   "settings.showInGpose": "Показывать в групповой позе",

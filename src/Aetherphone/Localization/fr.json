@@ -856,6 +856,8 @@
   "settings.marketContextMenuHint": "Affiche l'option « Chercher sur le marché » dans le menu contextuel en jeu lorsque vous faites un clic droit sur un objet.",
   "settings.linkpearlContextMenu": "Discussion Linkpearl dans le menu",
   "settings.linkpearlContextMenuHint": "Affiche l'option « Ouvrir une discussion Linkpearl » dans le menu contextuel en jeu lorsque vous faites un clic droit sur un joueur.",
+  "settings.arrowKeysStepPosts": "Les flèches font défiler les publications",
+  "settings.arrowKeysStepPostsHint": "Quand le téléphone a le focus, Haut et Bas glissent vers la publication précédente ou suivante dans Aethergram et Chirper.",
   "settings.scrollWhileIdle": "Faire défiler à l'arrêt",
   "settings.scrollWhileIdleHint": "Quand vous ouvrez votre téléphone en restant immobile, votre personnage le fait défiler (émote Tomescroll). Si vous bougez ou annulez l'émote, elle ne revient pas avant la prochaine ouverture du téléphone. Sans effet si vous n'avez pas débloqué l'émote.",
   "settings.showInGpose": "Afficher dans le Photodrame",

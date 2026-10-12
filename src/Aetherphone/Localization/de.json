@@ -856,6 +856,8 @@
   "settings.marketContextMenuHint": "Zeigt die Option \"Auf dem Markt suchen\" im Kontextmenü an, wenn du im Spiel mit Rechtsklick auf einen Gegenstand klickst.",
   "settings.linkpearlContextMenu": "Linkpearl-Chat im Kontextmenü",
   "settings.linkpearlContextMenuHint": "Zeigt die Option \"Linkpearl-Chat öffnen\" im Kontextmenü an, wenn du im Spiel mit Rechtsklick auf einen Spieler klickst.",
+  "settings.arrowKeysStepPosts": "Pfeiltasten scrollen Beiträge",
+  "settings.arrowKeysStepPostsHint": "Solange das Handy im Fokus ist, gleiten Pfeil hoch und runter zum vorherigen oder nächsten Beitrag in Aethergram und Chirper.",
   "settings.scrollWhileIdle": "Im Leerlauf scrollen",
   "settings.scrollWhileIdleHint": "Wenn du dein Handy öffnest und still stehst, scrollt dein Charakter darauf (Tomescroll-Emote). Bewegst du dich oder brichst die Emote ab, bleibt sie aus, bis du das Handy erneut öffnest. Ohne Wirkung, falls die Emote nicht freigeschaltet ist.",
   "settings.showInGpose": "In Gruppenpose anzeigen",

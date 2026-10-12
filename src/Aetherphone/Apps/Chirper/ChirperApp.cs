@@ -1049,7 +1049,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             else
             {
                 ImGui.Dummy(new Vector2(0f, FeedTopPadding * UiScale.Current));
-                feedVirtualizer.BeginFrame(store.FeedSource(scope));
+                feedVirtualizer.BeginFrame(store.FeedSource(scope), configuration.ArrowKeysStepPosts);
                 var viewportTop = ImGui.GetWindowPos().Y;
                 store.BeginImpressions(viewportTop, viewportTop + ImGui.GetWindowSize().Y, ImGui.GetIO().DeltaTime);
                 renderedUnderlyingIds.Clear();

@@ -856,6 +856,8 @@
   "settings.marketContextMenuHint": "Shows \"Search the Market\" option in the in-game context menu when right-clicking on an item.",
   "settings.linkpearlContextMenu": "Linkpearl chat in menus",
   "settings.linkpearlContextMenuHint": "Shows \"Open a Linkpearl chat\" option in the in-game context menu when right-clicking on a player.",
+  "settings.arrowKeysStepPosts": "Arrow keys scroll posts",
+  "settings.arrowKeysStepPostsHint": "While the phone is focused, Up and Down glide to the previous or next post in Aethergram and Chirper.",
   "settings.scrollWhileIdle": "Scroll While Idle",
   "settings.scrollWhileIdleHint": "When you open your phone and stand still, your character scrolls through it (Tomescroll emote). Move or cancel the emote and it stays off until you open the phone again. Does nothing if you haven't unlocked the emote.",
   "settings.showInGpose": "Show in Group Pose",

@@ -856,6 +856,8 @@
   "settings.marketContextMenuHint": "Mostra a opção \"Buscar no Mercado\" no menu de contexto do jogo ao clicar com o botão direito em um item.",
   "settings.linkpearlContextMenu": "Conversa no Linkpearl no menu",
   "settings.linkpearlContextMenuHint": "Mostra a opção \"Abrir uma conversa no Linkpearl\" no menu de contexto do jogo ao clicar com o botão direito em um jogador.",
+  "settings.arrowKeysStepPosts": "Setas rolam as publicações",
+  "settings.arrowKeysStepPostsHint": "Com o celular em foco, as setas para cima e para baixo deslizam até a publicação anterior ou seguinte no Aethergram e no Chirper.",
   "settings.scrollWhileIdle": "Rolar quando parado",
   "settings.scrollWhileIdleHint": "Ao abrir o telefone e ficar parado, seu personagem rola a tela dele (emote Tomescroll). Se você se mover ou cancelar o emote, ele não volta até você abrir o telefone de novo. Não faz nada se você não desbloqueou o emote.",
   "settings.showInGpose": "Mostrar no Group Pose",

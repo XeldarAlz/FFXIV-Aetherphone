@@ -856,6 +856,8 @@
   "settings.marketContextMenuHint": "Oyun içinde bir eşyaya sağ tıkladığında \"Pazarda Ara\" seçeneğini gösterir.",
   "settings.linkpearlContextMenu": "Sağ tık menüsünde Linkpearl sohbeti",
   "settings.linkpearlContextMenuHint": "Oyun içinde bir oyuncuya sağ tıkladığında \"Linkpearl sohbeti aç\" seçeneğini gösterir.",
+  "settings.arrowKeysStepPosts": "Ok tuşları gönderileri kaydırır",
+  "settings.arrowKeysStepPostsHint": "Telefon odaktayken Yukarı ve Aşağı tuşları Aethergram ve Chirper'de önceki veya sonraki gönderiye kayar.",
   "settings.scrollWhileIdle": "Boştayken kaydır",
   "settings.scrollWhileIdleHint": "Telefonu açıp hareketsiz durduğunda karakterin telefonunda gezinir (Tomescroll emotu). Hareket edersen ya da emotu iptal edersen, telefonu yeniden açana kadar tekrarlanmaz. Bu emotu açmadıysan hiçbir şey yapmaz.",
   "settings.showInGpose": "Grup pozunda göster",

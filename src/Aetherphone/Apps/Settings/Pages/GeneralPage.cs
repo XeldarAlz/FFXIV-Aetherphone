@@ -22,6 +22,7 @@ internal sealed class GeneralPage : ISettingsPage
         new(L.Settings.ShowSensitive),
         new(L.Settings.MarketContextMenu),
         new(L.Settings.LinkpearlContextMenu),
+        new(L.Settings.ArrowKeysStepPosts),
         new(L.Settings.AutoTranslate),
         new(L.Settings.Use24HourClock, L.Settings.ClockFormat),
         new(L.Settings.OpenOnStartup, L.Settings.Startup),
@@ -52,7 +53,7 @@ internal sealed class GeneralPage : ISettingsPage
         {
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
             var translationRow = translation.Enabled ? 1 : 0;
-            var card = GroupCard.Begin(theme, 8 + translationRow);
+            var card = GroupCard.Begin(theme, 9 + translationRow);
             var showInGpose = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.ShowInGpose),
                 configuration.ShowInGpose, theme, null, Loc.T(L.Settings.ShowInGposeHint));
             var showInCutscenes = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.ShowInCutscenes),
@@ -70,6 +71,8 @@ internal sealed class GeneralPage : ISettingsPage
                 configuration.MarketContextMenu, theme, null, Loc.T(L.Settings.MarketContextMenuHint));
             var linkpearlContextMenu = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.LinkpearlContextMenu),
                 configuration.LinkpearlContextMenu, theme, null, Loc.T(L.Settings.LinkpearlContextMenuHint));
+            var arrowKeysStepPosts = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.ArrowKeysStepPosts),
+                configuration.ArrowKeysStepPosts, theme, null, Loc.T(L.Settings.ArrowKeysStepPostsHint));
             var autoTranslate = configuration.AutoTranslatePosts;
             if (translationRow > 0)
             {
@@ -131,6 +134,12 @@ internal sealed class GeneralPage : ISettingsPage
             if (linkpearlContextMenu != configuration.LinkpearlContextMenu)
             {
                 configuration.LinkpearlContextMenu = linkpearlContextMenu;
+                configuration.Save();
+            }
+
+            if (arrowKeysStepPosts != configuration.ArrowKeysStepPosts)
+            {
+                configuration.ArrowKeysStepPosts = arrowKeysStepPosts;
                 configuration.Save();
             }
 

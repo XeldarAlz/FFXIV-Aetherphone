@@ -1004,7 +1004,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             else
             {
                 ImGui.Dummy(new Vector2(0f, 4f * UiScale.Current));
-                feedVirtualizer.BeginFrame(store.FeedSource(scope));
+                feedVirtualizer.BeginFrame(store.FeedSource(scope), configuration.ArrowKeysStepPosts);
                 var viewportTop = ImGui.GetWindowPos().Y;
                 store.BeginImpressions(viewportTop, viewportTop + ImGui.GetWindowSize().Y, ImGui.GetIO().DeltaTime);
                 var ranked = scope == SocialFeedScope.ForYou && store.ForYouRanked;

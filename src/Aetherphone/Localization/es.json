@@ -856,6 +856,8 @@
   "settings.marketContextMenuHint": "Muestra la opción \"Buscar en el mercado\" en el menú contextual del juego al hacer clic derecho en un objeto.",
   "settings.linkpearlContextMenu": "Chat de Linkpearl desde el menú",
   "settings.linkpearlContextMenuHint": "Muestra la opción \"Abrir un chat de Linkpearl\" en el menú contextual del juego al hacer clic derecho en un jugador.",
+  "settings.arrowKeysStepPosts": "Las flechas desplazan las publicaciones",
+  "settings.arrowKeysStepPostsHint": "Con el teléfono enfocado, Arriba y Abajo se deslizan a la publicación anterior o siguiente en Aethergram y Chirper.",
   "settings.scrollWhileIdle": "Desplazar estando inactivo",
   "settings.scrollWhileIdleHint": "Al abrir el teléfono y quedarte quieto, tu personaje lo revisa (emote Tomescroll). Si te mueves o cancelas el emote, no se repite hasta que vuelvas a abrir el teléfono. No hace nada si no has desbloqueado el emote.",
   "settings.showInGpose": "Mostrar en Pose de grupo",

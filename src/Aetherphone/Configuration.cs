@@ -155,6 +155,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public int ChirperFeedScope { get; set; }
     public int AethergramFeedScope { get; set; }
     public bool ShowSensitiveContent { get; set; }
+    public bool ArrowKeysStepPosts { get; set; } = true;
     public Dictionary<string, AppNotificationSetting> NotificationSettings { get; set; } = new();
     public bool NotifyDailyReset { get; set; }
     public bool NotifyWeeklyReset { get; set; }
