@@ -13,7 +13,7 @@ Two terms you will see throughout: Dalamud is the plugin framework that loads Ae
 | src/Aetherphone/Core/Aethernet/IdentifiedMerge.cs | `MergeById`: the id-keyed merge every page, refresh and push goes through |
 | src/Aetherphone/Core/Message/ViewingMark.cs | The "on screen right now" mark (4 second grace) that gates refreshes and notifications |
 | src/Aetherphone/Windows/Components/Chat/ChatTranscript.cs | Renders the scrolling bubble list; owns scroll, paging triggers, and read ticks |
-| src/Aetherphone/Windows/Components/Chat/ChatComposer.cs | Input bar: multiline draft, reply and edit bars, emoji picker, image, location, voice |
+| src/Aetherphone/Windows/Components/Chat/ChatComposer.cs | Input bar: multiline draft, reply and edit bars, emoji picker and `:shortcode` suggestions, image, location, voice |
 | src/Aetherphone/Windows/Components/Chat/ChatMenuController.cs | Right-click message menu, the reaction strip, and the full emoji reaction sheet |
 | src/Aetherphone/Windows/Components/Chat/ReactionArt.cs | The quick reaction tokens and how a token resolves to emoji art |
 | src/Aetherphone/Windows/Components/Chat/ChatSearchController.cs | In-thread text search bar with match stepping |
