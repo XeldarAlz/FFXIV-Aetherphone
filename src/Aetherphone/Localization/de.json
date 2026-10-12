@@ -7758,6 +7758,7 @@
   "changelog.r1300.80": "Behoben, dass der Lodestone-Chip unter Leute bei größeren UI-Skalierungen auf zwei Zeilen umbrach",
   "changelog.r1300.84": "Behoben, dass das Mini-Telefon nach einem Neuladen des Plugins beim kurzen Datum blieb, beigetragen von t3sco",
   "changelog.r1300.85": "Behoben, dass Tooltips nahe am Bildschirmrand von den abgerundeten Ecken und dem Rahmen abgeschnitten wurden, beigetragen von t3sco",
+  "changelog.r1300.100": "Behoben, dass hochgeladene Bilder mit transparenten oder halbtransparenten Bereichen harte Leuchtränder und schwarze Säume bekamen: Sie verlaufen jetzt weich, beigetragen von Haydooners",
   "changelog.r1300.86": "Locations-Bereich im Floor hinzugefügt: die Tische der Location, in der du stehst, dein eigener offener Tisch mit Code, Tür und Buch oder Erneut eröffnen mit einem Tipp, darunter jedes Spiel, das du eröffnen kannst",
   "changelog.r1300.87": "Erneut eröffnen hinzugefügt: das Eröffnungsblatt merkt sich deinen letzten Tisch pro Charakter und öffnet ihn direkt im letzten Schritt",
   "changelog.r1300.88": "Gasteinträge im Gil-Buch hinzugefügt: der Gastgeber trägt Einkauf oder Auszahlung für Gäste ohne Aetherphone ein, aus der Handelsabfrage oder per eingetipptem Namen",

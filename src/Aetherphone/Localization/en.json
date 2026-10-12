@@ -7758,6 +7758,7 @@
   "changelog.r1300.80": "Fixed the Lodestone chip in People wrapping onto two lines at larger UI scales",
   "changelog.r1300.84": "Fixed the mini phone sticking to the short date after a plugin reload, contributed by t3sco",
   "changelog.r1300.85": "Fixed tooltips near the edge of the screen being cut off by the rounded corners and the frame, contributed by t3sco",
+  "changelog.r1300.100": "Fixed uploaded images with transparent or see-through areas getting harsh glowing edges and black fringes: they now blend smoothly, contributed by Haydooners",
   "changelog.r1300.86": "Added a Venues section to the Floor: the tables at the venue you stand in, your own open table with its code, Door and Ledger, or Host again in one tap, then every game you can host",
   "changelog.r1300.87": "Added Host again: the host sheet remembers your last table for each character and reopens it on the final step",
   "changelog.r1300.88": "Added guest entries to gil ledgers: the host records a buy-in or payout for a patron who has no Aetherphone, from the trade prompt or by typing the name",

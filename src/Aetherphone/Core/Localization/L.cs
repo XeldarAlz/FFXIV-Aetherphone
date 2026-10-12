@@ -2378,6 +2378,8 @@ internal static class L
                 "Fixed the mini phone sticking to the short date after a plugin reload, contributed by t3sco"),
             new("changelog.r1300.85",
                 "Fixed tooltips near the edge of the screen being cut off by the rounded corners and the frame, contributed by t3sco"),
+            new("changelog.r1300.100",
+                "Fixed uploaded images with transparent or see-through areas getting harsh glowing edges and black fringes: they now blend smoothly, contributed by Haydooners"),
         };
 
         public static readonly LocString[] Release1300ChirperAethergramVelvet =

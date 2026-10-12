@@ -186,13 +186,30 @@ internal static class ImageProcessor
         var pixels = ArrayPool<byte>.Shared.Rent(length);
         try
         {
-            image.CopyPixelDataTo(pixels.AsSpan(0, length));
-            return ScalarJpegEncoder.Encode(pixels.AsSpan(0, length), image.Width, image.Height, JpegQuality,
-                JpegSubsampling);
+            var span = pixels.AsSpan(0, length);
+            image.CopyPixelDataTo(span);
+            FlattenOntoBlack(span);
+            return ScalarJpegEncoder.Encode(span, image.Width, image.Height, JpegQuality, JpegSubsampling);
         }
         finally
         {
             ArrayPool<byte>.Shared.Return(pixels);
+        }
+    }
+
+    private static void FlattenOntoBlack(Span<byte> rgba)
+    {
+        for (var pixelOffset = 0; pixelOffset < rgba.Length; pixelOffset += 4)
+        {
+            var alpha = rgba[pixelOffset + 3];
+            if (alpha == byte.MaxValue)
+            {
+                continue;
+            }
+            rgba[pixelOffset] = (byte)((rgba[pixelOffset] * alpha + 127) / 255);
+            rgba[pixelOffset + 1] = (byte)((rgba[pixelOffset + 1] * alpha + 127) / 255);
+            rgba[pixelOffset + 2] = (byte)((rgba[pixelOffset + 2] * alpha + 127) / 255);
+            rgba[pixelOffset + 3] = byte.MaxValue;
         }
     }
 

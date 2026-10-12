@@ -7758,6 +7758,7 @@
   "changelog.r1300.80": "Corrigimos o chip Lodestone de Pessoas que quebrava em duas linhas em escalas de interface maiores",
   "changelog.r1300.84": "Corrigido o telefone pequeno ficar com a data curta após recarregar o plugin, contribuição de t3sco",
   "changelog.r1300.85": "Corrigimos as dicas perto da borda da tela que ficavam cortadas pelos cantos arredondados e pela moldura, contribuição de t3sco",
+  "changelog.r1300.100": "Corrigimos as imagens enviadas com áreas transparentes ou semitransparentes que ficavam com bordas brilhantes duras e franjas pretas: agora elas se fundem suavemente, contribuição de Haydooners",
   "changelog.r1300.86": "Adicionamos uma seção Locais ao Salão: as mesas do local onde você está, sua própria mesa aberta com código, Porta e Registro, ou Abrir de novo em um toque, e abaixo cada jogo que você pode abrir",
   "changelog.r1300.87": "Adicionamos Abrir de novo: a folha de anfitrião lembra sua última mesa por personagem e a reabre na etapa final",
   "changelog.r1300.88": "Adicionamos entradas de convidado aos registros de gil: o anfitrião anota uma compra ou um pagamento de um cliente sem Aetherphone, pelo aviso de troca ou digitando o nome",

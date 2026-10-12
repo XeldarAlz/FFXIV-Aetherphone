@@ -7758,6 +7758,7 @@
   "changelog.r1300.80": "Kişiler'deki Lodestone çipinin büyük arayüz ölçeklerinde iki satıra bölünmesi düzeltildi",
   "changelog.r1300.84": "Mini telefonun eklenti yeniden yüklendikten sonra kısa tarihte takılı kalması düzeltildi, katkı: t3sco",
   "changelog.r1300.85": "Ekran kenarına yakın araç ipuçlarının yuvarlatılmış köşeler ve çerçeve tarafından kesilmesi düzeltildi, katkı: t3sco",
+  "changelog.r1300.100": "Saydam veya yarı saydam alanları olan yüklenen görsellerde oluşan sert parlak kenarlar ve siyah çizgiler düzeltildi: artık yumuşakça kaynaşıyor, katkı: Haydooners",
   "changelog.r1300.86": "Salona Mekanlar bölümü eklendi: bulunduğun mekandaki masalar, kodu, Kapı ve Defter ile kendi açık masan ya da tek dokunuşla Yeniden aç, altında da açabileceğin her oyun",
   "changelog.r1300.87": "Yeniden aç eklendi: ev sahibi sayfası her karakter için son masanı hatırlar ve son adımdan yeniden açar",
   "changelog.r1300.88": "Gil defterlerine misafir kayıtları eklendi: ev sahibi, Aetherphone'u olmayan bir müşterinin alımını veya ödemesini takas uyarısından ya da adını yazarak kaydeder",

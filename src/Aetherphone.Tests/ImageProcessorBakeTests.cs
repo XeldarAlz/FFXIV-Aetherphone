@@ -88,4 +88,48 @@ public sealed class ImageProcessorBakeTests
         image.SaveAsPng(sourcePath);
         return sourcePath;
     }
+
+    [Fact]
+    public void BakeJpegPremultipliesAlphaOntoBlack()
+    {
+        const int size = 16;
+        const byte red = 200;
+        const byte green = 100;
+        const byte blue = 50;
+        const byte alpha = 128;
+        const int tolerance = 4;
+        var expectedRed = (byte)MathF.Round(red * (alpha / 255f));
+        var expectedGreen = (byte)MathF.Round(green * (alpha / 255f));
+        var expectedBlue = (byte)MathF.Round(blue * (alpha / 255f));
+        var sourcePath = Path.Combine(Path.GetTempPath(), $"aetherphone-test-{Guid.NewGuid():N}.png");
+        var pixels = new byte[size * size * 4];
+        for (var index = 0; index < pixels.Length; index += 4)
+        {
+            pixels[index] = red;
+            pixels[index + 1] = green;
+            pixels[index + 2] = blue;
+            pixels[index + 3] = alpha;
+        }
+        using (var image = Image.LoadPixelData<Rgba32>(pixels, size, size))
+        {
+            image.SaveAsPng(sourcePath);
+        }
+        try
+        {
+            var baked = ImageProcessor.BakeJpeg(sourcePath, size);
+            var (decoded, decodedWidth, decodedHeight) = ScalarJpegEncoderTests.Decode(baked.Bytes);
+            Assert.Equal(size, decodedWidth);
+            Assert.Equal(size, decodedHeight);
+            for (var index = 0; index < decoded.Length; index += 4)
+            {
+                Assert.InRange(decoded[index], expectedRed - tolerance, expectedRed + tolerance);
+                Assert.InRange(decoded[index + 1], expectedGreen - tolerance, expectedGreen + tolerance);
+                Assert.InRange(decoded[index + 2], expectedBlue - tolerance, expectedBlue + tolerance);
+            }
+        }
+        finally
+        {
+            File.Delete(sourcePath);
+        }
+    }
 }

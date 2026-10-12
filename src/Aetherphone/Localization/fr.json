@@ -7758,6 +7758,7 @@
   "changelog.r1300.80": "Correction de la puce Lodestone de Personnes qui passait sur deux lignes aux grandes échelles d'interface",
   "changelog.r1300.84": "Correction du mini téléphone qui gardait la date courte après un rechargement du plugin, contribution de t3sco",
   "changelog.r1300.85": "Correction des infobulles près du bord de l'écran, qui étaient coupées par les coins arrondis et le cadre, contribution de t3sco",
+  "changelog.r1300.100": "Correction des images envoyées avec des zones transparentes ou semi-transparentes, qui avaient des bords lumineux durs et des franges noires : elles se fondent désormais en douceur, contribution de Haydooners",
   "changelog.r1300.86": "Ajout d'une section Lieux à la Salle : les tables du lieu où tu te trouves, ta propre table ouverte avec son code, Porte et Registre, ou Rouvrir en un geste, puis chaque jeu que tu peux ouvrir",
   "changelog.r1300.87": "Ajout de Rouvrir : la fiche d'hôte retient ta dernière table pour chaque personnage et la rouvre à la dernière étape",
   "changelog.r1300.88": "Ajout des entrées invité aux registres de gils : l'hôte note une entrée ou un paiement pour un client sans Aetherphone, depuis l'invite d'échange ou en tapant le nom",

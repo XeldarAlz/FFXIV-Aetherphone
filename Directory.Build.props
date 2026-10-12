@@ -63,16 +63,14 @@
   </PropertyGroup>
 
   <!--
-    ImageSharp 3.1.12 advisories published 2026-10-07. The only fix is 4.1.2,
-    which needs a Six Labors license key at build time. Remove these once the
-    package is upgraded.
+    SixLabors.ImageSharp validates an assembly-scoped license before compiling
+    any project that references it directly. The community license at the
+    repository root covers the Aetherphone assembly until 2028-01-09; Six
+    Labors opens renewal 90 days before expiry, and an expired key fails every
+    Release build, old tags included.
   -->
-  <ItemGroup Label="AuditSuppressions">
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-gwg2-r3hj-4w44" />
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-wmxv-xphr-5c9g" />
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j3p4-wp97-rph4" />
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j9gm-c75j-xc9q" />
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-jjfr-hcj7-qf5w" />
-  </ItemGroup>
+  <PropertyGroup Label="Licensing">
+    <SixLaborsLicenseFile>$(MSBuildThisFileDirectory)sixlabors.lic</SixLaborsLicenseFile>
+  </PropertyGroup>
 
 </Project>

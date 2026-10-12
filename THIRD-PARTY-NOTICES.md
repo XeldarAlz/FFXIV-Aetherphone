@@ -241,7 +241,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## SixLabors.ImageSharp
 
-`SixLabors.ImageSharp.dll` (version 3.1.x, by Six Labors and contributors) is
+`SixLabors.ImageSharp.dll` (version 4.1.x, by Six Labors and contributors) is
 redistributed in binary form.
 
 - Source: https://github.com/SixLabors/ImageSharp
@@ -249,7 +249,10 @@ redistributed in binary form.
   (https://github.com/SixLabors/ImageSharp/blob/main/LICENSE). Aetherphone is
   an open-source project consuming the package unmodified, which the Split
   License covers under the terms of the Apache License, Version 2.0
-  (https://www.apache.org/licenses/LICENSE-2.0).
+  (https://www.apache.org/licenses/LICENSE-2.0). Six Labors granted the
+  project an assembly-scoped Community license for the Aetherphone assembly
+  (`sixlabors.lic` in the repository root, valid until 2028-01-09), which the
+  package validates at build time.
 
 ## Bouncy Castle
 
@@ -295,6 +298,7 @@ once at the end of this section:
 | YoutubeExplode | 6.6.2 | Oleksii Holub (https://github.com/Tyrrrz/YoutubeExplode) |
 | HtmlAgilityPack | 1.11.46 | ZZZ Projects and contributors (https://github.com/zzzprojects/html-agility-pack) |
 | System.Security.Cryptography.ProtectedData | 10.0.12 | Microsoft Corporation (https://github.com/dotnet/runtime) |
+| System.IO.Hashing | 8.0.0 | Microsoft Corporation (https://github.com/dotnet/runtime) |
 | NEbml | 1.1.0.5 | Oleg Zee (https://github.com/OlegZee/NEbml) |
 | NLayer / NLayer.NAudioSupport | 2.0.1 | Mark Heath, Andrew Ward (https://github.com/naudio/NLayer) |
 | Net.Codecrete.QrCodeGenerator | 3.2.1 | Manuel Bleichenbacher and Project Nayuki (https://github.com/manuelbl/QrCodeGenerator) |
