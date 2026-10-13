@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Notifications;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Windows.Components;
@@ -21,7 +22,7 @@ internal static class UnderlineTabs
     private const float LabelLift = 2f;
 
     public static int Draw(Rect row, string leftLabel, string rightLabel, bool rightActive, ref Spring slide,
-        SocialInk ink, in UnderlineTabStyle style)
+        SocialInk ink, in UnderlineTabStyle style, UiSound tapSound = UiSound.Tap)
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
@@ -47,12 +48,12 @@ internal static class UnderlineTabs
             new Vector2(underlineLeft + underlineWidth, row.Max.Y), style.Underline * scale * 0.5f,
             ImGui.GetColorU32(style.UnderlineInk));
         FeedCell.Hairline(drawList, row.Min.X, row.Max.X, row.Max.Y, ink.Hairline);
-        if (UiInteract.Click(leftRect.Min, leftRect.Max, leftHovered))
+        if (UiInteract.Click(leftRect.Min, leftRect.Max, leftHovered, tapSound))
         {
             return 0;
         }
 
-        return UiInteract.Click(rightRect.Min, rightRect.Max, rightHovered) ? 1 : -1;
+        return UiInteract.Click(rightRect.Min, rightRect.Max, rightHovered, tapSound) ? 1 : -1;
     }
 
     public static int DrawIcons(Rect row, ReadOnlySpan<string> glyphs, ReadOnlySpan<string> labels, int active,

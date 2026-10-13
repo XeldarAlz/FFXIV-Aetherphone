@@ -18,6 +18,9 @@ internal sealed class AppearancePage : ISettingsPage
     private static readonly SettingsEntry[] Searchable =
     {
         new(L.Settings.Theme),
+        new(L.Settings.SeasonalThemeTitle),
+        new(L.Settings.SeasonalNameFont, L.Settings.SeasonalThemeTitle),
+        new(L.Settings.SeasonalParallax, L.Settings.SeasonalThemeTitle),
         new(L.Settings.Accent),
         new(L.Settings.IconAppearance),
         new(L.Settings.Wallpaper),
@@ -44,8 +47,11 @@ internal sealed class AppearancePage : ISettingsPage
     private const float MinimumWallpaperAspect = 0.1f;
     private static readonly ThemeMode[] ModeOrder = { ThemeMode.Light, ThemeMode.Dark, ThemeMode.Auto };
     private static readonly int[] GridRowOptions = { 5, 6, 7 };
+    private static readonly SeasonalThemeMode[] SeasonalOrder =
+        { SeasonalThemeMode.Automatic, SeasonalThemeMode.Halloween, SeasonalThemeMode.Off };
     private readonly string[] modeLabels = new string[ModeOrder.Length];
     private readonly string[] densityLabels = new string[GridRowOptions.Length];
+    private readonly string[] seasonalLabels = new string[SeasonalOrder.Length];
     private LanguageInfo? labelsLanguage;
     private readonly Configuration configuration;
     private readonly ThemeProvider themes;
@@ -79,6 +85,8 @@ internal sealed class AppearancePage : ISettingsPage
         {
             DrawThemeCard(theme);
             ImGui.Dummy(new Vector2(0f, CardGap * scale));
+            DrawSeasonalCard(theme);
+            ImGui.Dummy(new Vector2(0f, CardGap * scale));
             DrawAccentCard(theme, scale);
             ImGui.Dummy(new Vector2(0f, CardGap * scale));
             DrawIconCard(theme);
@@ -106,6 +114,9 @@ internal sealed class AppearancePage : ISettingsPage
         densityLabels[0] = Loc.T(L.Home.GridComfortable);
         densityLabels[1] = Loc.T(L.Home.GridStandard);
         densityLabels[2] = Loc.T(L.Home.GridCompact);
+        seasonalLabels[0] = Loc.T(L.Settings.SeasonalAutomatic);
+        seasonalLabels[1] = Loc.T(L.Settings.SeasonalHalloween);
+        seasonalLabels[2] = Loc.T(L.Settings.SeasonalOff);
     }
 
     private void DrawThemeCard(PhoneTheme theme)
@@ -124,6 +135,35 @@ internal sealed class AppearancePage : ISettingsPage
 
         configuration.ThemeMode = mode;
         ApplyTheme();
+    }
+
+    private void DrawSeasonalCard(PhoneTheme theme)
+    {
+        SettingsSection.Header(Loc.T(L.Settings.SeasonalThemeTitle), theme);
+        var decorated = configuration.SeasonalThemeMode != SeasonalThemeMode.Off;
+        var card = GroupCard.Begin(theme, decorated ? 3 : 1);
+        var seasonal = SeasonalOrder[SegmentStrip.Draw("settings.seasonalTheme", card.NextRow(), seasonalLabels,
+            Array.IndexOf(SeasonalOrder, configuration.SeasonalThemeMode), theme)];
+        var nameFont = decorated
+            ? SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.SeasonalNameFont), configuration.SeasonalNameFont,
+                theme, hint: Loc.T(L.Settings.SeasonalNameFontHint))
+            : configuration.SeasonalNameFont;
+        var parallax = decorated
+            ? SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.SeasonalParallax), configuration.SeasonalParallax,
+                theme, hint: Loc.T(L.Settings.SeasonalParallaxHint))
+            : configuration.SeasonalParallax;
+        card.End();
+        SettingsSection.Hint(Loc.T(L.Settings.SeasonalThemeHint), theme);
+        if (seasonal == configuration.SeasonalThemeMode && nameFont == configuration.SeasonalNameFont &&
+            parallax == configuration.SeasonalParallax)
+        {
+            return;
+        }
+
+        configuration.SeasonalThemeMode = seasonal;
+        configuration.SeasonalNameFont = nameFont;
+        configuration.SeasonalParallax = parallax;
+        configuration.Save();
     }
 
     private void DrawAccentCard(PhoneTheme theme, float scale)

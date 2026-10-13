@@ -40,23 +40,31 @@ internal sealed partial class VelvetShell
         var rowCenterY = area.Min.Y + VHeader.Height * scale * 0.5f;
         var logoSize = LogoSize * scale;
         var logoCenter = new Vector2(area.Min.X + SocialChrome.CellPadX * scale + logoSize * 0.5f, rowCenterY);
+        DrawLogoFlare(drawList, logoCenter, logoSize);
         if (!AppIconTile.TryDrawGlyph(drawList, Id, logoCenter, logoSize, VelvetTheme.RoseInk))
         {
             PhoneIcon.Draw(drawList, logoCenter, PhoneIcons.Moon, VelvetTheme.RoseInk, logoSize);
         }
 
+        DrawLogoTap(logoCenter, logoSize);
+
         var titleLeft = logoCenter.X + logoSize * 0.5f + LogoGap * scale;
-        var titleRight = SocialChrome.HeaderSlot(area, RootTrailingSlots(activeTab) - 1).X
-            - SocialChrome.HeaderIconRadius * scale - TitleIconGap * scale;
-        var title = Typography.FitText(DisplayName, MathF.Max(1f, titleRight - titleLeft), WordmarkStyle);
-        var titleSize = Typography.Measure(title, WordmarkStyle);
+        var iconsLeft = SocialChrome.HeaderSlot(area, RootTrailingSlots(activeTab) - 1).X
+            - SocialChrome.HeaderIconRadius * scale;
+        var titleRight = iconsLeft - TitleIconGap * scale;
+        var titleHeight = Typography.LineHeight(WordmarkStyle);
+        var titleMaxWidth = MathF.Max(1f, titleRight - titleLeft);
+        var titleSize = SocialSeason.FitWordmark(DisplayName, titleMaxWidth, titleHeight, WordmarkStyle, out var title,
+            out var gothic);
         var titleTop = rowCenterY - titleSize.Y * 0.5f;
         var titleMin = new Vector2(titleLeft - TitleHitPad * scale, titleTop - TitleHitPadY * scale);
         var titleMax = new Vector2(titleLeft + titleSize.X + TitleHitPad * scale,
             titleTop + titleSize.Y + TitleHitPadY * scale);
         UiInteract.HoverHighlight(drawList, titleMin, titleMax, TitleHitRounding * scale);
-        Typography.Draw(drawList, new Vector2(titleLeft, titleTop), title, VelvetTheme.TitleInk, WordmarkStyle);
-        if (UiInteract.HoverClick(titleMin, titleMax))
+        SocialSeason.DrawWordmark(drawList, new Vector2(titleLeft, titleTop), title, VelvetTheme.TitleInk, titleHeight,
+            WordmarkStyle, gothic);
+        PlaceMoon(titleLeft + titleSize.X, iconsLeft);
+        if (UiInteract.HoverClick(titleMin, titleMax, TitleSound))
         {
             RefreshRootTab();
         }

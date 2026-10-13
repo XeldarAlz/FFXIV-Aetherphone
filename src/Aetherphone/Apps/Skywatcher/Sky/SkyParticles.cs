@@ -4,8 +4,8 @@ namespace Aetherphone.Apps.Skywatcher.Sky;
 
 internal static class SkyParticles
 {
+    public const double LightningPeriodSeconds = 6.8;
     private const float GoldenStep = 0.618034f;
-    private const double LightningPeriodSeconds = 6.8;
     private const int BoltSegments = 11;
     private const int BranchSegments = 5;
     private const int RayCount = 5;
@@ -59,7 +59,7 @@ internal static class SkyParticles
     }
 
     public static void Luminary(in SkyCanvas canvas, Vector2 anchor, float daylight, in AmbienceInk ink,
-        float strength)
+        float strength, bool full)
     {
         var drawList = canvas.DrawList;
         var center = canvas.At(anchor.X, anchor.Y);
@@ -72,7 +72,7 @@ internal static class SkyParticles
         SkyLayers.Glow(canvas, center, new Vector2(width * 0.085f), ink.Core, (0.55f + 0.35f * daylight) * opacity);
         var disc = width * (0.026f + 0.006f * daylight);
         drawList.AddCircleFilled(center, disc, SkyLayers.Color(ink.Core, 0.92f * opacity), 40);
-        if (daylight >= 0.5f)
+        if (full || daylight >= 0.5f)
         {
             return;
         }

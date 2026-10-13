@@ -21,6 +21,7 @@ internal sealed class SoundsPage : ISettingsPage
         new(L.Settings.UiSoundTransitions, L.Settings.UiSounds),
         new(L.Settings.UiSoundToggles, L.Settings.UiSounds),
         new(L.Settings.UiSoundKeyboard, L.Settings.UiSounds),
+        new(L.Settings.SeasonalSounds, L.Settings.UiSounds),
         new(L.Settings.GameSounds),
     };
 
@@ -212,7 +213,7 @@ internal sealed class SoundsPage : ISettingsPage
         }
 
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * UiScale.Current));
-        var extrasCard = GroupCard.Begin(theme, 4);
+        var extrasCard = GroupCard.Begin(theme, 5);
         var taps = SettingsRow.Bool(extrasCard.NextRow(), Loc.T(L.Settings.UiSoundTaps),
             configuration.UiSoundTaps, theme);
         var transitions = SettingsRow.Bool(extrasCard.NextRow(), Loc.T(L.Settings.UiSoundTransitions),
@@ -221,9 +222,12 @@ internal sealed class SoundsPage : ISettingsPage
             configuration.UiSoundToggles, theme);
         var keyboard = SettingsRow.Bool(extrasCard.NextRow(), Loc.T(L.Settings.UiSoundKeyboard),
             configuration.UiSoundKeyboard, theme, null, Loc.T(L.Settings.UiSoundExtrasHint));
+        var seasonal = SettingsRow.Bool(extrasCard.NextRow(), Loc.T(L.Settings.SeasonalSounds),
+            configuration.SeasonalSounds, theme, null, Loc.T(L.Settings.SeasonalSoundsHint));
         extrasCard.End();
         if (taps == configuration.UiSoundTaps && transitions == configuration.UiSoundTransitions &&
-            toggles == configuration.UiSoundToggles && keyboard == configuration.UiSoundKeyboard)
+            toggles == configuration.UiSoundToggles && keyboard == configuration.UiSoundKeyboard &&
+            seasonal == configuration.SeasonalSounds)
         {
             return;
         }
@@ -232,6 +236,7 @@ internal sealed class SoundsPage : ISettingsPage
         configuration.UiSoundTransitions = transitions;
         configuration.UiSoundToggles = toggles;
         configuration.UiSoundKeyboard = keyboard;
+        configuration.SeasonalSounds = seasonal;
         configuration.Save();
     }
 }

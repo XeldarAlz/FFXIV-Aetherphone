@@ -37,7 +37,7 @@ internal sealed partial class AethergramApp
         var searchRect = new Rect(new Vector2(area.Min.X + CellPadX * scale, searchTop),
             new Vector2(area.Max.X - CellPadX * scale, searchTop + InboxSearchHeight * scale));
         SearchField.Draw(searchRect, "##aethergramShareSearch", Loc.T(L.Aethergram.NameOrWorld),
-            ref shareSearchDraft, AppPalettes.Aethergram);
+            ref shareSearchDraft, AethergramInk.CurrentPalette);
         RunDmSearch(ref shareSearch, shareSearchDraft);
         var listRect = new Rect(new Vector2(area.Min.X, searchRect.Max.Y + 4f * scale), area.Max);
         using (AppSurface.BeginEdgeToEdge(listRect))

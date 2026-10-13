@@ -113,6 +113,12 @@ internal sealed partial class CoinApp
         cursorY = DrawBalanceCard(drawList, new Vector2(origin.X, cursorY), width, wallet, scale);
         cursorY = DrawPurse(drawList, new Vector2(origin.X, cursorY), width, scale);
         cursorY = DrawCheckIn(new Vector2(origin.X, cursorY), width, wallet, frozen, scale);
+        if (SeasonalTheme.Halloween)
+        {
+            cursorY = treatCard.Draw(ui, new Vector2(origin.X, cursorY + Metrics.Space.Md * scale), width,
+                CharacterName());
+        }
+
         if (wallet.Paused)
         {
             var panelTop = cursorY + Metrics.Space.Md * scale;

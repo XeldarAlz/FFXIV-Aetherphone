@@ -37,8 +37,13 @@ internal static class ChirperReactions
     };
 
     private static readonly string?[] EmojiFiles = new string?[Kinds.Length];
+    private static readonly int[] SpookyOrder = { 7, 10, 6, 0, 1, 2, 3, 4, 5, 8, 9, 11, 12 };
 
     public static int Count => Kinds.Length;
+
+    public static int KindAt(int slot, bool spookyFirst) =>
+        spookyFirst ? SpookyOrder[Math.Clamp(slot, 0, Kinds.Length - 1)] : slot;
+
     public static ChirperReaction Get(int kind) => Kinds[Math.Clamp(kind, 0, Kinds.Length - 1)];
     public static Vector4 Color(int kind) => Get(kind).Color;
     public static string Label(int kind) => Loc.T(Get(kind).Label);

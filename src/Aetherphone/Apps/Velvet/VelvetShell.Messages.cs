@@ -856,7 +856,7 @@ internal sealed partial class VelvetShell
             var send = new Rect(new Vector2(sendOrigin.X + inset, sendOrigin.Y),
                 new Vector2(sendOrigin.X + inset + contentWidth, sendOrigin.Y + IntroSendHeight * scale));
             if (Button.Draw(drawList, send, Loc.T(L.Velvet.SendIntro), VelvetTheme.Ink,
-                    enabled: !string.IsNullOrWhiteSpace(introText) && !store.IntroBusy))
+                    enabled: !string.IsNullOrWhiteSpace(introText) && !store.IntroBusy, tapSound: ConnectSound))
             {
                 SendIntro(userId);
             }
@@ -869,7 +869,8 @@ internal sealed partial class VelvetShell
             var skipOrigin = ImGui.GetCursorScreenPos();
             var skip = new Rect(new Vector2(skipOrigin.X + inset, skipOrigin.Y),
                 new Vector2(skipOrigin.X + inset + contentWidth, skipOrigin.Y + IntroSkipHeight * scale));
-            if (Button.Draw(drawList, skip, Loc.T(L.Velvet.JustConnectMe), VelvetTheme.Ink, ButtonStyle.Gray))
+            if (Button.Draw(drawList, skip, Loc.T(L.Velvet.JustConnectMe), VelvetTheme.Ink, ButtonStyle.Gray,
+                    tapSound: ConnectSound))
             {
                 ConnectWithoutIntro(userId);
             }
@@ -986,6 +987,7 @@ internal sealed partial class VelvetShell
         store.SendIntro(userId, introText.Trim(), _ => { });
         introText = string.Empty;
         router.Pop();
+        SocialSeason.Toast(toast, L.Seasonal.VelvetConnected);
     }
 
     private void ConnectWithoutIntro(string userId)
@@ -993,6 +995,7 @@ internal sealed partial class VelvetShell
         store.Connect(userId);
         introText = string.Empty;
         router.Pop();
+        SocialSeason.Toast(toast, L.Seasonal.VelvetConnected);
     }
 
     private static string IntroLineOf(VelvetConnectionDto request) =>

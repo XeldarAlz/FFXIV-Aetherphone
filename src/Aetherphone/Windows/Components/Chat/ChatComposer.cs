@@ -107,6 +107,8 @@ internal sealed class ChatComposer : IDisposable
         set => editor.Adopt(value);
     }
 
+    public UiSound SendSound { get; set; } = UiSound.MessageSent;
+
     public bool IsEditing => editTargetId is not null;
 
     public bool HasReplyTarget => replyTargetId is not null;
@@ -839,7 +841,7 @@ internal sealed class ChatComposer : IDisposable
         else
         {
             model.OnSendText(model.ConversationId, body, replyTargetId);
-            UiFeedback.Play(UiSound.MessageSent);
+            UiFeedback.Play(SendSound);
             editor.Adopt(string.Empty);
             ClearReply();
         }
@@ -929,7 +931,7 @@ internal sealed class ChatComposer : IDisposable
             if (recorder.Stop(out var wavBytes, out var durationSecs))
             {
                 model.OnSendVoice(model.ConversationId, wavBytes, durationSecs);
-                UiFeedback.Play(UiSound.MessageSent);
+                UiFeedback.Play(SendSound);
             }
         }
     }

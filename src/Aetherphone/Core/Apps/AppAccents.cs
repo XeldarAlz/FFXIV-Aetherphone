@@ -47,7 +47,7 @@ internal static class AppAccents
         ["muster"] = AccentRing.Cyan,
         ["yellowpages"] = AccentRing.Gold,
         ["games"] = AccentRing.Red,
-        ["housing"] = AccentRing.Emerald,
+        ["housing"] = AccentRing.Teal,
         ["memory"] = AccentRing.Gold,
         ["bubbles"] = AccentRing.Teal,
         ["whack"] = AccentRing.Lime,

@@ -117,7 +117,7 @@ internal sealed partial class AethergramApp
     {
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth();
-        SearchField.Draw(bar, id, hint, ref draft, AppPalettes.Aethergram);
+        SearchField.Draw(bar, id, hint, ref draft, AethergramInk.CurrentPalette);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, bar.Max.Y - origin.Y));
     }

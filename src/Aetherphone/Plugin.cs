@@ -135,6 +135,7 @@ public sealed class Plugin : IDalamudPlugin
             Framework.Update += OnVideoFrameworkUpdate;
             Framework.Update += OnDeviceLinkTick;
             Framework.Update += OnCallsTick;
+            Framework.Update += OnSeasonTick;
             videoDebugWindow = new VideoDebugWindow(videoSuite.Player, videoSuite.Screen);
             screenWindow = new AetherStreamScreenWindow(videoSuite);
             videoWorldOverlay = new VideoWorldOverlay(videoSuite, Cfg);
@@ -263,6 +264,7 @@ public sealed class Plugin : IDalamudPlugin
         Framework.Update -= OnVideoFrameworkUpdate;
         Framework.Update -= OnDeviceLinkTick;
         Framework.Update -= OnCallsTick;
+        Framework.Update -= OnSeasonTick;
         Framework.Update -= OnLinkpearlPresenceTick;
         ContextMenu.OnMenuOpened -= OnMenuOpened;
         CommandManager.RemoveHandler(AepConstants.PrimaryCommand);
@@ -354,6 +356,12 @@ public sealed class Plugin : IDalamudPlugin
     private void OnCallsTick(IFramework framework) =>
         services.Calls.Advance((float)framework.UpdateDelta.TotalSeconds);
 
+    private static void OnSeasonTick(IFramework framework)
+    {
+        SeasonalTheme.Update(Cfg, DateTime.Now);
+        Fonts.SyncDisplay(SeasonalTheme.Halloween);
+    }
+
     private void OnDeviceLinkTick(IFramework framework)
     {
         services.DeviceLinks.Tick((float)framework.UpdateDelta.TotalSeconds);
@@ -407,6 +415,7 @@ public sealed class Plugin : IDalamudPlugin
         Framework.Update -= OnVideoFrameworkUpdate;
         Framework.Update -= OnDeviceLinkTick;
         Framework.Update -= OnCallsTick;
+        Framework.Update -= OnSeasonTick;
         Framework.Update -= OnLinkpearlPresenceTick;
         services.Calls.IncomingCallPresented -= BringPhoneForward;
         services.AlarmRinger.Presented -= BringPhoneForward;

@@ -1,6 +1,7 @@
 using System.Globalization;
 using Aetherphone.Core;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
@@ -15,6 +16,8 @@ internal static class MonthGrid
     private const float DotUnits = 1.6f;
     private const float DotGapUnits = 2f;
     private const float InitialsGapUnits = 3f;
+    private const float PumpkinPerch = 0.9f;
+    private const float PumpkinSize = 0.8f;
 
     private static readonly string[] DayNumbers = BuildDayNumbers();
     private static readonly string[] Initials = new string[DaysPerWeek];
@@ -61,10 +64,19 @@ internal static class MonthGrid
                 gridTop + cellHeight * (row + 0.5f) - (showDots ? dotSpace * 0.5f : 0f));
             var dayOfWeek = (firstDay + column) % DaysPerWeek;
             var weekend = dayOfWeek is (int)DayOfWeek.Saturday or (int)DayOfWeek.Sunday;
+            var radius = MathF.Min(cellWidth, cellHeight) * TodayFraction;
+            var halloweenNight = SeasonalTheme.IsHalloweenNight(new DateTime(today.Year, today.Month, day));
+            if (halloweenNight && day != today.Day)
+            {
+                var perch = radius * PumpkinPerch;
+                PhoneIcon.Draw(drawList, center + new Vector2(perch, -perch), PhoneIcons.Pumpkin,
+                    ink.Accent(Spooks.Pumpkin), radius * PumpkinSize);
+            }
+
             if (day == today.Day)
             {
-                var radius = MathF.Min(cellWidth, cellHeight) * TodayFraction;
-                drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(ink.Accent(accent)), 28);
+                var todayAccent = halloweenNight ? Spooks.Pumpkin : accent;
+                drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(ink.Accent(todayAccent)), 28);
                 Centered(drawList, DayNumbers[day], center.X, center.Y - numberHeight * 0.5f, ink.OnAccent,
                     todayStyle);
             }

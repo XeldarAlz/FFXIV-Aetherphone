@@ -8,24 +8,20 @@ internal static class ChangelogData
     {
         new ChangelogEntry("1.3.0.0", "2026-10-09", new ChangelogSection[]
         {
+            new(L.Changelog.SectionHalloween, L.Changelog.Release1300Halloween),
             new(L.Apps.Casino, L.Changelog.Release1300Gamba),
+            new(L.Apps.Coin, L.Changelog.Release1300Coin),
             new(L.Changelog.SectionGuidelines, L.Changelog.Release1300Guidelines),
             new(L.Apps.Linkpearl, L.Changelog.Release1300Linkpearl),
             new(L.Changelog.SectionPhone, L.Changelog.Release1300Phone),
             new(L.Changelog.SectionChirperAethergramVelvet, L.Changelog.Release1300ChirperAethergramVelvet),
             new(L.Changelog.SectionAethergramVelvet, L.Changelog.Release1300AethergramVelvet),
             new(L.Changelog.SectionMessaging, L.Changelog.Release1300Messaging),
+            new(L.Apps.Games, L.Changelog.Release1300Games),
             new(L.Apps.Housing, L.Changelog.Release1300Housing),
             new(L.Apps.Hunts, L.Changelog.Release1300Hunts),
             new(L.Apps.Market, L.Changelog.Release1300Market),
             new(L.Apps.Music, L.Changelog.Release1300Music),
-        }),
-        new ChangelogEntry("1.2.0.1", "2026-10-10", new ChangelogSection[]
-        {
-            new(L.Apps.Coin, L.Changelog.Release1201Coin),
-            new(L.Changelog.SectionPhone, L.Changelog.Release1201Phone),
-            new(L.Apps.Games, L.Changelog.Release1201Games),
-            new(L.Apps.Housing, L.Changelog.Release1201Housing),
         }),
         new ChangelogEntry("1.2.0.0", "2026-10-08", new ChangelogSection[]
         {

@@ -316,6 +316,7 @@ internal sealed class PhoneServices : IDisposable
         Social.Frames.Use(frameCatalog);
         Windows.Components.UserName.Configure(badgeCatalog, remoteImages);
         Windows.Components.NowPlayingArt.Configure(remoteImages);
+        Windows.Components.Treats.Configure(installer, aethernetSession);
         Moderation.ModerationNoticeText.Configure(badgeCatalog, frameCatalog);
         var coinApi = new AethernetApi(http, aethernetSession, "coin");
         var coins = new Coins.CoinStore(aethernetSession, coinApi.Coins);
@@ -385,8 +386,9 @@ internal sealed class PhoneServices : IDisposable
         var housingCacheRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "housing"));
         var housingGate = installer.Gate(HousingService.AppId);
         var housingGameMaps = new HousingGameMaps(dataManager, textures);
-        var housing = new HousingService(http, configuration, gameData, framework, housingGameMaps, visibility,
-            housingCacheRoot, housingGate);
+        var housingArt = new HousingDistrictArt(dataManager, textures);
+        var housing = new HousingService(http, configuration, gameData, framework, housingGameMaps, housingArt,
+            visibility, housingCacheRoot, housingGate);
         var fishing = new FishingCatalog(dataManager,
             Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty);
         var fishingAlerts = new FishingAlerts(configuration, fishing, notifications, clientState, framework,
@@ -720,6 +722,7 @@ internal sealed class PhoneServices : IDisposable
         ShortcutRunner.Dispose();
         RemoteImages.Dispose();
         Windows.Components.UserName.Reset();
+        Windows.Components.Treats.Reset();
         Moderation.ModerationNoticeText.Reset();
         MoogleClicker.Dispose();
         Leaderboard.Dispose();

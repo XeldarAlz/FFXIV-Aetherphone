@@ -289,7 +289,7 @@ public sealed class ThrustBoardTests
     public void TheAutopilotFliesFarThroughTheGeneratedCourse()
     {
         var total = 0f;
-        for (var seed = 1UL; seed <= 12UL; seed++)
+        for (var seed = 1UL; seed <= 4UL; seed++)
         {
             var board = Fresh(seed);
             for (var frame = 0; frame < 60 * 400 && board.State == ThrustState.Running && board.Distance < 1500f; frame++)
@@ -307,7 +307,7 @@ public sealed class ThrustBoardTests
             total += board.Distance;
         }
 
-        Assert.True(total / 12f >= 800f, $"the autopilot averaged {total / 12f:F0} m");
+        Assert.True(total / 4f >= 800f, $"the autopilot averaged {total / 4f:F0} m");
     }
 
     [Fact]

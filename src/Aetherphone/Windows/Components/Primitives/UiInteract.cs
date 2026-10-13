@@ -133,7 +133,10 @@ internal static class UiInteract
 
     public static bool Click(Vector2 min, Vector2 max, bool hovered) => Click(min, max, hovered, true);
 
-    public static bool Click(Vector2 min, Vector2 max, bool hovered, bool tapSound)
+    public static bool Click(Vector2 min, Vector2 max, bool hovered, bool tapSound) =>
+        Click(min, max, hovered, tapSound ? UiSound.Tap : null);
+
+    public static bool Click(Vector2 min, Vector2 max, bool hovered, UiSound? tapSound)
     {
         hovered = hovered && WindowHovered;
         if (!ImGui.IsMouseDown(ImGuiMouseButton.Left) && !ImGui.IsMouseReleased(ImGuiMouseButton.Left))
@@ -162,14 +165,15 @@ internal static class UiInteract
         if (activated)
         {
             hasPendingTap = false;
-            if (tapSound)
+            if (tapSound is { } sound)
             {
-                UiFeedback.Play(UiSound.Tap);
+                UiFeedback.PlayTap(sound);
             }
         }
 
         return activated;
     }
+
 
     private static Vector2 ToContentSpace(Vector2 screen, Vector2 windowPos) =>
         screen - windowPos + new Vector2(ImGui.GetScrollX(), ImGui.GetScrollY());
@@ -179,7 +183,12 @@ internal static class UiInteract
 
     public static bool Click(Vector2 min, Vector2 max) => Click(min, max, Hover(min, max));
 
-    public static bool HoverClick(Vector2 min, Vector2 max)
+    public static bool HoverClick(Vector2 min, Vector2 max) => Click(min, max, HoverWithHand(min, max));
+
+    public static bool HoverClick(Vector2 min, Vector2 max, UiSound sound) =>
+        Click(min, max, HoverWithHand(min, max), sound);
+
+    private static bool HoverWithHand(Vector2 min, Vector2 max)
     {
         var hovering = Hover(min, max);
         if (hovering)
@@ -187,7 +196,7 @@ internal static class UiInteract
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return Click(min, max, hovering);
+        return hovering;
     }
 
     public static bool HoverClickCircle(Vector2 center, float radius)

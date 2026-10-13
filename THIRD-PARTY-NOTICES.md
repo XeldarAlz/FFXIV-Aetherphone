@@ -36,6 +36,18 @@ Bold) are redistributed unmodified.
 - Full license text: `src/Aetherphone/Fonts/Inter-OFL.txt`, shipped next to
   the fonts in every release archive.
 
+## Pirata One font
+
+`src/Aetherphone/Fonts/PirataOne-Regular.ttf`, the seasonal wordmark face for
+Chirper and Aethergram, is redistributed unmodified.
+
+- Copyright (c) 2012 Rodrigo Fuenzalida, Nicolas Massi
+  (www.taip.com.ar / abc.taip.com.ar), with Reserved Font Name 'Pirata'
+- Source: https://github.com/google/fonts/tree/main/ofl/pirataone
+- License: SIL Open Font License 1.1
+- Full license text: `src/Aetherphone/Fonts/PirataOne-OFL.txt`, shipped next
+  to the fonts in every release archive.
+
 ## Phosphor Icons
 
 The painted application icons under `src/Aetherphone/Icons/` (`<appid>.png`

@@ -24,6 +24,9 @@ user picked on the Settings Appearance page (`IconAppearance`):
 - `Tinted` lays the foreground as a mask in the system accent, on graphite (or on paper in Light mode).
 - `Clear` draws the foreground as a white mask on `Material.LiquidGlass`.
 
+A seasonal pair (`<id>.halloween.png` plus `<id>.halloween.fg.png`) replaces the app's pair while
+`SeasonalTheme.Halloween` is on; `AppIconCache` falls back to the regular pair for any app without one.
+
 The icon pipeline itself is covered in [Assets and media](assets-and-media.md#app-icons).
 
 The accent squircle is the fallback. A tile whose id has no painted pair, or whose painting is not ready or

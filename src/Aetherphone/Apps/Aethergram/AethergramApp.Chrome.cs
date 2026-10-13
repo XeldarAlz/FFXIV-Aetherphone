@@ -32,7 +32,7 @@ internal sealed partial class AethergramApp
     private const float FollowPillWidth = 96f;
     private const float EmptyStateTop = 72f;
 
-    private static readonly SocialInk Ink = AethergramInk.Shared;
+    private static SocialInk Ink => AethergramInk.Shared;
     private static readonly TextStyle ScreenTitleStyle = TextStyles.Headline;
 
     private static readonly TextStyle GridOverlayStyle = TextStyles.FootnoteEmphasized;

@@ -66,6 +66,7 @@ internal sealed partial class CoinApp : IPhoneApp, ITabRouteTarget
     private readonly CoinFloat floats = new();
     private readonly CoinLedgerText ledgerText = new();
     private readonly CoinStreakCard streakCard = new();
+    private readonly CoinTreatCard treatCard = new();
     private readonly CoinTextCache texts = new();
 
     private PendingTab pendingTab;

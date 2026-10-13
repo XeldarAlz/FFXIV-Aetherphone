@@ -17,6 +17,8 @@ internal sealed class UiSoundPlayer : IDisposable
 
     private readonly object gate = new();
     private readonly Dictionary<string, float[]> clips = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<(string FileName, HauntDepth Depth), float[]> hauntedClips = new();
+    private int hauntGeneration;
     private readonly DirectoryInfo root;
     private MixingSampleProvider? mixer;
     private VolumeSampleProvider? bus;
@@ -31,11 +33,11 @@ internal sealed class UiSoundPlayer : IDisposable
         this.root = root;
     }
 
-    public void Play(string fileName, float gain, float rate)
+    public void Play(string fileName, float gain, float rate, HauntDepth haunt)
     {
         lock (gate)
         {
-            if (disposed || Volatile.Read(ref activeVoices) >= MaxVoices || !TryLoadClip(fileName, out var clip))
+            if (disposed || Volatile.Read(ref activeVoices) >= MaxVoices || !TryLoadClip(fileName, haunt, out var clip))
             {
                 return;
             }
@@ -58,6 +60,15 @@ internal sealed class UiSoundPlayer : IDisposable
             }
 
             lastPlayTicks = Environment.TickCount64;
+        }
+    }
+
+    public void ClearHaunted()
+    {
+        lock (gate)
+        {
+            hauntedClips.Clear();
+            hauntGeneration++;
         }
     }
 
@@ -96,6 +107,55 @@ internal sealed class UiSoundPlayer : IDisposable
     private void OnMixerInputEnded(object? sender, SampleProviderEventArgs eventArgs)
     {
         Interlocked.Decrement(ref activeVoices);
+    }
+
+    private bool TryLoadClip(string fileName, HauntDepth haunt, out float[] clip)
+    {
+        if (haunt == HauntDepth.None)
+        {
+            return TryLoadClip(fileName, out clip);
+        }
+
+        var key = (fileName, haunt);
+        if (hauntedClips.TryGetValue(key, out clip!))
+        {
+            return clip.Length > 0;
+        }
+
+        if (!TryLoadClip(fileName, out clip))
+        {
+            return false;
+        }
+
+        var plain = clip;
+        var generation = hauntGeneration;
+        hauntedClips[key] = plain;
+        _ = Task.Run(() => BuildHaunted(key, plain, generation));
+        return true;
+    }
+
+    private void BuildHaunted((string FileName, HauntDepth Depth) key, float[] plain, int generation)
+    {
+        float[] haunted;
+        try
+        {
+            haunted = HauntFilter.Apply(plain, key.Depth);
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning(exception, $"[UiSound] haunting {key.FileName} failed");
+            haunted = plain;
+        }
+
+        lock (gate)
+        {
+            if (disposed || generation != hauntGeneration)
+            {
+                return;
+            }
+
+            hauntedClips[key] = haunted;
+        }
     }
 
     private bool TryLoadClip(string fileName, out float[] clip)

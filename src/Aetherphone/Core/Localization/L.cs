@@ -1342,6 +1342,7 @@ internal static class L
         public static readonly LocString PhaseUnavailable = new("housing.phaseUnavailable", "Unavailable period");
         public static readonly LocString PhaseUnknown = new("housing.phaseUnknown", "Phase unknown");
         public static readonly LocString PhaseExpired = new("housing.phaseExpired", "Expired, refreshing");
+        public static readonly LocString PhaseOnWorld = new("housing.phaseOnWorld", "{0} · {1}");
         public static readonly LocString EligibilityPrivate = new("housing.eligibilityPrivate", "Private buyers");
         public static readonly LocString EligibilityFreeCompany =
             new("housing.eligibilityFreeCompany", "Free Companies");
@@ -1376,9 +1377,12 @@ internal static class L
             new("housing.countdownUnderMinute", "Under 1 minute");
         public static readonly LocString CountdownEnded = new("housing.countdownEnded", "Ended");
         public static readonly LocString ScannedJustNow = new("housing.scannedJustNow", "Scanned just now");
-        public static readonly LocString ScannedMinutes = new("housing.scannedMinutes", "Scanned {0} minutes ago");
-        public static readonly LocString ScannedHours = new("housing.scannedHours", "Scanned {0} hours ago");
-        public static readonly LocString ScannedDays = new("housing.scannedDays", "Scanned {0} days ago");
+        public static readonly LocPlural ScannedMinutes =
+            new("housing.scannedMinutes", "Scanned {0} minute ago", "Scanned {0} minutes ago");
+        public static readonly LocPlural ScannedHours =
+            new("housing.scannedHours", "Scanned {0} hour ago", "Scanned {0} hours ago");
+        public static readonly LocPlural ScannedDays =
+            new("housing.scannedDays", "Scanned {0} day ago", "Scanned {0} days ago");
         public static readonly LocString ScannedUnknown = new("housing.scannedUnknown", "Scan time unknown");
         public static readonly LocString AgeNow = new("housing.ageNow", "now");
         public static readonly LocString AgeMinutes = new("housing.ageMinutes", "{0}m");
@@ -1394,9 +1398,10 @@ internal static class L
         public static readonly LocString CachedBanner = new("housing.cachedBanner",
             "Live updates are unavailable. Showing housing data saved {0}.");
         public static readonly LocString AgeJustNow = new("housing.ageJustNow", "just now");
-        public static readonly LocString AgeMinutesAgo = new("housing.ageMinutesAgo", "{0} minutes ago");
-        public static readonly LocString AgeHoursAgo = new("housing.ageHoursAgo", "{0} hours ago");
-        public static readonly LocString AgeDaysAgo = new("housing.ageDaysAgo", "{0} days ago");
+        public static readonly LocPlural AgeMinutesAgo =
+            new("housing.ageMinutesAgo", "{0} minute ago", "{0} minutes ago");
+        public static readonly LocPlural AgeHoursAgo = new("housing.ageHoursAgo", "{0} hour ago", "{0} hours ago");
+        public static readonly LocPlural AgeDaysAgo = new("housing.ageDaysAgo", "{0} day ago", "{0} days ago");
 
         public static readonly LocString Watch = new("housing.watch", "Watch");
         public static readonly LocString Watching = new("housing.watching", "Watching");
@@ -2166,6 +2171,17 @@ internal static class L
         public static readonly LocString IconAppearanceTinted = new("settings.iconAppearanceTinted", "Tinted");
         public static readonly LocString IconAppearanceClear = new("settings.iconAppearanceClear", "Clear");
         public static readonly LocString IconAppearanceHint = new("settings.iconAppearanceHint", "Dark and Tinted repaint each icon on graphite, Clear shows it as glass over the wallpaper. Icons without painted artwork keep their colored tile.");
+        public static readonly LocString SeasonalThemeTitle = new("settings.seasonalTheme", "Seasonal Theme");
+        public static readonly LocString SeasonalThemeHint = new("settings.seasonalThemeHint", "Automatic shows Halloween from 15 October to 2 November. Halloween keeps it all year, and Off turns it off.");
+        public static readonly LocString SeasonalAutomatic = new("settings.seasonalAutomatic", "Automatic");
+        public static readonly LocString SeasonalHalloween = new("settings.seasonalHalloween", "Halloween");
+        public static readonly LocString SeasonalOff = new("settings.seasonalOff", "Off");
+        public static readonly LocString SeasonalNameFont = new("settings.seasonalNameFont", "Seasonal Name Font");
+        public static readonly LocString SeasonalNameFontHint = new("settings.seasonalNameFontHint", "Writes display names in Chirper, Aethergram and Velvet in the seasonal font.");
+        public static readonly LocString SeasonalSounds = new("settings.seasonalSounds", "Seasonal Sounds");
+        public static readonly LocString SeasonalParallax = new("settings.seasonalParallax", "Background Parallax");
+        public static readonly LocString SeasonalParallaxHint = new("settings.seasonalParallaxHint", "Lets the night scenes drift gently as you scroll and move the cursor. Turn off to keep them still.");
+        public static readonly LocString SeasonalSoundsHint = new("settings.seasonalSoundsHint", "Plays the holiday sounds that come with the seasonal theme. Turn off to keep the look with the usual sounds.");
         public static readonly LocString SearchHint = new("settings.searchHint", "Search settings");
         public static readonly LocString NoResults = new("settings.noResults", "No settings match that");
         public static readonly LocString PhoneWidthReadout = new("settings.phoneWidthReadout", "{0} px wide");
@@ -2174,6 +2190,38 @@ internal static class L
         public static readonly LocString DynamicIsland = new("settings.dynamicIsland", "Dynamic Island");
         public static readonly LocString ShowInIsland = new("settings.showInIsland", "Show in Dynamic Island");
         public static readonly LocString RemoveApp = new("settings.removeApp", "Remove App");
+    }
+
+    internal static class Seasonal
+    {
+        public static readonly LocString PackAnswers = new("seasonal.packAnswers", "The pack answers");
+        public static readonly LocString NightTakesWing = new("seasonal.nightTakesWing", "The night takes wing");
+        public static readonly LocString SavedToCrypt = new("seasonal.savedToCrypt", "Saved to your crypt");
+        public static readonly LocString ChirperCaughtUp = new("seasonal.chirperCaughtUp", "The pack is asleep");
+        public static readonly LocString ChirperCaughtUpHint = new("seasonal.chirperCaughtUpHint", "Older howls continue below");
+        public static readonly LocString AethergramCaughtUp = new("seasonal.aethergramCaughtUp", "Nothing left but the night");
+        public static readonly LocString AethergramCaughtUpHint = new("seasonal.aethergramCaughtUpHint", "Older posts lurk below");
+        public static readonly LocString VelvetFeedNone = new("seasonal.velvetFeedNone", "Not a candle lit yet");
+        public static readonly LocString VelvetConnected = new("seasonal.velvetConnected", "Sealed by candlelight");
+        public static readonly LocString CandlesFlare = new("seasonal.candlesFlare", "The candles flare");
+        public static readonly LocString TreatFound = new("seasonal.treatFound", "Treat found! {0} of {1}");
+        public static readonly LocString TreatsComplete = new("seasonal.treatsComplete", "All {0} treats found! Your name burns with Witchfire until Halloween ends, visible only to you.");
+        public static readonly LocString TreatsProgress = new("seasonal.treatsProgress", "Treats {0}/{1}");
+        public static readonly LocString CountdownName = new("seasonal.countdownName", "Halloween");
+        public static readonly LocString CountdownDescription = new("seasonal.countdownDescription", "Counts down to Halloween night and tracks the treats you find.");
+        public static readonly LocPlural DaysToGo = new("seasonal.daysToGo", "day to go", "days to go");
+        public static readonly LocString Tonight = new("seasonal.tonight", "Tonight");
+        public static readonly LocString HalloweenNight = new("seasonal.halloweenNight", "Halloween night");
+        public static readonly LocString HalloweenPassed = new("seasonal.halloweenPassed", "Until next year");
+        public static readonly LocString TreatsFoundLabel = new("seasonal.treatsFoundLabel", "Treats Found");
+        public static readonly LocString TreatsCount = new("seasonal.treatsCount", "{0} of {1}");
+        public static readonly LocString TreatHidingIn = new("seasonal.treatHidingIn", "A treat is hiding in {0}");
+        public static readonly LocString TreatHidingHome = new("seasonal.treatHidingHome", "A treat is hiding on the home screen");
+        public static readonly LocString TreatHidingEmpty = new("seasonal.treatHidingEmpty", "A treat is hiding on an empty screen");
+        public static readonly LocString TreatLater = new("seasonal.treatLater", "Another treat will turn up later");
+        public static readonly LocString TreatTomorrow = new("seasonal.treatTomorrow", "The next treat arrives tomorrow");
+        public static readonly LocString TreatsAllFound = new("seasonal.treatsAllFound", "All found. Enjoy the flame!");
+        public static readonly LocString TreatsRewardHint = new("seasonal.treatsRewardHint", "Find all {0} and your name burns with Witchfire until the season ends, visible only to you.");
     }
 
     internal static class Translate
@@ -2205,6 +2253,17 @@ internal static class L
         public static readonly LocString SectionWidgets = new("changelog.sectionWidgets", "Widgets");
         public static readonly LocString SectionTours = new("changelog.sectionTours", "Setup and tours");
         public static readonly LocString SectionSounds = new("changelog.sectionSounds", "Sounds");
+        public static readonly LocString SectionHalloween = new("changelog.sectionHalloween", "Halloween");
+
+        public static readonly LocString[] Release1300Halloween =
+        {
+            new("changelog.r1300.101",
+                "Added a Halloween theme: night scenes in Chirper, Aethergram and Velvet, bats and mist on the Home Screen, and Halloween icons, wallpapers and sounds, contributed by t3sco"),
+            new("changelog.r1300.102",
+                "Added a treat hunt from 15 October to 2 November: 13 treats hide around the phone, one a day, and finding them all sets your name in Witchfire, contributed by t3sco"),
+            new("changelog.r1300.103",
+                "Added Seasonal Theme under Settings > Appearance: Automatic shows Halloween from 15 October to 2 November, Halloween keeps it all year, and Off turns it off, contributed by t3sco"),
+        };
 
         public static readonly LocString[] Release1300Gamba =
         {
@@ -2368,6 +2427,8 @@ internal static class L
                 "Added a Show in cutscenes setting that keeps the phone on screen while a cutscene plays, for a second monitor"),
             new("changelog.r1300.81",
                 "Added an FPS counter to the mini phone, off by default under Settings > Minimized phone, contributed by t3sco"),
+            new("changelog.r1300.118",
+                "Added reordering inside folders: in edit mode, drag an app to a new spot, contributed by hellovvn"),
             new("changelog.r1300.51",
                 "Fixed the scrollbar moving the wrong way and too slowly when dragged while the phone position is locked, contributed by jambalong"),
             new("changelog.r1300.57",
@@ -2404,10 +2465,42 @@ internal static class L
                 "Fixed chats at the newest message snapping back to the bottom when you drag to scroll up, contributed by jambalong"),
         };
 
+        public static readonly LocString[] Release1300Coin =
+        {
+            new("changelog.r1300.107",
+                "Added a hint under every daily quest saying exactly what counts"),
+            new("changelog.r1300.108",
+                "Changed daily quests to pay on their own once finished, with no Claim button to find"),
+            new("changelog.r1300.109",
+                "Changed game sessions to pay for the same game again, up to five sessions a day"),
+            new("changelog.r1300.110",
+                "Changed radio listening to count toward the quest while you listen instead of after you stop"),
+            new("changelog.r1300.111",
+                "Changed the explore quest to swap to one you can still do when every poll already has your vote or no public meetup is open"),
+            new("changelog.r1300.112",
+                "Fixed a finished quest paying nothing without a word: the reason now shows on the card"),
+            new("changelog.r1300.113",
+                "Fixed radio listening not counting when the station had only just gone live"),
+        };
+
+        public static readonly LocString[] Release1300Games =
+        {
+            new("changelog.r1300.114",
+                "Fixed the featured game switching at the wrong hour and lagging behind the day"),
+        };
+
         public static readonly LocString[] Release1300Housing =
         {
-            new("changelog.r1300.53",
-                "Fixed the lottery countdown and its widget showing an ended lottery instead of the unavailable period running now, contributed by YozoraCho"),
+            new("changelog.r1300.105",
+                "Redesigned the Housing overview to fit on one screen: a ring counts down the lottery phase, a card counts open plots by size, and each district gets a tile with its loading screen art, contributed by YozoraCho"),
+            new("changelog.r1300.106",
+                "Added a night sky with the district's art behind every Housing screen, contributed by YozoraCho"),
+            new("changelog.r1300.115",
+                "Fixed the lottery countdown and its widget showing a past phase as expired instead of the one running now, contributed by YozoraCho"),
+            new("changelog.r1300.116",
+                "Fixed empty map screens being hard to read: the map now dims behind them, contributed by YozoraCho"),
+            new("changelog.r1300.117",
+                "Fixed buttons on empty screens cutting off longer labels, contributed by YozoraCho"),
         };
 
         public static readonly LocString[] Release1300Hunts =
@@ -2426,6 +2519,8 @@ internal static class L
 
         public static readonly LocString[] Release1300Music =
         {
+            new("changelog.r1300.104",
+                "Added Remove from playlist to the song menu inside a playlist, contributed by hellovvn"),
             new("changelog.r1300.99",
                 "Fixed long song titles and artist names in song lists staying cut short: hovering a row now scrolls the full text, contributed by hellovvn"),
         };
@@ -2682,46 +2777,6 @@ internal static class L
         {
             new("changelog.r1200.98",
                 "Fixed crackling and gaps in sounds and music while the game is busy"),
-        };
-
-        public static readonly LocString[] Release1201Coin =
-        {
-            new("changelog.r1201.0",
-                "Added a hint under every daily quest saying exactly what counts"),
-            new("changelog.r1201.1",
-                "Changed daily quests to pay on their own once finished, with no Claim button to find"),
-            new("changelog.r1201.2",
-                "Changed game sessions to pay for the same game again, up to five sessions a day"),
-            new("changelog.r1201.3",
-                "Changed radio listening to count toward the quest while you listen instead of after you stop"),
-            new("changelog.r1201.4",
-                "Changed the explore quest to swap to one you can still do when every poll already has your vote or no public meetup is open"),
-            new("changelog.r1201.5",
-                "Fixed a finished quest paying nothing without a word: the reason now shows on the card"),
-            new("changelog.r1201.6",
-                "Fixed radio listening not counting when the station had only just gone live"),
-        };
-
-        public static readonly LocString[] Release1201Games =
-        {
-            new("changelog.r1201.7",
-                "Fixed the featured game switching at the wrong hour and lagging behind the day"),
-        };
-
-        public static readonly LocString[] Release1201Housing =
-        {
-            new("changelog.r1201.8",
-                "Fixed the lottery countdown and its widget showing a past phase as expired instead of the one running now, contributed by YozoraCho"),
-            new("changelog.r1201.9",
-                "Fixed empty map screens being hard to read: the map now dims behind them, contributed by YozoraCho"),
-            new("changelog.r1201.10",
-                "Fixed buttons on empty screens cutting off longer labels, contributed by YozoraCho"),
-        };
-
-        public static readonly LocString[] Release1201Phone =
-        {
-            new("changelog.r1201.11",
-                "Added reordering inside folders: in edit mode, drag an app to a new spot, contributed by hellovvn"),
         };
 
         public static readonly LocString[] Release1104Music =
@@ -6172,6 +6227,7 @@ internal static class L
         public static readonly LocString Unlove = new("music.unlove", "Remove from loved");
         public static readonly LocString AddToLibrary = new("music.addToLibrary", "Add to library");
         public static readonly LocString RemoveFromLibrary = new("music.removeFromLibrary", "Remove from library");
+        public static readonly LocString RemoveFromPlaylist = new("music.removeFromPlaylist", "Remove from playlist");
         public static readonly LocString Download = new("music.download", "Download");
         public static readonly LocString RemoveDownload = new("music.removeDownload", "Remove download");
         public static readonly LocString GoToArtist = new("music.goToArtist", "Go to artist");
