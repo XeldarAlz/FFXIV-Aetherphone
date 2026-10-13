@@ -1,5 +1,4 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Jobs;
 using Aetherphone.Core.Localization;
@@ -39,8 +38,8 @@ internal sealed partial class JobsApp
     private const float GearsetNameTop = 12f;
     private const float GearsetSubTop = 36f;
 
-    private Spring detailRingFill;
-    private Spring detailBarFill;
+    private LevelFill detailRingFill;
+    private LevelFill detailBarFill;
     private bool gearsetAnchorTaken;
 
     private void DrawDetail(Rect area, uint classJobId)
@@ -99,7 +98,7 @@ internal sealed partial class JobsApp
         Material.TopGlow(drawList, origin, max, radius, tint, DetailGlowCoverage, DetailGlowStrength);
 
         var center = new Vector2(origin.X + pad + ringRadius, (origin.Y + max.Y) * 0.5f);
-        var fill = detailRingFill.Step(job.Fraction, Motion.Sheet, JobsArt.FrameDelta());
+        var fill = detailRingFill.Step(job, JobsArt.FrameDelta());
         JobsArt.JobRing(drawList, textures, center, ringRadius, DetailRingThickness * scale, fill, job, ui.TitleInk,
             IsPending(job), scale);
 
@@ -174,7 +173,7 @@ internal sealed partial class JobsApp
                 cursorY + headerHeight - Typography.LineHeight(TextStyles.FootnoteEmphasized)), percent, tint,
             TextStyles.FootnoteEmphasized);
         cursorY += headerHeight + BarGap * scale;
-        var fill = detailBarFill.Step(job.Fraction, Motion.Sheet, JobsArt.FrameDelta());
+        var fill = detailBarFill.Step(job, JobsArt.FrameDelta());
         JobsArt.Bar(drawList,
             new Rect(new Vector2(innerLeft, cursorY), new Vector2(innerLeft + innerWidth, cursorY + BarHeight * scale)),
             fill, rested / (float)job.ExperienceNeeded, tint, ui.TitleInk);

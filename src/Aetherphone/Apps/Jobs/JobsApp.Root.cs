@@ -39,7 +39,7 @@ internal sealed partial class JobsApp
     private const float ReorderRadius = 11f;
 
     private readonly NavBarButton[] rootButtons = new NavBarButton[2];
-    private Spring heroFill;
+    private LevelFill heroFill;
 
     private void DrawRoot(Rect area)
     {
@@ -143,7 +143,7 @@ internal sealed partial class JobsApp
         }
 
         var center = new Vector2(min.X + pad + ringRadius, (min.Y + max.Y) * 0.5f);
-        var fill = heroFill.Step(job.Fraction, Motion.Sheet, JobsArt.FrameDelta());
+        var fill = heroFill.Step(job, JobsArt.FrameDelta());
         JobsArt.JobRing(drawList, textures, center, ringRadius * press, HeroRingThickness * scale, fill, job,
             ui.TitleInk, IsPending(job), scale);
         JobsArt.Chevron(drawList, new Vector2(max.X - pad, (min.Y + max.Y) * 0.5f), HeroChevronSize * scale,
@@ -359,7 +359,7 @@ internal sealed partial class JobsApp
             }
 
             var job = snapshot.Jobs[jobIndex];
-            var fill = tileFills[jobIndex].Step(job.Fraction, Motion.Sheet, JobsArt.FrameDelta());
+            var fill = tileFills[jobIndex].Step(job, JobsArt.FrameDelta());
             if (DrawJobCell(drawList, cell, job, fill, job.LevelText, job.IsCapped, IsPending(job), job.TooltipId,
                     scale))
             {

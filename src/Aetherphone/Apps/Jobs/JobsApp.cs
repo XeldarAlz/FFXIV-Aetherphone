@@ -1,5 +1,4 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Game;
@@ -45,7 +44,7 @@ internal sealed partial class JobsApp : IPhoneApp
     private readonly RouterDraw<JobsView> drawView;
     private readonly Action back;
     private JobsSnapshot snapshot = JobsSnapshot.Empty;
-    private Spring[] tileFills = Array.Empty<Spring>();
+    private LevelFill[] tileFills = Array.Empty<LevelFill>();
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
     private Rect content;
@@ -190,7 +189,7 @@ internal sealed partial class JobsApp : IPhoneApp
         sinceRefresh = 0f;
         if (tileFills.Length != snapshot.Jobs.Length)
         {
-            tileFills = new Spring[snapshot.Jobs.Length];
+            tileFills = new LevelFill[snapshot.Jobs.Length];
         }
 
         ResolvePendingEquip();
