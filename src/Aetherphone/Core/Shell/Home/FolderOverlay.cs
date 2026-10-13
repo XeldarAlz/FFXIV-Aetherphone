@@ -29,6 +29,7 @@ internal sealed class FolderOverlay
     private const float CloseSnap = 0.01f;
     private const float WheelStepUnits = 40f;
     private const float DragLiftScale = 1.08f;
+    private const float SettleFloatUnits = 0.5f;
     private const int NameMaxLength = 64;
     private const int Columns = HomeTileView.FolderMiniColumns;
     private static readonly Vector4 NoTintSwatch = new(0.55f, 0.56f, 0.60f, 1f);
@@ -246,6 +247,9 @@ internal sealed class FolderOverlay
             lift.Step(1f, Motion.PageSettle, delta);
         }
 
+        var settleFloating = false;
+        var settleCenter = Vector2.Zero;
+        var settleFloat = SettleFloatUnits * scale;
         drawList.PushClipRect(panel.Min, panel.Max, true);
         for (var index = 0; index < current.Members.Count; index++)
         {
@@ -253,9 +257,17 @@ internal sealed class FolderOverlay
                 pad + index / Columns * cell + iconTop + iconSize * 0.5f - scroll) / target.Width;
             var center = panel.Min +
                          Vector2.Lerp(HomeTileView.FolderMiniCenter(index), openCenter, progress) * panel.Width;
-            center += SlideOffset(index, cell, delta);
+            var slide = SlideOffset(index, cell, delta);
+            center += slide;
             if (index == dragIndex)
             {
+                continue;
+            }
+
+            if (index == settleIndex && slide.LengthSquared() > settleFloat * settleFloat)
+            {
+                settleFloating = true;
+                settleCenter = center;
                 continue;
             }
 
@@ -312,6 +324,12 @@ internal sealed class FolderOverlay
         }
 
         drawList.PopClipRect();
+        if (settleFloating)
+        {
+            DrawMember(drawList, current.Members[settleIndex], settleCenter, iconSize, theme, labelAlpha, cell,
+                drawFactor * lift.Value);
+        }
+
         if (dragIndex >= 0)
         {
             DrawMember(drawList, current.Members[dragIndex], dragCenter, iconSize, theme, labelAlpha, cell,
