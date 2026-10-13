@@ -30,6 +30,7 @@ internal sealed class FolderOverlay
     private const float WheelStepUnits = 40f;
     private const float DragLiftScale = 1.08f;
     private const float SettleFloatUnits = 0.5f;
+    private const float DragOutSeconds = 0.5f;
     private const int NameMaxLength = 64;
     private const int Columns = HomeTileView.FolderMiniColumns;
     private static readonly Vector4 NoTintSwatch = new(0.55f, 0.56f, 0.60f, 1f);
@@ -54,6 +55,9 @@ internal sealed class FolderOverlay
     private int dragTarget = -1;
     private Vector2 dragGrab;
     private Vector2 dragCenter;
+    private float outsideDwell;
+    private HomeTile? draggedOut;
+    private Vector2 draggedOutCenter;
     private Spring lift = new(1f);
     private int settleIndex = -1;
     private Spring[] slideX = Array.Empty<Spring>();
@@ -77,6 +81,20 @@ internal sealed class FolderOverlay
         var requested = editRequested;
         editRequested = false;
         return requested;
+    }
+
+    public bool TryTakeDraggedOut(out HomeTile tile, out Vector2 center)
+    {
+        center = draggedOutCenter;
+        if (draggedOut is not { } taken)
+        {
+            tile = null!;
+            return false;
+        }
+
+        tile = taken;
+        draggedOut = null;
+        return true;
     }
 
     public void Open(HomeTile tile, Rect originRect)
@@ -223,6 +241,11 @@ internal sealed class FolderOverlay
         else
         {
             released = TrackDrag(current.Members.Count, editing && interactive, scale);
+        }
+
+        if (!released && TrackDragOut(current, target, currentPage, delta))
+        {
+            return;
         }
 
         EnsureSlideSprings(current.Members.Count);
@@ -415,6 +438,29 @@ internal sealed class FolderOverlay
 
         dragCenter = mouse - dragGrab;
         return !ImGui.IsMouseDown(ImGuiMouseButton.Left);
+    }
+
+    private bool TrackDragOut(HomeTile current, Rect target, int currentPage, float delta)
+    {
+        if (dragIndex < 0 || target.Contains(ImGui.GetMousePos()))
+        {
+            outsideDwell = 0f;
+            return false;
+        }
+
+        outsideDwell += delta;
+        if (outsideDwell < DragOutSeconds)
+        {
+            return false;
+        }
+
+        var member = current.Members[dragIndex];
+        var center = dragCenter;
+        outsideDwell = 0f;
+        RequestClose();
+        draggedOut = layout.RemoveFromFolder(current, member, currentPage);
+        draggedOutCenter = center;
+        return true;
     }
 
     private void Drop(HomeTile current, Vector2 firstSlotCenter, float cell)

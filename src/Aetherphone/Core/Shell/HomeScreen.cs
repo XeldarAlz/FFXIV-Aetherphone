@@ -87,11 +87,11 @@ internal sealed class HomeScreen
             chrome.DrawEditChrome(content, metrics, theme);
         }
 
+        folder.Draw(screen, content, metrics, theme, navigation, interaction.Editing, pager.Page, delta);
         var ghostDrawList = ImGui.GetWindowDrawList();
         ghostDrawList.PushClipRect(screen.Min, screen.Max, true);
         renderer.DrawDragGhost(metrics, theme, delta);
         ghostDrawList.PopClipRect();
-        folder.Draw(screen, content, metrics, theme, navigation, interaction.Editing, pager.Page, delta);
         DrawWidgetMenu(content, metrics, theme, delta);
         widgetMenu.DrawSheets(screen, theme, delta);
         gallery.Draw(screen, theme, delta, metrics);

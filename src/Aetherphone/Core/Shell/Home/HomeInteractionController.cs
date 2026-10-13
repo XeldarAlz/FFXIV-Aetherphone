@@ -160,7 +160,12 @@ internal sealed class HomeInteractionController
             editing = true;
         }
 
-        if (gallery.Active || folder.Active || widgetMenu.Active || spotlight.Active)
+        if (folder.TryTakeDraggedOut(out var draggedOut, out var draggedCenter))
+        {
+            StartDrag(draggedOut, draggedCenter, ImGui.GetMousePos(), pager.Page, false);
+        }
+
+        if (gallery.Active || folder.Active && dragTile is null || widgetMenu.Active || spotlight.Active)
         {
             if (pressActive)
             {
@@ -510,10 +515,15 @@ internal sealed class HomeInteractionController
 
     private void BeginDrag(in HomeMetrics metrics, HomeTile tile, Vector2 mouse)
     {
+        StartDrag(tile, CommittedRect(metrics, tile)?.Center ?? mouse, mouse,
+            pressFromDock ? pager.Page : LocatePage(tile), pressFromDock);
+    }
+
+    private void StartDrag(HomeTile tile, Vector2 center, Vector2 mouse, int page, bool fromDock)
+    {
         dragTile = tile;
-        dragFromDock = pressFromDock;
-        dragPage = dragFromDock ? pager.Page : LocatePage(tile);
-        var center = CommittedRect(metrics, tile)?.Center ?? mouse;
+        dragFromDock = fromDock;
+        dragPage = page;
         grabOffset = mouse - center;
         dragPos = center;
         lift.SnapTo(1f);
