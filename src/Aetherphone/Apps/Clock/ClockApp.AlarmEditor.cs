@@ -337,18 +337,20 @@ internal sealed partial class ClockApp
         var radius = diameter * 0.5f;
         var step = (right - left - diameter) / (WeekOrder.Length - 1);
         var centerY = top + DayRowHeight * scale * 0.5f - Metrics.Space.Xxs * scale;
+        var tapTarget = Metrics.Size.TapTarget * scale;
+        var hit = new Vector2(MathF.Min(tapTarget, step), tapTarget) * 0.5f;
         for (var index = 0; index < WeekOrder.Length; index++)
         {
             var day = WeekOrder[index];
             var center = new Vector2(left + radius + index * step, centerY);
             var corner = new Vector2(radius, radius);
             var active = draft.RepeatsOn(day);
-            var hovered = UiInteract.Hover(center - corner, center + corner);
+            var hovered = UiInteract.Hover(center - hit, center + hit);
             var face = RoundButton.Surface(drawList, new Rect(center - corner, center + corner), ui.Ink,
                 active ? ButtonStyle.Prominent : ButtonStyle.Gray, true, hovered, ImGui.GetID($"clock.day.{index}"));
             var label = Typography.FitText(names[(int)day], diameter * 0.8f, TextStyles.FootnoteEmphasized);
             Typography.DrawCentered(drawList, center, label, face.LabelInk, TextStyles.FootnoteEmphasized);
-            if (UiInteract.Click(center - corner, center + corner, hovered))
+            if (UiInteract.Click(center - hit, center + hit, hovered))
             {
                 draft.ToggleDay(day);
             }
