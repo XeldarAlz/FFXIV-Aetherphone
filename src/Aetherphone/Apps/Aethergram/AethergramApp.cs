@@ -231,6 +231,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     private string caption = string.Empty;
     private bool composeSensitive;
     private bool captionFocus;
+    private bool captionTyping;
     private readonly FailureSlot feedFailure = new();
     private readonly FailureSlot commentFailure = new();
     private string? commentRestore;

@@ -89,7 +89,7 @@ internal sealed class GameEmojiComposer
         return picked;
     }
 
-    public bool DrawSuggestions(Rect bar, Rect host, PhoneTheme theme, ref string draft)
+    public bool DrawSuggestions(Rect bar, Rect host, PhoneTheme theme, ref string draft, bool typing)
     {
         if (open || !PickerEnabled || !EmojiShortcodes.Enabled)
         {
@@ -98,6 +98,6 @@ internal sealed class GameEmojiComposer
 
         skin.Palette = AppPalettes.Linkpearl(theme);
         skin.Theme = theme;
-        return suggestions.Draw(bar, host, skin, ref draft);
+        return suggestions.Draw(bar, host, skin, ref draft, typing);
     }
 }

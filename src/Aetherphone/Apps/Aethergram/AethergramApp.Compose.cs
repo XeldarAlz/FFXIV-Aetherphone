@@ -409,7 +409,7 @@ internal sealed partial class AethergramApp
         var field = new Rect(new Vector2(card.Min.X + pad, card.Min.Y + pad),
             new Vector2(card.Max.X - pad, card.Min.Y + pad + ComposeCaptionFieldHeight * scale));
         DrawCaptionField(field, screen, scale, fieldId, paragraphs, ref text, mentions);
-        if (captionEmoji.DrawSuggestions(card, screen, ui, ref text, MaxCaptionLength))
+        if (captionEmoji.DrawSuggestions(card, screen, ui, ref text, MaxCaptionLength, captionTyping))
         {
             captionFocus = true;
         }
@@ -443,6 +443,8 @@ internal sealed partial class AethergramApp
                 SoftWrapField.Multiline(fieldId, ref text, MaxCaptionLength, field.Size, wrapWidth, mentions);
             }
         }
+
+        captionTyping = EmojiSuggestions.FieldTyping();
 
         var pickedMention = mentionPopup.Draw(mentions, screen, theme, images, lodestone);
         if (pickedMention >= 0)

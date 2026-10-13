@@ -199,7 +199,7 @@ internal sealed partial class ChirperApp
             var typed = new Rect(new Vector2(inputX, inputTop),
                 new Vector2(inputX + inputWidth, inputTop + measuredText + ImGui.GetStyle().FramePadding.Y * 2f));
             var room = new Rect(area.Min, new Vector2(area.Max.X, area.Max.Y - toolbarHeight));
-            if (composeEmoji.DrawSuggestions(typed, room, ui, ref draft, MaxPostLength, true))
+            if (composeEmoji.DrawSuggestions(typed, room, ui, ref draft, MaxPostLength, composeFieldActive, true))
             {
                 composeFocus = true;
             }

@@ -93,6 +93,7 @@ internal sealed class ChatComposer : IDisposable
     private string? pendingImage;
     private float fieldGrowth;
     private bool focus;
+    private bool typing;
     private bool emojiOpen;
     private int emojiOpenedFrame = -1;
     private int emojiClosedFrame = -1;
@@ -320,6 +321,8 @@ internal sealed class ChatComposer : IDisposable
             submitted = editor.Draw("##chatComposerInput", new Vector2(fieldWidth, fieldHeight), model.MaxLength, 0)
                         && !suggestions.Showing;
         }
+
+        typing = EmojiSuggestions.FieldTyping();
 
         if (model.CanImage && editTargetId is null && model.Library is { } library)
         {
@@ -874,6 +877,8 @@ internal sealed class ChatComposer : IDisposable
 
     private void DrawSuggestions(Rect composerArea, in ChatComposerModel model)
     {
+        var typed = typing;
+        typing = false;
         if (emojiOpen)
         {
             return;
@@ -881,7 +886,7 @@ internal sealed class ChatComposer : IDisposable
 
         var bar = new Rect(new Vector2(composerArea.Min.X, composerArea.Min.Y - AccessoryHeight), composerArea.Max);
         var draft = editor.Text;
-        if (!suggestions.Draw(bar, model.Screen, model.Ui, ref draft) || draft.Length > model.MaxLength)
+        if (!suggestions.Draw(bar, model.Screen, model.Ui, ref draft, typed) || draft.Length > model.MaxLength)
         {
             return;
         }

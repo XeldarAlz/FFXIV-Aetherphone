@@ -28,6 +28,12 @@ internal sealed class EmojiSuggestions
 
     public bool Showing => ImGui.GetFrameCount() - shownFrame <= 1;
 
+    public static bool FieldTyping() => ImGui.IsItemActive() || ImGui.IsItemDeactivated();
+
+    internal static bool StaysOpen(bool typing, bool showing, bool pointerHeld) => typing || (showing && pointerHeld);
+
+    internal static bool TakesKeys(bool typing, bool blocked, bool shielded) => typing && !blocked && !shielded;
+
     public void Reset()
     {
         query = string.Empty;
@@ -35,10 +41,19 @@ internal sealed class EmojiSuggestions
         selected = 0;
     }
 
-    public bool Draw(Rect bar, Rect host, AppSkin ui, ref string draft, bool below = false)
+    public bool Draw(Rect bar, Rect host, AppSkin ui, ref string draft, bool typing, bool below = false)
     {
-        var accepting = Showing && (ImGui.IsKeyPressed(ImGuiKey.Enter) || ImGui.IsKeyPressed(ImGuiKey.KeypadEnter) ||
-                                    ImGui.IsKeyPressed(ImGuiKey.Tab));
+        var pointerHeld = ImGui.IsMouseDown(ImGuiMouseButton.Left) || ImGui.IsMouseReleased(ImGuiMouseButton.Left);
+        if (!StaysOpen(typing, Showing, pointerHeld))
+        {
+            Reset();
+            return false;
+        }
+
+        var keys = TakesKeys(typing, UiInteract.InputBlocked, InputShield.Active);
+        var accepting = keys && Showing && (ImGui.IsKeyPressed(ImGuiKey.Enter) ||
+                                            ImGui.IsKeyPressed(ImGuiKey.KeypadEnter) ||
+                                            ImGui.IsKeyPressed(ImGuiKey.Tab));
         var text = accepting && draft.EndsWith('\n') ? draft.AsSpan(0, draft.Length - 1) : draft.AsSpan();
         if (!EmojiCatalog.Ready || !EmojiAutocomplete.TryToken(text, text.Length, out var start, out var length) ||
             length < EmojiAutocomplete.MinimumQuery)
@@ -66,12 +81,12 @@ internal sealed class EmojiSuggestions
 
         shownFrame = ImGui.GetFrameCount();
         selected = Math.Min(selected, rows - 1);
-        if (ImGui.IsKeyPressed(ImGuiKey.DownArrow, true))
+        if (keys && ImGui.IsKeyPressed(ImGuiKey.DownArrow, true))
         {
             selected = (selected + 1) % rows;
         }
 
-        if (ImGui.IsKeyPressed(ImGuiKey.UpArrow, true))
+        if (keys && ImGui.IsKeyPressed(ImGuiKey.UpArrow, true))
         {
             selected = (selected + rows - 1) % rows;
         }

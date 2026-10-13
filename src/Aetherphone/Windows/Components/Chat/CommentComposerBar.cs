@@ -102,6 +102,7 @@ internal static class CommentComposerBar
         }
 
         var fieldActive = ImGui.IsItemActive();
+        var typing = EmojiSuggestions.FieldTyping();
 
         if (attachmentActive)
         {
@@ -161,7 +162,7 @@ internal static class CommentComposerBar
         }
 
         if ((!attachmentActive || attachment!.PanelHeight(scale) <= 0f) && emoji.DrawSuggestions(
-                new Rect(new Vector2(bar.Min.X, overlayTop), bar.Max), screen, ui, ref draft, maxLength))
+                new Rect(new Vector2(bar.Min.X, overlayTop), bar.Max), screen, ui, ref draft, maxLength, typing))
         {
             if (fieldActive)
             {

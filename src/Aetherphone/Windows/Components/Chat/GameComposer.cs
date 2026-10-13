@@ -83,6 +83,7 @@ internal sealed class GameComposer
     private bool enterPressed;
     private bool focus;
     private bool fieldActive;
+    private bool typing;
     private bool channelFromCommand;
     private int recallIndex = -1;
     private string recallStash = string.Empty;
@@ -259,7 +260,7 @@ internal sealed class GameComposer
         }
 
         var suggested = editor.Text;
-        if (emoji.DrawSuggestions(bar, model.Screen, theme, ref suggested))
+        if (emoji.DrawSuggestions(bar, model.Screen, theme, ref suggested, typing))
         {
             editor.Adopt(suggested);
             editor.MoveCursor(editor.Text.Length);
@@ -349,6 +350,7 @@ internal sealed class GameComposer
         }
 
         fieldActive = ImGui.IsItemActive();
+        typing = EmojiSuggestions.FieldTyping();
         if (!string.Equals(line, editor.Text, StringComparison.Ordinal))
         {
             editor.Adopt(line);
@@ -378,6 +380,7 @@ internal sealed class GameComposer
         }
 
         fieldActive = ImGui.IsItemActive();
+        typing = EmojiSuggestions.FieldTyping();
         if (editor.Text.Length > 0)
         {
             return;
