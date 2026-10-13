@@ -352,7 +352,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         var composerBlocked = keyStatusPending || store.SendWouldDowngrade;
         if (!composerBlocked)
         {
-            composer.AcceptImageDrop(library, Accent);
+            composer.AcceptImageDrop(area, library, Accent);
         }
 
         composer.Draw(composerRect, new ChatComposerModel

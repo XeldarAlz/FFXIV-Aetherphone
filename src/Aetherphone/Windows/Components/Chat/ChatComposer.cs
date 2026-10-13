@@ -192,7 +192,8 @@ internal sealed class ChatComposer : IDisposable
 
     public void PasteImage(PhotoLibrary library) => intake.Paste(library);
 
-    public void AcceptImageDrop(PhotoLibrary library, Vector4 highlight) => intake.AcceptDrop(library, highlight);
+    public void AcceptImageDrop(Rect area, PhotoLibrary library, Vector4 highlight) =>
+        intake.AcceptDrop(area, library, highlight);
 
     public void AttachImage(string path)
     {
@@ -320,14 +321,10 @@ internal sealed class ChatComposer : IDisposable
             submitted = editor.Draw("##chatComposerInput", new Vector2(fieldWidth, fieldHeight), model.MaxLength, 0);
         }
 
-        if (model.CanImage && editTargetId is null && model.Library is { } library)
+        if (model.CanImage && editTargetId is null && model.Library is { } library && ImGui.IsItemActive()
+            && ImageIntake.PasteRequested())
         {
-            if (ImGui.IsItemActive() && ImageIntake.PasteRequested())
-            {
-                intake.Paste(library);
-            }
-
-            intake.AcceptDrop(library, model.Ui.Accent);
+            intake.Paste(library);
         }
 
         if (editor.Text.Length == 0)

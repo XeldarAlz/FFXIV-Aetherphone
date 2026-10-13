@@ -71,6 +71,7 @@ internal sealed partial class ChirperApp
             composeIntake.Paste(library);
         }
 
+        composeIntake.AcceptDrop(area, library, ChirperInk.Accent);
         if (composePicking)
         {
             DrawComposePicker(area);
@@ -197,8 +198,6 @@ internal sealed partial class ChirperApp
 
             DrawComposeToolbar(area, toolbarHeight);
         }
-
-        composeIntake.AcceptDrop(library, ChirperInk.Accent);
     }
 
     private void DrawComposeHeader(Rect area)

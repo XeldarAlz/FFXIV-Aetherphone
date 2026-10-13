@@ -68,7 +68,7 @@ internal sealed class ImageIntake
         Volatile.Write(ref failure, NoFailure);
     }
 
-    public void AcceptDrop(PhotoLibrary library, Vector4 highlight)
+    public void AcceptDrop(Rect area, PhotoLibrary library, Vector4 highlight)
     {
         var dragDrop = Plugin.DragDrop;
         if (!dragDrop.ServiceAvailable)
@@ -77,6 +77,7 @@ internal sealed class ImageIntake
         }
 
         dragDrop.CreateImGuiSource(PayloadLabel, CarriesImage);
+        ImGuiP.ItemAdd(new ImRect(area.Min, area.Max), ImGui.GetID(PayloadLabel));
         ImGui.PushStyleColor(ImGuiCol.DragDropTarget, highlight);
         var dropped = dragDrop.CreateImGuiTarget(PayloadLabel, out var droppedFiles, out _);
         ImGui.PopStyleColor();

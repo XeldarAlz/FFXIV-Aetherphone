@@ -229,6 +229,7 @@ internal sealed partial class AethergramApp
             composeIntake.Paste(library);
         }
 
+        composeIntake.AcceptDrop(area, library, Accent);
         var scale = UiScale.Current;
         var actionLabel = composeAvatarMode
             ? (store.Posting ? Loc.T(L.Aethergram.Saving) : Loc.T(L.Aethergram.Use))
@@ -269,8 +270,6 @@ internal sealed partial class AethergramApp
                 composeIntake.Paste(library);
             }
         }
-
-        composeIntake.AcceptDrop(library, Accent);
     }
 
     private void PickAdvance()

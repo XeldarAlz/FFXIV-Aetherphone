@@ -66,14 +66,14 @@ internal sealed class CommentAttachment
         }
     }
 
-    public void AcceptPasteAndDrop(PhotoLibrary library, bool fieldActive, Vector4 highlight)
+    public void AcceptPasteAndDrop(Rect area, PhotoLibrary library, bool fieldActive, Vector4 highlight)
     {
         if (fieldActive && ImageIntake.PasteRequested())
         {
             intake.Paste(library);
         }
 
-        intake.AcceptDrop(library, highlight);
+        intake.AcceptDrop(area, library, highlight);
     }
 
     public void DrawToggle(in AppSkin ui, Vector2 center, float radius, Vector4 activeColor, Vector4 idleColor,

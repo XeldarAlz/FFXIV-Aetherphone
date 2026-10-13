@@ -99,7 +99,7 @@ internal static class CommentComposerBar
 
         if (attachmentActive)
         {
-            attachment!.AcceptPasteAndDrop(library!, ImGui.IsItemActive(), style.SendEnabled);
+            attachment!.AcceptPasteAndDrop(screen, library!, ImGui.IsItemActive(), style.SendEnabled);
         }
 
         var pickedMention = mentionPopup.Draw(mentions, screen, theme, images, lodestone);
