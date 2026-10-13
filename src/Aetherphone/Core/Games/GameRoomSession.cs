@@ -34,7 +34,13 @@ internal sealed record GameRoomState(
     BroadsideRoomStateDto? Broadside = null,
     LuckyDrawRoomStateDto? LuckyDraw = null,
     CraterRoomStateDto? Crater = null,
-    MiniGolfRoomStateDto? MiniGolf = null);
+    MiniGolfRoomStateDto? MiniGolf = null)
+{
+    public bool IsPlayingRound(string roomId, long roundIndex) =>
+        string.Equals(RoomId, roomId, StringComparison.Ordinal)
+        && Snapshot.Phase == GameRoomWire.PhasePlaying
+        && Snapshot.RoundIndex == roundIndex;
+}
 
 internal sealed record GameRoomPrivate(
     string RoomId,

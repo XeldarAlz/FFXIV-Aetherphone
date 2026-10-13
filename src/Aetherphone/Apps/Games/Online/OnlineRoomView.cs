@@ -324,7 +324,15 @@ internal sealed class OnlineRoomView : IDisposable
         });
     }
 
-    private void AskResign() =>
+    private void AskResign()
+    {
+        if (store.Room.State is not { } asked)
+        {
+            return;
+        }
+
+        var roomId = asked.RoomId;
+        var roundIndex = asked.Snapshot.RoundIndex;
         confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(L.Games.OnlineResignConfirm),
@@ -332,8 +340,15 @@ internal sealed class OnlineRoomView : IDisposable
             CancelLabel = Loc.T(L.Common.Cancel),
             Sheet = true,
             Danger = true,
-            Confirm = store.SendResign,
+            Confirm = () =>
+            {
+                if (store.Room.State?.IsPlayingRound(roomId, roundIndex) == true)
+                {
+                    store.SendResign();
+                }
+            },
         });
+    }
 
     private void AskKick(GameRoomMemberView player)
     {
