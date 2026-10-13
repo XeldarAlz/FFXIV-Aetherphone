@@ -11,8 +11,8 @@ namespace Aetherphone.Core.Shell.Home;
 
 internal sealed class HomeInteractionController
 {
-    private const float LongPressSeconds = 0.42f;
-    private const float TapSlop = 6f;
+    internal const float LongPressSeconds = 0.42f;
+    internal const float TapSlop = 6f;
     private const float SwipeThreshold = 12f;
     internal const float DragThreshold = 7f;
     private const float EdgeZone = 0.09f;
@@ -155,6 +155,11 @@ internal sealed class HomeInteractionController
     public void HandleInput(Rect content, in HomeMetrics metrics, INavigator navigation, PhoneTheme theme,
         float delta)
     {
+        if (folder.ConsumeEditRequest())
+        {
+            editing = true;
+        }
+
         if (gallery.Active || folder.Active || widgetMenu.Active || spotlight.Active)
         {
             if (pressActive)
