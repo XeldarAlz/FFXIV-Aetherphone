@@ -35,7 +35,7 @@ internal sealed class EmojiSuggestions
         selected = 0;
     }
 
-    public bool Draw(Rect bar, Rect host, PhoneTheme theme, ref string draft, bool below = false)
+    public bool Draw(Rect bar, Rect host, AppSkin ui, ref string draft, bool below = false)
     {
         var accepting = Showing && (ImGui.IsKeyPressed(ImGuiKey.Enter) || ImGui.IsKeyPressed(ImGuiKey.KeypadEnter) ||
                                     ImGui.IsKeyPressed(ImGuiKey.Tab));
@@ -83,7 +83,7 @@ internal sealed class EmojiSuggestions
         var top = (below ? bar.Max.Y + gap : bar.Min.Y - gap - height) + slide;
         var popup = new Rect(new Vector2(bar.Min.X + Metrics.Space.Md * scale, top),
             new Vector2(bar.Max.X - Metrics.Space.Md * scale, top + height));
-        var picked = DrawPopup(popup, theme, rows, rowHeight, pad, reveal);
+        var picked = DrawPopup(popup, ui, rows, rowHeight, pad, reveal);
         if (picked < 0 && accepting)
         {
             picked = selected;
@@ -115,8 +115,9 @@ internal sealed class EmojiSuggestions
         }
     }
 
-    private int DrawPopup(Rect popup, PhoneTheme theme, int rows, float rowHeight, float pad, float alpha)
+    private int DrawPopup(Rect popup, AppSkin ui, int rows, float rowHeight, float pad, float alpha)
     {
+        var theme = ui.Theme;
         UiInteract.HoverOverlay(popup);
         var picked = -1;
         var scale = UiScale.Current;
@@ -150,7 +151,7 @@ internal sealed class EmojiSuggestions
             if (lit)
             {
                 Squircle.Fill(drawList, min, max, RowRadiusUnits * scale,
-                    ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, SelectedTint * alpha)));
+                    ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, SelectedTint * alpha)));
             }
 
             var iconMin = new Vector2(min.X + inset, min.Y + (rowHeight - icon) * 0.5f);

@@ -94,7 +94,7 @@ internal sealed class EmojiComposer
         }
 
         var completed = draft;
-        if (!suggestions.Draw(bar, host, ui.Theme, ref completed, below) || completed.Length > maxLength)
+        if (!suggestions.Draw(bar, host, ui, ref completed, below) || completed.Length > maxLength)
         {
             return false;
         }

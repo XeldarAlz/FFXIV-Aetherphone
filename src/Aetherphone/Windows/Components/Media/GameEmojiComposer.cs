@@ -96,6 +96,8 @@ internal sealed class GameEmojiComposer
             return false;
         }
 
-        return suggestions.Draw(bar, host, theme, ref draft);
+        skin.Palette = AppPalettes.Linkpearl(theme);
+        skin.Theme = theme;
+        return suggestions.Draw(bar, host, skin, ref draft);
     }
 }

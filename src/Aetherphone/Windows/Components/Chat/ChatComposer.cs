@@ -881,7 +881,7 @@ internal sealed class ChatComposer : IDisposable
 
         var bar = new Rect(new Vector2(composerArea.Min.X, composerArea.Min.Y - AccessoryHeight), composerArea.Max);
         var draft = editor.Text;
-        if (!suggestions.Draw(bar, model.Screen, model.Ui.Theme, ref draft) || draft.Length > model.MaxLength)
+        if (!suggestions.Draw(bar, model.Screen, model.Ui, ref draft) || draft.Length > model.MaxLength)
         {
             return;
         }
