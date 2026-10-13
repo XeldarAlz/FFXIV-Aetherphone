@@ -9,6 +9,14 @@ on:
 permissions:
   contents: read
 
+# A pull request only needs its newest commit checked, so a push cancels the
+# run it supersedes. A push to dev or master still runs to completion, and the
+# queue behind it collapses to the newest commit, which carries every commit
+# it displaced.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
 
   # Cheap gates that don't need the SDK or Dalamud; run them first so a
