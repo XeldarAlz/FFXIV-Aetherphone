@@ -1114,7 +1114,7 @@ internal sealed class ChatTranscript
             if (card.Available)
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                if (UiInteract.Click(bubbleMin, bubbleMax, true, false))
                 {
                     cards.Open(card.PostId);
                 }
@@ -1279,7 +1279,7 @@ internal sealed class ChatTranscript
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                 HoverTooltip.Show(new Rect(travelMin, travelMax), TravelPlanner.Label(in destination),
                     HoverLabelSide.Above);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                if (UiInteract.Click(travelMin, travelMax, true, false))
                 {
                     StartTravel(in destination);
                 }
@@ -1295,7 +1295,7 @@ internal sealed class ChatTranscript
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                 HoverTooltip.Show(new Rect(bubbleMin, bubbleMax), Loc.T(L.DirectMessages.LocationOpenMap),
                     HoverLabelSide.Above);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                if (UiInteract.Click(bubbleMin, bubbleMax, true, false))
                 {
                     LocationShare.OpenMap(location);
                 }
@@ -1458,7 +1458,7 @@ internal sealed class ChatTranscript
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             HoverTooltip.Show(new Rect(bubbleMin, bubbleMax), Loc.T(L.Muster.InviteOpen), HoverLabelSide.Above);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            if (UiInteract.Click(bubbleMin, bubbleMax, true, false))
             {
                 MusterChatBridge.Open(musterId);
             }
@@ -1610,7 +1610,7 @@ internal sealed class ChatTranscript
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             HoverTooltip.Show(new Rect(bubbleMin, bubbleMax), Loc.T(L.YellowPages.AdOpen), HoverLabelSide.Above);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            if (UiInteract.Click(bubbleMin, bubbleMax, true, false))
             {
                 AdChatBridge.Open(adId);
             }
@@ -1790,7 +1790,7 @@ internal sealed class ChatTranscript
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                 HoverTooltip.Show(new Rect(chipMin, chipMax),
                     Loc.T(reaction.Mine ? L.Message.ReactionRemove : L.Message.ReactionAdd), HoverLabelSide.Above);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                if (UiInteract.Click(chipMin, chipMax, true, false))
                 {
                     interactions.OnReactionClick(message.Id, reaction.Mine ? string.Empty : reaction.Token);
                 }
@@ -1898,7 +1898,7 @@ internal sealed class ChatTranscript
         if (entrance >= 1f && model.Voice is { } voice && Hovering(playHitMin, playHitMax))
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            if (UiInteract.Click(playHitMin, playHitMax, true, false))
             {
                 voice.Toggle(message.Id);
             }
@@ -1986,7 +1986,7 @@ internal sealed class ChatTranscript
             if (entrance >= 1f && model.Media is { } media && Hovering(imageMin, imageMax))
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                if (UiInteract.Click(imageMin, imageMax, true, false))
                 {
                     media.OnImageClick(message.Id);
                 }
@@ -2138,7 +2138,7 @@ internal sealed class ChatTranscript
         if (model.Interactions is { } interactions && Hovering(quoteMin, quoteMax))
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            if (UiInteract.Click(quoteMin, quoteMax, true, false))
             {
                 interactions.OnQuoteClick(message.ReplyToId!);
             }
