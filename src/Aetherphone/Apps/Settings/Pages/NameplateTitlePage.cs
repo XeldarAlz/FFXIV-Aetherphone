@@ -136,14 +136,25 @@ internal sealed class NameplateTitlePage : ISettingsPage
         SettingsSection.Hint(CharacterLine(), theme);
     }
 
+    private bool VelvetHidden => !configuration.IsVelvetOnboarded();
+
     private void DrawPriority(PhoneTheme theme, float scale)
     {
         var order = titles.Settings.Order;
+        var velvetHidden = VelvetHidden;
+        var count = velvetHidden && Array.IndexOf(order, NameplateStatus.Velvet) >= 0 ? order.Length - 1 : order.Length;
         SettingsSection.Header(Loc.T(L.Nameplate.Priority), theme);
-        var card = GroupCard.Begin(theme, order.Length);
+        var card = GroupCard.Begin(theme, count);
+        var shownIndex = 0;
         for (var index = 0; index < order.Length; index++)
         {
-            DrawStatusRow(card.NextRow(), index, order[index], order.Length, theme, scale);
+            if (velvetHidden && order[index] == NameplateStatus.Velvet)
+            {
+                continue;
+            }
+
+            DrawStatusRow(card.NextRow(), index, shownIndex, order[index], count, theme, scale);
+            shownIndex++;
         }
 
         card.End();
@@ -151,7 +162,8 @@ internal sealed class NameplateTitlePage : ISettingsPage
         SettingsSection.Hint(Loc.T(L.Nameplate.PriorityHint), theme);
     }
 
-    private void DrawStatusRow(Rect row, int index, NameplateStatus status, int count, PhoneTheme theme, float scale)
+    private void DrawStatusRow(Rect row, int index, int shownIndex, NameplateStatus status, int count,
+        PhoneTheme theme, float scale)
     {
         var settings = titles.Settings;
         ref readonly var info = ref NameplateStatusCatalog.For(status);
@@ -192,13 +204,13 @@ internal sealed class NameplateTitlePage : ISettingsPage
             navigator.Open(statusPage);
         }
 
-        if (SettingsReorder.Button(upCenter, radius, FontAwesomeIcon.ChevronUp, theme, index > 0))
+        if (SettingsReorder.Button(upCenter, radius, FontAwesomeIcon.ChevronUp, theme, shownIndex > 0))
         {
             moveIndex = index;
             moveDelta = -1;
         }
 
-        if (SettingsReorder.Button(downCenter, radius, FontAwesomeIcon.ChevronDown, theme, index < count - 1))
+        if (SettingsReorder.Button(downCenter, radius, FontAwesomeIcon.ChevronDown, theme, shownIndex < count - 1))
         {
             moveIndex = index;
             moveDelta = 1;
@@ -220,7 +232,13 @@ internal sealed class NameplateTitlePage : ISettingsPage
             return;
         }
 
-        titles.Settings.Move(moveIndex, moveDelta);
+        var settings = titles.Settings;
+        settings.Move(moveIndex, moveDelta);
+        if (VelvetHidden && settings.Order[moveIndex] == NameplateStatus.Velvet)
+        {
+            settings.Move(moveIndex + moveDelta, moveDelta);
+        }
+
         moveIndex = -1;
         moveDelta = 0;
         titles.Commit();

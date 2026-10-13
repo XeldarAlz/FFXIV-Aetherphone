@@ -27,6 +27,7 @@ internal sealed class NameplateStatusPage : ISettingsPage
     private readonly NameplateStatusPage? childPage;
     private readonly NameplateStage stage = new();
     private readonly string[] handleLabels = new string[3];
+    private readonly string[] socialHandleLabels = new string[2];
     private readonly string[] longTitleLabels = new string[2];
     private NameplateStatus status = NameplateStatus.Jam;
     private readonly string[] lines = new string[MaxLines];
@@ -323,11 +324,17 @@ internal sealed class NameplateStatusPage : ISettingsPage
 
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Xl * scale));
         SettingsSection.Header(Loc.T(L.Nameplate.HandleApp), theme);
-        handleLabels[0] = Loc.T(L.Apps.Chirper);
-        handleLabels[1] = Loc.T(L.Apps.Aethergram);
-        handleLabels[2] = Loc.T(L.Apps.Velvet);
+        var optedIn = configuration.IsVelvetOnboarded();
+        var labels = optedIn ? handleLabels : socialHandleLabels;
+        labels[0] = Loc.T(L.Apps.Chirper);
+        labels[1] = Loc.T(L.Apps.Aethergram);
+        if (optedIn)
+        {
+            labels[2] = Loc.T(L.Apps.Velvet);
+        }
+
         var appCard = GroupCard.Begin(theme, 1);
-        var picked = SegmentStrip.Draw("nameplate.handleApp", appCard.NextRow(), handleLabels, (int)settings.HandleApp,
+        var picked = SegmentStrip.Draw("nameplate.handleApp", appCard.NextRow(), labels, (int)settings.HandleApp,
             theme);
         appCard.End();
         if (picked == (int)settings.HandleApp)
