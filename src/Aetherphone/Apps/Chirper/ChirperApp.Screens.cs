@@ -61,9 +61,9 @@ internal sealed partial class ChirperApp
     private volatile int editOutcome;
 
     private float DrawScreenHeader(Rect area, string title, float trailingReserve = 0f, string subtitle = "",
-        bool showBack = true, TextStyle? titleStyle = null, bool centered = false) =>
+        bool showBack = true, TextStyle? titleStyle = null, bool centered = false, bool overlay = false) =>
         SocialChrome.DrawScreenHeader(area, title, ChirperInk.Shared, back, titleStyle ?? ScreenTitleStyle,
-            trailingReserve / UiScale.Current, subtitle, showBack, centered);
+            trailingReserve / UiScale.Current, subtitle, showBack, centered, overlay);
 
     private void DrawDiscover(Rect area, bool root = false)
     {
