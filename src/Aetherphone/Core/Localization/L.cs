@@ -1603,6 +1603,8 @@ internal static class L
         public static readonly LocString NotificationsSignInHint =
             new("hunts.notificationsSignInHint", "Log in to Faloop to receive these notifications");
         public static readonly LocString ResetToDefault = new("hunts.resetToDefault", "Reset to Default");
+        public static readonly LocString ResetToDefaultConfirm =
+            new("hunts.resetToDefaultConfirm", "Reset every alert setting to its default? Your current choices will be lost.");
         public static readonly LocString ResetTutorial = new("hunts.resetTutorial", "Reset Tutorial");
         public static readonly LocString NativeMapMarkersLabel =
             new("hunts.nativeMapMarkersLabel", "Show Map Markers");
@@ -1674,6 +1676,8 @@ internal static class L
         public static readonly LocString SignupAuthenticatedMessage =
             new("hunts.signupAuthenticatedMessage", "You're logged in to Faloop.");
         public static readonly LocString SignupLogoutButton = new("hunts.signupLogoutButton", "Log Out");
+        public static readonly LocString LogoutConfirm =
+            new("hunts.logoutConfirm", "Log out of Faloop? Live reports and spawn alerts stop until you log in again.");
         public static readonly LocString GuideTab = new("hunts.guideTab", "Hunt Guides");
         public static readonly LocString GuideHowItWorksTitle =
             new("hunts.guideHowItWorksTitle", "How does this work?");
