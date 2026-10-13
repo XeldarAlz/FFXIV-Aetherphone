@@ -559,7 +559,12 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         {
             DrawHomeTopBar(area);
             var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-            Typography.DrawCentered(body.Center, Loc.T(L.Aethergram.SetUpAccount), AethergramInk.MutedInk);
+            if (EmptyState.Draw(body, ui, PhoneIcons.User, DisplayName, Loc.T(L.Aethergram.SetUpAccount),
+                    Loc.T(L.Aethergram.OpenSettings)))
+            {
+                navigation.Open("settings");
+            }
+
             return;
         }
 

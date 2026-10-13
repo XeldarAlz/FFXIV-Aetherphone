@@ -6668,6 +6668,7 @@ internal static class L
     internal static class Chirper
     {
         public static readonly LocString SetUpAccount = new("chirper.setUpAccount", "Set up your account in Settings");
+        public static readonly LocString OpenSettings = new("chirper.openSettings", "Open Settings");
         public static readonly LocString Empty = new("chirper.empty", "No chirps yet. Post the first one");
         public static readonly LocString FollowingEmpty = new("chirper.followingEmpty", "Follow people to see their chirps here");
         public static readonly LocString ExploreEmpty = new("chirper.exploreEmpty", "No chirps yet. Be the first to post");
@@ -6784,6 +6785,7 @@ internal static class L
     internal static class Aethergram
     {
         public static readonly LocString SetUpAccount = new("aethergram.setUpAccount", "Set up your account in Settings");
+        public static readonly LocString OpenSettings = new("aethergram.openSettings", "Open Settings");
         public static readonly LocString ForYou = new("aethergram.forYou", "For You");
         public static readonly LocString Following = new("aethergram.following", "Following");
         public static readonly LocString FeedFilters = new("aethergram.feedFilters", "Feed filters");

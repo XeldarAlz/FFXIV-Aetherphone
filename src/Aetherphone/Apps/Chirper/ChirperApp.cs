@@ -495,7 +495,12 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         {
             DrawHomeTopBar(area);
             var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-            Typography.DrawCentered(body.Center, Loc.T(L.Chirper.SetUpAccount), ChirperInk.MutedInk);
+            if (EmptyState.Draw(body, ui, PhoneIcons.User, DisplayName, Loc.T(L.Chirper.SetUpAccount),
+                    Loc.T(L.Chirper.OpenSettings)))
+            {
+                navigation.Open("settings");
+            }
+
             return;
         }
 
