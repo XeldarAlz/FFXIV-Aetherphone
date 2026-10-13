@@ -135,10 +135,11 @@ internal sealed partial class ChirperApp
         }
 
         var bar = new Rect(area.Min, new Vector2(area.Max.X, headerBottom));
-        UiInteract.HoverOverlay(bar);
+        var backdrop = new Rect(new Vector2(area.Min.X, MathF.Min(area.Min.Y, ImGui.GetWindowPos().Y)), bar.Max);
+        UiInteract.HoverOverlay(backdrop);
         using (ImRaii.PushStyle(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * reveal))
         {
-            ui.PaintGradient(ImGui.GetWindowDrawList(), bar, screenRect, 0f);
+            ui.PaintGradient(ImGui.GetWindowDrawList(), backdrop, screenRect, 0f);
             DrawScreenHeader(bar, title, centered: true, overlay: true);
         }
     }
