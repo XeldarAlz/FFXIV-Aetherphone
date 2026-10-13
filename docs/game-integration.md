@@ -65,7 +65,7 @@ Dalamud is the plugin framework that loads Aetherphone inside FFXIV. It provides
 | `IAetheryteList` | Which aetherytes the character is attuned to |
 | `IKeyState` | Clearing the game's key state for keys a mini-game, the Linkpearl hotkey or the feed arrow keys consume, so they never reach the character |
 | `IAddonLifecycle` | `PostSetup` and `PostRefresh` listeners on the `AreaMap` addon that redraw hunt markers when the native map opens or changes |
-| `IDragDropManager` | Image files dragged in from File Explorer onto the Chirper composer, the comment bars, chat threads and the Aethergram and Velvet photo pickers (`ImageIntake.AcceptDrop`) |
+| `IDragDropManager` | Image files dragged in from File Explorer anywhere on the Chirper compose screen, a post with a reply bar, a chat, or the Aethergram and Velvet photo step (`ImageIntake.AcceptDrop` registers the whole screen as the target) |
 
 Core services get these handed to them once in `PhoneServices.Build` (src/Aetherphone/Core/PhoneServices.cs) instead of reaching for `Plugin.*` statics, which keeps them testable. Some leaf code (for example `LocationShare` and `HealthTracker`) does use the statics directly.
 
