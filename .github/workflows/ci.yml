@@ -197,10 +197,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # The package cache is keyed on the lock files plus the test project,
+      # which has no lock file of its own, so a dependency bump anywhere
+      # produces a fresh key and an unchanged tree restores from the cache.
       - name: Set up .NET
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
+          cache: true
+          cache-dependency-path: |
+            src/Aetherphone/packages.lock.json
+            src/ManagedDoom/packages.lock.json
+            src/Aetherphone.Tests/Aetherphone.Tests.csproj
 
       - name: Download Dalamud
         shell: pwsh
