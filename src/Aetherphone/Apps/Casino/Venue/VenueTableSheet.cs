@@ -142,7 +142,7 @@ internal sealed class VenueTableSheet
         var joinCode = codeOf(target.TableId);
         if (joinCode.Length > 0)
         {
-            code.Draw(ui, joinCode, string.Empty, ScrollLayout.StableContentWidth(), scale, overlay: true);
+            code.Draw(ui, joinCode, string.Empty, ScrollLayout.NativeScrollContentWidth(), scale, overlay: true);
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
         }
 

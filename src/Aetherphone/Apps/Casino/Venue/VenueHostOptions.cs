@@ -7,6 +7,14 @@ using Aetherphone.Windows.Components;
 
 namespace Aetherphone.Apps.Casino.Venue;
 
+[Flags]
+internal enum VenuePinNotes : byte
+{
+    None = 0,
+    InviteOnly = 1,
+    NoPlot = 2,
+}
+
 internal sealed class VenueHostOptions
 {
     private readonly CasinoVenueStore venue;
@@ -28,7 +36,34 @@ internal sealed class VenueHostOptions
 
     public CasinoTableLocationDto? Location() => PinLocation ? venue.Position.ToLocation() : null;
 
-    public void DrawLocation(AppSkin ui, float scale)
+    public VenuePinNotes Notes(int listing)
+    {
+        venue.EnsureNearby();
+        return NotesFor(PinLocation, listing, venue.Position);
+    }
+
+    internal static VenuePinNotes NotesFor(bool pinLocation, int listing, in CasinoHousingPosition position)
+    {
+        if (!pinLocation || !position.InWard)
+        {
+            return VenuePinNotes.None;
+        }
+
+        var notes = VenuePinNotes.None;
+        if (listing == CasinoListings.Private)
+        {
+            notes |= VenuePinNotes.InviteOnly;
+        }
+
+        if (position.Plot <= 0)
+        {
+            notes |= VenuePinNotes.NoPlot;
+        }
+
+        return notes;
+    }
+
+    public void DrawLocation(AppSkin ui, int listing, float scale)
     {
         venue.EnsureNearby();
         var position = venue.Position;
@@ -44,6 +79,16 @@ internal sealed class VenueHostOptions
 
         card.End();
         VenueFields.Hint(ui, Loc.T(L.Venue.LocationHint), scale);
+        var notes = NotesFor(PinLocation, listing, position);
+        if ((notes & VenuePinNotes.InviteOnly) != 0)
+        {
+            VenueFields.Hint(ui, Loc.T(L.Venue.PinInviteOnlyNote), scale);
+        }
+
+        if ((notes & VenuePinNotes.NoPlot) != 0)
+        {
+            VenueFields.Hint(ui, Loc.T(L.Venue.PinNoPlotNote), scale);
+        }
     }
 
     private string LocationText(CasinoHousingPosition position)

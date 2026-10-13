@@ -27,12 +27,19 @@ internal sealed class BlackjackTableLayout
     public const float RailSplitCardWidth = 14f;
     public const float RailInnerGap = 2f;
     public const float RailPuckRadius = 22f;
+    public const float RailRingGap = 4f;
     public const float RailPlateGap = 7f;
     public const float RailPlateHeight = 32f;
     public const float RailArcLift = 12f;
     public const float SpotRadiusMax = 28f;
     public const float SpotRadiusMin = 22f;
     public const float SpotGap = 6f;
+    public const float SideStakeHeight = 14f;
+    public const float SideStakeGap = 3f;
+    public const float SideStakeOverlap = 1f;
+    public const float SideStakeSlide = 4f;
+    public const float TimeBankPipLift = 4f;
+    public const float RailTitleDrop = 6f;
 
     public const float RaiseReserve = 8f;
     public const float CardsTotalGap = 4f;
@@ -44,6 +51,7 @@ internal sealed class BlackjackTableLayout
     public const float BetCapsuleGap = 6f;
     public const float CapsuleHeight = 40f;
     public const float CapsulePuckRadius = 16f;
+    public const float CapsuleRingGap = 3.5f;
     public const float CapsuleBottomInset = 4f;
     public const float SideSpotOffset = 70f;
     public const float SideCaptionHalf = 32f;
@@ -188,6 +196,27 @@ internal sealed class BlackjackTableLayout
         var top = puck.Y + RailPlateTop;
         return new Rect(new Vector2(puck.X - half, top), new Vector2(puck.X + half, top + RailPlateHeight * Scale));
     }
+
+    public float SideStakeFloor => Seated ? HeroTop + RaisePixels : HeroTop;
+
+    public Rect RailSideStakeRect(int slot, BlackjackSideBet bet, bool both) =>
+        SideStakeRect(RailPlateRect(slot), SideStakeFloor, bet, both, Scale);
+
+    public static Rect SideStakeRect(in Rect plate, float floor, BlackjackSideBet bet, bool both, float scale)
+    {
+        var height = SideStakeHeight * scale;
+        var attached = plate.Max.Y - SideStakeOverlap * scale;
+        var top = MathF.Min(attached, MathF.Max(floor - height, attached - SideStakeSlide * scale));
+        var width = both ? MathF.Max(1f, (plate.Width - SideStakeGap * scale) * 0.5f) : plate.Width;
+        var left = !both || bet == BlackjackSideBet.PerfectPairs ? plate.Min.X : plate.Max.X - width;
+        return new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
+    }
+
+    public static Vector2 TimeBankPips(Vector2 puck, float puckRadius, float scale) =>
+        new(puck.X, puck.Y - puckRadius + TimeBankPipLift * scale);
+
+    public static Vector2 RailTitleCenter(Vector2 puck, float puckRadius, float scale) =>
+        new(puck.X, puck.Y + puckRadius - RailTitleDrop * scale);
 
     public Rect DealerZone()
     {

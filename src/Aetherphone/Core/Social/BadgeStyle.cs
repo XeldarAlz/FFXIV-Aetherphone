@@ -146,6 +146,7 @@ internal sealed record BadgeStyle(
             "bubbles" => NameEffectKind.Bubbles,
             "confetti" => NameEffectKind.Confetti,
             "storm" => NameEffectKind.Storm,
+            "witchfire" => NameEffectKind.Witchfire,
             _ => NameEffectKind.None,
         };
     }

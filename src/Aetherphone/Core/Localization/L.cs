@@ -1342,6 +1342,7 @@ internal static class L
         public static readonly LocString PhaseUnavailable = new("housing.phaseUnavailable", "Unavailable period");
         public static readonly LocString PhaseUnknown = new("housing.phaseUnknown", "Phase unknown");
         public static readonly LocString PhaseExpired = new("housing.phaseExpired", "Expired, refreshing");
+        public static readonly LocString PhaseOnWorld = new("housing.phaseOnWorld", "{0} · {1}");
         public static readonly LocString EligibilityPrivate = new("housing.eligibilityPrivate", "Private buyers");
         public static readonly LocString EligibilityFreeCompany =
             new("housing.eligibilityFreeCompany", "Free Companies");
@@ -1376,9 +1377,12 @@ internal static class L
             new("housing.countdownUnderMinute", "Under 1 minute");
         public static readonly LocString CountdownEnded = new("housing.countdownEnded", "Ended");
         public static readonly LocString ScannedJustNow = new("housing.scannedJustNow", "Scanned just now");
-        public static readonly LocString ScannedMinutes = new("housing.scannedMinutes", "Scanned {0} minutes ago");
-        public static readonly LocString ScannedHours = new("housing.scannedHours", "Scanned {0} hours ago");
-        public static readonly LocString ScannedDays = new("housing.scannedDays", "Scanned {0} days ago");
+        public static readonly LocPlural ScannedMinutes =
+            new("housing.scannedMinutes", "Scanned {0} minute ago", "Scanned {0} minutes ago");
+        public static readonly LocPlural ScannedHours =
+            new("housing.scannedHours", "Scanned {0} hour ago", "Scanned {0} hours ago");
+        public static readonly LocPlural ScannedDays =
+            new("housing.scannedDays", "Scanned {0} day ago", "Scanned {0} days ago");
         public static readonly LocString ScannedUnknown = new("housing.scannedUnknown", "Scan time unknown");
         public static readonly LocString AgeNow = new("housing.ageNow", "now");
         public static readonly LocString AgeMinutes = new("housing.ageMinutes", "{0}m");
@@ -1394,9 +1398,10 @@ internal static class L
         public static readonly LocString CachedBanner = new("housing.cachedBanner",
             "Live updates are unavailable. Showing housing data saved {0}.");
         public static readonly LocString AgeJustNow = new("housing.ageJustNow", "just now");
-        public static readonly LocString AgeMinutesAgo = new("housing.ageMinutesAgo", "{0} minutes ago");
-        public static readonly LocString AgeHoursAgo = new("housing.ageHoursAgo", "{0} hours ago");
-        public static readonly LocString AgeDaysAgo = new("housing.ageDaysAgo", "{0} days ago");
+        public static readonly LocPlural AgeMinutesAgo =
+            new("housing.ageMinutesAgo", "{0} minute ago", "{0} minutes ago");
+        public static readonly LocPlural AgeHoursAgo = new("housing.ageHoursAgo", "{0} hour ago", "{0} hours ago");
+        public static readonly LocPlural AgeDaysAgo = new("housing.ageDaysAgo", "{0} day ago", "{0} days ago");
 
         public static readonly LocString Watch = new("housing.watch", "Watch");
         public static readonly LocString Watching = new("housing.watching", "Watching");
@@ -2166,6 +2171,17 @@ internal static class L
         public static readonly LocString IconAppearanceTinted = new("settings.iconAppearanceTinted", "Tinted");
         public static readonly LocString IconAppearanceClear = new("settings.iconAppearanceClear", "Clear");
         public static readonly LocString IconAppearanceHint = new("settings.iconAppearanceHint", "Dark and Tinted repaint each icon on graphite, Clear shows it as glass over the wallpaper. Icons without painted artwork keep their colored tile.");
+        public static readonly LocString SeasonalThemeTitle = new("settings.seasonalTheme", "Seasonal Theme");
+        public static readonly LocString SeasonalThemeHint = new("settings.seasonalThemeHint", "Automatic shows Halloween from 15 October to 2 November. Halloween keeps it all year, and Off turns it off.");
+        public static readonly LocString SeasonalAutomatic = new("settings.seasonalAutomatic", "Automatic");
+        public static readonly LocString SeasonalHalloween = new("settings.seasonalHalloween", "Halloween");
+        public static readonly LocString SeasonalOff = new("settings.seasonalOff", "Off");
+        public static readonly LocString SeasonalNameFont = new("settings.seasonalNameFont", "Seasonal Name Font");
+        public static readonly LocString SeasonalNameFontHint = new("settings.seasonalNameFontHint", "Writes display names in Chirper, Aethergram and Velvet in the seasonal font.");
+        public static readonly LocString SeasonalSounds = new("settings.seasonalSounds", "Seasonal Sounds");
+        public static readonly LocString SeasonalParallax = new("settings.seasonalParallax", "Background Parallax");
+        public static readonly LocString SeasonalParallaxHint = new("settings.seasonalParallaxHint", "Lets the night scenes drift gently as you scroll and move the cursor. Turn off to keep them still.");
+        public static readonly LocString SeasonalSoundsHint = new("settings.seasonalSoundsHint", "Plays the holiday sounds that come with the seasonal theme. Turn off to keep the look with the usual sounds.");
         public static readonly LocString SearchHint = new("settings.searchHint", "Search settings");
         public static readonly LocString NoResults = new("settings.noResults", "No settings match that");
         public static readonly LocString PhoneWidthReadout = new("settings.phoneWidthReadout", "{0} px wide");
@@ -2174,6 +2190,38 @@ internal static class L
         public static readonly LocString DynamicIsland = new("settings.dynamicIsland", "Dynamic Island");
         public static readonly LocString ShowInIsland = new("settings.showInIsland", "Show in Dynamic Island");
         public static readonly LocString RemoveApp = new("settings.removeApp", "Remove App");
+    }
+
+    internal static class Seasonal
+    {
+        public static readonly LocString PackAnswers = new("seasonal.packAnswers", "The pack answers");
+        public static readonly LocString NightTakesWing = new("seasonal.nightTakesWing", "The night takes wing");
+        public static readonly LocString SavedToCrypt = new("seasonal.savedToCrypt", "Saved to your crypt");
+        public static readonly LocString ChirperCaughtUp = new("seasonal.chirperCaughtUp", "The pack is asleep");
+        public static readonly LocString ChirperCaughtUpHint = new("seasonal.chirperCaughtUpHint", "Older howls continue below");
+        public static readonly LocString AethergramCaughtUp = new("seasonal.aethergramCaughtUp", "Nothing left but the night");
+        public static readonly LocString AethergramCaughtUpHint = new("seasonal.aethergramCaughtUpHint", "Older posts lurk below");
+        public static readonly LocString VelvetFeedNone = new("seasonal.velvetFeedNone", "Not a candle lit yet");
+        public static readonly LocString VelvetConnected = new("seasonal.velvetConnected", "Sealed by candlelight");
+        public static readonly LocString CandlesFlare = new("seasonal.candlesFlare", "The candles flare");
+        public static readonly LocString TreatFound = new("seasonal.treatFound", "Treat found! {0} of {1}");
+        public static readonly LocString TreatsComplete = new("seasonal.treatsComplete", "All {0} treats found! Your name burns with Witchfire until Halloween ends, visible only to you.");
+        public static readonly LocString TreatsProgress = new("seasonal.treatsProgress", "Treats {0}/{1}");
+        public static readonly LocString CountdownName = new("seasonal.countdownName", "Halloween");
+        public static readonly LocString CountdownDescription = new("seasonal.countdownDescription", "Counts down to Halloween night and tracks the treats you find.");
+        public static readonly LocPlural DaysToGo = new("seasonal.daysToGo", "day to go", "days to go");
+        public static readonly LocString Tonight = new("seasonal.tonight", "Tonight");
+        public static readonly LocString HalloweenNight = new("seasonal.halloweenNight", "Halloween night");
+        public static readonly LocString HalloweenPassed = new("seasonal.halloweenPassed", "Until next year");
+        public static readonly LocString TreatsFoundLabel = new("seasonal.treatsFoundLabel", "Treats Found");
+        public static readonly LocString TreatsCount = new("seasonal.treatsCount", "{0} of {1}");
+        public static readonly LocString TreatHidingIn = new("seasonal.treatHidingIn", "A treat is hiding in {0}");
+        public static readonly LocString TreatHidingHome = new("seasonal.treatHidingHome", "A treat is hiding on the home screen");
+        public static readonly LocString TreatHidingEmpty = new("seasonal.treatHidingEmpty", "A treat is hiding on an empty screen");
+        public static readonly LocString TreatLater = new("seasonal.treatLater", "Another treat will turn up later");
+        public static readonly LocString TreatTomorrow = new("seasonal.treatTomorrow", "The next treat arrives tomorrow");
+        public static readonly LocString TreatsAllFound = new("seasonal.treatsAllFound", "All found. Enjoy the flame!");
+        public static readonly LocString TreatsRewardHint = new("seasonal.treatsRewardHint", "Find all {0} and your name burns with Witchfire until the season ends, visible only to you.");
     }
 
     internal static class Translate
@@ -2205,6 +2253,17 @@ internal static class L
         public static readonly LocString SectionWidgets = new("changelog.sectionWidgets", "Widgets");
         public static readonly LocString SectionTours = new("changelog.sectionTours", "Setup and tours");
         public static readonly LocString SectionSounds = new("changelog.sectionSounds", "Sounds");
+        public static readonly LocString SectionHalloween = new("changelog.sectionHalloween", "Halloween");
+
+        public static readonly LocString[] Release1300Halloween =
+        {
+            new("changelog.r1300.101",
+                "Added a Halloween theme: night scenes in Chirper, Aethergram and Velvet, bats and mist on the Home Screen, and Halloween icons, wallpapers and sounds, contributed by t3sco"),
+            new("changelog.r1300.102",
+                "Added a treat hunt from 15 October to 2 November: 13 treats hide around the phone, one a day, and finding them all sets your name in Witchfire, contributed by t3sco"),
+            new("changelog.r1300.103",
+                "Added Seasonal Theme under Settings > Appearance: Automatic shows Halloween from 15 October to 2 November, Halloween keeps it all year, and Off turns it off, contributed by t3sco"),
+        };
 
         public static readonly LocString[] Release1300Gamba =
         {
@@ -2296,6 +2355,14 @@ internal static class L
                 "Added night totals to gil ledgers: gil in and gil out for the session, in the copied text too"),
             new("changelog.r1300.91",
                 "Added Jump back in: a rail of the games you played last"),
+            new("changelog.r1300.119",
+                "Added a stake to dice tables: on a gil dice table, each closed round books what every losing roller owes the winner on the ledger"),
+            new("changelog.r1300.120",
+                "Added every seat's Pairs and 21+3 stakes under its name plate on the blackjack felt, with the result once the hand is revealed"),
+            new("changelog.r1300.121",
+                "Added the time bank to blackjack: the seat on its turn shows its longer turns left as pips, as Hold'em does"),
+            new("changelog.r1300.136",
+                "Added buying several raffle tickets at once: type a count and see the total, with the per-person limit shown in the room and on the host sheet"),
             new("changelog.r1300.36",
                 "Overhauled the Floor: your chips, level, bonuses and the free daily spin up top, then Venues, the live rooms, Jump back in, missions, and three shelves: Cards, Machines and Quick bets"),
             new("changelog.r1300.37",
@@ -2328,8 +2395,30 @@ internal static class L
                 "Changed the live rail to keep the race, the wheel and bingo on it between rounds"),
             new("changelog.r1300.94",
                 "Changed missions to a capsule that opens a sheet"),
+            new("changelog.r1300.122",
+                "Changed the host's Deal button to Deal now while auto deal is on, with the dealer's deck saying the table deals on the clock"),
+            new("changelog.r1300.123",
+                "Changed the tournament Hands field to name its 10 to 50 band instead of quietly changing your number"),
+            new("changelog.r1300.124",
+                "Changed Start pressed during a hand to queue the tournament: it begins when that hand settles"),
+            new("changelog.r1300.139",
+                "Changed the Venues app to pick up a table newly hosted at a venue within half a minute instead of up to a minute later"),
+            new("changelog.r1300.137",
+                "Changed gil raffle tickets to one ledger entry per purchase, so one trade settles the lot instead of one trade per ticket"),
             new("changelog.r1300.47",
                 "Fixed Barkeep practice shifts needing chips to open"),
+            new("changelog.r1300.125",
+                "Fixed a finished tournament staying on the table for good: it clears with the next hand or Stop, and closing the standings dismisses it"),
+            new("changelog.r1300.126",
+                "Fixed the room code card in the table sheet resizing while the sheet scrolls"),
+            new("changelog.r1300.127",
+                "Fixed registered players at a Book or a venue room being offered as guests before their first entry"),
+            new("changelog.r1300.128",
+                "Fixed Record as guest staying on screen after the entry was made, so a second tap could book it twice"),
+            new("changelog.r1300.129",
+                "Fixed gil dice tables refusing buy-ins because a venue room seats nobody"),
+            new("changelog.r1300.138",
+                "Fixed a table pinned to a venue staying hidden while Who can join was Invite only: the host sheet now says it will not be listed until you pick Ask to join or Open, and asks you to stand on the plot"),
         };
 
         public static readonly LocString[] Release1300Linkpearl =
@@ -2344,6 +2433,8 @@ internal static class L
                 "Fixed Lodestone searches waiting behind portrait downloads, which could leave Searching up for a minute"),
             new("changelog.r1300.80",
                 "Fixed the Lodestone chip in People wrapping onto two lines at larger UI scales"),
+            new("changelog.r1300.135",
+                "Fixed a friend's Lodestone profile showing the first friend you opened: each profile now loads by name and home world"),
         };
 
         public static readonly LocString[] Release1300Guidelines =
@@ -2359,7 +2450,7 @@ internal static class L
             new("changelog.r1300.74",
                 "Changed the suspension screen and the frozen wallet notice to point to a ticket on the Discord"),
             new("changelog.r1300.75",
-                "Changed moderation warnings to say what a second and a third removal lead to"),
+                "Changed moderation warnings and every removal notice to say what a second and a third removal lead to"),
         };
 
         public static readonly LocString[] Release1300Phone =
@@ -2368,6 +2459,8 @@ internal static class L
                 "Added a Show in cutscenes setting that keeps the phone on screen while a cutscene plays, for a second monitor"),
             new("changelog.r1300.81",
                 "Added an FPS counter to the mini phone, off by default under Settings > Minimized phone, contributed by t3sco"),
+            new("changelog.r1300.118",
+                "Added reordering inside folders: in edit mode, drag an app to a new spot, contributed by hellovvn"),
             new("changelog.r1300.51",
                 "Fixed the scrollbar moving the wrong way and too slowly when dragged while the phone position is locked, contributed by jambalong"),
             new("changelog.r1300.57",
@@ -2380,6 +2473,8 @@ internal static class L
                 "Fixed tooltips near the edge of the screen being cut off by the rounded corners and the frame, contributed by t3sco"),
             new("changelog.r1300.100",
                 "Fixed uploaded images with transparent or see-through areas getting harsh glowing edges and black fringes: they now blend smoothly, contributed by Haydooners"),
+            new("changelog.r1300.133",
+                "Fixed the glow around a full-width button, such as Wear on a badge, being cut flat at the sides"),
         };
 
         public static readonly LocString[] Release1300ChirperAethergramVelvet =
@@ -2404,16 +2499,54 @@ internal static class L
                 "Fixed chats at the newest message snapping back to the bottom when you drag to scroll up, contributed by jambalong"),
         };
 
+        public static readonly LocString[] Release1300Coin =
+        {
+            new("changelog.r1300.107",
+                "Added a hint under every daily quest saying exactly what counts"),
+            new("changelog.r1300.130",
+                "Added a wallet freeze notice: a freeze opens on the phone with when it lifts, the moderator's reason and how to open a ticket on the Discord, and the wallet banner says the same"),
+            new("changelog.r1300.108",
+                "Changed daily quests to pay on their own once finished, with no Claim button to find"),
+            new("changelog.r1300.109",
+                "Changed game sessions to pay for the same game again, up to five sessions a day"),
+            new("changelog.r1300.110",
+                "Changed radio listening to count toward the quest while you listen instead of after you stop"),
+            new("changelog.r1300.111",
+                "Changed the explore quest to swap to one you can still do when every poll already has your vote or no public meetup is open"),
+            new("changelog.r1300.112",
+                "Fixed a finished quest paying nothing without a word: the reason now shows on the card"),
+            new("changelog.r1300.113",
+                "Fixed radio listening not counting when the station had only just gone live"),
+            new("changelog.r1300.131",
+                "Fixed the wallet balance waiting up to a minute to show a freeze or a lift"),
+        };
+
+        public static readonly LocString[] Release1300Games =
+        {
+            new("changelog.r1300.114",
+                "Fixed the featured game, the daily challenge, its countdown and the streak turning over at different hours: they all switch together at 15:00 UTC"),
+        };
+
         public static readonly LocString[] Release1300Housing =
         {
-            new("changelog.r1300.53",
-                "Fixed the lottery countdown and its widget showing an ended lottery instead of the unavailable period running now, contributed by YozoraCho"),
+            new("changelog.r1300.105",
+                "Redesigned the Housing overview to fit on one screen: a ring counts down the lottery phase, a card counts open plots by size, and each district gets a tile with its loading screen art, contributed by YozoraCho"),
+            new("changelog.r1300.106",
+                "Added a night sky with the district's art behind every Housing screen, contributed by YozoraCho"),
+            new("changelog.r1300.115",
+                "Fixed the lottery countdown and its widget showing a past phase as expired instead of the one running now, contributed by YozoraCho"),
+            new("changelog.r1300.116",
+                "Fixed empty map screens being hard to read: the map now dims behind them, contributed by YozoraCho"),
+            new("changelog.r1300.117",
+                "Fixed buttons on empty screens cutting off longer labels, contributed by YozoraCho"),
         };
 
         public static readonly LocString[] Release1300Hunts =
         {
             new("changelog.r1300.54",
                 "Fixed hunt markers on the map and minimap covering the whole map in zones with many spawn points, contributed by YozoraCho"),
+            new("changelog.r1300.132",
+                "Fixed the spawn markers being too faint to see since the shrink: each state has a full-size icon, tracked spots get a larger disc, and zones with few spawn points get a bigger one"),
         };
 
         public static readonly LocString[] Release1300Market =
@@ -2426,8 +2559,16 @@ internal static class L
 
         public static readonly LocString[] Release1300Music =
         {
+            new("changelog.r1300.104",
+                "Added Remove from playlist to the song menu inside a playlist, contributed by hellovvn"),
             new("changelog.r1300.99",
                 "Fixed long song titles and artist names in song lists staying cut short: hovering a row now scrolls the full text, contributed by hellovvn"),
+        };
+
+        public static readonly LocString[] Release1300Activity =
+        {
+            new("changelog.r1300.134",
+                "Fixed the Streaks and Trends cards clipping their text at larger text sizes: the cards grow with the text and long labels wrap"),
         };
 
         public static readonly LocString[] Release1200Chirper =
@@ -2682,46 +2823,6 @@ internal static class L
         {
             new("changelog.r1200.98",
                 "Fixed crackling and gaps in sounds and music while the game is busy"),
-        };
-
-        public static readonly LocString[] Release1201Coin =
-        {
-            new("changelog.r1201.0",
-                "Added a hint under every daily quest saying exactly what counts"),
-            new("changelog.r1201.1",
-                "Changed daily quests to pay on their own once finished, with no Claim button to find"),
-            new("changelog.r1201.2",
-                "Changed game sessions to pay for the same game again, up to five sessions a day"),
-            new("changelog.r1201.3",
-                "Changed radio listening to count toward the quest while you listen instead of after you stop"),
-            new("changelog.r1201.4",
-                "Changed the explore quest to swap to one you can still do when every poll already has your vote or no public meetup is open"),
-            new("changelog.r1201.5",
-                "Fixed a finished quest paying nothing without a word: the reason now shows on the card"),
-            new("changelog.r1201.6",
-                "Fixed radio listening not counting when the station had only just gone live"),
-        };
-
-        public static readonly LocString[] Release1201Games =
-        {
-            new("changelog.r1201.7",
-                "Fixed the featured game switching at the wrong hour and lagging behind the day"),
-        };
-
-        public static readonly LocString[] Release1201Housing =
-        {
-            new("changelog.r1201.8",
-                "Fixed the lottery countdown and its widget showing a past phase as expired instead of the one running now, contributed by YozoraCho"),
-            new("changelog.r1201.9",
-                "Fixed empty map screens being hard to read: the map now dims behind them, contributed by YozoraCho"),
-            new("changelog.r1201.10",
-                "Fixed buttons on empty screens cutting off longer labels, contributed by YozoraCho"),
-        };
-
-        public static readonly LocString[] Release1201Phone =
-        {
-            new("changelog.r1201.11",
-                "Added reordering inside folders: in edit mode, drag an app to a new spot, contributed by hellovvn"),
         };
 
         public static readonly LocString[] Release1104Music =
@@ -6172,6 +6273,7 @@ internal static class L
         public static readonly LocString Unlove = new("music.unlove", "Remove from loved");
         public static readonly LocString AddToLibrary = new("music.addToLibrary", "Add to library");
         public static readonly LocString RemoveFromLibrary = new("music.removeFromLibrary", "Remove from library");
+        public static readonly LocString RemoveFromPlaylist = new("music.removeFromPlaylist", "Remove from playlist");
         public static readonly LocString Download = new("music.download", "Download");
         public static readonly LocString RemoveDownload = new("music.removeDownload", "Remove download");
         public static readonly LocString GoToArtist = new("music.goToArtist", "Go to artist");
@@ -10362,6 +10464,10 @@ internal static class L
         public static readonly LocString QuestExploreMusterHint = new("coin.questExploreMusterHint", "Say you're going to someone else's public meetup");
         public static readonly LocString QuestLimitReached = new("coin.questLimitReached", "Three quests paid today");
         public static readonly LocString QuestUnavailable = new("coin.questUnavailable", "Could not pay yet, trying again soon");
+        public static readonly LocString FrozenUntil = new("coin.frozenUntil", "Earning and spending are on hold until {0}.");
+        public static readonly LocString FrozenTicket = new("coin.frozenTicket", "Open a ticket on the Discord to restore access.");
+        public static readonly LocString UnfrozenTitle = new("coin.unfrozenTitle", "Your wallet is no longer frozen");
+        public static readonly LocString UnfrozenBody = new("coin.unfrozenBody", "Earning and spending work again.");
     }
 
     internal static class Originals
@@ -11583,6 +11689,11 @@ internal static class L
         public static readonly LocString ColumnStack = new("casino.tables.columnStack", "Stack");
         public static readonly LocString ColumnNet = new("casino.tables.columnNet", "Net");
         public static readonly LocString RenameSave = new("casino.tables.renameSave", "Save");
+        public static readonly LocString DealNow = new("casino.tables.dealNow", "Deal now");
+        public static readonly LocString DealerClockDeals = new("casino.tables.dealerClockDeals", "The table deals on the clock");
+
+        public static readonly LocString ReasonTournamentHands = new("casino.tables.reasonTournamentHands", "A tournament runs 10 to 50 hands. Pick a number in that band, or leave it blank for 20.");
+        public static readonly LocString ReasonTournamentPending = new("casino.tables.reasonTournamentPending", "Starts after this hand.");
     }
 
     internal static class Race
@@ -11810,7 +11921,7 @@ internal static class L
         public static readonly LocString LocationPlot = new("casino.venue.locationPlot", "{0}, ward {1}, plot {2}");
         public static readonly LocString LocationWard = new("casino.venue.locationWard", "{0}, ward {1}");
         public static readonly LocString PinLocation = new("casino.venue.pinLocation", "List at this venue");
-        public static readonly LocString LocationHint = new("casino.venue.locationHint", "Taken from where you stand, so players in the same ward see your table first.");
+        public static readonly LocString LocationHint = new("casino.venue.locationHint", "Taken from where you stand. Players in the same ward see the table once Who can join is Ask to join or Open.");
         public static readonly LocString TournamentHeading = new("casino.venue.tournamentHeading", "Tournament");
         public static readonly LocString TournamentHands = new("casino.venue.tournamentHands", "Hands");
         public static readonly LocString TournamentStack = new("casino.venue.tournamentStack", "Starting stack");
@@ -11826,6 +11937,24 @@ internal static class L
         public static readonly LocString TournamentNeedsPlayers = new("casino.venue.tournamentNeedsPlayers", "Needs two seated players. Take a seat yourself to play in it.");
         public static readonly LocString TournamentDealerOut = new("casino.venue.tournamentDealerOut", "You deal at this table, so you cannot enter. Two other players need a seat.");
         public static readonly LocString TournamentYouAreOut = new("casino.venue.tournamentYouAreOut", "You're out of the tournament.");
+        public static readonly LocString TournamentHandsPlaceholder = new("casino.venue.tournamentHandsPlaceholder", "10 to 50");
+        public static readonly LocString TournamentPending = new("casino.venue.tournamentPending", "Starts after this hand. Stop takes it back.");
+
+        public static readonly LocString RoundStake = new("casino.venue.roundStake", "Stake per round");
+        public static readonly LocString RoundStakeHint = new("casino.venue.roundStakeHint", "When a round closes, everyone who rolled lower owes the winner the stake. Each debt goes on the gil ledger for both sides to confirm.");
+        public static readonly LocString NoStake = new("casino.venue.noStake", "No stake");
+
+        public static readonly LocString TicketCap = new("casino.venue.ticketCap", "Up to {0} tickets a person");
+        public static readonly LocString TicketCountLabel = new("casino.venue.ticketCountLabel", "Tickets");
+        public static readonly LocString TakeTickets = new("casino.venue.takeTickets", "Take {0} tickets");
+        public static readonly LocString TicketsTotalGil = new("casino.venue.ticketsTotalGil", "{0} tickets for {1} gil, paid to the host in one trade");
+        public static readonly LocString UpTo = new("casino.venue.upTo", "Up to {0}");
+        public static readonly LocString RaffleEntrantsCap = new("casino.venue.raffleEntrantsCap", "Entrants");
+        public static readonly LocString RaffleCapsHint = new("casino.venue.raffleCapsHint", "You set each raffle's title, tickets a person, winners and clock when you open it from the room, within these limits.");
+        public static readonly LocString ReasonTicketCount = new("casino.venue.reasonTicketCount", "Fewer tickets than that are left to you in this raffle. Take what is left or wait for the next one.");
+
+        public static readonly LocString PinInviteOnlyNote = new("casino.venue.pinInviteOnlyNote", "Not listed at this venue while Who can join is Invite only. Pick Ask to join or Open to list it.");
+        public static readonly LocString PinNoPlotNote = new("casino.venue.pinNoPlotNote", "Stand on the venue's plot so the Venues app can show your table. The Floor still shows it for this ward.");
     }
 
     internal static class VenueHub

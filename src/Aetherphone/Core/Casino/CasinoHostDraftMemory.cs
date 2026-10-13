@@ -70,6 +70,8 @@ internal sealed class CasinoHostDraftMemory
 
     public int Stake { get; set; }
 
+    public int DiceStake { get; set; }
+
     public bool PinLocation { get; set; } = true;
 
     public bool IsCurrent => Version == CurrentVersion;

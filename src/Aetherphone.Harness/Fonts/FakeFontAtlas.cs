@@ -27,7 +27,7 @@ internal sealed unsafe class FakeFontAtlas : IFontAtlas
         Name = name;
     }
 
-    public event FontAtlasBuildStepDelegate? BuildStepChange { add { } remove { } }
+    public event FontAtlasBuildStepDelegate? BuildStepChange;
 
     public event Action? RebuildRecommend { add { } remove { } }
 
@@ -121,6 +121,7 @@ internal sealed unsafe class FakeFontAtlas : IFontAtlas
         atlas.Clear();
         ReleasePinned();
         var toolkit = new FakeBuildToolkit(this, atlas, assets) { BuildStep = FontAtlasBuildStep.PreBuild };
+        BuildStepChange?.Invoke(toolkit);
         var snapshot = handles.ToArray();
         for (var index = 0; index < snapshot.Length; index++)
         {
@@ -145,6 +146,7 @@ internal sealed unsafe class FakeFontAtlas : IFontAtlas
             Invoke(postBuild[index], "post-build");
         }
 
+        BuildStepChange?.Invoke(toolkit);
         Upload(atlas);
         var afterBuild = toolkit.AfterBuildActions;
         for (var index = 0; index < afterBuild.Count; index++)

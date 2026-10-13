@@ -56,6 +56,7 @@ internal sealed class CasinoVenueStore : IDisposable
     private int fetchingNearby;
     private int verifying;
     private long nearbyAtTick;
+    private volatile string listingAskedFor = string.Empty;
     private string? lastAccountId;
 
     public CasinoVenueStore(AethernetSession session, CasinoClient casino, SafetyClient safety, CasinoRoomsStore rooms,
@@ -302,11 +303,51 @@ internal sealed class CasinoVenueStore : IDisposable
         {
             var answer = await casino.NearbyTablesAsync(location.World, location.Territory, location.Ward, token)
                 .ConfigureAwait(false);
-            if (answer is not null && ReferenceEquals(nearbyFor, location))
+            if (answer is null || !ReferenceEquals(nearbyFor, location))
             {
-                nearby = answer.Tables ?? Array.Empty<CasinoTableRowDto>();
+                return;
             }
+
+            var fresh = answer.Tables ?? Array.Empty<CasinoTableRowDto>();
+            nearby = fresh;
+            var unlisted = UnlistedNearby(fresh, tables.Listed, listingAskedFor);
+            if (unlisted.Length == 0)
+            {
+                return;
+            }
+
+            listingAskedFor = unlisted;
+            tables.RefreshNow();
         }, () => Interlocked.Exchange(ref fetchingNearby, 0));
+    }
+
+    internal static string UnlistedNearby(CasinoTableRowDto[] nearby, CasinoTableRowDto[] listed, string askedFor)
+    {
+        for (var nearbyIndex = 0; nearbyIndex < nearby.Length; nearbyIndex++)
+        {
+            var tableId = nearby[nearbyIndex].TableId;
+            if (tableId.Length == 0 || Holds(listed, tableId))
+            {
+                continue;
+            }
+
+            return string.Equals(tableId, askedFor, StringComparison.Ordinal) ? string.Empty : tableId;
+        }
+
+        return string.Empty;
+    }
+
+    private static bool Holds(CasinoTableRowDto[] rows, string tableId)
+    {
+        for (var index = 0; index < rows.Length; index++)
+        {
+            if (string.Equals(rows[index].TableId, tableId, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public CasinoTableRowDto? LiveTableAt(VenueAddress address)
@@ -424,6 +465,7 @@ internal sealed class CasinoVenueStore : IDisposable
         view = null;
         nearby = Array.Empty<CasinoTableRowDto>();
         nearbyFor = null;
+        listingAskedFor = string.Empty;
         Interlocked.Exchange(ref actAnswer, null);
         Interlocked.Exchange(ref hostOutcome, null);
         Interlocked.Exchange(ref tradeOutcome, null);

@@ -1,3 +1,5 @@
+using Aetherphone.Core.Theme;
+
 namespace Aetherphone.Core.Notifications;
 
 internal sealed class UiSoundService : IDisposable
@@ -6,6 +8,7 @@ internal sealed class UiSoundService : IDisposable
     private readonly UiSoundPlayer player;
     private readonly long[] lastPlayed;
     private readonly int[] variantCursor;
+    private bool hauntingWasOn;
 
     public UiSoundService(Configuration configuration, UiSoundPlayer player)
     {
@@ -19,11 +22,33 @@ internal sealed class UiSoundService : IDisposable
 
     public void PlayPitched(UiSound sound, float rate) => Play(sound, rate, true);
 
+    public void PlayTap(UiSound sound)
+    {
+        if (!configuration.UiSoundTaps)
+        {
+            return;
+        }
+
+        Play(SeasonalMuted(sound) ? UiSound.Tap : sound, 0f, false);
+    }
+
+    private bool SeasonalMuted(UiSound sound) => !configuration.SeasonalSounds && UiSoundCatalog.IsSeasonal(sound);
+
     private void Play(UiSound sound, float rate, bool pitched)
     {
         if (configuration.SilentMode || !configuration.UiSounds)
         {
             return;
+        }
+
+        if (SeasonalMuted(sound))
+        {
+            if (UiSoundCatalog.PlainFor(sound) is not { } plain)
+            {
+                return;
+            }
+
+            sound = plain;
         }
 
         var index = (int)sound;
@@ -52,8 +77,11 @@ internal sealed class UiSoundService : IDisposable
         var files = entry.Files;
         var cursor = variantCursor[index];
         variantCursor[index] = (cursor + 1) % files.Length;
-        player.Play(files[cursor], volume, pitched ? rate : PlaybackRate(entry.PitchVariance));
+        var haunt = HauntingOn ? UiSoundCatalog.HauntDepthFor(sound) : HauntDepth.None;
+        player.Play(files[cursor], volume, pitched ? rate : PlaybackRate(entry.PitchVariance), haunt);
     }
+
+    private bool HauntingOn => SeasonalTheme.Halloween && configuration.SeasonalSounds;
 
     private static float PlaybackRate(float variance)
     {
@@ -65,7 +93,17 @@ internal sealed class UiSoundService : IDisposable
         return 1f + (Random.Shared.NextSingle() * 2f - 1f) * variance;
     }
 
-    public void Maintain() => player.CloseIfIdle();
+    public void Maintain()
+    {
+        var haunting = HauntingOn;
+        if (hauntingWasOn && !haunting)
+        {
+            player.ClearHaunted();
+        }
+
+        hauntingWasOn = haunting;
+        player.CloseIfIdle();
+    }
 
     private bool ChannelEnabled(UiSoundChannel channel) => channel switch
     {
@@ -86,9 +124,12 @@ internal static class UiFeedback
 
     public static void Bind(UiSoundService bound) => service = bound;
 
+    public static void PlayTap(UiSound sound) => service?.PlayTap(sound);
+
     public static void Unbind() => service = null;
 
     public static void Play(UiSound sound) => service?.Play(sound);
 
     public static void PlayPitched(UiSound sound, float rate) => service?.PlayPitched(sound, rate);
+
 }

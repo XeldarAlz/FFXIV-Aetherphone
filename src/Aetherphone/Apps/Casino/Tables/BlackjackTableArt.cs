@@ -11,11 +11,19 @@ namespace Aetherphone.Apps.Casino.Tables;
 internal static class BlackjackTableArt
 {
     public const int ChipColumnCapacity = 5;
+    public const float TimeBankPipRadius = 2.2f;
+    public const float TimeBankPipStep = 2.8f;
+    public const float TimeBankPipPad = 0.8f;
 
     private const float ChipDiscStep = 4.2f;
     private const float PlateDiscRadius = 6.5f;
     private const float FlightDiscRadius = 7.5f;
     private const float OutcomeBadgeStrokeAlpha = 0.8f;
+    private const float SideStakePadX = 3f;
+    private const float SideStakeRimAlpha = 0.55f;
+    private const float SideStakePaidRimAlpha = 0.9f;
+    private const float SideStakeLostRimAlpha = 0.3f;
+    private const float TimeBankSpentAlpha = 0.35f;
 
     public static readonly Vector4 OutcomeBadgeFill = StageText.CapsuleFill with { W = 0.92f };
 
@@ -139,6 +147,56 @@ internal static class BlackjackTableArt
             ImGui.GetColorU32(Palette.WithAlpha(PlateFill, bubble.Alpha)));
         Typography.DrawCentered(drawList, (min + max) * 0.5f, shown, Palette.WithAlpha(ink, bubble.Alpha),
             TextStyles.FootnoteEmphasized);
+    }
+
+    public static void DrawSideStake(ImDrawListPtr drawList, in Rect rect, string label, SideSpotResult result,
+        float scale)
+    {
+        StageText.Capsule(drawList, rect.Min, rect.Max);
+        var paid = result == SideSpotResult.Paid;
+        var lost = result == SideSpotResult.Lost;
+        var rim = paid
+            ? Palette.WithAlpha(Stage.CasinoColors.Money, SideStakePaidRimAlpha)
+            : lost
+                ? Palette.WithAlpha(StageText.Muted, SideStakeLostRimAlpha)
+                : Palette.WithAlpha(Stage.CasinoColors.LightA, SideStakeRimAlpha);
+        Squircle.Stroke(drawList, rect.Min, rect.Max, rect.Height * 0.5f, ImGui.GetColorU32(rim),
+            Metrics.Stroke.Hairline * scale);
+        var inner = MathF.Max(1f, rect.Width - SideStakePadX * 2f * scale);
+        var style = TextStyles.FootnoteEmphasized;
+        var fit = Typography.FitScale(label, inner, style.Scale, TextStyles.Caption2.Scale, style.Weight);
+        var ink = paid ? Stage.CasinoColors.Money : lost ? StageText.Muted : StageText.Strong;
+        Typography.DrawCentered(drawList, rect.Center, Typography.FitText(label, inner, fit, style.Weight), ink, fit,
+            style.Weight);
+    }
+
+    public static float TimeBankPipHalfHeight(float scale) => (TimeBankPipRadius + TimeBankPipPad) * scale;
+
+    public static float TimeBankPipHalfWidth(int total, float scale)
+    {
+        var radius = TimeBankPipRadius * scale;
+        return radius * TimeBankPipStep * (total - 1) * 0.5f + radius + TimeBankPipPad * scale;
+    }
+
+    public static void DrawTimeBankPips(ImDrawListPtr drawList, Vector2 center, int left, int total, float scale)
+    {
+        if (left <= 0 || total <= 0)
+        {
+            return;
+        }
+
+        var half = new Vector2(TimeBankPipHalfWidth(total, scale), TimeBankPipHalfHeight(scale));
+        StageText.Capsule(drawList, center - half, center + half);
+        var radius = TimeBankPipRadius * scale;
+        var step = radius * TimeBankPipStep;
+        var first = center.X - step * (total - 1) * 0.5f;
+        var ready = ImGui.GetColorU32(Stage.CasinoColors.LightB);
+        var spent = ImGui.GetColorU32(Palette.WithAlpha(Stage.CasinoColors.InkMuted, TimeBankSpentAlpha));
+        for (var pip = 0; pip < total; pip++)
+        {
+            drawList.AddCircleFilled(new Vector2(first + pip * step, center.Y), radius, pip < left ? ready : spent,
+                10);
+        }
     }
 
     public static void DrawChipColumn(ImDrawListPtr drawList, Vector2 baseCenter, long amount, bool practice,

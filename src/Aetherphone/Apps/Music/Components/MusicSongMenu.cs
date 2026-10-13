@@ -17,7 +17,7 @@ internal enum SongMenuOutcome : byte
 
 internal sealed class MusicSongMenu
 {
-    private const int MaxItems = 10;
+    private const int MaxItems = 12;
     private const string ShareLinkPrefix = "https://music.youtube.com/watch?v=";
     private const string StationContextPrefix = "station.";
 
@@ -26,6 +26,7 @@ internal sealed class MusicSongMenu
         PlayNext,
         PlayLast,
         AddToPlaylist,
+        RemoveFromPlaylist,
         Love,
         Library,
         Download,
@@ -38,6 +39,7 @@ internal sealed class MusicSongMenu
     private readonly ActionSheet.Item[] items = new ActionSheet.Item[MaxItems];
     private readonly Command[] commands = new Command[MaxItems];
     private Song song;
+    private string playlistId = string.Empty;
 
     public Song Song => song;
 
@@ -45,7 +47,7 @@ internal sealed class MusicSongMenu
 
     public bool CapturesPointer => sheet.CapturesPointer;
 
-    public void Open(in Song target)
+    public void Open(in Song target, string sourcePlaylistId = "")
     {
         if (target.IsEmpty)
         {
@@ -53,6 +55,7 @@ internal sealed class MusicSongMenu
         }
 
         song = target;
+        playlistId = sourcePlaylistId;
         sheet.Open();
     }
 
@@ -94,6 +97,12 @@ internal sealed class MusicSongMenu
 
         Add(ref count, Command.Share, Loc.T(L.Music.ShareSong), FontAwesomeIcon.ShareSquare);
         Add(ref count, Command.StartStation, Loc.T(L.Music.StartStation), FontAwesomeIcon.BroadcastTower);
+        if (playlistId.Length > 0 && library.PlaylistContains(playlistId, song.VideoId))
+        {
+            Add(ref count, Command.RemoveFromPlaylist, Loc.T(L.Music.RemoveFromPlaylist), FontAwesomeIcon.Minus,
+                true);
+        }
+
         return count;
     }
 
@@ -118,6 +127,9 @@ internal sealed class MusicSongMenu
                 return SongMenuOutcome.None;
             case Command.AddToPlaylist:
                 return SongMenuOutcome.AddToPlaylist;
+            case Command.RemoveFromPlaylist:
+                library.RemoveFromPlaylist(playlistId, song.VideoId);
+                return SongMenuOutcome.None;
             case Command.Love:
                 library.SetLoved(song, !library.IsLoved(song.VideoId));
                 return SongMenuOutcome.None;

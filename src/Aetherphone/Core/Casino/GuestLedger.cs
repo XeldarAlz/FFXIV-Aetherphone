@@ -33,6 +33,14 @@ internal static class GuestLedger
 
     public static GuestOffer? Shown(GuestOffer? offer, bool open) => open ? offer : null;
 
+    public static bool SameTrade(GuestOffer handled, TradeMiss miss)
+    {
+        return string.Equals(handled.TableId, miss.TableId, StringComparison.Ordinal)
+            && string.Equals(handled.GuestName, miss.PartnerName, StringComparison.Ordinal)
+            && handled.Amount == miss.Amount
+            && handled.Incoming == miss.Incoming;
+    }
+
     public static string KindOf(TradeMiss miss, CasinoLedgerEntryDto[] entries) =>
         miss.Incoming ? BuyInKindFor(entries, miss.PartnerName) : CasinoLedgerKinds.Payout;
 

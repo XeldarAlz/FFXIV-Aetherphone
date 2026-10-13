@@ -71,4 +71,29 @@ public sealed class BlackjackHostedLayoutTests
             Tournament: new CasinoBlackjackTournamentDto(WinnerUserId: "winner"))));
         Assert.True(TournamentOverlay.Reserve(1f) >= TournamentOverlay.StripHeight);
     }
+
+    [Fact]
+    public void AFinishedStripGoesAwayOnceItsBoardWasClosedAndAClearedRecordNeverShows()
+    {
+        var overlay = new TournamentOverlay();
+        var finished = new CasinoBlackjackTournamentDto(WinnerUserId: "winner");
+        var over = new CasinoBlackjackRoomStateDto(Tournament: finished);
+        var running = new CasinoBlackjackTournamentDto(Live: true);
+        var live = new CasinoBlackjackRoomStateDto(Tournament: running);
+
+        Assert.True(overlay.Showing(over));
+        Assert.True(overlay.Showing(live));
+        Assert.False(overlay.Showing(new CasinoBlackjackRoomStateDto()));
+        Assert.False(overlay.Showing(null));
+
+        overlay.CloseBoard(running);
+        Assert.True(overlay.Showing(over));
+
+        overlay.CloseBoard(finished);
+        Assert.False(overlay.Showing(over));
+        Assert.True(overlay.Showing(live));
+
+        overlay.Reset();
+        Assert.True(overlay.Showing(over));
+    }
 }

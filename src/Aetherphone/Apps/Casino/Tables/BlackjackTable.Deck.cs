@@ -276,14 +276,15 @@ internal sealed partial class BlackjackTable
             return;
         }
 
-        if (deck == DealerDeck.WaitingBets)
+        if (BlackjackHosting.TryDealerStatus(board, deck, out var status))
         {
-            StageText.Status(drawList, BlackjackDeckLayout.UpperRow(row, scale).Center,
-                Loc.T(L.Tables.DealerWaitingBets), row.Width, scale);
+            StageText.Status(drawList, BlackjackDeckLayout.UpperRow(row, scale).Center, Loc.T(status), row.Width,
+                scale);
         }
 
         var enabled = deck == DealerDeck.Deal && !tables.IntentInFlight;
-        if (!DeckActions.DrawPrimary(row, Loc.T(L.Tables.Deal), ui.Ink, enabled, "blackjack.deal"))
+        if (!DeckActions.DrawPrimary(row, Loc.T(BlackjackHosting.DealLabel(board)), ui.Ink, enabled,
+                "blackjack.deal"))
         {
             return;
         }

@@ -59,16 +59,23 @@ internal static class AppPalettes
 
     private static AppPalette For(string id) => Tinted(AppAccents.For(id));
 
+    private static AppPalette Night(Vector4 accent, Vector4 top, Vector4 bottom, Vector4 bloom) =>
+        Tinted(accent) with { BackdropTop = top, BackdropBottom = bottom, BloomTop = bloom, BloomBottom = bloom with { W = 0f } };
+
     public static readonly AppPalette Health = Neutral(AppAccents.For("health"));
     public static readonly AppPalette Chirper = For("chirper");
+    public static readonly AppPalette ChirperMoonlit = Night(new(0.498f, 0.596f, 0.918f, 1f),
+        new(0.039f, 0.063f, 0.188f, 1f), new(0.024f, 0.027f, 0.102f, 1f), new(0.80f, 0.85f, 1f, 0.08f));
     public static readonly AppPalette Market = For("market");
     public static readonly AppPalette Aethergram = For("aethergram");
+    public static readonly AppPalette AethergramBloodMoon = Night(new(0.878f, 0.149f, 0.243f, 1f),
+        new(0.110f, 0.016f, 0.031f, 1f), new(0.039f, 0.004f, 0.012f, 1f), new(0.878f, 0.149f, 0.243f, 0.14f));
     public static readonly AppPalette Velvet = For("velvet");
     public static readonly AppPalette Message = MessageChrome(AppAccents.For("message"));
     public static readonly AppPalette Venues = For("venues");
     public static readonly AppPalette Strats = For("strats");
     public static readonly AppPalette Games = Neutral(AppAccents.For("games"));
-    public static readonly AppPalette Housing = For("housing");
+    public static readonly AppPalette Housing = HousingChrome(AppAccents.For("housing"));
     public static readonly AppPalette Muster = For("muster");
     public static readonly AppPalette YellowPages = For("yellowpages");
     public static readonly AppPalette Feedback = For("feedback");
@@ -102,6 +109,26 @@ internal static class AppPalettes
         CardFill = new(0.125f, 0.173f, 0.200f, 1f),
         CardStroke = new(1f, 1f, 1f, 0.04f),
         FieldSurface = new(0.125f, 0.173f, 0.200f, 1f),
+        HoverTint = DefaultHover,
+        Hairline = new(1f, 1f, 1f, 0.07f),
+        HoverWash = DefaultHoverWash,
+    };
+
+    private static AppPalette HousingChrome(Vector4 accent) => new()
+    {
+        Accent = accent,
+        TitleInk = new(0.976f, 0.980f, 0.988f, 1f),
+        BodyInk = new(0.898f, 0.918f, 0.949f, 0.96f),
+        MutedInk = new(0.682f, 0.725f, 0.800f, 1f),
+        HeaderInk = Palette.WithAlpha(Palette.Lighten(accent, 0.55f), 0.95f),
+        HeadingInk = new(0.976f, 0.980f, 0.988f, 1f),
+        BackdropTop = new(0.063f, 0.122f, 0.220f, 1f),
+        BackdropBottom = new(0.031f, 0.059f, 0.110f, 1f),
+        BloomTop = Palette.WithAlpha(accent, 0.04f),
+        BloomBottom = new(0f, 0f, 0f, 0f),
+        CardFill = new(0.082f, 0.133f, 0.227f, 1f),
+        CardStroke = new(1f, 1f, 1f, 0.10f),
+        FieldSurface = new(0.110f, 0.169f, 0.267f, 1f),
         HoverTint = DefaultHover,
         Hairline = new(1f, 1f, 1f, 0.07f),
         HoverWash = DefaultHoverWash,

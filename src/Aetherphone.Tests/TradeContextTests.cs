@@ -92,13 +92,27 @@ public sealed class TradeContextTests
     [Fact]
     public void TheHostsDoorPageIsTheirTable()
     {
-        var door = new CasinoTableDoorDto(Table, true, Seated: new[] { new CasinoTableSeatedDto(Player, "Xeldar", 0) });
+        var door = new CasinoTableDoorDto(Table, true, Seated: new[] { new CasinoTableSeatedDto(Player, "Xeldar", 0) },
+            Present: new[] { new CasinoTablePresentDto("u-chea", "Chea", true) });
         var view = View(Host, door: door);
         var table = TradeContexts.Locate(view);
         Assert.Equal(Table, table.TableId);
         Assert.Equal(Host, table.HostUserId);
-        Assert.Contains(TradeContexts.Build(table, view).Seats, seat => seat.UserId == Player);
+        var seats = TradeContexts.Build(table, view).Seats;
+        Assert.Contains(seats, seat => seat.UserId == Player);
+        Assert.DoesNotContain(seats, seat => seat.UserId == "u-chea");
         Assert.False(TradeContexts.Locate(View(Player, door: door with { Owner = false })).Located);
+
+        var bookView = View(Host, door: door with { RoomId = Book });
+        var book = TradeContexts.Locate(bookView);
+        Assert.Equal(Book, book.TableId);
+        Assert.Contains(TradeContexts.Build(book, bookView).Seats,
+            seat => seat.UserId == "u-chea" && seat.DisplayName == "Chea");
+
+        var raffleView = View(Host, door: door with { RoomId = Raffle });
+        var raffle = TradeContexts.Locate(raffleView);
+        Assert.True(raffle.Venue);
+        Assert.Contains(TradeContexts.Build(raffle, raffleView).Seats, seat => seat.UserId == "u-chea");
     }
 
     [Fact]
@@ -199,7 +213,7 @@ public sealed class TradeContextTests
     }
 
     [Fact]
-    public void AVenueTableConfirmsATicketButNeverProposesABuyIn()
+    public void AVenueTableConfirmsATicketAndProposesAnUnmatchedBuyIn()
     {
         var ticket = new CasinoLedgerEntryDto("t1", Raffle, CasinoLedgerKinds.Ticket, 30_000, Player, "Xeldar", Host,
             "Ciri");
@@ -210,7 +224,9 @@ public sealed class TradeContextTests
         Assert.Equal("t1", paid.EntryId);
 
         var unknown = TradeLedgerMatcher.Match(new TradeCompletion(new[] { "Xeldar" }, 45_000, 0), context);
-        Assert.Equal(TradeProposalKind.None, unknown.Kind);
+        Assert.Equal(TradeProposalKind.Propose, unknown.Kind);
+        Assert.Equal(CasinoLedgerKinds.BuyIn, unknown.LedgerKind);
+        Assert.True(unknown.HostSide);
 
         var prize = TradeLedgerMatcher.Match(new TradeCompletion(new[] { "Xeldar" }, 0, 45_000), context);
         Assert.Equal(TradeProposalKind.Propose, prize.Kind);

@@ -20,6 +20,9 @@ internal static class MotionButton
     private const float SheenSeconds = 0.65f;
     private const float RimReachUnits = 90f;
     private const int HaloLayers = 7;
+    private const float HaloStepUnits = 2.2f;
+    private const float HaloDropScale = 0.35f;
+    private const float ClipEdgeEpsilon = 0.5f;
     private static readonly Vector4 LabelInk = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 Shadow = new(0f, 0f, 0f, 1f);
 
@@ -126,6 +129,8 @@ internal static class MotionButton
         return pose;
     }
 
+    public static float HaloReach(float scale) => HaloLayers * HaloStepUnits * scale;
+
     public static void Halo(ImDrawListPtr drawList, Rect face, float radius, Vector4 tint, float strength)
     {
         if (strength <= 0.001f)
@@ -134,14 +139,62 @@ internal static class MotionButton
         }
 
         var scale = UiScale.Current;
+        var clip = HaloClipFor(drawList, HaloReach(scale));
+        drawList.PushClipRect(clip.Min, clip.Max, false);
         var color = ImGui.GetColorU32(tint with { W = tint.W * strength / HaloLayers });
         for (var layerIndex = 0; layerIndex < HaloLayers; layerIndex++)
         {
-            var spread = (layerIndex + 1) * 2.2f * scale;
-            var drop = new Vector2(0f, spread * 0.35f);
+            var spread = (layerIndex + 1) * HaloStepUnits * scale;
+            var drop = new Vector2(0f, spread * HaloDropScale);
             Squircle.Fill(drawList, face.Min - new Vector2(spread, spread) + drop,
                 face.Max + new Vector2(spread, spread) + drop, radius + spread, color);
         }
+
+        drawList.PopClipRect();
+    }
+
+    public static Rect HaloClip(Rect clip, Rect innerClip, Rect bound, float reach, float drop)
+    {
+        var min = new Vector2(RelaxMin(clip.Min.X, innerClip.Min.X, bound.Min.X, reach),
+            RelaxMin(clip.Min.Y, innerClip.Min.Y, bound.Min.Y, reach - drop));
+        var max = new Vector2(RelaxMax(clip.Max.X, innerClip.Max.X, bound.Max.X, reach),
+            RelaxMax(clip.Max.Y, innerClip.Max.Y, bound.Max.Y, reach + drop));
+        return new Rect(min, max);
+    }
+
+    private static Rect HaloClipFor(ImDrawListPtr drawList, float reach)
+    {
+        var clip = new Rect(drawList.GetClipRectMin(), drawList.GetClipRectMax());
+        var window = ImGuiP.GetCurrentWindowRead();
+        if (window.IsNull)
+        {
+            return clip;
+        }
+
+        var innerClip = new Rect(window.InnerClipRect.Min, window.InnerClipRect.Max);
+        var bound = new Rect(Vector2.Max(window.OuterRectClipped.Min, window.InnerRect.Min),
+            Vector2.Min(window.OuterRectClipped.Max, window.InnerRect.Max));
+        return HaloClip(clip, innerClip, bound, reach, reach * HaloDropScale);
+    }
+
+    private static float RelaxMin(float edge, float innerEdge, float boundEdge, float reach)
+    {
+        if (MathF.Abs(edge - innerEdge) > ClipEdgeEpsilon)
+        {
+            return edge;
+        }
+
+        return MathF.Min(edge, MathF.Max(boundEdge, edge - reach));
+    }
+
+    private static float RelaxMax(float edge, float innerEdge, float boundEdge, float reach)
+    {
+        if (MathF.Abs(edge - innerEdge) > ClipEdgeEpsilon)
+        {
+            return edge;
+        }
+
+        return MathF.Max(edge, MathF.Min(boundEdge, edge + reach));
     }
 
     public static void RimLight(ImDrawListPtr drawList, Rect face, float radius, float strength)

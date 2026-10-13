@@ -39,9 +39,23 @@ internal static class NameEffects
     private const double CometPeriod = 2200.0;
     private const double MotePeriod = 5000.0;
     private const double StormPeriod = 1600.0;
+    private const double WitchfirePeriod = 5600.0;
 
     private const int RainbowStops = 8;
     private const float RainbowSaturation = 0.72f;
+
+    private static readonly Vector4[] HallowedColors =
+    {
+        new(0.56f, 0.9f, 0.6f, 1f),
+        new(0.3f, 0.75f, 0.38f, 1f),
+        new(0.16f, 0.54f, 0.24f, 1f),
+        new(0.08f, 0.27f, 0.12f, 1f),
+    };
+
+    public static Vector4 HallowedInk(bool light) => RoleInk.For(HallowedColors[1], light);
+
+    public static TextEffect Hallowed(bool light) => new(NameEffectKind.Witchfire,
+        RoleInk.Highlight(HallowedColors[1], light), Phase(NameEffectKind.Witchfire), RampAcross(HallowedColors, light));
 
     public static TextEffect For(RoleKind role, bool light)
     {
@@ -112,7 +126,8 @@ internal static class NameEffects
 
     private static bool SamplesAcross(NameEffectKind kind, int colorCount)
     {
-        return colorCount > 1 && (kind == NameEffectKind.Horizon || kind == NameEffectKind.Blaze);
+        return colorCount > 1
+            && (kind == NameEffectKind.Horizon || kind == NameEffectKind.Blaze || kind == NameEffectKind.Witchfire);
     }
 
     private static bool Decorrelated(NameEffectKind kind)
@@ -131,6 +146,7 @@ internal static class NameEffects
             NameEffectKind.Scan => true,
             NameEffectKind.Comet => true,
             NameEffectKind.Storm => true,
+            NameEffectKind.Witchfire => true,
             _ => false,
         };
     }
@@ -249,6 +265,7 @@ internal static class NameEffects
             NameEffectKind.Bubbles => Pulse.Phase(MotePeriod),
             NameEffectKind.Confetti => Pulse.Phase(MotePeriod),
             NameEffectKind.Storm => Pulse.Phase(StormPeriod),
+            NameEffectKind.Witchfire => Pulse.Phase(WitchfirePeriod),
             _ => 0f,
         };
     }

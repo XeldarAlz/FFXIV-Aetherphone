@@ -45,8 +45,6 @@ internal sealed class VenueCabinet : ICabinetIdle
 
     public VenueRoomKind Kind => kind;
 
-    public static float DeckHeight => CasinoStageLayout.DeckHeight;
-
     public int Currency => venue.ViewFor(roomId)?.Currency
         ?? (venue.Tables.CardFor(roomId) is { } card ? CasinoCurrencies.Of(card) : CasinoCurrencies.Practice);
 
@@ -66,7 +64,8 @@ internal sealed class VenueCabinet : ICabinetIdle
 
     public CasinoStageSpec Spec()
     {
-        return new CasinoStageSpec(GameIdOf(kind), NameOf(kind), Backdrop.Strip, Room: true, DeckHeight: DeckHeight,
+        return new CasinoStageSpec(GameIdOf(kind), NameOf(kind), Backdrop.Strip, Room: true,
+            DeckHeight: RaffleTicketPicker.DeckHeightFor(venue.ViewFor(roomId), Owning(), venue.AccountId),
             Practice: Currency == CasinoCurrencies.Practice, InstantAvailable: true, Extra: L.Venue.TableSheet,
             HouseBanked: false);
     }

@@ -16,7 +16,9 @@ Settings only lists its own kind:
   `Core/Notifications/UiSound.cs` and never appear in Settings lists, and
   `UiSoundCatalogTests` fails the build server if a wired name goes missing.
   `ringback.wav` is the outgoing-call loop, and `alarm.wav` and `timer.wav`
-  are the Clock loops, all played by `SoundService`.
+  are the Clock loops, all played by `SoundService`. The `halloween_*.wav`
+  clips are the seasonal Chirper and Aethergram sounds, played only while the
+  Halloween theme is on.
 - `Games/` ships the **Game Sounds** palette for the mini-games and the
   Casino (hits, pops, chimes, cards, chips, Simon tones), wired through
   the same catalog on the Game channel and gated by the Game Sounds toggle in

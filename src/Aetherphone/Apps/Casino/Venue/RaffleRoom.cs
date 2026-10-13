@@ -17,10 +17,12 @@ internal sealed class RaffleRoom
     private const string EntrantsMarquee = "venue.raffle.entrants";
     private const string PrizeMarquee = "venue.raffle.prize";
     private const string SeedMarquee = "venue.raffle.seed";
+    private const string CapMarquee = "venue.raffle.cap";
 
     private readonly CasinoTextCache texts;
     private readonly RafflePlayback playback = new();
     private readonly VenueCheer cheer = new();
+    private readonly RaffleTicketPicker picker = new();
     private readonly RaffleComposer composer;
     private readonly Action<VenueActDraft> act;
 
@@ -43,6 +45,7 @@ internal sealed class RaffleRoom
         playback.Reset();
         cheer.Clear();
         composer.Close();
+        picker.Reset();
         shownWinners = -1;
     }
 
@@ -114,6 +117,10 @@ internal sealed class RaffleRoom
         var entrants = shown.Entrants?.Length ?? 0;
         StageText.Label(room.DrawList, new Vector2(room.World.Center.X, top + lineHeight * 0.5f),
             texts.Counts(L.Venue.Entrants, entrants, shown.Tickets), room.World.Width, EntrantsMarquee,
+            TextStyles.Subheadline, false);
+        top += lineHeight + VenueArt.LineGap * scale;
+        StageText.Label(room.DrawList, new Vector2(room.World.Center.X, top + lineHeight * 0.5f),
+            texts.Count(L.Venue.TicketCap, shown.TicketsPerPerson), room.World.Width, CapMarquee,
             TextStyles.Subheadline, false);
         top += lineHeight + VenueArt.LineGap * scale;
         if (live is not null)
@@ -271,7 +278,6 @@ internal sealed class RaffleRoom
         }
 
         var held = MyTickets(live, room.Me);
-        var maxed = held >= live.TicketsPerPerson;
         if (room.Owner && room.Gil)
         {
             VenueArt.DeckCaption(drawList, deck, Loc.T(L.Tables.ReasonHostTicket), scale);
@@ -283,19 +289,15 @@ internal sealed class RaffleRoom
             return;
         }
 
-        var caption = room.Gil && live.TicketPrice > 0
-            ? texts.Number(L.Venue.TicketPriceGil, live.TicketPrice)
-            : Loc.T(L.Venue.RaffleFree);
-        VenueArt.DeckCaption(drawList, deck, caption, scale);
         if (room.Hosting && room.Stage.SecondaryAction(Loc.T(L.Venue.DrawNow), room.Enabled, room.Ui.Ink))
         {
             act(new VenueActDraft(VenueActions.RaffleDraw));
         }
 
-        if (room.Stage.PrimaryAction(Loc.T(L.Venue.TakeTicket), room.Enabled && !maxed, room.Ui.Ink) && !maxed)
+        if (picker.Draw(room, texts, live, deck, held))
         {
             CasinoSfx.Play(UiSound.Daub);
-            act(new VenueActDraft(VenueActions.RaffleTicket, 1));
+            act(RaffleTicketPicker.Build(picker.Count));
         }
     }
 

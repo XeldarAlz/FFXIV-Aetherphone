@@ -308,18 +308,14 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
 
     private int FeaturedIndex()
     {
-        if (featuredSource.Length > 0)
+        var index = IndexOfGame(featuredSource);
+        if (index >= 0)
         {
-            for (var index = 0; index < games.Length; index++)
-            {
-                if (string.Equals(games[index].Id, featuredSource, StringComparison.Ordinal))
-                {
-                    return index;
-                }
-            }
+            return index;
         }
 
-        return featuredDay % games.Length;
+        index = IndexOfGame(Core.Coins.CoinGames.FeaturedFor(featuredDay));
+        return index >= 0 ? index : featuredDay % games.Length;
     }
 
     private void SyncFeatured()
@@ -514,15 +510,21 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
 
     private IMiniGame? FindGame(ReadOnlySpan<char> id)
     {
+        var index = IndexOfGame(id);
+        return index < 0 ? null : games[index];
+    }
+
+    private int IndexOfGame(ReadOnlySpan<char> id)
+    {
         for (var index = 0; index < games.Length; index++)
         {
             if (id.SequenceEqual(games[index].Id))
             {
-                return games[index];
+                return index;
             }
         }
 
-        return null;
+        return -1;
     }
 
     private void DrawView(GamesRoute route, Rect area, int depth)

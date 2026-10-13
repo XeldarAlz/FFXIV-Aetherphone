@@ -139,6 +139,17 @@ public sealed class TradeSyncTests
     }
 
     [Fact]
+    public void TheHostOfAVenueRoomReceivingGilProposesABuyIn()
+    {
+        var proposal = TradeLedgerMatcher.Match(new TradeCompletion(MiraWindow, 500_000, 0),
+            HostContext() with { Venue = true });
+        Assert.Equal(TradeProposalKind.Propose, proposal.Kind);
+        Assert.Equal(CasinoLedgerKinds.BuyIn, proposal.LedgerKind);
+        Assert.Equal(Player, proposal.CounterpartyUserId);
+        Assert.True(proposal.HostSide);
+    }
+
+    [Fact]
     public void ThePlayerSendingGilToTheHostProposesTheirBuyIn()
     {
         var proposal = TradeLedgerMatcher.Match(new TradeCompletion(HostWindow, 0, 250_000), PlayerContext());

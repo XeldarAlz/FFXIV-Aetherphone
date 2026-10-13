@@ -151,7 +151,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         plinko = new Plinko.PlinkoCabinet(casino, casinoPlay.Plinko, preferences);
         dealerHoldem = new DealerHoldem.DealerHoldemCabinet(casino, casinoPlay.DealerHoldem);
         blackjack = new Tables.BlackjackTable(casino, casinoRooms, casinoTables, history, casinoTurns, remoteImages,
-            lodestone, PopRoute, OpenLedger, OpenGilLedger);
+            lodestone, tournament, PopRoute, OpenLedger, OpenGilLedger);
         playerLedger = new Tables.TableLedger(casinoTables, casino, confirm, tradeSync);
         gilLedger = new Tables.GilLedgerView(casinoTables, confirm);
         openTable = OpenTable;

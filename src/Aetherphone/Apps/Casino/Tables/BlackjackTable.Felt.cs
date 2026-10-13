@@ -20,7 +20,6 @@ internal sealed partial class BlackjackTable
     private const float SettleFlightSeconds = 0.55f;
     private const float BadgePopSeconds = 0.25f;
     private const float HeroRaiseSmoothing = 0.12f;
-    private const float TitleDrop = 6f;
     private const float StateRingRadius = 11f;
     private const float HeroColumnSink = 3f;
     private const float StateLineShare = 0.84f;
@@ -238,8 +237,10 @@ internal sealed partial class BlackjackTable
                 view.AvatarUrl, images, lodestone, 1f, 32, dimmed ? 0.45f : 1f, Frames.Of(view.FrameId));
             if (acting)
             {
-                TurnTimerRing.Draw(drawList, puck, puckRadius + 4f * scale, turnRemaining, board.WindowSeconds,
-                    ui.Accent, scale);
+                TurnTimerRing.Draw(drawList, puck, puckRadius + BlackjackTableLayout.RailRingGap * scale,
+                    turnRemaining, board.WindowSeconds, ui.Accent, scale);
+                BlackjackTableArt.DrawTimeBankPips(drawList, BlackjackTableLayout.TimeBankPips(puck, puckRadius, scale),
+                    projection.SeatAt(seatIndex)?.TimeBankLeft ?? 0, CasinoHostingRules.TimeBankUses, scale);
             }
 
             if (!view.Connected)
@@ -251,6 +252,7 @@ internal sealed partial class BlackjackTable
 
             DrawSeatPlate(drawList, currency, view, puck, puckRadius, columnWidth - 2f * scale, dimmed, scale);
             DrawBalanceTitle(drawList, currency, view.Stack, puck, puckRadius, columnWidth, scale);
+            DrawRailSideStakes(drawList, board, seatIndex, slot, scale);
 
             DrawBetDisplay(drawList, ui, seatIndex, currency, puck,
                 new Vector2(puck.X, puck.Y - layout.RailBetLift), dealerAnchor, false, scale);
@@ -279,6 +281,47 @@ internal sealed partial class BlackjackTable
         Typography.DrawCentered(drawList, new Vector2(puck.X, min.Y + lineHeight * 1.45f),
             Typography.FitText(stack, inner, fit, style.Weight), dimmed ? StageText.Body : StackInk(currency), fit,
             style.Weight);
+    }
+
+    private void DrawRailSideStakes(ImDrawListPtr drawList, CasinoBlackjackRoomStateDto board, int seatIndex,
+        int slot, float scale)
+    {
+        if (!BlackjackRecap.SideBetsOffered(board))
+        {
+            return;
+        }
+
+        var sides = projection.SeatAt(seatIndex)?.SideBets;
+        if (sides is null)
+        {
+            return;
+        }
+
+        var both = sides.PerfectPairs > 0 && sides.TwentyOnePlusThree > 0;
+        if (sides.PerfectPairs > 0)
+        {
+            DrawRailSideStake(drawList, layout.RailSideStakeRect(slot, BlackjackSideBet.PerfectPairs, both),
+                seatIndex, BlackjackSideBet.PerfectPairs, sides.PerfectPairs, scale);
+        }
+
+        if (sides.TwentyOnePlusThree > 0)
+        {
+            DrawRailSideStake(drawList, layout.RailSideStakeRect(slot, BlackjackSideBet.TwentyOnePlusThree, both),
+                seatIndex, BlackjackSideBet.TwentyOnePlusThree, sides.TwentyOnePlusThree, scale);
+        }
+    }
+
+    private void DrawRailSideStake(ImDrawListPtr drawList, in Rect rect, int seatIndex, BlackjackSideBet bet,
+        long placed, float scale)
+    {
+        var recap = recaps[seatIndex];
+        var result = BadgeEntrance(seatIndex) > 0f
+            ? BlackjackRecap.SideResult(recap, bet, placed)
+            : SideSpotResult.Open;
+        var label = result == SideSpotResult.Paid
+            ? text.Compact(L.Stage.Plus, BlackjackRecap.SideNet(recap, bet))
+            : NumberText.Compact(placed);
+        BlackjackTableArt.DrawSideStake(drawList, rect, label, result, scale);
     }
 
     private string RailName(int seatIndex, string displayName, float width)
@@ -311,7 +354,7 @@ internal sealed partial class BlackjackTable
             return;
         }
 
-        StatusTitle.Draw(drawList, new Vector2(puck.X, puck.Y + puckRadius - TitleDrop * scale), title, maxWidth,
+        StatusTitle.Draw(drawList, BlackjackTableLayout.RailTitleCenter(puck, puckRadius, scale), title, maxWidth,
             scale);
     }
 
@@ -562,8 +605,10 @@ internal sealed partial class BlackjackTable
             images, lodestone, 1f, 32, dimmed ? 0.45f : 1f, Frames.Of(view.FrameId));
         if (board.ActiveSeat == mySeat && board.Phase == BlackjackPhases.PlayerTurns)
         {
-            TurnTimerRing.Draw(drawList, puck, puckRadius + 3.5f * scale, turnRemaining, board.WindowSeconds,
-                ui.Accent, scale);
+            TurnTimerRing.Draw(drawList, puck, puckRadius + BlackjackTableLayout.CapsuleRingGap * scale,
+                turnRemaining, board.WindowSeconds, ui.Accent, scale);
+            BlackjackTableArt.DrawTimeBankPips(drawList, BlackjackTableLayout.TimeBankPips(puck, puckRadius, scale),
+                projection.SeatAt(mySeat)?.TimeBankLeft ?? 0, CasinoHostingRules.TimeBankUses, scale);
         }
 
         var textX = puck.X + puckRadius + pad * 0.75f;

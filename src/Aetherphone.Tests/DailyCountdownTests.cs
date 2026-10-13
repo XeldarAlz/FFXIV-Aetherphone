@@ -9,12 +9,14 @@ public sealed class DailyCountdownTests
         new DateTime(2026, 10, 7, hour, minute, second, DateTimeKind.Utc).Ticks;
 
     [Theory]
-    [InlineData(0, 0, 0, 1440)]
-    [InlineData(18, 48, 0, 312)]
-    [InlineData(18, 48, 59, 312)]
-    [InlineData(18, 49, 0, 311)]
-    [InlineData(23, 59, 30, 1)]
-    public void TheCountdownRunsToTheNextUtcMidnightInWholeMinutes(int hour, int minute, int second, int expected)
+    [InlineData(0, 0, 0, 900)]
+    [InlineData(14, 59, 30, 1)]
+    [InlineData(15, 0, 0, 1440)]
+    [InlineData(18, 48, 0, 1212)]
+    [InlineData(18, 48, 59, 1212)]
+    [InlineData(18, 49, 0, 1211)]
+    [InlineData(23, 59, 30, 901)]
+    public void TheCountdownRunsToTheNextCoinDayInWholeMinutes(int hour, int minute, int second, int expected)
     {
         Assert.Equal(expected, DailyCountdown.MinutesUntilReset(At(hour, minute, second)));
     }
@@ -24,8 +26,8 @@ public sealed class DailyCountdownTests
     {
         var countdown = new DailyCountdown();
 
-        Assert.Equal("Resets in 5h 12m", countdown.Label(At(18, 48, 0)));
-        Assert.Equal("Resets in 1h 0m", countdown.Label(At(23, 0, 0)));
+        Assert.Equal("Resets in 20h 12m", countdown.Label(At(18, 48, 0)));
+        Assert.Equal("Resets in 16h 0m", countdown.Label(At(23, 0, 0)));
     }
 
     [Fact]
@@ -33,7 +35,7 @@ public sealed class DailyCountdownTests
     {
         var countdown = new DailyCountdown();
 
-        Assert.Equal("Resets in 42m", countdown.Label(At(23, 18, 0)));
+        Assert.Equal("Resets in 42m", countdown.Label(At(14, 18, 0)));
     }
 
     [Fact]

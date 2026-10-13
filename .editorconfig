@@ -56,6 +56,17 @@ dotnet_diagnostic.CA1852.severity = warning
 # A blank line after a closing brace before the next statement
 dotnet_diagnostic.IDE2003.severity = warning
 
+# Unused usings are not gated. Inside a build this analyzer only reports when
+# GenerateDocumentationFile is on, which this tree never sets, so under
+# EnforceCodeStyleInBuild it was the single most expensive analyzer (a third of
+# all analyzer time on the main project) and could not fail anything. The
+# compiler only skips an analyzer when every id it owns is off, and this one
+# owns four.
+dotnet_diagnostic.IDE0005.severity = none
+dotnet_diagnostic.IDE0005_gen.severity = none
+dotnet_diagnostic.EnableGenerateDocumentationFile.severity = none
+dotnet_diagnostic.RemoveUnnecessaryImportsFixable.severity = none
+
 # Naming. Types, members and constants PascalCase; interfaces I prefixed;
 # locals, parameters and private fields camelCase with no underscore.
 # The per rule severities below only take effect once IDE1006 itself is raised,

@@ -78,15 +78,15 @@ internal static class HousingFormat
 
         if (age.TotalMinutes < 60d)
         {
-            return Loc.T(L.Housing.ScannedMinutes, (int)age.TotalMinutes);
+            return Loc.Plural(L.Housing.ScannedMinutes, (int)age.TotalMinutes);
         }
 
         if (age.TotalHours < 24d)
         {
-            return Loc.T(L.Housing.ScannedHours, (int)age.TotalHours);
+            return Loc.Plural(L.Housing.ScannedHours, (int)age.TotalHours);
         }
 
-        return Loc.T(L.Housing.ScannedDays, (int)age.TotalDays);
+        return Loc.Plural(L.Housing.ScannedDays, (int)age.TotalDays);
     }
 
     public static string AgeRelative(DateTime momentUtc, DateTime nowUtc)
@@ -109,12 +109,12 @@ internal static class HousingFormat
 
         if (age.TotalMinutes < 60d)
         {
-            return Loc.T(L.Housing.AgeMinutesAgo, (int)age.TotalMinutes);
+            return Loc.Plural(L.Housing.AgeMinutesAgo, (int)age.TotalMinutes);
         }
 
         return age.TotalHours < 24d
-            ? Loc.T(L.Housing.AgeHoursAgo, (int)age.TotalHours)
-            : Loc.T(L.Housing.AgeDaysAgo, (int)age.TotalDays);
+            ? Loc.Plural(L.Housing.AgeHoursAgo, (int)age.TotalHours)
+            : Loc.Plural(L.Housing.AgeDaysAgo, (int)age.TotalDays);
     }
 
     public static string ScanAgeShort(DateTime scannedUtc, DateTime nowUtc)
@@ -155,9 +155,14 @@ internal static class HousingFormat
             return Loc.T(L.Housing.TimeUnknown);
         }
 
-        var local = DateTime.SpecifyKind(utcMoment, DateTimeKind.Utc).ToLocalTime();
-        return local.ToString("d MMM yyyy", Loc.Culture) + " " + TimeText.Clock(local);
+        return LocalDate(utcMoment) + " " + LocalClock(utcMoment);
     }
+
+    public static string LocalDate(DateTime utcMoment) =>
+        DateTime.SpecifyKind(utcMoment, DateTimeKind.Utc).ToLocalTime().ToString("d MMM yyyy", Loc.Culture);
+
+    public static string LocalClock(DateTime utcMoment) =>
+        TimeText.Clock(DateTime.SpecifyKind(utcMoment, DateTimeKind.Utc).ToLocalTime());
 
     public static string Price(long gil) =>
         gil <= 0L ? Loc.T(L.Housing.NotReported) : Loc.T(L.Housing.PriceGil, NumberText.Group(gil));

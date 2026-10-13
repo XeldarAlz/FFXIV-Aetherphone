@@ -23,9 +23,9 @@ internal sealed partial class VelvetShell
             store.EnsureMe();
         }
 
-        tabItems[(int)VelvetPage.Discover] = new TabItem(Loc.T(L.Velvet.TabDiscover), PhoneIcons.Compass,
+        tabItems[(int)VelvetPage.Discover] = new TabItem(Loc.T(L.Velvet.TabDiscover), DiscoverGlyph,
             AnchorKey: AnchorFor(VelvetPage.Discover));
-        tabItems[(int)VelvetPage.Feed] = new TabItem(Loc.T(L.Velvet.TabFeed), PhoneIcons.Photo,
+        tabItems[(int)VelvetPage.Feed] = new TabItem(Loc.T(L.Velvet.TabFeed), FeedGlyph,
             AnchorKey: AnchorFor(VelvetPage.Feed));
         tabItems[(int)VelvetPage.Messages] = new TabItem(Loc.T(L.Velvet.Messages), PhoneIcons.MessageCircle,
             PhoneIcons.MessageCircleFilled, store.UnreadCount + store.RequestCount, AnchorFor(VelvetPage.Messages));

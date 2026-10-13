@@ -344,6 +344,104 @@ public sealed class BlackjackTableLayoutTests
         }
     }
 
+    [Theory]
+    [MemberData(nameof(FloorTables))]
+    public void SideStakesHangUnderEachSeatPlateInsideItsColumn(float scale, float width, int railCount,
+        bool seated)
+    {
+        var floor = BlackjackTableLayout.MinimumHeight(width * scale, railCount, seated, scale) / scale;
+        for (var extra = 0f; extra <= FloorSlack; extra += FloorSlack * 0.5f)
+        {
+            var layout = Compute(scale, width, floor + extra, railCount, seated);
+            for (var slot = 0; slot < railCount; slot++)
+            {
+                var plate = layout.RailPlateRect(slot);
+                var pairs = layout.RailSideStakeRect(slot, BlackjackSideBet.PerfectPairs, true);
+                var three = layout.RailSideStakeRect(slot, BlackjackSideBet.TwentyOnePlusThree, true);
+                var single = layout.RailSideStakeRect(slot, BlackjackSideBet.TwentyOnePlusThree, false);
+                Assert.Equal(BlackjackTableLayout.SideStakeHeight * scale, pairs.Height, 3);
+                Assert.Equal(pairs.Height, three.Height, 3);
+                Assert.Equal(pairs.Min.Y, three.Min.Y, 3);
+                Assert.Equal(pairs.Width, three.Width, 3);
+                Assert.True(pairs.Min.X >= plate.Min.X - Epsilon);
+                Assert.True(pairs.Max.X < three.Min.X);
+                Assert.True(three.Max.X <= plate.Max.X + Epsilon);
+                Assert.Equal(plate.Min.X, single.Min.X, 3);
+                Assert.Equal(plate.Max.X, single.Max.X, 3);
+                var attached = plate.Max.Y - BlackjackTableLayout.SideStakeOverlap * scale;
+                Assert.True(pairs.Min.Y <= attached + Epsilon);
+                Assert.True(pairs.Min.Y >= attached - BlackjackTableLayout.SideStakeSlide * scale - Epsilon);
+                var hangs = pairs.Max.Y - plate.Max.Y;
+                Assert.True(hangs >= pairs.Height - BlackjackTableLayout.SideStakeOverlap * scale
+                    - BlackjackTableLayout.SideStakeSlide * scale - Epsilon);
+                if (layout.SideStakeFloor - attached >= pairs.Height)
+                {
+                    Assert.Equal(attached, pairs.Min.Y, 3);
+                    Assert.True(pairs.Max.Y <= layout.SideStakeFloor + Epsilon);
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public void TheOwnersPhoneKeepsSideStakesOffTheStackLineAndTheHeroCards()
+    {
+        var layout = Compute(1f, 272f, 489f, BlackjackRules.SeatCount - 1, true);
+        for (var slot = 0; slot < BlackjackRules.SeatCount - 1; slot++)
+        {
+            var plate = layout.RailPlateRect(slot);
+            var stake = layout.RailSideStakeRect(slot, BlackjackSideBet.PerfectPairs, true);
+            Assert.Equal(plate.Max.Y - BlackjackTableLayout.SideStakeOverlap, stake.Min.Y, 3);
+            Assert.True(stake.Max.Y <= layout.SideStakeFloor + Epsilon);
+            Assert.True(stake.Width >= 20f);
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(ScaleData))]
+    public void TimeBankPipsSitInsideTheTurnRingAtTheCrownOfThePuck(float scale)
+    {
+        var puck = new Vector2(100f, 200f);
+        var pucks = new[]
+        {
+            (BlackjackTableLayout.RailPuckRadius, BlackjackTableLayout.RailRingGap),
+            (BlackjackTableLayout.CapsulePuckRadius, BlackjackTableLayout.CapsuleRingGap),
+        };
+        for (var index = 0; index < pucks.Length; index++)
+        {
+            var radius = pucks[index].Item1 * scale;
+            var ring = radius + pucks[index].Item2 * scale;
+            var center = BlackjackTableLayout.TimeBankPips(puck, radius, scale);
+            var halfHeight = BlackjackTableArt.TimeBankPipHalfHeight(scale);
+            var halfWidth = BlackjackTableArt.TimeBankPipHalfWidth(CasinoHostingRules.TimeBankUses, scale);
+            Assert.Equal(puck.X, center.X, 3);
+            Assert.True(center.Y + halfHeight < puck.Y);
+            Assert.True(center.Y - halfHeight >= puck.Y - radius - Epsilon);
+            var cornerRise = puck.Y - (center.Y - halfHeight);
+            Assert.True(MathF.Sqrt(halfWidth * halfWidth + cornerRise * cornerRise) <= ring + Epsilon);
+            Assert.True(halfWidth * 2f <= radius * 2f);
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(ScaleData))]
+    public void TimeBankPipsClearTheBalanceTitleOfASharkSeat(float scale)
+    {
+        var puck = new Vector2(100f, 200f);
+        var radius = BlackjackTableLayout.RailPuckRadius * scale;
+        var title = StatusTitle.For(StatusTitle.Shark);
+        Assert.NotEqual(BalanceTitle.None, title);
+        var badgeHalf = StatusTitle.PillHeight(title, scale) * 0.5f;
+        Assert.True(badgeHalf > 0f);
+        var badgeCenter = BlackjackTableLayout.RailTitleCenter(puck, radius, scale);
+        var badgeTop = badgeCenter.Y - badgeHalf;
+        Assert.True(badgeCenter.Y + badgeHalf > puck.Y + radius);
+        var pips = BlackjackTableLayout.TimeBankPips(puck, radius, scale);
+        var pipBottom = pips.Y + BlackjackTableArt.TimeBankPipHalfHeight(scale);
+        Assert.True(pipBottom < badgeTop);
+        Assert.True(pipBottom < puck.Y);
+    }
+
     [Fact]
     public void TheOwnersHostedGilTableKeepsItsSeatsOffTheSplitHands()
     {

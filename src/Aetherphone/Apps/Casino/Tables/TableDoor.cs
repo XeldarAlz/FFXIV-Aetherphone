@@ -415,7 +415,7 @@ internal sealed partial class TableDoor
     private static string ControlLabel(DoorControl control, CasinoTableRowDto card) => control switch
     {
         DoorControl.Pause => Loc.T(card.Paused ? L.Tables.Resume : L.Tables.Pause),
-        DoorControl.Deal => Loc.T(L.Tables.Deal),
+        DoorControl.Deal => Loc.T(card.Config is { AutoDeal: true } ? L.Tables.DealNow : L.Tables.Deal),
         DoorControl.CoDealers => Loc.T(L.Tables.ControlCoDealers),
         DoorControl.Rename => Loc.T(L.Tables.Rename),
         _ => Loc.T(L.Tables.CloseTable),

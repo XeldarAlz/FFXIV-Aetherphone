@@ -4,6 +4,7 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Translation;
@@ -218,7 +219,7 @@ internal sealed partial class ChirperApp
         var cursorY = MathF.Max(avatarCenter.Y + avatarRadius, actionTop + ProfileActionHeight * scale) + 10f * scale;
         var nameHeight = Typography.LineHeight(ProfileNameStyle);
         UserName.DrawAuto(drawList, "chirper.profile.name." + user.Id, displayName, user.Badges, user.ProfileBadges,
-            innerLeft, cursorY, innerWidth, ProfileNameStyle, ChirperInk.TitleInk, theme);
+            innerLeft, cursorY, innerWidth, ProfileNameStyle, ChirperInk.TitleInk, theme, self: RewardedSelf(user.Id));
         cursorY += nameHeight + 2f * scale;
         if (user.Handle.Length > 0)
         {
@@ -793,26 +794,31 @@ internal sealed partial class ChirperApp
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
         var featherSize = 26f * scale;
         var featherCenter = new Vector2(area.Min.X + CellPadX * scale + featherSize * 0.5f, rowCenterY);
-        PhoneIcon.Draw(drawList, featherCenter, PhoneIcons.Feather,
-            ChirperInk.AccentLink, featherSize);
+        if (!SeasonalTheme.Halloween ||
+            !AppIconTile.TryDrawGlyph(drawList, Id, featherCenter, featherSize * MoonLogoGrow, ChirperInk.TitleInk))
+        {
+            PhoneIcon.Draw(drawList, featherCenter, PhoneIcons.Feather, ChirperInk.AccentLink, featherSize);
+        }
         var titleLeft = featherCenter.X + featherSize * 0.5f + 12f * scale;
         var buttonRadius = TopBarButtonRadius * scale;
         var refreshCenter = new Vector2(area.Max.X - CellPadX * scale - buttonRadius, rowCenterY);
         var filterCenter = new Vector2(refreshCenter.X - buttonRadius * 2f - 2f * scale, rowCenterY);
         var titleHeight = Typography.LineHeight(WordmarkStyle);
         var titleMaxWidth = MathF.Max(1f, filterCenter.X - buttonRadius - 8f * scale - titleLeft);
-        var title = Typography.FitText(DisplayName, titleMaxWidth, WordmarkStyle);
-        var titleSize = Typography.Measure(title, WordmarkStyle);
+        var titleSize = SocialSeason.FitWordmark(DisplayName, titleMaxWidth, titleHeight, WordmarkStyle, out var title,
+            out var gothic);
         var titleMin = new Vector2(titleLeft - 6f * scale, rowCenterY - titleHeight * 0.5f - 4f * scale);
         var titleMax = new Vector2(titleLeft + titleSize.X + 6f * scale, rowCenterY + titleHeight * 0.5f + 4f * scale);
         UiInteract.HoverHighlight(drawList, titleMin, titleMax, 8f * scale);
-        Typography.Draw(drawList, new Vector2(titleLeft, rowCenterY - titleHeight * 0.5f), title, ChirperInk.TitleInk,
-            WordmarkStyle);
-        if (UiInteract.HoverClick(titleMin, titleMax))
+        var titleTop = rowCenterY - (gothic ? titleSize.Y : titleHeight) * 0.5f;
+        SocialSeason.DrawWordmark(drawList, new Vector2(titleLeft, titleTop), title, ChirperInk.TitleInk, titleHeight,
+            WordmarkStyle, gothic);
+        if (UiInteract.HoverClick(titleMin, titleMax, SocialSeason.Sound(UiSound.HalloweenHoot)))
         {
             RefreshActiveFeed();
         }
 
+        DrawMoonTap(rowCenterY);
         if (!store.IsSignedIn)
         {
             return;
@@ -838,6 +844,7 @@ internal sealed partial class ChirperApp
         bool filter, bool highlighted) =>
         SocialChrome.DrawHeaderIcon(drawList, center, radius,
             filter ? PhoneIcons.AdjustmentsHorizontal : PhoneIcons.Refresh, 18f, tooltip, ChirperInk.Shared,
-            ChirperInk.BodyInk, highlighted);
+            ChirperInk.BodyInk, highlighted,
+            tapSound: filter ? UiSound.Tap : SocialSeason.Sound(UiSound.HalloweenHoot));
 
 }

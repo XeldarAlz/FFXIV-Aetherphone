@@ -147,6 +147,39 @@ public sealed class CasinoHostingWireContractTests
     }
 
     [Fact]
+    public void TheDoorCarriesAPendingTournamentStart()
+    {
+        const string pending = """
+        {
+          "roomId": "table-a1b2", "owner": true, "inviteToken": "", "knocks": [], "seated": [],
+          "serverNowUnixMs": 0, "joinCode": "ABCDEF", "present": [], "tournamentPending": true
+        }
+        """;
+        const string older = """
+        { "roomId": "table-a1b2", "owner": true, "inviteToken": "", "knocks": [], "seated": [], "serverNowUnixMs": 0 }
+        """;
+
+        var door = JsonSerializer.Deserialize(pending, AethernetJsonContext.Default.CasinoTableDoorDto);
+        var legacy = JsonSerializer.Deserialize(older, AethernetJsonContext.Default.CasinoTableDoorDto);
+
+        Assert.True(door!.TournamentPending);
+        Assert.False(legacy!.TournamentPending);
+    }
+
+    [Fact]
+    public void TheTournamentLifecycleReasonsHaveTheirOwnMessages()
+    {
+        Assert.Equal("tournament_hands", CasinoReasons.TournamentHands);
+        Assert.Equal("tournament_pending", CasinoReasons.TournamentPending);
+        Assert.Contains(CasinoReasons.TournamentHands, CasinoReasons.All);
+        Assert.Contains(CasinoReasons.TournamentPending, CasinoReasons.All);
+        Assert.True(CasinoReasons.TryMessage(CasinoReasons.TournamentHands, out var hands));
+        Assert.Equal(L.Tables.ReasonTournamentHands.Key, hands.Key);
+        Assert.True(CasinoReasons.TryMessage(CasinoReasons.TournamentPending, out var pending));
+        Assert.Equal(L.Tables.ReasonTournamentPending.Key, pending.Key);
+    }
+
+    [Fact]
     public void TheGilLedgerReadsBothSidesOfEveryEntry()
     {
         const string json = """
@@ -292,11 +325,15 @@ public sealed class CasinoHostingWireContractTests
           "nextCommit": "ab", "rolls": [ { "seq": 12, "userId": "u1", "displayName": "Mira", "bound": 1000,
           "value": 777, "atUnixMs": 0, "seed": "cd" } ], "round": { "index": 1, "openedSeq": 10, "endsAtUnixMs": 0,
           "winnerUserId": "", "winnerName": "", "winningValue": 0, "closed": false, "rollers": ["u1"] },
-          "lastRound": null, "currency": 1 }
+          "lastRound": null, "currency": 2, "stake": 50000 }
         """;
         var table = JsonSerializer.Deserialize(dice, AethernetJsonContext.Default.CasinoDiceTableStateDto);
         Assert.Equal(777, table!.Rolls![0].Value);
         Assert.Equal("u1", table.Round!.Rollers![0]);
+        Assert.Equal(50_000, table.Stake);
+        Assert.Equal("{\"sides\":20,\"highestWins\":true,\"roundSeconds\":60,\"stake\":50000}",
+            JsonSerializer.Serialize(new CasinoDiceTableOptionsDto(20, true, 60, 50_000),
+                AethernetJsonContext.Default.CasinoDiceTableOptionsDto));
 
         const string raffle = """
         { "name": "", "lastSeq": 30, "nextCommit": "", "raffle": null,

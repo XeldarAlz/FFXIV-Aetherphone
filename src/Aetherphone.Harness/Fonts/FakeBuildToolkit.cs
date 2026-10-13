@@ -36,7 +36,7 @@ internal sealed unsafe class FakeBuildToolkit : IFontAtlasBuildToolkitPreBuild, 
 
     public ImFontAtlasPtr NewImAtlas => atlas;
 
-    public ImVectorWrapper<ImFontPtr> Fonts => throw new NotSupportedException();
+    public ImVectorWrapper<ImFontPtr> Fonts => new((ImVector*)&atlas.Handle->Fonts, null, false);
 
     public IReadOnlyList<Action> PostBuildActions => postBuild;
 

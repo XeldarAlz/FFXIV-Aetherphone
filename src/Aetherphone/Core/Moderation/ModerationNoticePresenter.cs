@@ -1,6 +1,7 @@
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Coins;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
@@ -16,16 +17,18 @@ internal sealed class ModerationNoticePresenter : IDisposable
     private readonly ConfirmService confirm;
     private readonly NotificationService notifications;
     private readonly AccountStateService accountState;
+    private readonly CoinStore coins;
     private readonly IFramework framework;
     private readonly HashSet<string> presented = new(StringComparer.Ordinal);
 
     public ModerationNoticePresenter(ModerationNoticeService notices, ConfirmService confirm,
-        NotificationService notifications, AccountStateService accountState, IFramework framework)
+        NotificationService notifications, AccountStateService accountState, CoinStore coins, IFramework framework)
     {
         this.notices = notices;
         this.confirm = confirm;
         this.notifications = notifications;
         this.accountState = accountState;
+        this.coins = coins;
         this.framework = framework;
         framework.Update += OnFrameworkTick;
     }
@@ -75,6 +78,11 @@ internal sealed class ModerationNoticePresenter : IDisposable
         if (ModerationNoticeText.RefreshesAccount(notice))
         {
             accountState.RefreshNow();
+        }
+
+        if (ModerationNoticeText.RefreshesWallet(notice))
+        {
+            coins.RefreshNow();
         }
 
         var title = ModerationNoticeText.Title(notice);

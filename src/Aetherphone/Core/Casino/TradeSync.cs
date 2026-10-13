@@ -242,37 +242,8 @@ internal static class TradeLedgerMatcher
         }
 
         var kind = incoming == hostSide ? CasinoLedgerKinds.BuyIn : CasinoLedgerKinds.Payout;
-        if (context.Venue && string.Equals(kind, CasinoLedgerKinds.BuyIn, StringComparison.Ordinal)
-            && !Covered(context.Entries, payer, payee, amount, incoming ? LedgerSide.Payee : LedgerSide.Payer))
-        {
-            return TradeProposal.None;
-        }
-
         return new TradeProposal(TradeProposalKind.Propose, context.TableId, kind, counterparty.UserId,
             counterparty.DisplayName, amount, string.Empty, hostSide, incoming);
-    }
-
-    internal static bool Covered(CasinoLedgerEntryDto[] entries, string payer, string payee, long amount,
-        LedgerSide mySide)
-    {
-        for (var index = 0; index < entries.Length; index++)
-        {
-            var entry = entries[index];
-            if (entry.Settled || entry.Amount <= amount
-                || !string.Equals(entry.PayerUserId, payer, StringComparison.Ordinal)
-                || !string.Equals(entry.PayeeUserId, payee, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            var stamped = mySide == LedgerSide.Payer ? entry.PayerConfirmed : entry.PayeeConfirmed;
-            if (!stamped)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     internal static CasinoLedgerEntryDto? Unsettled(CasinoLedgerEntryDto[] entries, string payer, string payee,

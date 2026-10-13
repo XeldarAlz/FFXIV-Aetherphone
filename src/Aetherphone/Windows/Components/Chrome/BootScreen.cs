@@ -16,6 +16,10 @@ internal static class BootScreen
     private const float GreetingDriftPixels = 18f;
     private const float EmblemMarkSpan = 2.4f;
     private const float CaptionGapUnits = 34f;
+    private const float HaloReach = 1.5f;
+    private const float HaloAlpha = 0.32f;
+    private const int BatCount = 3;
+    private const float BatOrbitSpeed = 0.9f;
     private static readonly Vector4 StageInk = new(1f, 1f, 1f, 0.96f);
 
     private static readonly Vector2[] GlowOffsets =
@@ -62,12 +66,17 @@ internal static class BootScreen
             var ringSize = markSize * (1f + BootTiming.EmblemRingExpansion * 0.5f * boot.EmblemRingProgress);
             var ringHalf = new Vector2(ringSize * 0.5f, ringSize * 0.5f);
             Squircle.Stroke(dl, center - ringHalf, center + ringHalf, ringSize * BrandMark.CornerFraction,
-                ImGui.GetColorU32(BrandMark.Lilac with { W = boot.EmblemRingAlpha * 0.4f }), 1.6f * scale);
+                ImGui.GetColorU32(Accent with { W = boot.EmblemRingAlpha * 0.4f }), 1.6f * scale);
         }
 
         if (alpha <= 0f)
         {
             return;
+        }
+
+        if (SeasonalTheme.Halloween)
+        {
+            DrawHaunting(dl, center, markSize, alpha, scale);
         }
 
         if (BrandMark.TryDraw(dl, center, markSize, alpha))
@@ -83,8 +92,25 @@ internal static class BootScreen
         var alpha = boot.EmblemAlpha;
         var baseRadius = EmblemBaseRadius * scale * boot.EmblemScale;
         var caret = center.Y + baseRadius * EmblemMarkSpan * 0.5f + CaptionGapUnits * scale;
-        LoadingPulse.Caption(new Vector2(center.X, caret), StageInk, BrandMark.Lilac, LoadingPulse.SafeLabel(),
+        LoadingPulse.Caption(new Vector2(center.X, caret), StageInk, Accent, LoadingPulse.SafeLabel(),
             alpha, CaptionFontScale, drawList: dl);
+    }
+
+    private static Vector4 Accent => SeasonalTheme.Halloween ? Spooks.Pumpkin : BrandMark.Lilac;
+
+    private static void DrawHaunting(ImDrawListPtr drawList, Vector2 center, float markSize, float alpha, float scale)
+    {
+        NightScene.Glow(drawList, center, markSize * HaloReach, Spooks.Pumpkin with { W = HaloAlpha * alpha }, 12);
+        var time = (float)ImGui.GetTime();
+        var ink = ImGui.GetColorU32(Spooks.BatShadow with { W = alpha });
+        for (var batIndex = 0; batIndex < BatCount; batIndex++)
+        {
+            var angle = time * BatOrbitSpeed + batIndex * MathF.Tau / BatCount;
+            var orbit = markSize * (0.78f + batIndex * 0.1f);
+            var position = center + new Vector2(MathF.Cos(angle) * orbit, MathF.Sin(angle) * orbit * 0.45f);
+            var flap = MathF.Sin(time * 14f + batIndex * 1.3f);
+            NightScene.DrawBat(drawList, position, (0.9f + batIndex * 0.12f) * scale, flap, ink);
+        }
     }
 
     private static string greetingSource = string.Empty;

@@ -37,6 +37,7 @@ internal sealed partial class BlackjackTable : ICabinetIdle
     private readonly CasinoTurnNotifier turns;
     private readonly RemoteImageCache images;
     private readonly LodestoneService lodestone;
+    private readonly Venue.TournamentOverlay tournament;
     private readonly BlackjackSeatFlow seatFlow;
     private readonly Action leaveRoom;
     private readonly Action<string> openLedger;
@@ -68,7 +69,7 @@ internal sealed partial class BlackjackTable : ICabinetIdle
 
     public BlackjackTable(CasinoStore chips, CasinoRoomsStore rooms, CasinoTablesStore tables,
         CasinoHistoryStore history, CasinoTurnNotifier turns, RemoteImageCache images, LodestoneService lodestone,
-        Action leaveRoom, Action<string> openLedger, Action openGilLedger)
+        Venue.TournamentOverlay tournament, Action leaveRoom, Action<string> openLedger, Action openGilLedger)
     {
         this.chips = chips;
         this.rooms = rooms;
@@ -77,6 +78,7 @@ internal sealed partial class BlackjackTable : ICabinetIdle
         this.turns = turns;
         this.images = images;
         this.lodestone = lodestone;
+        this.tournament = tournament;
         this.leaveRoom = leaveRoom;
         this.openLedger = openLedger;
         this.openGilLedger = openGilLedger;
@@ -271,7 +273,7 @@ internal sealed partial class BlackjackTable : ICabinetIdle
         var localNow = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var deadlineRemaining = room.RemainingMilliseconds(board.DeadlineUnixMs, localNow);
         stateLabel = StateLabel(board, unreachable);
-        var top = Venue.TournamentOverlay.Shows(board)
+        var top = tournament.Showing(board)
             ? safe.Min.Y + Venue.TournamentOverlay.Reserve(scale)
             : safe.Min.Y;
         var seated = BlackjackRules.IsSeat(mySeat);
@@ -460,7 +462,7 @@ internal sealed partial class BlackjackTable : ICabinetIdle
         var height = Button.LargeHeight * scale;
         var buttonGap = Metrics.Space.Sm * scale;
         var pauseLabel = board.Paused ? Loc.T(L.Tables.Resume) : Loc.T(L.Tables.Pause);
-        var dealLabel = Loc.T(L.Tables.Deal);
+        var dealLabel = Loc.T(BlackjackHosting.DealLabel(board));
         var ledgerLabel = Loc.T(L.Tables.OpenLedger);
         var pauseWidth = dealerPowers ? Button.WidthFor(pauseLabel, ButtonSize.Large) : 0f;
         var dealWidth = showsDeal ? Button.WidthFor(dealLabel, ButtonSize.Large) : 0f;

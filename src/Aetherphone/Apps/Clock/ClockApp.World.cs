@@ -37,6 +37,9 @@ internal sealed partial class ClockApp
     private const int HeroTrackSegments = 48;
     private const int HeroTrackLabelStep = 6;
     private const float HeroNightAlpha = 0.20f;
+    private const double HeroFlightPeriodSeconds = 15.0;
+    private const float HeroFlightWindow = 0.4f;
+    private const float HeroBatSize = 0.9f;
 
     private static readonly TextStyle HeroClockStyle = TextStyles.WidgetDisplay;
     private static readonly TextStyle WorldTimeStyle = TextStyles.WidgetDisplayCompact;
@@ -150,6 +153,14 @@ internal sealed partial class ClockApp
         var celestialRadius = HeroCelestialRadius * scale;
         DrawCelestial(drawList, new Vector2(right - celestialRadius, clockTop + clockHeight * 0.5f), celestialRadius,
             daylight, sky);
+        if (SeasonalTheme.Halloween)
+        {
+            drawList.PushClipRect(origin, max, true);
+            Spooks.DrawFlight(drawList, new Rect(origin, max), ImGui.GetTime(), HeroFlightPeriodSeconds,
+                HeroFlightWindow, 0.18f, 0.25f, HeroBatSize * scale, Spooks.BatShadow with { W = 0.85f });
+            drawList.PopClipRect();
+            Treats.Offer(drawList, TreatSpot.Clock, new Rect(origin, max));
+        }
 
         var trackTop = clockTop + clockHeight + HeroTrackGap * scale;
         DrawBellTrack(drawList, left, right, trackTop, bell, sky, scale);
@@ -183,6 +194,13 @@ internal sealed partial class ClockApp
         }
 
         drawList.AddCircleFilled(center, radius * 1.45f, ImGui.GetColorU32(MoonCore with { W = 0.08f }), 40);
+        if (SeasonalTheme.Halloween)
+        {
+            NightScene.Glow(drawList, center, radius * 3f, MoonCore with { W = 0.3f }, 10);
+            drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(MoonCore), 40);
+            return;
+        }
+
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(MoonCore), 40);
         drawList.AddCircleFilled(center + new Vector2(radius * 0.42f, -radius * 0.28f), radius * 0.86f,
             ImGui.GetColorU32(Vector4.Lerp(sky.Top, sky.Bottom, 0.3f)), 40);

@@ -42,6 +42,7 @@ internal sealed class HostDraft
     public int RoundSeconds;
     public int StartAt;
     public int Stake;
+    public int DiceStake;
 
     public HostDraft()
     {
@@ -73,6 +74,10 @@ internal sealed class HostDraft
     public int SidesValue => (int)HostLadders.DiceSides[Sides];
 
     public int StartAtValue => (int)HostLadders.StartNumbers[StartAt];
+
+    public long DiceStakeValue => Gil && HighestWins ? HostLadders.DiceStakes[DiceStake] : 0;
+
+    public LadderSpan DiceStakeSpan => new(0, HostLadders.GilBets(BankValue).Last + 1);
 
     public LadderSpan BetSpan => Currency switch
     {
@@ -113,6 +118,7 @@ internal sealed class HostDraft
         HighestWins = true;
         RoundSeconds = Math.Max(0, Array.IndexOf(HostLadders.RoundSeconds, VenueRules.DefaultRoundSeconds));
         StartAt = HostLadders.FloorIndex(HostLadders.StartNumbers, VenueRules.DefaultStartAt);
+        DiceStake = 0;
         ResetStakes();
     }
 
@@ -159,6 +165,7 @@ internal sealed class HostDraft
         MaxBet = span.Clamp(MaxBet);
         MinBet = Math.Clamp(MinBet, span.First, MaxBet);
         Stake = span.Clamp(Stake);
+        DiceStake = Gil ? DiceStakeSpan.Clamp(DiceStake) : 0;
         if (Gil)
         {
             MaxPayout = PayoutSpan.Clamp(MaxPayout);
@@ -216,6 +223,7 @@ internal sealed class HostDraft
         RoundSeconds = RoundSeconds,
         StartAt = StartAt,
         Stake = Stake,
+        DiceStake = DiceStake,
         PinLocation = pinLocation,
     };
 
@@ -260,6 +268,7 @@ internal sealed class HostDraft
         RoundSeconds = LastIndexAtMost(memory.RoundSeconds, HostLadders.RoundSeconds.Length);
         StartAt = LastIndexAtMost(memory.StartAt, HostLadders.StartNumbers.Length);
         Stake = LastIndexAtMost(memory.Stake, rungs.Length);
+        DiceStake = LastIndexAtMost(memory.DiceStake, HostLadders.DiceStakes.Length);
     }
 
     private static int LastIndexAtMost(int index, int length) => Math.Clamp(index, 0, length - 1);
@@ -374,7 +383,8 @@ internal sealed class HostDraft
             Spectators: true,
             Location: location,
             Dice: kind == VenueRoomKind.Dice
-                ? new CasinoDiceTableOptionsDto(SidesValue, HighestWins, HostLadders.RoundSeconds[RoundSeconds])
+                ? new CasinoDiceTableOptionsDto(SidesValue, HighestWins, HostLadders.RoundSeconds[RoundSeconds],
+                    DiceStakeValue)
                 : null,
             Deathroll: kind == VenueRoomKind.Deathroll ? new CasinoDeathrollOptionsDto(StartAtValue, StakeValue) : null,
             Currency: Gil ? CasinoCurrencies.Gil : CasinoCurrencies.Practice);

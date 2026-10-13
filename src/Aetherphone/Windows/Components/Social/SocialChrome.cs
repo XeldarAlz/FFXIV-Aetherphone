@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Windows.Components;
@@ -103,20 +104,20 @@ internal static class SocialChrome
     {
         var scale = UiScale.Current;
         var clicked = GlassButton(drawList, ImGui.GetID(BackChipKey), center, radius, BackChipHitHalf * scale, ink,
-            false, out var grow);
+            false, UiSound.Tap, out var grow);
         PhoneIcon.Draw(drawList, center, PhoneIcons.ChevronLeft, ink.TitleInk, BackChipGlyph * scale * grow);
         return clicked;
     }
 
     public static bool DrawHeaderIcon(ImDrawListPtr drawList, Vector2 center, float radius, string glyph,
         float iconSize, string tooltip, SocialInk ink, Vector4 idleInk, bool highlighted = false, int badge = 0,
-        HoverLabelSide side = HoverLabelSide.Below)
+        HoverLabelSide side = HoverLabelSide.Below, UiSound tapSound = UiSound.Tap)
     {
         var scale = UiScale.Current;
         var buttonRadius = HeaderIconRadius * scale;
         var extent = new Vector2(buttonRadius, buttonRadius);
         var clicked = GlassButton(drawList, ImGui.GetID(tooltip.Length > 0 ? tooltip : glyph), center, buttonRadius,
-            buttonRadius, ink, highlighted, out var grow);
+            buttonRadius, ink, highlighted, tapSound, out var grow);
         PhoneIcon.Draw(drawList, center, glyph, highlighted ? ink.White : idleInk,
             NavBarMetrics.GlyphSize * scale * grow);
         DrawCountBadge(drawList, center + new Vector2(10f * scale, -10f * scale), badge, ink);
@@ -226,7 +227,7 @@ internal static class SocialChrome
     }
 
     private static bool GlassButton(ImDrawListPtr drawList, uint key, Vector2 center, float radius, float hitHalf,
-        SocialInk ink, bool highlighted, out float grow)
+        SocialInk ink, bool highlighted, UiSound tapSound, out float grow)
     {
         var scale = UiScale.Current;
         var hit = new Vector2(hitHalf, hitHalf);
@@ -248,6 +249,6 @@ internal static class SocialChrome
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return UiInteract.Click(center - hit, center + hit, hovered);
+        return UiInteract.Click(center - hit, center + hit, hovered, tapSound);
     }
 }

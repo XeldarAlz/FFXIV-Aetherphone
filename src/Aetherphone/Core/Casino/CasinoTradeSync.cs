@@ -24,14 +24,13 @@ internal sealed class CasinoTradeSync : IDisposable
     private readonly TradeSyncTracker tracker = new();
     private readonly TradeTableMemory memory = new();
     private readonly TradeProposalQueue queue = new();
+    private readonly TradeMissState misses = new();
     private readonly ITradeMatchSource source;
     private readonly StoreWork work = new("CasinoTradeSync");
     private readonly Func<string, CasinoTableRowDto?> cardFor;
     private readonly Func<string, CasinoTableLedgerDto?> ledgerFor;
 
     private volatile TradeMatchHolder? serverAnswer;
-    private volatile TradeMiss? lastMiss;
-    private volatile GuestOffer? pendingGuest;
     private int matching;
     private bool wasOpen;
     private long locatedAtTick;
@@ -93,9 +92,10 @@ internal sealed class CasinoTradeSync : IDisposable
 
     public TradeProposal Pending => queue.Head;
 
-    public TradeMiss? LastMiss => lastMiss;
+    public TradeMiss? LastMiss => misses.LastMiss;
 
-    public GuestOffer? PendingGuest => GuestLedger.Shown(pendingGuest, chips.HasFeature(CasinoFeatures.VenueBook));
+    public GuestOffer? PendingGuest =>
+        GuestLedger.Shown(misses.PendingGuest, chips.HasFeature(CasinoFeatures.VenueBook));
 
     public bool Busy => venue.HostInFlight;
 
@@ -126,21 +126,53 @@ internal sealed class CasinoTradeSync : IDisposable
 
     public void RecordGuest()
     {
-        var offer = Interlocked.Exchange(ref pendingGuest, null);
+        var offer = misses.TakeGuest();
         if (offer is null)
         {
             return;
         }
 
-        lastMiss = null;
-        AepLog.Info($"[TradeSync] Recording a guest {offer.LedgerKind} of {offer.Amount} gil at table {offer.TableId}");
-        tables.ProposeGuestEntry(offer.TableId, offer.LedgerKind, offer.GuestName, offer.Amount,
-            CasinoLedgerKinds.Trade);
+        Handle(offer, misses.LastMiss);
+        Record(offer, CasinoLedgerKinds.Trade);
+    }
+
+    public void RecordGuest(GuestOffer offer, TradeMiss? answered)
+    {
+        Handle(offer, answered);
+        Record(offer, answered is null ? CasinoLedgerKinds.Manual : CasinoLedgerKinds.Trade);
     }
 
     public void DismissGuest()
     {
-        pendingGuest = null;
+        var offer = misses.TakeGuest();
+        if (offer is null)
+        {
+            return;
+        }
+
+        Handle(offer, misses.LastMiss);
+    }
+
+    public void Answered(TradeMiss miss)
+    {
+        if (misses.Answered(miss))
+        {
+            DropProbe();
+        }
+    }
+
+    private void Handle(GuestOffer offer, TradeMiss? answered)
+    {
+        if (misses.Handled(offer, answered, Environment.TickCount64))
+        {
+            DropProbe();
+        }
+    }
+
+    private void Record(GuestOffer offer, string source)
+    {
+        AepLog.Info($"[TradeSync] Recording a guest {offer.LedgerKind} of {offer.Amount} gil at table {offer.TableId}");
+        tables.ProposeGuestEntry(offer.TableId, offer.LedgerKind, offer.GuestName, offer.Amount, source);
     }
 
     public TradeTableContext Context()
@@ -282,9 +314,13 @@ internal sealed class CasinoTradeSync : IDisposable
 
     private void Missed(TradeMiss miss, in TradeTableContext context)
     {
-        lastMiss = miss;
         var offer = GuestLedger.Offer(miss, context.Hosting, context.Entries);
-        pendingGuest = offer;
+        if (!misses.Miss(miss, offer, miss.AtTick))
+        {
+            AepLog.Info("[TradeSync] The same guest trade was handled moments ago, not offered again");
+            return;
+        }
+
         if (context.Hosting)
         {
             Arm(miss, context.MyUserId);
@@ -315,10 +351,9 @@ internal sealed class CasinoTradeSync : IDisposable
             return;
         }
 
-        if (!ReferenceEquals(lastMiss, miss) || now - miss.AtTick > ProbeMilliseconds)
+        if (!ReferenceEquals(misses.LastMiss, miss) || now - miss.AtTick > ProbeMilliseconds)
         {
-            probedMiss = null;
-            probedLedger = null;
+            DropProbe();
             return;
         }
 
@@ -347,11 +382,16 @@ internal sealed class CasinoTradeSync : IDisposable
         tables.RefreshLedgerNow(miss.TableId);
     }
 
+    private void DropProbe()
+    {
+        probedMiss = null;
+        probedLedger = null;
+    }
+
     private void Offer(in TradeProposal proposal)
     {
-        lastMiss = null;
-        pendingGuest = null;
-        probedMiss = null;
+        misses.Clear();
+        DropProbe();
         var automatic = !proposal.HostSide && configuration.CasinoTradeAutoConfirm;
         AepLog.Info($"[TradeSync] {proposal.Kind} {proposal.LedgerKind} for {proposal.Amount} gil, "
             + $"host side {proposal.HostSide}, incoming {proposal.Incoming}, automatic {automatic}");

@@ -76,6 +76,27 @@ public sealed class CasinoHostDraftMemoryTests
     }
 
     [Fact]
+    public void ADiceStakeRoundTripsThroughTheRememberedDraft()
+    {
+        var configuration = new Configuration();
+        var preferences = PreferencesFor(configuration, Main);
+        var original = new HostDraft();
+        original.SelectGame(HostGame.DiceTable, true);
+        original.SelectCurrency(CasinoCurrencies.Gil, true);
+        original.DiceStake = Array.IndexOf(HostLadders.DiceStakes, 25_000L);
+        original.Normalize(true);
+
+        preferences.RememberHostDraft(original.Snapshot(true));
+
+        Assert.True(preferences.TryLoadHostDraft(out var memory));
+        var restored = new HostDraft();
+        restored.Restore(memory);
+        restored.Normalize(true);
+        Assert.Equal(25_000, restored.Build(null).Dice!.Stake);
+        Assert.Equal(original.Build(null), restored.Build(null));
+    }
+
+    [Fact]
     public void ADraftFromAnotherVersionIsDiscarded()
     {
         var configuration = new Configuration();

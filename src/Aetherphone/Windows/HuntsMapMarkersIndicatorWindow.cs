@@ -195,15 +195,15 @@ internal sealed unsafe class HuntsMapMarkersIndicatorWindow : Window
 
         top += LegendTopGap * scale;
         DrawLegendRow(drawList, contentLeft, ref top, scale, ink, HuntsMapMarkerIcons.CandidateIconId,
-            Loc.T(L.Hunts.NativeMapLegendCandidate), boosted: true);
+            Loc.T(L.Hunts.NativeMapLegendCandidate), boosted: false);
         DrawLegendRow(drawList, contentLeft, ref top, scale, ink, HuntsMapMarkerIcons.SightedIconId,
-            Loc.T(L.Hunts.NativeMapLegendSighted), boosted: true);
+            Loc.T(L.Hunts.NativeMapLegendSighted), boosted: false);
         DrawLegendRow(drawList, contentLeft, ref top, scale, ink, HuntsMapMarkerIcons.ConfirmedIconId,
             Loc.T(L.Hunts.NativeMapLegendConfirmed), boosted: true);
         DrawLegendRow(drawList, contentLeft, ref top, scale, ink, HuntsMapMarkerIcons.ActiveMinionIconId,
             Loc.T(L.Hunts.NativeMapLegendActiveMinion), boosted: true);
         DrawLegendRow(drawList, contentLeft, ref top, scale, ink, HuntsMapMarkerIcons.SsSpawnIconId,
-            Loc.T(L.Hunts.NativeMapLegendSsSpawn), boosted: true);
+            Loc.T(L.Hunts.NativeMapLegendSsSpawn), boosted: false);
         DrawLegendRow(drawList, contentLeft, ref top, scale, ink, HuntsMapMarkerIcons.FateInactiveIconId,
             Loc.T(L.Hunts.NativeMapLegendFateInactive), boosted: false);
         DrawLegendRow(drawList, contentLeft, ref top, scale, ink, HuntsMapMarkerIcons.FateActiveIconId,

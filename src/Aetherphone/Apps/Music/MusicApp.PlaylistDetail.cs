@@ -118,7 +118,7 @@ internal sealed partial class MusicApp
             }
             else
             {
-                DrawSongRows(playlistSongs, playlist.Id, playlist.Name);
+                DrawSongRows(playlistSongs, playlist.Id, playlist.Name, playlist.Id);
             }
 
             LibraryKit.Gap(Metrics.Space.Lg);

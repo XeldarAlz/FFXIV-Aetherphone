@@ -43,6 +43,8 @@ internal readonly struct AmbienceInk
     private static readonly Vector4 FlashTint = new(1.00f, 0.98f, 0.92f, 1f);
     private static readonly Vector4 SunCore = new(1.00f, 0.98f, 0.90f, 1f);
     private static readonly Vector4 MoonCore = new(0.90f, 0.93f, 1.00f, 1f);
+    private static readonly Vector4 PumpkinEmber = new(1.00f, 0.50f, 0.12f, 1f);
+    private static readonly Vector4 WitchFlash = new(0.86f, 0.80f, 1.00f, 1f);
 
     public readonly Vector4 Cloud;
     public readonly Vector4 Shade;
@@ -83,6 +85,9 @@ internal readonly struct AmbienceInk
             Vector4.Lerp(MoonCore, SunCore, daylight), ceiling,
             Vector4.Lerp(palette.Top, palette.Bottom, 0.08f) with { W = 1f });
     }
+
+    public AmbienceInk Haunted() =>
+        new(Cloud, Shade, Fog, Rain, Glow, PumpkinEmber, Star, WitchFlash, Core, Ceiling, Sky);
 
     public static AmbienceInk Mono(Vector4 ink)
     {

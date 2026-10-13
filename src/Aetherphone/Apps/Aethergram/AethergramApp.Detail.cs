@@ -185,7 +185,7 @@ internal sealed partial class AethergramApp
         var nameTop = origin.Y + padY;
         var nameWidth = UserName.DrawAuto(drawList, "aethergram.comment." + comment.Id, displayName,
             comment.AuthorBadges, comment.AuthorBadgeIds, textLeft, nameTop, textWidth, CommentNameStyle,
-            Ink.TitleInk, theme);
+            Ink.TitleInk, theme, self: RewardedSelf(comment.AuthorId));
         var metaLeft = textLeft + nameWidth + CommentMetaGap * scale;
         var meta = TimeText.Short(comment.CreatedAtUnix);
         var metaSize = Typography.Measure(meta, CommentMetaStyle);

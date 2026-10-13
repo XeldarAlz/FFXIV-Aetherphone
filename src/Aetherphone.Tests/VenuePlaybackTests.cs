@@ -1,3 +1,4 @@
+using Aetherphone.Apps.Casino.Stage;
 using Aetherphone.Apps.Casino.Venue;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Casino;
@@ -264,5 +265,49 @@ public sealed class VenuePlaybackTests
         Assert.Equal(0, draft.TicketPrice);
         Assert.Equal(0, draft.Prize);
         Assert.Equal(1_000_000, RaffleComposer.Build("Pot", 1, 1, 1, 0, 1_000_000, true).Prize);
+    }
+
+    [Fact]
+    public void TheTicketPickerSendsTheCountInOneAct()
+    {
+        var draft = RaffleTicketPicker.Build(5);
+        Assert.Equal(VenueActions.RaffleTicket, draft.Action);
+        Assert.Equal(5, draft.Count);
+        Assert.Equal(12, RaffleTicketPicker.CountFrom("12", 1));
+        Assert.Equal(1, RaffleTicketPicker.CountFrom(string.Empty, 1));
+        Assert.Equal(3, RaffleTicketPicker.CountFrom("none", 3));
+        Assert.Equal(3, RaffleTicketPicker.CountFrom("0", 3));
+    }
+
+    [Fact]
+    public void TheRaffleDeckGrowsOnlyWhereATicketCanBeTaken()
+    {
+        var live = RoomView(VenueKinds.Raffle,
+            "{\"raffle\":{\"seq\":2,\"title\":\"Bar tab\",\"ticketsPerPerson\":3},\"currency\":2}");
+        var practice = RoomView(VenueKinds.Raffle, "{\"raffle\":{\"seq\":2,\"ticketsPerPerson\":3},\"currency\":1}");
+        var maxed = RoomView(VenueKinds.Raffle,
+            "{\"raffle\":{\"seq\":2,\"ticketsPerPerson\":1,\"entrants\":[{\"userId\":\"u1\",\"tickets\":1}]},\"currency\":2}");
+        var idle = RoomView(VenueKinds.Raffle, "{\"last\":{\"seq\":2,\"drawn\":true},\"currency\":2}");
+        var dice = RoomView(VenueKinds.DiceTable, "{\"sides\":20,\"currency\":2}");
+        Assert.True(RaffleTicketPicker.Offers(live, false, Me));
+        Assert.False(RaffleTicketPicker.Offers(live, true, Me));
+        Assert.True(RaffleTicketPicker.Offers(practice, true, Me));
+        Assert.False(RaffleTicketPicker.Offers(maxed, false, Me));
+        Assert.True(RaffleTicketPicker.Offers(maxed, false, "u2"));
+        Assert.False(RaffleTicketPicker.Offers(idle, false, Me));
+        Assert.False(RaffleTicketPicker.Offers(dice, false, Me));
+        Assert.False(RaffleTicketPicker.Offers(null, false, Me));
+        Assert.Equal(RaffleTicketPicker.DeckHeight, RaffleTicketPicker.DeckHeightFor(live, false, Me));
+        Assert.Equal(CasinoStageLayout.DeckHeight, RaffleTicketPicker.DeckHeightFor(live, true, Me));
+        Assert.Equal(CasinoStageLayout.DeckHeight, RaffleTicketPicker.DeckHeightFor(maxed, false, Me));
+        Assert.Equal(CasinoStageLayout.DeckHeight, RaffleTicketPicker.DeckHeightFor(idle, false, Me));
+        Assert.Equal(CasinoStageLayout.DeckHeight + DeckActions.SecondaryHeight + DeckActions.Gap,
+            RaffleTicketPicker.DeckHeight);
+    }
+
+    private static VenueRoomView RoomView(string kind, string gameState)
+    {
+        var snapshot = new CasinoRoomSnapshotDto(RoomId: "venue-x", GameKind: kind, GameState: gameState);
+        return VenueRoomView.From(CasinoRoomSession.Build("venue-x", 1, 1, snapshot))!;
     }
 }

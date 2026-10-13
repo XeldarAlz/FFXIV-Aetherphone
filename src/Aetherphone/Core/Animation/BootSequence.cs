@@ -1,3 +1,5 @@
+using Aetherphone.Core.Theme;
+
 namespace Aetherphone.Core.Animation;
 
 internal sealed class BootSequence
@@ -5,6 +7,7 @@ internal sealed class BootSequence
     private const float EmblemStartScale = 0.7f;
 
     private static readonly string[] Greetings = { "Hello!", "Bonjour!", "Hola!", "Ciao!", "Olá!", };
+    private static readonly string[] SpookyGreetings = { "Boo!", "Bouh!", "¡Bu!", "Buh!", "Bu!", };
 
     private readonly Configuration configuration;
     private bool full;
@@ -95,6 +98,8 @@ internal sealed class BootSequence
         var holdEnd = powerOnSeconds + emblemInSeconds + emblemHoldSeconds + gateWait;
         return elapsed >= holdEnd && !Plugin.Fonts.Ready;
     }
+
+    private static string[] GreetingSet => SeasonalTheme.Halloween ? SpookyGreetings : Greetings;
 
     private float TotalSeconds => powerOnSeconds + EmblemDuration + GreetingsDuration + revealSeconds;
     private float EmblemDuration => emblemInSeconds + emblemHoldSeconds + gateWait + emblemExitSeconds;
@@ -189,7 +194,7 @@ internal sealed class BootSequence
         }
 
         var isLast = index == greetingCount - 1;
-        Greeting = Greetings[index];
+        Greeting = GreetingSet[index];
         GreetingReveal = Easing.Clamp01(local / greetingInSeconds);
 
         if (isLast)
@@ -223,7 +228,7 @@ internal sealed class BootSequence
             return;
         }
 
-        Greeting = Greetings[greetingCount - 1];
+        Greeting = GreetingSet[greetingCount - 1];
         GreetingReveal = 1f;
         GreetingAlpha = fade;
         GreetingDrift = 1f - fade;

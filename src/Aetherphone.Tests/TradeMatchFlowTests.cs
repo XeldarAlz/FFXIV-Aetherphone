@@ -238,6 +238,110 @@ public sealed class TradeMatchFlowTests
     }
 
     [Fact]
+    public void RecordingOrDismissingAGuestClearsTheMissAndHoldsOffARepeat()
+    {
+        Assert.Equal(15_000, TradeMissState.RepeatWindowMilliseconds);
+        Assert.True(TradeMissState.RepeatWindowMilliseconds > TradeSyncTracker.SettleWindowMilliseconds);
+        var misses = new TradeMissState();
+        var miss = new TradeMiss(Table, 50_000, 1_000, "Chea Thorne", true);
+        var offer = GuestLedger.Offer(miss, true, Array.Empty<CasinoLedgerEntryDto>());
+        Assert.NotNull(offer);
+        Assert.True(misses.Miss(miss, offer, miss.AtTick));
+        Assert.Same(miss, misses.LastMiss);
+        Assert.Same(offer, misses.PendingGuest);
+
+        Assert.Same(offer, misses.TakeGuest());
+        Assert.Null(misses.PendingGuest);
+        Assert.Same(miss, misses.LastMiss);
+        Assert.True(misses.Handled(offer!, misses.LastMiss, 2_000));
+        Assert.Null(misses.LastMiss);
+
+        var repeat = miss with { AtTick = 2_000 + TradeMissState.RepeatWindowMilliseconds };
+        Assert.False(misses.Miss(repeat, offer, repeat.AtTick));
+        Assert.Null(misses.LastMiss);
+        Assert.Null(misses.PendingGuest);
+        var otherAmount = repeat with { Amount = 60_000 };
+        Assert.True(misses.Miss(otherAmount, null, otherAmount.AtTick));
+        Assert.Same(otherAmount, misses.LastMiss);
+        Assert.True(misses.Miss(repeat with { Incoming = false }, null, repeat.AtTick));
+        Assert.True(misses.Miss(repeat with { PartnerName = "Rhan Oda" }, null, repeat.AtTick));
+        var later = miss with { AtTick = 2_001 + TradeMissState.RepeatWindowMilliseconds };
+        Assert.True(misses.Miss(later, offer, later.AtTick));
+        Assert.Same(later, misses.LastMiss);
+        Assert.Same(offer, misses.PendingGuest);
+    }
+
+    [Fact]
+    public void TheLedgerButtonClearsOnlyTheMissItWasFilledFrom()
+    {
+        var misses = new TradeMissState();
+        var miss = new TradeMiss(Table, 50_000, 1_000, "Chea Thorne", true);
+        var offer = GuestLedger.Offer(miss, true, Array.Empty<CasinoLedgerEntryDto>())!;
+        Assert.True(misses.Miss(miss, offer, miss.AtTick));
+
+        var typed = new GuestOffer(Table, "Rhan Oda", CasinoLedgerKinds.Payout, 20_000, false);
+        Assert.False(misses.Handled(typed, null, 1_500));
+        Assert.Same(miss, misses.LastMiss);
+        Assert.Same(offer, misses.PendingGuest);
+        Assert.False(misses.Handled(offer with { Amount = 45_000 },
+            new TradeMiss(Table, 50_000, 900, "Chea Thorne", true), 1_600));
+        Assert.Same(miss, misses.LastMiss);
+        Assert.Same(offer, misses.PendingGuest);
+        Assert.False(misses.Handled(offer, null, 1_650));
+        Assert.Same(miss, misses.LastMiss);
+        Assert.Null(misses.PendingGuest);
+        Assert.True(misses.Handled(offer with { Amount = 45_000 }, miss, 1_700));
+        Assert.Null(misses.LastMiss);
+
+        Assert.True(misses.Miss(miss, offer, 1_000 + TradeMissState.RepeatWindowMilliseconds * 2));
+        misses.Clear();
+        Assert.Null(misses.LastMiss);
+        Assert.Null(misses.PendingGuest);
+    }
+
+    [Fact]
+    public void RecordingTheMissAgainstARegisteredPlayerClearsTheMissAndItsOffer()
+    {
+        var misses = new TradeMissState();
+        var miss = new TradeMiss(Table, 50_000, 1_000, "Chea Thorne", true);
+        var offer = GuestLedger.Offer(miss, true, Array.Empty<CasinoLedgerEntryDto>());
+        Assert.True(misses.Miss(miss, offer, miss.AtTick));
+
+        Assert.False(misses.Answered(new TradeMiss(Table, 50_000, 900, "Chea Thorne", true)));
+        Assert.Same(miss, misses.LastMiss);
+        Assert.Same(offer, misses.PendingGuest);
+        Assert.True(misses.Answered(miss));
+        Assert.Null(misses.LastMiss);
+        Assert.Null(misses.PendingGuest);
+        Assert.False(misses.Answered(miss));
+
+        var again = miss with { AtTick = 2_000 };
+        Assert.True(misses.Miss(again, offer, again.AtTick));
+        Assert.Same(again, misses.LastMiss);
+    }
+
+    [Fact]
+    public void AGuestLabelDropsTheCrossWorldGlyphWhileTheWindowTextKeepsIt()
+    {
+        var crossWorld = "Mira Rhan" + (char)0xE05D + "Gilgamesh";
+        var macroBreak = "Mira Rhan" + (char)0xE000 + "Gilgamesh";
+        Assert.Equal("Mira Rhan", CasinoBookRules.NormalizeGuestName(crossWorld));
+        Assert.Equal("Mira Rhan", CasinoBookRules.NormalizeGuestName(macroBreak));
+        Assert.Equal("Mira Rhan", CasinoBookRules.NormalizeGuestName("  Mira   Rhan "));
+        Assert.Equal("Mira Rhan",
+            GuestLedger.PartnerNameOf(new TradeCompletion(new[] { macroBreak }, 50_000, 0, true)));
+        Assert.Equal(macroBreak, TradeNames.ForServer(new[] { macroBreak })[0]);
+
+        var handled = new GuestOffer(Table, "Mira Rhan", CasinoLedgerKinds.BuyIn, 50_000, true);
+        var same = new TradeMiss(Table, 50_000, 1_000, "Mira Rhan", true);
+        Assert.True(GuestLedger.SameTrade(handled, same));
+        Assert.False(GuestLedger.SameTrade(handled with { TableId = "table-b2" }, same));
+        Assert.False(GuestLedger.SameTrade(handled, same with { Amount = 50_001 }));
+        Assert.False(GuestLedger.SameTrade(handled, same with { Incoming = false }));
+        Assert.False(GuestLedger.SameTrade(handled, same with { PartnerName = "Mira Rhanson" }));
+    }
+
+    [Fact]
     public void TheMatchRouteAndBodyMatchTheWire()
     {
         Assert.Equal("/casino/tables/table-a1/ledger/match",

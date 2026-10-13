@@ -674,7 +674,11 @@ internal sealed record CasinoPokerTableOptionsDto(
     bool WaitForBigBlind = false,
     bool AutoMuck = true);
 
-internal sealed record CasinoDiceTableOptionsDto(int Sides = 1000, bool HighestWins = false, int RoundSeconds = 60);
+internal sealed record CasinoDiceTableOptionsDto(
+    int Sides = 1000,
+    bool HighestWins = false,
+    int RoundSeconds = 60,
+    long Stake = 0);
 
 internal sealed record CasinoDeathrollOptionsDto(int StartAt = 1000, long Stake = 10000);
 
@@ -807,7 +811,8 @@ internal sealed record CasinoDiceTableStateDto(
     CasinoDiceRoundDto? Round = null,
     CasinoDiceRoundDto? LastRound = null,
     int Currency = 1,
-    bool Paused = false);
+    bool Paused = false,
+    long Stake = 0);
 
 internal sealed record CasinoDeathrollDuelDto(
     long Seq = 0,
@@ -897,7 +902,8 @@ internal sealed record CasinoTableDoorDto(
     CasinoTableSeatedDto[]? Seated = null,
     long ServerNowUnixMs = 0,
     string JoinCode = "",
-    CasinoTablePresentDto[]? Present = null);
+    CasinoTablePresentDto[]? Present = null,
+    bool TournamentPending = false);
 
 internal sealed record CasinoTableDoorRequest(string UserId, bool Approve);
 

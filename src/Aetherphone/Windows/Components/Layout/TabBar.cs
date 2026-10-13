@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
@@ -59,6 +60,8 @@ internal sealed class TabBar
     private int lastFrame = -2;
 
     public Rect Bounds { get; private set; }
+
+    public UiSound TapSound { get; set; } = UiSound.Tap;
 
     public static float ContentInset(float scale) => TabBarLayout.ContentInset(scale);
 
@@ -154,7 +157,7 @@ internal sealed class TabBar
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             }
 
-            if (UiInteract.Click(cell.Min, cell.Max, hovered))
+            if (UiInteract.Click(cell.Min, cell.Max, hovered, TapSound))
             {
                 result = new TabBarResult(index, false);
             }
@@ -255,7 +258,7 @@ internal sealed class TabBar
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return UiInteract.Click(circle.Min, circle.Max, hovered);
+        return UiInteract.Click(circle.Min, circle.Max, hovered, TapSound);
     }
 
     public ref struct HostScope

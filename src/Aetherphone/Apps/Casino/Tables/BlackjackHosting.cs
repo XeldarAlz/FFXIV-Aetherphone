@@ -97,6 +97,29 @@ internal static class BlackjackHosting
         return AnyBet(board) ? DealerDeck.Deal : DealerDeck.WaitingBets;
     }
 
+    public static LocString DealLabel(CasinoBlackjackRoomStateDto board)
+    {
+        return board.AutoDeal ? L.Tables.DealNow : L.Tables.Deal;
+    }
+
+    public static bool TryDealerStatus(CasinoBlackjackRoomStateDto board, DealerDeck deck, out LocString status)
+    {
+        if (deck == DealerDeck.WaitingBets)
+        {
+            status = L.Tables.DealerWaitingBets;
+            return true;
+        }
+
+        if (deck == DealerDeck.Deal && board.AutoDeal)
+        {
+            status = L.Tables.DealerClockDeals;
+            return true;
+        }
+
+        status = default;
+        return false;
+    }
+
     public static bool AnyBet(CasinoBlackjackRoomStateDto board)
     {
         var seats = board.Seats;

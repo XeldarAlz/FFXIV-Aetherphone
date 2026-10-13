@@ -59,6 +59,14 @@ public sealed class HostDraftSummaryTests
         dice.SelectGame(HostGame.DiceTable, false);
         dice.Normalize(false);
         Assert.Equal("Dice table, Practice", HostDraftSummary.Of(dice));
+
+        dice.SelectCurrency(CasinoCurrencies.Gil, true);
+        dice.Normalize(true);
+        Assert.Equal("Dice table, Gil", HostDraftSummary.Of(dice));
+
+        dice.DiceStake = Array.IndexOf(HostLadders.DiceStakes, 50_000L);
+        dice.Normalize(true);
+        Assert.Equal("Dice table, Gil, stake " + NumberText.Compact(50_000), HostDraftSummary.Of(dice));
     }
 
     [Fact]

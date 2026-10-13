@@ -9,6 +9,14 @@ on:
 permissions:
   contents: read
 
+# A pull request only needs its newest commit checked, so a push cancels the
+# run it supersedes. A push to dev or master still runs to completion, and the
+# queue behind it collapses to the newest commit, which carries every commit
+# it displaced.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
 
   # Cheap gates that don't need the SDK or Dalamud; run them first so a
@@ -189,10 +197,33 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # Defender scans every file the compiler, the package cache and the
+      # Dalamud download write on this runner. All of it is throwaway, so the
+      # exclusions cost nothing and remove the scan from the build's path.
+      - name: Exclude build folders from Defender
+        shell: pwsh
+        run: |
+          try {
+            Add-MpPreference -ExclusionPath $env:GITHUB_WORKSPACE
+            Add-MpPreference -ExclusionPath "$env:USERPROFILE\.nuget\packages"
+            Add-MpPreference -ExclusionPath "$env:AppData\XIVLauncher"
+            Add-MpPreference -ExclusionPath "$env:ProgramFiles\dotnet"
+          } catch {
+            Write-Host "Defender is not managing this runner: $_"
+          }
+
+      # The package cache is keyed on the lock files plus the test project,
+      # which has no lock file of its own, so a dependency bump anywhere
+      # produces a fresh key and an unchanged tree restores from the cache.
       - name: Set up .NET
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
+          cache: true
+          cache-dependency-path: |
+            src/Aetherphone/packages.lock.json
+            src/ManagedDoom/packages.lock.json
+            src/Aetherphone.Tests/Aetherphone.Tests.csproj
 
       - name: Download Dalamud
         shell: pwsh

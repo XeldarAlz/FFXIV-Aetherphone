@@ -63,7 +63,7 @@ public sealed class UiSoundDecodeTests
         }
     }
 
-    private static float Peak(float[] samples)
+    internal static float Peak(float[] samples)
     {
         var peak = 0f;
         for (var index = 0; index < samples.Length; index++)
@@ -74,7 +74,7 @@ public sealed class UiSoundDecodeTests
         return peak;
     }
 
-    private static float[] Decode(string file)
+    internal static float[] Decode(string file)
     {
         var path = Path.Combine(FindProjectRoot(), "src", "Aetherphone", "Sounds", file);
         using var reader = SoundEffectPlayer.OpenReader(path);
