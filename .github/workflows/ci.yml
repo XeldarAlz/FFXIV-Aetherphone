@@ -197,6 +197,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # Defender scans every file the compiler, the package cache and the
+      # Dalamud download write on this runner. All of it is throwaway, so the
+      # exclusions cost nothing and remove the scan from the build's path.
+      - name: Exclude build folders from Defender
+        shell: pwsh
+        run: |
+          try {
+            Add-MpPreference -ExclusionPath $env:GITHUB_WORKSPACE
+            Add-MpPreference -ExclusionPath "$env:USERPROFILE\.nuget\packages"
+            Add-MpPreference -ExclusionPath "$env:AppData\XIVLauncher"
+            Add-MpPreference -ExclusionPath "$env:ProgramFiles\dotnet"
+          } catch {
+            Write-Host "Defender is not managing this runner: $_"
+          }
+
       # The package cache is keyed on the lock files plus the test project,
       # which has no lock file of its own, so a dependency bump anywhere
       # produces a fresh key and an unchanged tree restores from the cache.
