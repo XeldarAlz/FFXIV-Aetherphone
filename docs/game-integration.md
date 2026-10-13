@@ -45,7 +45,7 @@ Dalamud is the plugin framework that loads Aetherphone inside FFXIV. It provides
 | --- | --- |
 | `IDalamudPluginInterface` | Config file, UI builder, assembly location, IPC to other plugins |
 | `ICommandManager` | The `/phone` and `/aetherphone` chat commands (`/phonedev` and `/aetherphonedev` in Debug builds, `/phonebeta` and `/aetherphonebeta` in Beta, all from `AepConstants`) with the subcommands routed by `PhoneCommands` (`/phone help` lists the public ones; `videodebug` and `perfhud` stay unlisted); forwarding `/li` commands to Lifestream; listing installed plugin commands for Shortcuts |
-| `IDtrBar` | The server info bar entry (`ServerBarEntry`): the game's own Aethernet bitmap-font icon, the build tag and a plain unread count as SeString text, a native tooltip, and click to toggle the phone |
+| `IDtrBar` | The server info bar entry (`ServerBarEntry`): the game's own Aethernet bitmap-font icon and a label the user can edit (default "Aetherphone", with the build name on Dev and Beta), in the icon and text style picked under Settings > General, then a plain unread count, all as SeString text; the text styles keep the entry visible in bar replacers that drop icons (Umbra's plain text mode), a native tooltip, and click to toggle the phone |
 | `IChatGui` | Game chat capture for the Linkpearl app and the MogCast screen chat, plus `/phone run` feedback lines |
 | `IDataManager` | Lumina Excel sheet access (static game data) |
 | `IObjectTable` | `LocalPlayer`: name, world, position, current class |

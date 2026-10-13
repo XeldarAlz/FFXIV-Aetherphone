@@ -9,7 +9,9 @@ namespace Aetherphone.Core.Platform;
 
 internal sealed class ServerBarEntry : IDisposable
 {
-    private const BitmapFontIcon Icon = BitmapFontIcon.Aethernet;
+    public const string DefaultText = "Aetherphone";
+    public const int MaxTextLength = 20;
+    public const BitmapFontIcon Icon = BitmapFontIcon.Aethernet;
 
     private readonly IDtrBarEntry entry;
     private readonly Configuration configuration;
@@ -45,13 +47,33 @@ internal sealed class ServerBarEntry : IDisposable
 
     private SeString BuildText()
     {
-        var builder = new SeStringBuilder().AddIcon(Icon).AddText(AepConstants.ServerBarTag);
+        var style = configuration.ServerBarStyle;
+        var builder = new SeStringBuilder();
+        if (style != ServerBarStyle.Text)
+        {
+            builder.AddIcon(Icon);
+        }
+
+        builder.AddText(Label());
         if (unread > 0)
         {
             builder.AddText(string.Concat(" ", unread.ToString(Loc.Culture)));
         }
 
         return builder.Build();
+    }
+
+    private string Label()
+    {
+        if (configuration.ServerBarStyle == ServerBarStyle.Icon)
+        {
+            return AepConstants.ServerBarTag;
+        }
+
+        var text = string.IsNullOrWhiteSpace(configuration.ServerBarText)
+            ? DefaultText
+            : configuration.ServerBarText.Trim();
+        return AepConstants.ServerBarTag.Length > 0 ? string.Concat(text, " ", AepConstants.ServerBarTag) : text;
     }
 
     private SeString BuildTooltip()

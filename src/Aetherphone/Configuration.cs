@@ -21,6 +21,7 @@ using Aetherphone.Core.Jobs;
 using Aetherphone.Core.Market;
 using Aetherphone.Core.MoogleClicker;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Platform;
 using Aetherphone.Core.Radio;
 using Aetherphone.Core.Shell;
 using Aetherphone.Core.Shortcuts;
@@ -122,6 +123,8 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public int Version { get; set; } = 1;
     public bool OpenOnStartup { get; set; } = true;
     public bool OpenMinimizedOnStartup { get; set; } = true;
+    public ServerBarStyle ServerBarStyle { get; set; } = ServerBarStyle.IconAndText;
+    public string ServerBarText { get; set; } = string.Empty;
     public bool WelcomeShown { get; set; }
     public bool SetupCompleted { get; set; }
     public bool TutorialsEnabled { get; set; } = true;

@@ -2038,6 +2038,12 @@ internal static class L
         public static readonly LocString OpenOnStartup = new("settings.openOnStartup", "Open at startup");
         public static readonly LocString OpenMinimized = new("settings.openMinimized", "Open minimized");
         public static readonly LocString StartupHint = new("settings.startupHint", "Open the phone automatically when you log in. Open minimized shows it as a small dock that you tap to expand.");
+        public static readonly LocString ServerBar = new("settings.serverBar", "Server info bar");
+        public static readonly LocString ServerBarIconAndText = new("settings.serverBarIconAndText", "Icon + text");
+        public static readonly LocString ServerBarText = new("settings.serverBarText", "Text");
+        public static readonly LocString ServerBarIcon = new("settings.serverBarIcon", "Icon");
+        public static readonly LocString ServerBarPreview = new("settings.serverBarPreview", "Preview");
+        public static readonly LocString ServerBarHint = new("settings.serverBarHint", "Icon not showing in Umbra? Pick a style with text.");
         public static readonly LocString Ringtone = new("settings.ringtone", "Ringtone");
         public static readonly LocString Sounds = new("settings.sounds", "Sounds");
         public static readonly LocString Sound = new("settings.sound", "Sound");
