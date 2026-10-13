@@ -219,8 +219,14 @@ internal sealed partial class JobsApp
         var valueTop = rect.Max.Y - pad - valueHeight;
         Typography.Draw(drawList, new Vector2(rect.Min.X + pad, valueTop - labelHeight),
             Typography.FitText(label, textWidth, TextStyles.Footnote), ui.MutedInk, TextStyles.Footnote);
-        Typography.Draw(drawList, new Vector2(rect.Min.X + pad, valueTop),
-            Typography.FitText(value, textWidth, TextStyles.Title3), ui.TitleInk, TextStyles.Title3);
+        var valueStyle = TextStyles.Title3 with
+        {
+            Scale = Typography.FitScale(value, textWidth, TextStyles.Title3.Scale, TextStyles.Headline.Scale,
+                TextStyles.Title3.Weight),
+        };
+        Typography.Draw(drawList,
+            new Vector2(rect.Min.X + pad, valueTop + valueHeight - Typography.LineHeight(valueStyle)),
+            Typography.FitText(value, textWidth, valueStyle), ui.TitleInk, valueStyle);
     }
 
     private float SectionTop(ImDrawListPtr drawList, float left, float top, float width, string title, float scale)
