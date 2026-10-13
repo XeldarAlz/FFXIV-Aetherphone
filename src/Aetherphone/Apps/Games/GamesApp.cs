@@ -63,6 +63,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Changelog;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Honorific;
@@ -170,7 +171,8 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     public GamesApp(GameStatsStore stats, GameData gameData, ITextureProvider textures,
         Core.Coins.CoinStore coins, Core.Coins.CoinGameSessionTracker coinSessions,
         GameRoomsStore gameRooms, Configuration configuration, LeaderboardStore leaderboard, RemoteImageCache images,
-        LodestoneService lodestone, MoogleClickerService moogleClicker, SettingsLauncher settingsLauncher)
+        LodestoneService lodestone, MoogleClickerService moogleClicker, SettingsLauncher settingsLauncher,
+        ConfirmService confirm)
     {
         this.stats = stats;
         this.configuration = configuration;
@@ -185,7 +187,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         session = new GameSession(stats, leaderboard, leaderboard);
         fx = new ScreenFx(backdrop);
         onlineHub = new OnlineHub(gameRooms, OpenOnlineRoom);
-        onlineRoom = new OnlineRoomView(gameRooms, textures);
+        onlineRoom = new OnlineRoomView(gameRooms, textures, confirm);
         games = new IMiniGame[]
         {
             new SweeperApp(),

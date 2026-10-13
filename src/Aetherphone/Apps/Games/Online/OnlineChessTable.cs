@@ -21,6 +21,7 @@ internal sealed class OnlineChessTable
     private static readonly Vector4 ResignTint = new(0.85f, 0.35f, 0.32f, 1f);
 
     private readonly GameRoomsStore store;
+    private readonly Action askResign;
     private readonly ChessBoard hints = new();
     private int selectedSquare = -1;
     private int hintedActionCount = -1;
@@ -30,9 +31,10 @@ internal sealed class OnlineChessTable
     private int promotionFrom = -1;
     private int promotionTo = -1;
 
-    public OnlineChessTable(GameRoomsStore store)
+    public OnlineChessTable(GameRoomsStore store, Action askResign)
     {
         this.store = store;
+        this.askResign = askResign;
     }
 
     public void Reset()
@@ -108,7 +110,7 @@ internal sealed class OnlineChessTable
                 new Vector2(110f * scale, 30f * scale), Loc.T(L.Games.OnlineResign), ResignTint, theme)
             && !store.ActInFlight)
         {
-            store.SendResign();
+            askResign();
         }
 
         if (promotionFrom >= 0)

@@ -8822,6 +8822,11 @@ internal static class L
         public static readonly LocString OnlineLeave = new("games.onlineLeave", "Leave room");
         public static readonly LocString OnlineCloseRoom = new("games.onlineCloseRoom", "Close room");
         public static readonly LocString OnlineKick = new("games.onlineKick", "Remove");
+        public static readonly LocString OnlineLeaveConfirm =
+            new("games.onlineLeaveConfirm", "Leave the room while a round is still being played?");
+        public static readonly LocString OnlineCloseRoomConfirm =
+            new("games.onlineCloseRoomConfirm", "Close the room for everyone in it?");
+        public static readonly LocString OnlineKickConfirm = new("games.onlineKickConfirm", "Remove {0} from the room?");
         public static readonly LocString OnlineHostBadge = new("games.onlineHostBadge", "Host");
         public static readonly LocString OnlineAway = new("games.onlineAway", "Away");
         public static readonly LocString OnlineWins = new("games.onlineWins", "{0} wins");
@@ -8853,6 +8858,8 @@ internal static class L
         public static readonly LocString OnlineChess = new("games.onlineChess", "Chess");
         public static readonly LocString OnlineChessHostHint = new("games.onlineChessHostHint", "Head-to-head, 10 minutes on each clock");
         public static readonly LocString OnlineResign = new("games.onlineResign", "Resign");
+        public static readonly LocString OnlineResignConfirm =
+            new("games.onlineResignConfirm", "Resign this game? It can't be undone.");
         public static readonly LocString OnlineCheck = new("games.onlineCheck", "Check!");
         public static readonly LocString OnlineYouPlayWhite = new("games.onlineYouPlayWhite", "You play White");
         public static readonly LocString OnlineYouPlayBlack = new("games.onlineYouPlayBlack", "You play Black");
