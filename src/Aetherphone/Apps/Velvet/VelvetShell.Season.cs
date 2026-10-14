@@ -21,8 +21,6 @@ internal sealed partial class VelvetShell
     private readonly SeasonIntro intro = new();
     private bool? halloweenApplied;
 
-    private bool RewardedSelf(string userId) => SocialSeason.RewardedSelf(store.Me?.UserId, userId);
-
     private Spring moonSlide;
     private bool moonPlaced;
 

@@ -230,6 +230,8 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(CoinGameSessionDto))]
 [JsonSerializable(typeof(CoinQuestDto))]
 [JsonSerializable(typeof(CoinQuestBoardDto))]
+[JsonSerializable(typeof(HalloweenTreatsReport))]
+[JsonSerializable(typeof(HalloweenTreatsDto))]
 [JsonSerializable(typeof(CoinListenStartRequest))]
 [JsonSerializable(typeof(CoinListenStartDto))]
 [JsonSerializable(typeof(CoinListenEndDto))]

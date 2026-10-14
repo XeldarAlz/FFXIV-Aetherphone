@@ -32,8 +32,6 @@ internal sealed partial class AethergramApp
     private bool introSwarmPending;
     private bool? halloweenApplied;
 
-    private bool RewardedSelf(string userId) => SocialSeason.RewardedSelf(store.Me?.Id, userId);
-
     private static LocString CaughtUpTitle =>
         SeasonalTheme.Halloween ? L.Seasonal.AethergramCaughtUp : L.Social.FeedCaughtUp;
     private static LocString CaughtUpHint =>

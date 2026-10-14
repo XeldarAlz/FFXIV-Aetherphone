@@ -117,6 +117,7 @@ internal sealed class PhoneServices : IDisposable
     public required Coins.CoinGameSessionTracker CoinSessions { get; init; }
 
     public required Coins.CoinQuestStore CoinQuests { get; init; }
+    public required Coins.HalloweenBadgeStore HalloweenBadge { get; init; }
 
     public required Coins.CoinRadioListenTracker CoinRadio { get; init; }
 
@@ -316,13 +317,14 @@ internal sealed class PhoneServices : IDisposable
         Social.Frames.Use(frameCatalog);
         Windows.Components.UserName.Configure(badgeCatalog, remoteImages);
         Windows.Components.NowPlayingArt.Configure(remoteImages);
-        Windows.Components.Treats.Configure(installer, aethernetSession);
         Moderation.ModerationNoticeText.Configure(badgeCatalog, frameCatalog);
         var coinApi = new AethernetApi(http, aethernetSession, "coin");
         var coins = new Coins.CoinStore(aethernetSession, coinApi.Coins);
         var coinCatalog = new Coins.CoinCatalogStore(aethernetSession, coinApi.Coins);
         var coinSessions = new Coins.CoinGameSessionTracker(configuration, aethernetSession, coinApi.Coins);
         var coinQuests = new Coins.CoinQuestStore(aethernetSession, coinApi.Coins, coins);
+        var halloweenBadge = new Coins.HalloweenBadgeStore(aethernetSession, coinApi.Coins, coinCatalog, loadoutStore);
+        Windows.Components.Treats.Configure(installer, aethernetSession, halloweenBadge);
         var coinEarnNotifier = new Coins.CoinEarnNotifier(coins, notifications);
         var casinoApi = new AethernetApi(http, aethernetSession, "casino");
         var casino = new Casino.CasinoStore(configuration, aethernetSession, casinoApi.Casino, coins);
@@ -534,6 +536,7 @@ internal sealed class PhoneServices : IDisposable
             CoinCatalog = coinCatalog,
             CoinSessions = coinSessions,
             CoinQuests = coinQuests,
+            HalloweenBadge = halloweenBadge,
             CoinRadio = coinRadio,
             CoinEarnNotifier = coinEarnNotifier,
             Casino = casino,
@@ -742,6 +745,7 @@ internal sealed class PhoneServices : IDisposable
         CoinEarnNotifier.Dispose();
         CoinRadio.Dispose();
         CoinQuests.Dispose();
+        HalloweenBadge.Dispose();
         CoinSessions.Dispose();
         CoinCatalog.Dispose();
         Coins.Dispose();

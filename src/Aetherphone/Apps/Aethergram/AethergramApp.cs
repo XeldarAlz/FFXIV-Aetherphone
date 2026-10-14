@@ -1260,8 +1260,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var metaHeight = Typography.LineHeight(CardMetaStyle);
         var nameTop = avatarCenter.Y - (nameHeight + metaHeight + 1f * scale) * 0.5f;
         var drawnNameWidth = UserName.DrawAuto(drawList, "aethergram.card." + post.Id, displayName, post.AuthorBadges,
-            post.AuthorBadgeIds, nameLeft, nameTop, headerTextMaxWidth, CardNameStyle, Ink.TitleInk, theme,
-            self: RewardedSelf(post.AuthorId));
+            post.AuthorBadgeIds, nameLeft, nameTop, headerTextMaxWidth, CardNameStyle, Ink.TitleInk, theme);
         var nameMin = new Vector2(nameLeft, nameTop);
         var nameMax = new Vector2(nameLeft + drawnNameWidth, nameTop + nameHeight);
         if (UiInteract.Hover(nameMin, nameMax))

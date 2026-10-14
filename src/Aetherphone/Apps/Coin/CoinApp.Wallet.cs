@@ -118,7 +118,11 @@ internal sealed partial class CoinApp
         if (SeasonalTheme.Halloween)
         {
             cursorY = treatCard.Draw(ui, new Vector2(origin.X, cursorY + Metrics.Space.Md * scale), width,
-                CharacterName());
+                out var openItems);
+            if (openItems)
+            {
+                SelectTab(CoinTab.Items);
+            }
         }
 
         if (wallet.Paused)

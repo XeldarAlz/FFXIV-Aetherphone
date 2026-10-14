@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Coins;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
@@ -55,6 +56,7 @@ internal static class Treats
 
     private static AppInstaller? installer;
     private static AethernetSession? session;
+    private static HalloweenBadgeStore? badge;
     private static int activeSpot = NoSpot;
     private static int lastSpot = NoSpot;
     private static bool devHunt;
@@ -71,18 +73,25 @@ internal static class Treats
         ? Math.Clamp(SeasonalTheme.DayOfHalloween(DateTime.Today) + 1, 0, Total)
         : devHunt ? Total : 0;
 
-    public static bool Rewarded => HuntOpen && Found >= Total;
+    public static bool BadgeGranted => badge?.Granted == true;
 
-    public static void Configure(AppInstaller appInstaller, AethernetSession aethernetSession)
+    public static bool CanClaimBadge => SignedIn;
+
+    public static void SyncBadge() => badge?.Report(Found);
+
+    public static void Configure(AppInstaller appInstaller, AethernetSession aethernetSession,
+        HalloweenBadgeStore badgeStore)
     {
         installer = appInstaller;
         session = aethernetSession;
+        badge = badgeStore;
     }
 
     public static void Reset()
     {
         installer = null;
         session = null;
+        badge = null;
         activeSpot = NoSpot;
         lastSpot = NoSpot;
         devHunt = false;
@@ -270,6 +279,7 @@ internal static class Treats
         configuration.HalloweenTreatDue = Now + Wait();
         configuration.Save();
         var found = Found;
+        badge?.Report(found);
         UiFeedback.Play(found >= Total ? UiSound.HalloweenFlare : UiSound.HalloweenSparkle);
         ShellToast.Show(found >= Total
             ? Loc.T(L.Seasonal.TreatsComplete, Total)

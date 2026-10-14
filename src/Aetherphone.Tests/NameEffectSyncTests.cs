@@ -294,12 +294,6 @@ public sealed class NameEffectSyncTests
         Assert.True(witchfire.Crest.W > 0f);
     }
 
-    [Fact]
-    public void TheHallowedRewardWearsWitchfire()
-    {
-        Assert.Equal(NameEffectKind.Witchfire, NameEffects.Hallowed(false).Kind);
-        Assert.Equal(4, NameEffects.Hallowed(true).Ramp.Count);
-    }
 
     [Fact]
     public void StaticDecorationsStayStill()
