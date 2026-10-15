@@ -182,7 +182,7 @@ internal sealed class VideoEngine : IDisposable
 
         try
         {
-            if (!await Dependencies.EnsureReadyAsync(token).ConfigureAwait(false))
+            if (!await Dependencies.EnsureReadyAsync(token).ConfigureAwait(ConfigureAwaitOptions.ForceYielding))
             {
                 LastError = DependencyFailureText();
                 return PlayStart.Failed;
@@ -502,7 +502,7 @@ internal sealed class VideoEngine : IDisposable
         var token = lifetime.Token;
         try
         {
-            await playGate.WaitAsync(token).ConfigureAwait(false);
+            await playGate.WaitAsync(token).ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
             try
             {
                 if (renderer is not { } current || !string.Equals(current.CurrentUrl, stalledUrl, StringComparison.Ordinal))
@@ -625,7 +625,7 @@ internal sealed class VideoEngine : IDisposable
                 return;
             }
 
-            await playGate.WaitAsync(token).ConfigureAwait(false);
+            await playGate.WaitAsync(token).ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
             try
             {
                 DetachRenderer();
