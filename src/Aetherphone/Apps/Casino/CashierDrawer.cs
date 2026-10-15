@@ -38,7 +38,7 @@ internal sealed class CashierDrawer
         this.store = store;
         this.coins = coins;
         this.confirm = confirm;
-        panel = new CashierPanel(store, coins, confirm);
+        panel = new CashierPanel(store, coins);
     }
 
     public bool IsOpen => open;
@@ -66,6 +66,7 @@ internal sealed class CashierDrawer
 
     public void Close()
     {
+        panel.CloseSheet();
         if (!open)
         {
             return;
@@ -77,7 +78,7 @@ internal sealed class CashierDrawer
 
     public void Gate()
     {
-        if (open && confirm.Active is null)
+        if ((open || panel.SheetCapturesPointer) && confirm.Active is null)
         {
             UiInteract.BlockThisFrame();
         }
@@ -86,6 +87,19 @@ internal sealed class CashierDrawer
     public void Draw(Rect screen, AppSkin ui, Action openLimits)
     {
         ConsumeResults(openLimits);
+        DrawDrawer(screen, ui);
+        panel.DrawOverlays(screen, ui);
+        if (!panel.TakeLimitsRequest())
+        {
+            return;
+        }
+
+        Close();
+        openLimits();
+    }
+
+    private void DrawDrawer(Rect screen, AppSkin ui)
+    {
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         reveal.Step(open ? 1f : 0f, Motion.Sheet, delta);
         if (!open && reveal.IsResting(0f, 0.001f, 0.005f))
@@ -100,7 +114,7 @@ internal sealed class CashierDrawer
         {
             var drawList = ImGui.GetWindowDrawList();
             Material.Veil(drawList, screen.Min, screen.Max, MaxDim * opacity);
-            var interactive = open && confirm.Active is null && opacity > 0.5f;
+            var interactive = open && confirm.Active is null && !panel.SheetCapturesPointer && opacity > 0.5f;
             var panelRect = DrawPanel(screen, ui, drawList, opacity, interactive);
             if (!interactive)
             {
@@ -122,10 +136,27 @@ internal sealed class CashierDrawer
             if (closed.Granted)
             {
                 UiFeedback.Play(UiSound.Payout);
-                Announce(panel.CashOutLine(closed));
+                Announce(panel.CashOutLine(closed.ConvertedCoins), closed.ConvertedCoins);
             }
 
             HandleOutcome(closed.Reason, openLimits);
+        }
+
+        var partial = store.TakeCashOutResult();
+        if (partial is not null)
+        {
+            var result = partial.Result;
+            if (result.Granted && partial.Moved)
+            {
+                UiFeedback.Play(UiSound.Payout);
+                Announce(panel.CashOutLine(result.Coins), result.Coins);
+            }
+            else if (result.Granted)
+            {
+                Inform(Loc.T(L.CashierDesk.AlreadyCashedOut));
+            }
+
+            HandleOutcome(result.Granted ? string.Empty : ReasonOf(result.Reason), openLimits, true);
         }
 
         if (store.TakeMoneyMoveFailure())
@@ -134,18 +165,36 @@ internal sealed class CashierDrawer
         }
     }
 
-    private void Announce(string line)
+    internal static string CashOutMessage(string reason, long maxBet) =>
+        string.Equals(reason, CasinoReasons.BuyInRange, StringComparison.Ordinal)
+            ? Loc.T(L.CashierDesk.ReasonAmountRange)
+            : CasinoReasons.Text(reason, maxBet);
+
+    private static string ReasonOf(string reason) => reason.Length > 0 ? reason : CasinoReasons.Unreachable;
+
+    private void Announce(string line, long coinsBack)
     {
         if (open || panel.Visible)
         {
-            panel.ShowNote(line, true);
+            panel.CashedOut(line, coinsBack);
             return;
         }
 
         ShellToast.Show(line);
     }
 
-    private void HandleOutcome(string reason, Action openLimits)
+    private void Inform(string message)
+    {
+        if (open || panel.Visible)
+        {
+            panel.ShowNote(message, false);
+            return;
+        }
+
+        ShellToast.Show(message);
+    }
+
+    private void HandleOutcome(string reason, Action openLimits, bool partial = false)
     {
         if (reason.Length == 0)
         {
@@ -159,7 +208,9 @@ internal sealed class CashierDrawer
             return;
         }
 
-        var message = CasinoReasons.Text(reason, store.Ceiling.MaxBet);
+        var message = partial
+            ? CashOutMessage(reason, store.Ceiling.MaxBet)
+            : CasinoReasons.Text(reason, store.Ceiling.MaxBet);
         if (open || panel.Visible)
         {
             panel.ShowNote(message, false);

@@ -128,9 +128,9 @@ internal static class CasinoHostingRules
 {
     public const int MinSeats = 2;
 
-    public const int MaxSeats = 6;
+    public const int MaxSeats = BlackjackRules.SeatCount;
 
-    public const int DefaultSeats = 6;
+    public const int DefaultSeats = BlackjackRules.SeatCount;
 
     public const int NameMaxLength = 24;
 

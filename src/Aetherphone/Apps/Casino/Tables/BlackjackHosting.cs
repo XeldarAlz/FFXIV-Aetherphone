@@ -77,6 +77,12 @@ internal static class BlackjackHosting
         return !seated && IsDealingHost(board, me, ownerId);
     }
 
+    public static bool BanksFromDeck(CasinoBlackjackRoomStateDto board, string me, string ownerId, bool seated)
+    {
+        return !seated && me.Length > 0 && CasinoCurrencies.Of(board) == CasinoCurrencies.Gil
+               && string.Equals(me, ownerId, StringComparison.Ordinal);
+    }
+
     public static DealerDeck DealerDeckOf(CasinoBlackjackRoomStateDto board)
     {
         if (board.Paused)

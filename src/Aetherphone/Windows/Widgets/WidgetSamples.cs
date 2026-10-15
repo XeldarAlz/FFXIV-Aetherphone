@@ -13,7 +13,6 @@ internal static class WidgetSamples
     public const int CasinoLevel = 67;
     public const float CasinoLevelFraction = 0.62f;
     public const long CasinoLevelCap = 308_000_000;
-    public const long CasinoBalance = 370_427_000;
 
     public static readonly string[] Names = { "Aerin Vale", "Koto Mizu", "Rhea Solace", "Bram Ashford" };
     public static readonly string[] Worlds = { "Ultros", "Cactuar", "Balmung", "Twintania" };

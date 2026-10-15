@@ -43,6 +43,7 @@ internal sealed class PhoneShell : IDisposable
     private readonly CoinEarnPill coinPill;
     private readonly CoinEarnFloats coinFloats;
     private readonly MinimizedPhone minimizedPhone;
+    private readonly MinimizedPhone previewPhone;
     private bool minimizedSinceDraw;
     private readonly MinimizeTransition minimize = new();
     private readonly OrientationTurn turn = new();
@@ -104,6 +105,8 @@ internal sealed class PhoneShell : IDisposable
         var controlCenter = new ControlCenter(configuration, themes, services.Playback, calls, navigation,
             notifications, router, services.Coins, services.AethernetSession, services.PcMedia, services.Installer);
         minimizedPhone = new MinimizedPhone(services, router, navigation, services.MinimizedLayout);
+        previewPhone = new MinimizedPhone(services, router, navigation, services.MinimizedLayout, demo: true);
+        services.MinimizedPreview.Bind(previewPhone);
         var spotlightIndex = new Spotlight.SpotlightIndex(apps, services.Installer, bundle.Contacts,
             services.DmLauncher, services.ChatInbox, services.ChatLog, services.LinkpearlLauncher,
             services.MarketIndex, services.MarketLauncher, services.Shortcuts, services.ShortcutRunner,
@@ -569,6 +572,7 @@ internal sealed class PhoneShell : IDisposable
         coinPill.Dispose();
         coinFloats.Dispose();
         minimizedPhone.Dispose();
+        previewPhone.Dispose();
         setup.Dispose();
         navigation.Current?.OnClosed();
         for (var index = 0; index < apps.Count; index++)

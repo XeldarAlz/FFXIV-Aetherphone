@@ -478,7 +478,7 @@ internal sealed class PlinkoCabinet : ICabinetIdle
         }
 
         var sitting = state.Sitting ?? CasinoWire.NoBankroll;
-        var blocked = state.StakesPaused || state.Draining || frame.Blocked;
+        var blocked = state.StakesPaused || state.Draining;
         var stack = Math.Max(0, sitting.Stack - plinko.QueuedStake);
         var inFlight = flight.ActiveCount + plinko.Outstanding;
         var full = inFlight >= PlinkoRules.MaxInFlight;

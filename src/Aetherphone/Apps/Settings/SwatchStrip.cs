@@ -86,7 +86,7 @@ internal static class SwatchStrip
         return result;
     }
 
-    private static void DrawWheel(ImDrawListPtr drawList, Vector2 center, float radius)
+    public static void DrawWheel(ImDrawListPtr drawList, Vector2 center, float radius)
     {
         for (var segment = 0; segment < WheelSegments; segment++)
         {

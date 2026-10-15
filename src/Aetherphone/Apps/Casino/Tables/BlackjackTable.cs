@@ -44,7 +44,7 @@ internal sealed partial class BlackjackTable : ICabinetIdle
     private readonly Action leaveRoom;
     private readonly Action<string> openLedger;
     private readonly Action openGilLedger;
-    private readonly Action resignSeat;
+    private readonly Action standUp;
     private readonly BlackjackHostedText hostedText = new();
     private readonly CasinoTextCache text = new();
     private readonly BlackjackHandLog handLog = new();
@@ -69,6 +69,7 @@ internal sealed partial class BlackjackTable : ICabinetIdle
     private bool entered;
     private bool motionsPrimed;
     private bool dealing;
+    private bool banking;
 
     public BlackjackTable(CasinoStore chips, CasinoRoomsStore rooms, CasinoTablesStore tables,
         CasinoHistoryStore history, CasinoTurnNotifier turns, ConfirmService confirm, RemoteImageCache images,
@@ -87,7 +88,7 @@ internal sealed partial class BlackjackTable : ICabinetIdle
         this.leaveRoom = leaveRoom;
         this.openLedger = openLedger;
         this.openGilLedger = openGilLedger;
-        resignSeat = StandUp;
+        standUp = StandUp;
         seatFlow = new BlackjackSeatFlow(tables);
         composer = new BetComposer("##blackjackBet");
         gilComposer = new ClassicBetComposer("##blackjackGilBet");
@@ -127,23 +128,27 @@ internal sealed partial class BlackjackTable : ICabinetIdle
             ClassicBetComposer.HeightFor(1f) + BetComposer.Pad * 2f));
     }
 
+    public bool HoldsSeat => entered && !seatFlow.StandQueued
+                             && (BlackjackRules.IsSeat(mySeat) || CasinoSeatMachine.Holds(seatFlow.Stage));
+
     public bool ForfeitsTournament
     {
         get
         {
             var board = projection.Board;
-            if (board is null || !entered || seatFlow.StandQueued)
-            {
-                return false;
-            }
-
-            if (!BlackjackRules.IsSeat(mySeat) && !CasinoSeatMachine.Holds(seatFlow.Stage))
-            {
-                return false;
-            }
-
-            return BlackjackHosting.StillInTournament(board, rooms.AccountId);
+            return board is not null && HoldsSeat && BlackjackHosting.StillInTournament(board, rooms.AccountId);
         }
+    }
+
+    public void ConfirmLeave(Action leave)
+    {
+        if (ForfeitsTournament)
+        {
+            ConfirmResign(leave);
+            return;
+        }
+
+        TableLeaveConfirm.Ask(confirm, leave);
     }
 
     public void ConfirmResign(Action resign)
@@ -174,6 +179,7 @@ internal sealed partial class BlackjackTable : ICabinetIdle
         inlineReason = string.Empty;
         mySeat = -1;
         dealing = false;
+        banking = false;
         projection.Reset();
         playback.Reset();
         seatFlow.Reset();
@@ -199,12 +205,7 @@ internal sealed partial class BlackjackTable : ICabinetIdle
 
     private void AbandonSeatIfHeld()
     {
-        if (!entered || seatFlow.StandQueued)
-        {
-            return;
-        }
-
-        if (!BlackjackRules.IsSeat(mySeat) && !CasinoSeatMachine.Holds(seatFlow.Stage))
+        if (!HoldsSeat)
         {
             return;
         }
@@ -225,6 +226,7 @@ internal sealed partial class BlackjackTable : ICabinetIdle
         historySheet.Close();
         mySeat = -1;
         dealing = false;
+        banking = false;
         projection.Reset();
         playback.Reset();
         dealer.Clear();
@@ -290,8 +292,10 @@ internal sealed partial class BlackjackTable : ICabinetIdle
             return;
         }
 
-        dealing = BlackjackHosting.DealsFromDeck(board, rooms.AccountId, OwnerId(),
-            BlackjackRules.IsSeat(mySeat) || CasinoSeatMachine.Holds(seatFlow.Stage));
+        var ownerId = OwnerId();
+        var holdsSeat = BlackjackRules.IsSeat(mySeat) || CasinoSeatMachine.Holds(seatFlow.Stage);
+        dealing = BlackjackHosting.DealsFromDeck(board, rooms.AccountId, ownerId, holdsSeat);
+        banking = !dealing && BlackjackHosting.BanksFromDeck(board, rooms.AccountId, ownerId, holdsSeat);
 
         if (frame.SnapToTruth)
         {

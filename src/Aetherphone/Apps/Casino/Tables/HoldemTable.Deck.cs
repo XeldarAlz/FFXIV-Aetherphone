@@ -58,7 +58,6 @@ internal sealed partial class HoldemTable
         }
 
         var deck = frame.Deck;
-        var blocked = frame.Blocked;
         if (hero is null)
         {
             if (CasinoSeatMachine.Holds(seatFlow.Stage) || seatFlow.Stage == CasinoSeatStage.Sitting)
@@ -69,11 +68,11 @@ internal sealed partial class HoldemTable
 
             if (deckMode == HoldemDeckMode.BuyIn)
             {
-                DrawBuyInDeck(ui, deck, board, blocked, scale);
+                DrawBuyInDeck(ui, deck, board, scale);
                 return;
             }
 
-            DrawWatchDeck(stage, ui, deck, board, blocked, scale);
+            DrawWatchDeck(stage, ui, deck, board, scale);
             return;
         }
 
@@ -86,7 +85,7 @@ internal sealed partial class HoldemTable
                 return;
             }
 
-            var model = RaiseModel(board, hero, prompt, blocked);
+            var model = RaiseModel(board, hero, prompt);
             if (deckMode == HoldemDeckMode.Raise)
             {
                 DrawRaiseDeck(ui, deck, board, model);
@@ -100,7 +99,7 @@ internal sealed partial class HoldemTable
         switch (deckMode)
         {
             case HoldemDeckMode.TopUp:
-                DrawTopUpDeck(ui, deck, board, hero, blocked, scale);
+                DrawTopUpDeck(ui, deck, board, hero, scale);
                 return;
             case HoldemDeckMode.Reactions:
                 DrawReactionsDeck(ui, deck, scale);
@@ -116,11 +115,11 @@ internal sealed partial class HoldemTable
     }
 
     private HoldemRaiseModel RaiseModel(CasinoHoldemRoomStateDto board, CasinoHoldemSeatDto hero,
-        CasinoHoldemPromptDto prompt, bool blocked)
+        CasinoHoldemPromptDto prompt)
     {
         var bigBlind = board.BigBlind > 0 ? board.BigBlind : 1;
         return new HoldemRaiseModel(prompt.Actions, hero.Bet, prompt.ToCall, prompt.MinRaiseTo, prompt.MaxRaiseTo,
-            prompt.PotTotal, bigBlind, !blocked && !store.ActInFlight);
+            prompt.PotTotal, bigBlind, !store.ActInFlight);
     }
 
     private static Rect StatusRect(Rect deck, float scale)
@@ -160,8 +159,7 @@ internal sealed partial class HoldemTable
             width, StatusMarquee, TextStyles.Footnote, false);
     }
 
-    private void DrawWatchDeck(CasinoStage stage, AppSkin ui, Rect deck, CasinoHoldemRoomStateDto board, bool blocked,
-        float scale)
+    private void DrawWatchDeck(CasinoStage stage, AppSkin ui, Rect deck, CasinoHoldemRoomStateDto board, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
         var status = StatusRect(deck, scale);
@@ -182,7 +180,7 @@ internal sealed partial class HoldemTable
         StatusLine(status, texts.Counts(L.Holdem.SeatedLine, Seated(board), SeatCountOf(board)), 0f, scale);
         var historyCenter = new Vector2(action.Max.X - IconRadius * scale, action.Center.Y);
         if (RoundButton.Icon(drawList, historyCenter, IconRadius * scale, HistoryGlyph, ui.Ink, ButtonStyle.Gray,
-                Loc.T(L.Holdem.History), HoverLabelSide.Above, !blocked))
+                Loc.T(L.Holdem.History), HoverLabelSide.Above))
         {
             historySheet.Open(roomId, rooms.AccountId);
         }
@@ -199,7 +197,7 @@ internal sealed partial class HoldemTable
 
         var label = seat < 0 ? Loc.T(L.Casino.TableFullBadge) : Loc.T(L.Holdem.SitDown);
         if (Button.Draw(drawList, sitRect, label, ui.Ink, ButtonStyle.Prominent,
-                enabled: seat >= 0 && !blocked && !seatFlow.Busy, id: "holdem.watch.sit"))
+                enabled: seat >= 0 && !seatFlow.Busy, id: "holdem.watch.sit"))
         {
             BeginBuyIn(seat);
         }
@@ -229,7 +227,7 @@ internal sealed partial class HoldemTable
     private static long MaxBuyIn(CasinoHoldemRoomStateDto board) =>
         board.MaxBuyIn > 0 ? board.MaxBuyIn : board.BigBlind * HoldemRules.MaxBuyInBigBlinds;
 
-    private void DrawBuyInDeck(AppSkin ui, Rect deck, CasinoHoldemRoomStateDto board, bool blocked, float scale)
+    private void DrawBuyInDeck(AppSkin ui, Rect deck, CasinoHoldemRoomStateDto board, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
         var bigBlind = board.BigBlind > 0 ? board.BigBlind : 1;
@@ -249,7 +247,7 @@ internal sealed partial class HoldemTable
         }
         else
         {
-            DrawStepRow(ui, first, bigBlind, minimum, top, ref buyIn, !blocked, scale);
+            DrawStepRow(ui, first, bigBlind, minimum, top, ref buyIn, scale);
         }
 
         var penalty = store.RejoinPenalty(roomId, Environment.TickCount64);
@@ -263,7 +261,7 @@ internal sealed partial class HoldemTable
         var canSit = practice || (buyIn >= minimum && buyIn <= top);
         var label = practice ? Loc.T(L.Holdem.SitDown) : texts.Number(L.Holdem.SitFor, buyIn);
         if (!TableButton.Draw(drawList, confirm, label, string.Empty, ui.Ink, ButtonStyle.Prominent,
-                canSit && !blocked && !seatFlow.Busy && pickedSeat >= 0, "holdem.buyin.sit"))
+                canSit && !seatFlow.Busy && pickedSeat >= 0, "holdem.buyin.sit"))
         {
             return;
         }
@@ -309,12 +307,12 @@ internal sealed partial class HoldemTable
     }
 
     private static void DrawStepRow(AppSkin ui, Rect row, long bigBlind, long minimum, long maximum, ref long amount,
-        bool enabled, float scale)
+        float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
         var gap = DeckGap * scale;
         var radius = row.Height * 0.5f;
-        var live = enabled && maximum >= minimum;
+        var live = maximum >= minimum;
         var lessCenter = new Vector2(row.Min.X + radius, row.Center.Y);
         var moreCenter = new Vector2(row.Max.X - radius, row.Center.Y);
         var step = 0;
@@ -657,8 +655,7 @@ internal sealed partial class HoldemTable
         if (RoundButton.Icon(drawList, center, radius, LeaveGlyph, ui.Ink, ButtonStyle.Gray, Loc.T(L.Holdem.Leave),
                 HoverLabelSide.Above, !seatFlow.Busy && !seatFlow.StandQueued))
         {
-            inlineReason = string.Empty;
-            seatFlow.Stand(roomId);
+            ConfirmLeave(standUp);
         }
     }
 
@@ -666,7 +663,7 @@ internal sealed partial class HoldemTable
         HoldemRules.TopUpCeiling(hero.Stack, MaxBuyIn(board), Bankroll(), chips.Ceiling.MaxBet);
 
     private void DrawTopUpDeck(AppSkin ui, Rect deck, CasinoHoldemRoomStateDto board, CasinoHoldemSeatDto hero,
-        bool blocked, float scale)
+        float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
         var bigBlind = board.BigBlind > 0 ? board.BigBlind : 1;
@@ -684,7 +681,7 @@ internal sealed partial class HoldemTable
         }
         else
         {
-            DrawStepRow(ui, first, bigBlind, Math.Min(bigBlind, top), top, ref buyIn, !blocked, scale);
+            DrawStepRow(ui, first, bigBlind, Math.Min(bigBlind, top), top, ref buyIn, scale);
         }
 
         DrawRowNote(drawList, DeckRowRect(deck, 1, scale), L.Holdem.TopUpHint);
@@ -696,7 +693,7 @@ internal sealed partial class HoldemTable
 
         var label = practice ? Loc.T(L.Holdem.Rebuy) : texts.Number(L.Holdem.TopUpFor, buyIn);
         if (!TableButton.Draw(drawList, confirm, label, string.Empty, ui.Ink, ButtonStyle.Prominent,
-                !blocked && buyIn > 0 && !store.IntentInFlight, "holdem.topup.confirm"))
+                buyIn > 0 && !store.IntentInFlight, "holdem.topup.confirm"))
         {
             return;
         }

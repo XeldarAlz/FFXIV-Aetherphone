@@ -1,4 +1,5 @@
 using Aetherphone.Apps.Casino.Stage;
+using Aetherphone.Apps.Casino.Strip;
 using Aetherphone.Apps.Coin;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
@@ -16,16 +17,21 @@ namespace Aetherphone.Apps.Casino;
 
 internal sealed partial class CasinoApp
 {
-    private const float ResumeHeight = 76f;
-    private const float ResumeTile = 46f;
-    private const float FloorSectionGap = 22f;
-
-    private bool lobbyHistoryFailed;
+    private const float ResumeHeight = 58f;
+    private const float ResumeTile = 38f;
+    private const float ResumePad = 12f;
+    private const float ResumeWashLeft = 0.16f;
+    private const float ResumeWashRight = 0.04f;
+    private const float ResumeRimAlpha = 0.5f;
+    private const float FloorBlockGap = 16f;
+    private const float FloorHeaderGap = 10f;
+    private const float FooterGap = 20f;
+    private const string ResumeButtonId = "casino.resume.go";
+    private const string ShelvesAnchor = "casino.shelves";
 
     private void ResetLobby()
     {
         stripHero.Snap(FloorBalance());
-        lobbyHistoryFailed = false;
     }
 
     private long FloorBalance()
@@ -38,7 +44,7 @@ internal sealed partial class CasinoApp
     {
         var scale = UiScale.Current;
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        FreshenLobbyHistory();
+        DrawWordmark(ImGui.GetWindowDrawList(), body, scale);
         using (ImRaii.PushId("casino.lobby"))
         using (var surface = AppSurface.Begin(body))
         {
@@ -46,7 +52,7 @@ internal sealed partial class CasinoApp
             var drawList = ImGui.GetWindowDrawList();
             var origin = ImGui.GetCursorScreenPos();
             var width = ScrollLayout.StableContentWidth();
-            var gap = CardGap * scale;
+            var gap = FloorBlockGap * scale;
             var cursorY = DrawStakeNotice(origin, width, scale);
             var state = casino.State;
             if (state is not null && CasinoTonight.From(state).Reached)
@@ -54,27 +60,18 @@ internal sealed partial class CasinoApp
                 cursorY = DrawLimitReached(drawList, new Vector2(origin.X, cursorY), width, scale) + gap;
             }
 
-            cursorY = DrawHeroBlock(drawList, new Vector2(origin.X, cursorY), width, delta, scale) + gap;
             cursorY = DrawResume(drawList, new Vector2(origin.X, cursorY), width, scale);
-            cursorY = DrawFloorExtras(drawList, new Vector2(origin.X, cursorY), width, scale);
-            cursorY = DrawCarousel(drawList, new Vector2(origin.X, cursorY), width, delta, scale);
-            var tickerBottom = winsTicker.Draw(drawList, floor.Ticker, floor.TickerVersion,
-                new Vector2(origin.X, cursorY), width, scale);
-            cursorY = tickerBottom > cursorY ? tickerBottom + gap : cursorY;
-            cursorY = venueSection.Draw(drawList, ui, new Vector2(origin.X, cursorY), width, scale);
-            cursorY = DrawLiveNow(drawList, new Vector2(origin.X, cursorY), width, scale);
-            cursorY = DrawRecentGames(drawList, new Vector2(origin.X, cursorY), width, delta, scale);
-            cursorY += FloorSectionGap * scale * 0.5f;
-            var shelvesBottom = shelves.Draw(drawList, ui, this, new Vector2(origin.X, cursorY), width, floorLights.Phase,
-                delta, !router.IsTransitioning && !LaunchActive, scale, out var tapped, out var source);
-            if (tapped.GameId is not null)
+            cursorY = DrawHeroBlock(drawList, new Vector2(origin.X, cursorY), width, delta, scale) + gap;
+            cursorY = DrawShortcuts(drawList, new Vector2(origin.X, cursorY), width, scale);
+            var live = !router.IsTransitioning && !LaunchActive;
+            for (var shelfIndex = 0; shelfIndex < StripCatalog.Shelves.Length; shelfIndex++)
             {
-                OpenEntry(tapped, source);
+                cursorY = DrawShelf(drawList, StripCatalog.Shelves[shelfIndex], new Vector2(origin.X, cursorY), width,
+                    live, delta, scale) + gap;
             }
 
-            cursorY = DrawFloorTail(drawList, new Vector2(origin.X, shelvesBottom + FloorSectionGap * scale), width,
-                scale);
-            cursorY = DrawRecordsRow(drawList, new Vector2(origin.X, cursorY), width, scale);
+            cursorY = DrawLiveNow(drawList, new Vector2(origin.X, cursorY), width, scale);
+            cursorY = DrawFloorFooter(drawList, new Vector2(origin.X, cursorY), width, scale);
             if (!cashier.IsOpen && !missionsSheet.IsOpen)
             {
                 bonusShelf.DrawShower(drawList, scale);
@@ -84,46 +81,32 @@ internal sealed partial class CasinoApp
         }
     }
 
-    private void OpenEntry(in Strip.StripEntry entry, Rect source) => OpenGame(entry.GameId, source);
-
-    private float DrawHeroBlock(ImDrawListPtr drawList, Vector2 origin, float width, float delta, float scale)
+    private float DrawShelf(ImDrawListPtr drawList, StripShelf shelf, Vector2 origin, float width, bool live,
+        float delta, float scale)
     {
-        var state = casino.State;
-        var progress = casino.HasFeature(CasinoFeatures.Levels) ? casino.Progress : null;
-        var levelFraction = 0f;
-        if (progress is not null)
+        var top = FloorHeader.Draw(drawList, ui, origin, width, Loc.T(StripCatalog.TitleOf(shelf)),
+            Loc.T(StripCatalog.SublineOf(shelf)), scale) + FloorHeaderGap * scale;
+        if (shelf == StripShelf.Machines && casino.Jackpot > 0)
         {
-            var span = progress.NextLevelXp - progress.LevelStartXp;
-            levelFraction = span <= 0 ? 1f : Math.Clamp((float)(progress.Xp - progress.LevelStartXp) / span, 0f, 1f);
+            top = DrawJackpot(drawList, new Vector2(origin.X, top), width, delta, scale) + FloorHeaderGap * scale;
         }
 
-        var bonuses = casino.HasFeature(CasinoFeatures.Bonus);
-        var spinReady = DailySpinStatus.OffersWheel(DailySpinStatus.Of(casinoSpin.Answer));
-        var model = new Strip.StripHeroModel(FloorBalance(), state?.Sitting is not null, progress?.Level ?? 1,
-            levelFraction, casino.Ceiling.LevelCap, progress is not null,
-            bonuses ? casino.BonusFor(CasinoBonusKinds.Timed) : null,
-            bonuses ? casino.BonusFor(CasinoBonusKinds.Streak) : null, spinReady, casino.ClaimingBonus.Length > 0,
-            DateTimeOffset.UtcNow.ToUnixTimeSeconds(), casino.Rate);
-        var action = stripHero.Draw(drawList, ui, model, origin, width, delta, scale, out var bottom);
-        switch (action)
+        var bottom = shelves.DrawGrid(drawList, this, shelf, new Vector2(origin.X, top), width, floorLights.Phase,
+            delta, live, scale, out var tapped, out var source);
+        if (shelf == StripShelf.Cards)
         {
-            case Strip.StripHeroAction.GetChips:
-            case Strip.StripHeroAction.Cashier:
-                cashier.Open();
-                break;
-            case Strip.StripHeroAction.ClaimTimed:
-                bonusShelf.Claim(CasinoBonusKinds.Timed, stripHero.TimedCenter);
-                break;
-            case Strip.StripHeroAction.ClaimStreak:
-                bonusShelf.Claim(CasinoBonusKinds.Streak, stripHero.StreakCenter);
-                break;
-            case Strip.StripHeroAction.FreeSpin:
-                OpenGame(CasinoGames.DailySpin, stripHero.SpinSource);
-                break;
+            UiAnchors.Report(ShelvesAnchor, new Rect(new Vector2(origin.X, top), new Vector2(origin.X + width, bottom)));
+        }
+
+        if (tapped.GameId is not null)
+        {
+            OpenEntry(tapped, source);
         }
 
         return bottom;
     }
+
+    private void OpenEntry(in StripEntry entry, Rect source) => OpenGame(entry.GameId, source);
 
     private float DrawResume(ImDrawListPtr drawList, Vector2 origin, float width, float scale)
     {
@@ -134,33 +117,80 @@ internal sealed partial class CasinoApp
         }
 
         var gameId = ClientGameId(rack.GameKind);
-        var height = ResumeHeight * scale;
+        var pad = ResumePad * scale;
+        var labels = Typography.LineHeight(TextStyles.BodyEmphasized) + Typography.LineHeight(TextStyles.Footnote);
+        var height = MathF.Max(ResumeHeight * scale, pad * 2f + MathF.Max(ResumeTile * scale, labels));
         var max = new Vector2(origin.X + width, origin.Y + height);
         var hovered = CasinoArt.PressCard(ImGui.GetID("casino.resume"), origin, max, out var cardMin, out var cardMax);
-        ui.Card(drawList, cardMin, cardMax, Metrics.Radius.Grouped * scale);
-        Squircle.Stroke(drawList, cardMin, cardMax, Metrics.Radius.Grouped * scale,
-            ImGui.GetColorU32(Palette.WithAlpha(CasinoColors.Money, 0.5f)), MathF.Max(1f, scale));
-        var pad = Metrics.Space.Lg * scale;
+        var radius = Metrics.Radius.Lg * scale;
+        Squircle.FillHorizontalGradient(drawList, cardMin, cardMax, radius,
+            ImGui.GetColorU32(CasinoColors.Money with { W = ResumeWashLeft }),
+            ImGui.GetColorU32(CasinoColors.Money with { W = ResumeWashRight }));
+        Squircle.Stroke(drawList, cardMin, cardMax, radius,
+            ImGui.GetColorU32(CasinoColors.Money with { W = ResumeRimAlpha }), MathF.Max(1f, scale));
         var tile = ResumeTile * scale;
         var tileCenter = new Vector2(origin.X + pad + tile * 0.5f, origin.Y + height * 0.5f);
         CasinoArt.GameTile(drawList, gameId.Length > 0 ? gameId : CasinoGames.Blackjack, tileCenter, tile);
         var buttonLabel = Loc.T(L.Strip.ResumeAction);
-        var buttonWidth = Button.WidthFor(buttonLabel, ButtonSize.Large);
-        var buttonHeight = Button.LargeHeight * scale;
+        var buttonWidth = Button.WidthFor(buttonLabel, ButtonSize.Regular);
+        var buttonHeight = Button.RegularHeight * scale;
         var button = new Rect(new Vector2(max.X - pad - buttonWidth, tileCenter.Y - buttonHeight * 0.5f),
             new Vector2(max.X - pad, tileCenter.Y + buttonHeight * 0.5f));
-        var textLeft = tileCenter.X + tile * 0.5f + CoinArt.TextGap * scale;
+        var textLeft = tileCenter.X + tile * 0.5f + ResumePad * scale;
         CoinArt.Labels(drawList, textLeft, button.Min.X - CoinArt.ValueGap * scale, tileCenter.Y,
             Loc.T(L.Strip.ResumeTitle), texts.Compact(L.Strip.ResumeStack, rack.Stack), ui.TitleInk, ui.BodyInk,
             scale);
         var overButton = UiInteract.Hover(button.Min, button.Max);
-        var pressed = Button.Draw(drawList, button, buttonLabel, ui.Ink, ButtonStyle.Prominent, id: "casino.resume.go");
-        if (pressed || (!overButton && UiInteract.Click(origin, max, hovered)))
+        var face = Button.Surface(drawList, button, ui.Ink.WithAccent(CasinoColors.Money), ButtonStyle.Prominent,
+            ButtonRole.Normal, true, overButton, ImGui.GetID(ResumeButtonId));
+        Button.DrawLabel(drawList, face with { LabelInk = CasinoColors.InkOnLight with { W = face.LabelInk.W } },
+            buttonLabel, ResumeButtonId);
+        if (UiInteract.Click(button.Min, button.Max, overButton) || (!overButton && UiInteract.Click(origin, max, hovered)))
         {
             OpenTable(rack.TableId);
         }
 
-        return max.Y + CardGap * scale;
+        return max.Y + FloorBlockGap * scale;
+    }
+
+    private float DrawFloorFooter(ImDrawListPtr drawList, Vector2 origin, float width, float scale)
+    {
+        var fair = Loc.T(L.Casino.FairnessRow);
+        var limits = Loc.T(L.Casino.LimitsRow);
+        var height = Button.RegularHeight * scale;
+        var gap = FooterGap * scale;
+        var fairWidth = MathF.Min(width, Button.WidthFor(fair, ButtonSize.Regular));
+        var limitsWidth = MathF.Min(width, Button.WidthFor(limits, ButtonSize.Regular));
+        var ink = ui.Ink.WithAccent(ui.MutedInk);
+        Rect fairRect;
+        Rect limitsRect;
+        if (fairWidth + gap + limitsWidth <= width)
+        {
+            var left = origin.X + (width - fairWidth - gap - limitsWidth) * 0.5f;
+            fairRect = new Rect(new Vector2(left, origin.Y), new Vector2(left + fairWidth, origin.Y + height));
+            left += fairWidth + gap;
+            limitsRect = new Rect(new Vector2(left, origin.Y), new Vector2(left + limitsWidth, origin.Y + height));
+        }
+        else
+        {
+            var center = origin.X + width * 0.5f;
+            fairRect = new Rect(new Vector2(center - fairWidth * 0.5f, origin.Y),
+                new Vector2(center + fairWidth * 0.5f, origin.Y + height));
+            limitsRect = new Rect(new Vector2(center - limitsWidth * 0.5f, origin.Y + height),
+                new Vector2(center + limitsWidth * 0.5f, origin.Y + height * 2f));
+        }
+
+        if (Button.Draw(drawList, fairRect, fair, ink, ButtonStyle.Plain, id: "casino.footer.fair"))
+        {
+            OpenFairness();
+        }
+
+        if (Button.Draw(drawList, limitsRect, limits, ink, ButtonStyle.Plain, id: "casino.footer.limits"))
+        {
+            OpenLimits();
+        }
+
+        return limitsRect.Max.Y;
     }
 
     private void ConsumeFloorNotes()
@@ -177,23 +207,6 @@ internal sealed partial class CasinoApp
             ShellToast.Show(texts.Compact(L.Strip.RainLanded, rain));
             UiFeedback.Play(UiSound.CoinShower);
         }
-    }
-
-    private void FreshenLobbyHistory()
-    {
-        if (lobbyHistoryFailed)
-        {
-            return;
-        }
-
-        history.EnsureFresh();
-        if (!history.TakeLoadFailure())
-        {
-            return;
-        }
-
-        lobbyHistoryFailed = true;
-        historyLoadFailed = true;
     }
 
     private string TonightResult(long netLoss, out Vector4 ink)

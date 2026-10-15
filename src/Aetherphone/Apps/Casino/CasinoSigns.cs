@@ -35,15 +35,17 @@ internal enum CasinoSign : byte
 
 internal static class CasinoSigns
 {
-    public const float GridWidth = 4f;
     public const float GridHeight = 6f;
-    public const float LetterGap = 1.6f;
+    public const float LetterGap = 1.5f;
     public const float SpaceAdvance = 3f;
     public const float StrokeFraction = 0.085f;
-    public const int MaxStrokePoints = 16;
 
     private const int FirstChar = 32;
     private const int LastChar = 90;
+    private const float CornerRadius = 1.6f;
+    private const float ArcStep = MathF.PI / 12f;
+    private const float MinTurn = 0.001f;
+    private const float SamePoint = 0.0001f;
 
     private static readonly string[] Words =
     {
@@ -52,73 +54,78 @@ internal static class CasinoSigns
         "GOLDEN BIRD", "CASCADE", "MOOGLE", "DEATHROLL", "RAFFLE", "DEALER HOLD'EM", "BOOK",
     };
 
-    private static readonly Vector2[][]?[] Glyphs = new Vector2[][]?[LastChar - FirstChar + 1];
-    private static readonly float[] Advances = new float[LastChar - FirstChar + 1];
+    private static readonly GlyphShape[] Shapes = new GlyphShape[LastChar - FirstChar + 1];
+    private static readonly StrokeRange[] Strokes;
+    private static readonly Vector2[] Points;
+    private static readonly int LongestStroke;
 
     static CasinoSigns()
     {
-        Define('A', "0,6 0,2 2,0 4,2 4,6|0,3.6 4,3.6");
-        Define('B', "0,3 0,0 3,0 4,1 4,2 3,3 0,3 0,6 3,6 4,5 4,4 3,3");
-        Define('C', "4,1 3,0 1,0 0,1 0,5 1,6 3,6 4,5");
-        Define('D', "0,0 0,6 2.4,6 4,4.4 4,1.6 2.4,0 0,0");
-        Define('E', "4,0 0,0 0,6 4,6|0,3 3,3");
-        Define('F', "4,0 0,0 0,6|0,3 3,3");
-        Define('G', "4,1 3,0 1,0 0,1 0,5 1,6 3,6 4,5 4,3.5 2.4,3.5");
-        Define('H', "0,0 0,6|4,0 4,6|0,3 4,3");
-        Define('I', "1,0 3,0|2,0 2,6|1,6 3,6");
-        Define('J', "1,0 4,0|3,0 3,5 2,6 1,6 0,5");
-        Define('K', "0,0 0,6|4,0 0,3.6|1.3,2.8 4,6");
-        Define('L', "0,0 0,6 4,6");
-        Define('M', "0,6 0,0 2,3 4,0 4,6");
-        Define('N', "0,6 0,0 4,6 4,0");
-        Define('O', "1,0 3,0 4,1 4,5 3,6 1,6 0,5 0,1 1,0");
-        Define('P', "0,6 0,0 3,0 4,1 4,2 3,3 0,3");
-        Define('Q', "1,0 3,0 4,1 4,5 3,6 1,6 0,5 0,1 1,0|2.6,4.6 4,6");
-        Define('R', "0,6 0,0 3,0 4,1 4,2 3,3 0,3|1.6,3 4,6");
-        Define('S', "4,1 3,0 1,0 0,1 0,2 1,3 3,3 4,4 4,5 3,6 1,6 0,5");
-        Define('T', "0,0 4,0|2,0 2,6");
-        Define('U', "0,0 0,5 1,6 3,6 4,5 4,0");
-        Define('V', "0,0 2,6 4,0");
-        Define('W', "0,0 1,6 2,3 3,6 4,0");
-        Define('X', "0,0 4,6|4,0 0,6");
-        Define('Y', "0,0 2,3 4,0|2,3 2,6");
-        Define('Z', "0,0 4,0 0,6 4,6");
-        Define('0', "1,0 3,0 4,1 4,5 3,6 1,6 0,5 0,1 1,0|3.4,1 0.6,5");
-        Define('1', "1,1.2 2,0 2,6|1,6 3,6");
-        Define('2', "0,1 1,0 3,0 4,1 4,2 0,6 4,6");
-        Define('3', "0,1 1,0 3,0 4,1 4,2 3,3 4,4 4,5 3,6 1,6 0,5|1.6,3 3,3");
-        Define('4', "3,6 3,0 0,4 4,4");
-        Define('5', "4,0 0,0 0,3 3,3 4,4 4,5 3,6 0,6");
-        Define('6', "4,1 3,0 1,0 0,1 0,5 1,6 3,6 4,5 4,4 3,3 0,3");
-        Define('7', "0,0 4,0 1.6,6");
-        Define('8', "1,3 0,2 0,1 1,0 3,0 4,1 4,2 3,3 1,3 0,4 0,5 1,6 3,6 4,5 4,4 3,3");
-        Define('9', "4,3 1,3 0,2 0,1 1,0 3,0 4,1 4,5 3,6 1,6 0,5");
-        Define('\'', "1,0 1,1.6", 2f);
-        Define('-', "0.5,3.2 3.5,3.2");
-        Define('!', "1,0 1,4|1,5.6 1,6", 2f);
-        Advances[' ' - FirstChar] = SpaceAdvance;
+        var strokes = new List<StrokeRange>();
+        var points = new List<Vector2>();
+        Define(strokes, points, 'A', "0,6 2.3,0 4.6,6|0.85,3.8 3.75,3.8", -0.4f, -0.4f);
+        Define(strokes, points, 'B', "2.35,2.9 4.2,2.9r 4.2,6r 0,6 0,0 3.8,0r 3.8,2.9r 0,2.9");
+        Define(strokes, points, 'C', "4.2,1.6 4.2,0r 0,0r 0,6r 4.2,6r 4.2,4.4", 0f, -0.1f);
+        Define(strokes, points, 'D', "0,0 4.2,0r 4.2,6r 0,6 0,0");
+        Define(strokes, points, 'E', "3.6,0 0,0 0,6 3.6,6|0,3 3,3", 0f, -0.2f);
+        Define(strokes, points, 'F', "3.6,0 0,0 0,6|0,3 3,3", 0f, -0.4f);
+        Define(strokes, points, 'G', "4.2,1.6 4.2,0r 0,0r 0,6r 4.2,6r 4.2,3.2 2.4,3.2");
+        Define(strokes, points, 'H', "0,0 0,6|4.2,0 4.2,6|0,3 4.2,3");
+        Define(strokes, points, 'I', "0,0 0,6");
+        Define(strokes, points, 'J', "3.2,0 3.2,6r 0,6r 0,4.4", -0.3f);
+        Define(strokes, points, 'K', "0,0 0,6|4,0 0,3.2 4.2,6", 0f, -0.2f);
+        Define(strokes, points, 'L', "0,0 0,6 3.6,6", 0f, -0.15f);
+        Define(strokes, points, 'M', "0,6 0,0 2.6,3.6 5.2,0 5.2,6");
+        Define(strokes, points, 'N', "0,6 0,0 4.2,6 4.2,0");
+        Define(strokes, points, 'O', "0,0r 4.4,0r 4.4,6r 0,6r 0,0r");
+        Define(strokes, points, 'P', "0,6 0,0 4,0r 4,3.2r 0,3.2", 0f, -0.2f);
+        Define(strokes, points, 'Q', "0,0r 4.4,0r 4.4,6r 0,6r 0,0r|2.8,4.4 4.4,6");
+        Define(strokes, points, 'R', "0,6 0,0 4,0r 4,3.2r 0,3.2|2.2,3.2 4.2,6");
+        Define(strokes, points, 'S', "4.2,1.6 4.2,0r 0,0r 0,3r 4.2,3r 4.2,6r 0,6r 0,4.4");
+        Define(strokes, points, 'T', "0,0 4.4,0|2.2,0 2.2,6", -0.5f, -0.5f);
+        Define(strokes, points, 'U', "0,0 0,6r 4.2,6r 4.2,0");
+        Define(strokes, points, 'V', "0,0 2.3,6 4.6,0", -0.4f, -0.4f);
+        Define(strokes, points, 'W', "0,0 1.4,6 2.9,1.4 4.4,6 5.8,0", -0.2f, -0.2f);
+        Define(strokes, points, 'X', "0,0 4.2,6|4.2,0 0,6", -0.2f, -0.2f);
+        Define(strokes, points, 'Y', "0,0 2.2,3.2 4.4,0|2.2,3.2 2.2,6", -0.3f, -0.3f);
+        Define(strokes, points, 'Z', "0,0 4.2,0 0,6 4.2,6");
+        Define(strokes, points, '0', "0,0r 4,0r 4,6r 0,6r 0,0r");
+        Define(strokes, points, '1', "0,1.4 1.6,0 1.6,6", -0.2f);
+        Define(strokes, points, '2', "0,1.6 0,0r 4,0r 4,2.6r 0,6 4,6");
+        Define(strokes, points, '3', "0,0 4,0r 4,6r 0,6|1.4,3 4,3");
+        Define(strokes, points, '4', "3,6 3,0 0,4 4.2,4");
+        Define(strokes, points, '5', "4,0 0,0 0,2.8 4,2.8r 4,6r 0,6");
+        Define(strokes, points, '6', "4,0 0,0r 0,6r 4,6r 4,2.8r 0,2.8");
+        Define(strokes, points, '7', "0,0 4,0 1.4,6", 0f, -0.4f);
+        Define(strokes, points, '8', "0,0r 4,0r 4,6r 0,6r 0,0r|0,3 4,3");
+        Define(strokes, points, '9', "4,3.2 0,3.2r 0,0r 4,0r 4,6r 0,6");
+        Define(strokes, points, '\'', "0,0 0,1.6");
+        Define(strokes, points, '-', "0,3.2 2.6,3.2");
+        Define(strokes, points, '!', "0,0 0,4|0,5.9 0,6");
+        Strokes = strokes.ToArray();
+        Points = points.ToArray();
+        for (var index = 0; index < Strokes.Length; index++)
+        {
+            LongestStroke = Math.Max(LongestStroke, Strokes[index].Count);
+        }
     }
 
     public static string Text(CasinoSign sign) => Words[(int)sign];
 
-    public static bool HasGlyph(char character) => character == ' ' || GlyphFor(character) is not null;
+    public static bool HasGlyph(char character) => character == ' ' || SlotOf(character) >= 0;
 
     public static float Measure(CasinoSign sign, float height) => Measure(Words[(int)sign], height);
 
     public static float Measure(ReadOnlySpan<char> text, float height)
     {
-        var unit = height / GridHeight;
-        var width = 0f;
-        for (var index = 0; index < text.Length; index++)
+        var typesetter = new Typesetter(text);
+        var placed = false;
+        while (typesetter.Next(out _, out _))
         {
-            width += Advance(text[index]) * unit;
-            if (index < text.Length - 1)
-            {
-                width += LetterGap * unit;
-            }
+            placed = true;
         }
 
-        return width;
+        return placed ? (typesetter.Pen + StrokeFraction * GridHeight) * height / GridHeight : 0f;
     }
 
     public static float HeightToFit(CasinoSign sign, float maxWidth, float maxHeight)
@@ -141,77 +148,211 @@ internal static class CasinoSigns
     public static void Draw(ImDrawListPtr drawList, ReadOnlySpan<char> text, Vector2 center, float height,
         Vector4 color, float lit)
     {
-        if (height <= 0f || text.Length == 0)
+        if (height <= 0f || text.Length == 0 || color.W * lit <= 0f)
         {
             return;
         }
 
         var unit = height / GridHeight;
-        var width = Measure(text, height);
-        var origin = new Vector2(center.X - width * 0.5f, center.Y - height * 0.5f);
-        var tint = color with { W = color.W * Math.Clamp(lit, 0f, 1f) };
+        var left = center.X - Measure(text, height) * 0.5f + height * StrokeFraction * 0.5f;
+        var top = center.Y - height * 0.5f;
         var stroke = MathF.Max(1f, height * StrokeFraction);
-        Span<Vector2> points = stackalloc Vector2[MaxStrokePoints];
-        for (var index = 0; index < text.Length; index++)
+        Span<uint> palette = stackalloc uint[NeonTubeMesh.PaletteSize];
+        NeonTubeMesh.Palette(color, lit, palette);
+        Span<Vector2> path = stackalloc Vector2[LongestStroke];
+        var typesetter = new Typesetter(text);
+        while (typesetter.Next(out var slot, out var pen))
         {
-            var glyph = GlyphFor(text[index]);
-            if (glyph is not null)
+            var shape = Shapes[slot];
+            var origin = new Vector2(left + pen * unit, top);
+            for (var strokeIndex = 0; strokeIndex < shape.StrokeCount; strokeIndex++)
             {
-                for (var strokeIndex = 0; strokeIndex < glyph.Length; strokeIndex++)
+                var range = Strokes[shape.FirstStroke + strokeIndex];
+                for (var pointIndex = 0; pointIndex < range.Count; pointIndex++)
                 {
-                    var source = glyph[strokeIndex];
-                    var count = Math.Min(source.Length, MaxStrokePoints);
-                    for (var pointIndex = 0; pointIndex < count; pointIndex++)
-                    {
-                        points[pointIndex] = origin + source[pointIndex] * unit;
-                    }
-
-                    CasinoLights.NeonTube(drawList, points[..count], tint, stroke, lit);
+                    path[pointIndex] = origin + Points[range.First + pointIndex] * unit;
                 }
+
+                NeonTubeMesh.Stroke(drawList, path[..range.Count], range.Closed, stroke, palette);
             }
-
-            origin.X += (Advance(text[index]) + LetterGap) * unit;
         }
     }
 
-    private static float Advance(char character)
+    private static int SlotOf(char character)
     {
         var slot = character - FirstChar;
-        if (slot < 0 || slot >= Advances.Length)
-        {
-            return GridWidth;
-        }
-
-        var advance = Advances[slot];
-        return advance > 0f ? advance : GridWidth;
+        return slot >= 0 && slot < Shapes.Length && Shapes[slot].StrokeCount > 0 ? slot : -1;
     }
 
-    private static Vector2[][]? GlyphFor(char character)
+    private static void Define(List<StrokeRange> strokes, List<Vector2> points, char character, string paths,
+        float leading = 0f, float trailing = 0f)
     {
-        var slot = character - FirstChar;
-        return slot < 0 || slot >= Glyphs.Length ? null : Glyphs[slot];
-    }
-
-    private static void Define(char character, string strokes, float advance = GridWidth)
-    {
-        var parts = strokes.Split('|');
-        var glyph = new Vector2[parts.Length][];
+        var firstStroke = strokes.Count;
+        var firstPoint = points.Count;
+        var parts = paths.Split('|');
         for (var partIndex = 0; partIndex < parts.Length; partIndex++)
         {
-            var pairs = parts[partIndex].Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var points = new Vector2[pairs.Length];
-            for (var pairIndex = 0; pairIndex < pairs.Length; pairIndex++)
-            {
-                var comma = pairs[pairIndex].IndexOf(',');
-                points[pairIndex] = new Vector2(
-                    float.Parse(pairs[pairIndex].AsSpan(0, comma), CultureInfo.InvariantCulture),
-                    float.Parse(pairs[pairIndex].AsSpan(comma + 1), CultureInfo.InvariantCulture));
-            }
-
-            glyph[partIndex] = points;
+            var start = points.Count;
+            var closed = Trace(parts[partIndex], points);
+            strokes.Add(new StrokeRange(start, points.Count - start, closed));
         }
 
-        Glyphs[character - FirstChar] = glyph;
-        Advances[character - FirstChar] = advance;
+        var minimum = float.MaxValue;
+        var maximum = float.MinValue;
+        for (var pointIndex = firstPoint; pointIndex < points.Count; pointIndex++)
+        {
+            minimum = MathF.Min(minimum, points[pointIndex].X);
+            maximum = MathF.Max(maximum, points[pointIndex].X);
+        }
+
+        for (var pointIndex = firstPoint; pointIndex < points.Count; pointIndex++)
+        {
+            points[pointIndex] -= new Vector2(minimum, 0f);
+        }
+
+        Shapes[character - FirstChar] =
+            new GlyphShape(firstStroke, parts.Length, maximum - minimum, leading, trailing);
+    }
+
+    private static bool Trace(string path, List<Vector2> output)
+    {
+        var tokens = path.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var corners = new Vector2[tokens.Length];
+        var rounded = new bool[tokens.Length];
+        for (var tokenIndex = 0; tokenIndex < tokens.Length; tokenIndex++)
+        {
+            var token = tokens[tokenIndex].AsSpan();
+            rounded[tokenIndex] = token[^1] == 'r';
+            var pair = rounded[tokenIndex] ? token[..^1] : token;
+            var comma = pair.IndexOf(',');
+            corners[tokenIndex] = new Vector2(
+                float.Parse(pair[..comma], CultureInfo.InvariantCulture),
+                float.Parse(pair[(comma + 1)..], CultureInfo.InvariantCulture));
+        }
+
+        var closed = corners.Length > 2 && corners[0] == corners[^1];
+        var count = closed ? corners.Length - 1 : corners.Length;
+        if (closed)
+        {
+            rounded[0] |= rounded[^1];
+        }
+
+        var start = output.Count;
+        for (var index = 0; index < count; index++)
+        {
+            if (!rounded[index] || !IsInterior(index, count, closed))
+            {
+                Append(output, start, corners[index]);
+                continue;
+            }
+
+            var previous = (index + count - 1) % count;
+            var next = (index + 1) % count;
+            var incomingReach = Reach(previous, count, closed, rounded);
+            var outgoingReach = Reach(next, count, closed, rounded);
+            Round(output, start, corners[previous], corners[index], corners[next], incomingReach, outgoingReach);
+        }
+
+        if (closed && output.Count - start > 1 &&
+            Vector2.DistanceSquared(output[^1], output[start]) < SamePoint)
+        {
+            output.RemoveAt(output.Count - 1);
+        }
+
+        return closed;
+    }
+
+    private static bool IsInterior(int index, int count, bool closed) => closed || (index > 0 && index < count - 1);
+
+    private static float Reach(int neighbor, int count, bool closed, bool[] rounded) =>
+        rounded[neighbor] && IsInterior(neighbor, count, closed) ? 0.5f : 1f;
+
+    private static void Round(List<Vector2> output, int start, Vector2 previous, Vector2 corner, Vector2 next,
+        float incomingReach, float outgoingReach)
+    {
+        var incoming = corner - previous;
+        var outgoing = next - corner;
+        var incomingLength = incoming.Length();
+        var outgoingLength = outgoing.Length();
+        incoming /= incomingLength;
+        outgoing /= outgoingLength;
+        var turn = MathF.Acos(Math.Clamp(Vector2.Dot(incoming, outgoing), -1f, 1f));
+        if (turn < MinTurn)
+        {
+            Append(output, start, corner);
+            return;
+        }
+
+        var halfTangent = MathF.Tan(turn * 0.5f);
+        var tangent = MathF.Min(CornerRadius * halfTangent,
+            MathF.Min(incomingLength * incomingReach, outgoingLength * outgoingReach));
+        var radius = tangent / halfTangent;
+        var arcStart = corner - incoming * tangent;
+        var side = incoming.X * outgoing.Y - incoming.Y * outgoing.X > 0f ? 1f : -1f;
+        var center = arcStart + new Vector2(-incoming.Y, incoming.X) * side * radius;
+        var startAngle = MathF.Atan2(arcStart.Y - center.Y, arcStart.X - center.X);
+        var steps = Math.Max(2, (int)MathF.Ceiling(turn / ArcStep));
+        for (var step = 0; step <= steps; step++)
+        {
+            var angle = startAngle + side * turn * step / steps;
+            Append(output, start, center + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius);
+        }
+    }
+
+    private static void Append(List<Vector2> output, int start, Vector2 point)
+    {
+        if (output.Count > start && Vector2.DistanceSquared(output[^1], point) < SamePoint)
+        {
+            return;
+        }
+
+        output.Add(point);
+    }
+
+    private readonly record struct StrokeRange(int First, int Count, bool Closed);
+
+    private readonly record struct GlyphShape(int FirstStroke, int StrokeCount, float Width, float Leading,
+        float Trailing);
+
+    private ref struct Typesetter(ReadOnlySpan<char> text)
+    {
+        private readonly ReadOnlySpan<char> text = text;
+        private int index;
+        private int previous = -1;
+        private bool spaced;
+
+        public float Pen { get; private set; }
+
+        public bool Next(out int slot, out float pen)
+        {
+            while (index < text.Length)
+            {
+                var current = SlotOf(text[index]);
+                index++;
+                if (current < 0)
+                {
+                    spaced = true;
+                    continue;
+                }
+
+                if (previous >= 0)
+                {
+                    Pen += spaced
+                        ? SpaceAdvance + LetterGap
+                        : LetterGap + Shapes[previous].Trailing + Shapes[current].Leading;
+                }
+
+                spaced = false;
+                slot = current;
+                pen = Pen;
+                Pen += Shapes[current].Width;
+                previous = current;
+                return true;
+            }
+
+            slot = -1;
+            pen = Pen;
+            return false;
+        }
     }
 }

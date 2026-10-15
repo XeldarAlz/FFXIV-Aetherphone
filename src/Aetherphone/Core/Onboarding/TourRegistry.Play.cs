@@ -15,7 +15,7 @@ internal static partial class TourRegistry
                 GuideStep.TryTap(L.GamesHub.TourLibraryTitle, L.GamesHub.TourLibraryBody, "games.tab.library"),
                 GuideStep.TryTap(L.GamesHub.TourProfileTitle, L.GamesHub.TourProfileBody, "games.tab.records"),
             });
-        Add(tours, "casino", 4,
+        Add(tours, "casino", 5,
             new[]
             {
                 GuideStep.Intro(L.Apps.Casino, L.Onboarding.CasinoIntroBody),
@@ -24,7 +24,7 @@ internal static partial class TourRegistry
                 GuideStep.Point(L.Strip.TourShelvesTitle, L.Strip.TourShelvesBody, "casino.shelves",
                     GuideGesture.Tap),
                 GuideStep.TryTap(L.Strip.TourLiveTitle, L.Strip.TourLiveBody, "casino.tab.live"),
-                GuideStep.Point(L.Strip.TourRecordsTitle, L.Strip.TourRecordsBody, "casino.records",
+                GuideStep.Point(L.FloorPage.TourShortcutsTitle, L.FloorPage.TourShortcutsBody, "casino.shortcuts",
                     GuideGesture.Tap),
             });
         Add(tours, "coin", 3,

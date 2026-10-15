@@ -190,7 +190,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool ScrollWhileIdle { get; set; } = true;
     public bool ShowLodestonePortraits { get; set; } = true;
     public int LodestoneIdIndexVersion { get; set; }
-    public float TextZoom { get; set; } = 1.0f;
+    public float TextZoom { get; set; } = TextZoomCatalog.DefaultZoom;
     public string FontGlyphCache { get; set; } = string.Empty;
     public string IconGlyphCache { get; set; } = string.Empty;
     public float ScreenBrightness { get; set; } = 1f;
@@ -217,7 +217,8 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool AutoTranslatePosts { get; set; }
     public List<string> TranslatedConversations { get; set; } = new();
     public ThemeMode ThemeMode { get; set; } = ThemeMode.Dark;
-    public SeasonalThemeMode SeasonalThemeMode { get; set; } = SeasonalThemeMode.Automatic;
+    public SeasonalThemeMode SeasonalThemeMode { get; set; } = SeasonalThemeMode.Off;
+    public bool SeasonalThemeOptInApplied { get; set; }
     public bool SeasonalSounds { get; set; } = true;
     public bool SeasonalNameFont { get; set; } = true;
     public bool SeasonalParallax { get; set; } = true;
@@ -1166,6 +1167,32 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
 
         ShowWindowsMedia = false;
         WindowsMediaOptInApplied = true;
+        return true;
+    }
+
+    public void MigrateSeasonalThemeOptIn()
+    {
+        if (!ApplySeasonalThemeOptIn())
+        {
+            return;
+        }
+
+        Save();
+    }
+
+    internal bool ApplySeasonalThemeOptIn()
+    {
+        if (SeasonalThemeOptInApplied)
+        {
+            return false;
+        }
+
+        if (SeasonalThemeMode == SeasonalThemeMode.Automatic)
+        {
+            SeasonalThemeMode = SeasonalThemeMode.Off;
+        }
+
+        SeasonalThemeOptInApplied = true;
         return true;
     }
 

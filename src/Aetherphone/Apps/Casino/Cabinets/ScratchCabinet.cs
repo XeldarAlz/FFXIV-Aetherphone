@@ -310,7 +310,7 @@ internal sealed class ScratchCabinet : ICabinetIdle
         ScratchTicketArt.Shell(drawList, ticketArea, tier, frame.Phase, scale);
         var grid = ScratchTicketArt.GridRect(ticketArea);
         var cell = CellSize(grid, scale);
-        var scratching = playback.Phase == ScratchPhase.Scratching && !frame.Blocked;
+        var scratching = playback.Phase == ScratchPhase.Scratching;
         if (scratching && UiInteract.HoverWindowOnly(grid.Min, grid.Max))
         {
             UiInteract.ReportGestureSurface();
@@ -550,9 +550,9 @@ internal sealed class ScratchCabinet : ICabinetIdle
 
         var price = CurrentPrice;
         composer.Reset(price);
-        var blocked = state.StakesPaused || state.Draining || frame.Blocked;
+        var blocked = state.StakesPaused || state.Draining;
         var repeat = stage.RepeatPressed();
-        if (repeat && scratching && !composer.Auto.Running && !frame.Blocked)
+        if (repeat && scratching && !composer.Auto.Running)
         {
             RevealAll();
         }

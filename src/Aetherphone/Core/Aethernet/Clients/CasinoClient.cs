@@ -9,6 +9,7 @@ internal sealed partial class CasinoClient
 {
     internal const string StatePath = "/casino";
     internal const string BuyChipsPath = "/casino/chips/buy";
+    internal const string CashOutChipsPath = "/casino/chips/cashout";
     internal const string CloseSittingPath = "/casino/sittings/close";
     internal const string LimitsPath = "/casino/limits";
     internal const string SpinSlotsPath = "/casino/slots/spin";
@@ -162,6 +163,14 @@ internal sealed partial class CasinoClient
         return net.PostAsync(BuyChipsPath, new CasinoBuyChipsRequest(coins, clientActionId),
             AethernetJsonContext.Default.CasinoBuyChipsRequest, AethernetJsonContext.Default.CasinoBuyChipsDto, token,
             null, onFailure);
+    }
+
+    public Task<CasinoCashOutChipsDto?> CashOutChipsAsync(long coins, string clientActionId, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.PostAsync(CashOutChipsPath, new CasinoCashOutChipsRequest(coins, clientActionId),
+            AethernetJsonContext.Default.CasinoCashOutChipsRequest,
+            AethernetJsonContext.Default.CasinoCashOutChipsDto, token, null, onFailure);
     }
 
     public Task<CasinoSittingResultDto?> CloseSittingAsync(string sittingId, CancellationToken token,

@@ -318,16 +318,19 @@ public sealed class BlackjackTableLayoutTests
         }
     }
 
-    [Fact]
-    public void TheSeatArcBowsTowardThePlayer()
+    [Theory]
+    [InlineData(BlackjackRules.SeatCount - 1, 36f)]
+    [InlineData(BlackjackRules.SeatCount - 2, 44f)]
+    public void TheSeatArcBowsTowardThePlayer(int railCount, float puckFloor)
     {
-        var layout = Compute(1f, 272f, 489f, BlackjackRules.SeatCount - 1, true);
+        var layout = Compute(1f, 272f, 489f, railCount, true);
         var edge = layout.RailPuckCenter(0);
-        var middle = layout.RailPuckCenter(2);
-        var last = layout.RailPuckCenter(4);
+        var middle = layout.RailPuckCenter(railCount / 2);
+        var last = layout.RailPuckCenter(railCount - 1);
+        Assert.Equal(0f, layout.Stagger);
         Assert.True(edge.Y < middle.Y);
         Assert.Equal(edge.Y, last.Y, 3);
-        Assert.True(layout.PuckRadius * 2f >= 44f);
+        Assert.True(layout.PuckRadius * 2f >= puckFloor - Epsilon);
     }
 
     [Fact]
@@ -390,8 +393,9 @@ public sealed class BlackjackTableLayoutTests
         Assert.Equal(0, BlackjackTableLayout.RailSlotOf(3, mySeat));
         Assert.Equal(1, BlackjackTableLayout.RailSlotOf(4, mySeat));
         Assert.Equal(2, BlackjackTableLayout.RailSlotOf(5, mySeat));
-        Assert.Equal(3, BlackjackTableLayout.RailSlotOf(0, mySeat));
-        Assert.Equal(4, BlackjackTableLayout.RailSlotOf(1, mySeat));
+        Assert.Equal(3, BlackjackTableLayout.RailSlotOf(6, mySeat));
+        Assert.Equal(4, BlackjackTableLayout.RailSlotOf(0, mySeat));
+        Assert.Equal(5, BlackjackTableLayout.RailSlotOf(1, mySeat));
     }
 
     [Fact]
@@ -512,17 +516,19 @@ public sealed class BlackjackTableLayoutTests
         }
     }
 
-    [Fact]
-    public void TheOwnersPhoneKeepsSideStakesOffTheStackLineAndTheHeroCards()
+    [Theory]
+    [InlineData(BlackjackRules.SeatCount - 1, 18f)]
+    [InlineData(BlackjackRules.SeatCount - 2, 20f)]
+    public void TheOwnersPhoneKeepsSideStakesOffTheStackLineAndTheHeroCards(int railCount, float stakeFloor)
     {
-        var layout = Compute(1f, 272f, 489f, BlackjackRules.SeatCount - 1, true);
-        for (var slot = 0; slot < BlackjackRules.SeatCount - 1; slot++)
+        var layout = Compute(1f, 272f, 489f, railCount, true);
+        for (var slot = 0; slot < railCount; slot++)
         {
             var plate = layout.RailPlateRect(slot);
             var stake = layout.RailSideStakeRect(slot, BlackjackSideBet.PerfectPairs, true);
             Assert.Equal(plate.Max.Y - BlackjackTableLayout.SideStakeOverlap, stake.Min.Y, 3);
             Assert.True(stake.Max.Y <= layout.SideStakeFloor + Epsilon);
-            Assert.True(stake.Width >= 20f);
+            Assert.True(stake.Width >= stakeFloor);
         }
     }
 
@@ -742,8 +748,12 @@ public sealed class BlackjackTableLayoutTests
 
             for (var other = slot + 1; other < railCount; other++)
             {
+                var otherPuck = layout.RailPuckCenter(other);
                 Assert.False(Overlaps(seat, layout.RailSeatRect(other)));
-                Assert.True(Vector2.Distance(puck, layout.RailPuckCenter(other)) >= layout.SpotRadius * 2f - Epsilon);
+                Assert.True(Vector2.Distance(puck, otherPuck) >= layout.SpotRadius * 2f - Epsilon);
+                Assert.False(Overlaps(plate, layout.RailPlateRect(other)));
+                Assert.False(Overlaps(plate, PuckBox(otherPuck, layout.PuckRadius)));
+                Assert.False(Overlaps(layout.RailPlateRect(other), PuckBox(puck, layout.PuckRadius)));
             }
         }
     }

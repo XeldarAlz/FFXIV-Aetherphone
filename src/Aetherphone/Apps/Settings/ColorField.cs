@@ -35,6 +35,7 @@ internal static class ColorField
         }
     }
 
+    private const float CardHeight = 210f;
     private const float RailHeight = 20f;
     private const float HandleRadius = 10f;
     private const float HandleRing = 3f;
@@ -48,6 +49,18 @@ internal static class ColorField
     private static string activeId = string.Empty;
     private static bool activeIsRail;
     private static int activeFrame = -1;
+
+    public static Result DrawCard(string id, HsvColor color, PhoneTheme theme)
+    {
+        var card = GroupCard.Begin(theme, 1, CardHeight);
+        var row = card.NextRow();
+        var padding = Metrics.Space.Lg * UiScale.Current;
+        var field = new Rect(new Vector2(row.Min.X, row.Min.Y + padding),
+            new Vector2(row.Max.X, row.Max.Y - padding));
+        var result = Draw(id, field, color, theme, ImGui.GetColorU32(theme.GroupedCard));
+        card.End();
+        return result;
+    }
 
     public static Result Draw(string id, Rect area, HsvColor color, PhoneTheme theme, uint maskColor)
     {

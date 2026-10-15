@@ -48,13 +48,16 @@ internal struct GroupCard
         var origin = ImGui.GetCursorScreenPos();
         var right = origin.X + ImGui.GetContentRegionAvail().X;
         var height = totalHeight * scale;
-        var cardMax = new Vector2(right, origin.Y + height);
-        var drawList = ImGui.GetWindowDrawList();
-        var radius = Metrics.Radius.Grouped * scale;
-        Squircle.Fill(drawList, origin, cardMax, radius, ImGui.GetColorU32(theme.GroupedCard));
-        Squircle.Stroke(drawList, origin, cardMax, radius,
-            ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, CardStrokeAlpha)), Metrics.Stroke.Hairline);
+        DrawSurface(ImGui.GetWindowDrawList(), origin, new Vector2(right, origin.Y + height), theme, scale);
         return new GroupCard(theme.Separator, scale, rowHeight, origin.X, right, origin.Y, totalHeight);
+    }
+
+    public static void DrawSurface(ImDrawListPtr drawList, Vector2 min, Vector2 max, PhoneTheme theme, float scale)
+    {
+        var radius = Metrics.Radius.Grouped * scale;
+        Squircle.Fill(drawList, min, max, radius, ImGui.GetColorU32(theme.GroupedCard));
+        Squircle.Stroke(drawList, min, max, radius,
+            ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, CardStrokeAlpha)), Metrics.Stroke.Hairline);
     }
 
     private static GroupCard Begin(AppSkin ui, float totalHeight, float rowHeight)

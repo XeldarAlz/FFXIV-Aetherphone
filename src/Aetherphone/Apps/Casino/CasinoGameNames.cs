@@ -31,4 +31,7 @@ internal static class CasinoGameNames
         CasinoGames.Book => L.Book.Game,
         _ => L.Apps.Casino,
     };
+
+    public static LocString OfEveryMachine(string gameId) =>
+        string.Equals(gameId, CasinoGames.Slots, StringComparison.Ordinal) ? L.Casino.GameSlots : Of(gameId);
 }

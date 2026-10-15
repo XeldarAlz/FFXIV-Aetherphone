@@ -39,10 +39,10 @@ public sealed class CasinoTableLedgerTests
     [Fact]
     public void EachHostActionHasItsOwnLabel()
     {
-        Assert.Equal(Loc.T(L.Tables.MarkPaid), LedgerEntryCards.OptionLabel(LedgerEntryOption.MarkPaid));
-        Assert.Equal(Loc.T(L.Tables.MarkUnpaid), LedgerEntryCards.OptionLabel(LedgerEntryOption.MarkUnpaid));
-        Assert.Equal(Loc.T(L.Tables.RemoveEntry), LedgerEntryCards.OptionLabel(LedgerEntryOption.Remove));
-        Assert.Equal(string.Empty, LedgerEntryCards.OptionLabel(LedgerEntryOption.None));
+        Assert.Equal(Loc.T(L.Tables.MarkPaid), LedgerEntryRows.OptionLabel(LedgerEntryOption.MarkPaid));
+        Assert.Equal(Loc.T(L.Tables.MarkUnpaid), LedgerEntryRows.OptionLabel(LedgerEntryOption.MarkUnpaid));
+        Assert.Equal(Loc.T(L.Tables.RemoveEntry), LedgerEntryRows.OptionLabel(LedgerEntryOption.Remove));
+        Assert.Equal(string.Empty, LedgerEntryRows.OptionLabel(LedgerEntryOption.None));
     }
 
     [Fact]

@@ -1,142 +1,107 @@
 using Aetherphone.Core;
+using Aetherphone.Windows.Components;
 
 namespace Aetherphone.Apps.Casino.Tables;
 
-[Flags]
-internal enum HostStep : byte
-{
-    None = 0,
-    Game = 1,
-    PlayFor = 2,
-    Table = 4,
-}
-
 internal static class HostFlowLayout
 {
-    public const HostStep EveryStep = HostStep.Game | HostStep.PlayFor | HostStep.Table;
-
-    public static HostStep Steps(HostGame game) =>
-        HostGames.IsBook(game) ? HostStep.Game | HostStep.Table : EveryStep;
-
-    public static int StepOrdinal(HostStep steps, HostStep step)
-    {
-        if ((steps & step) == 0)
-        {
-            return 0;
-        }
-
-        var ordinal = 0;
-        for (var bit = HostStep.Game; bit <= step; bit = (HostStep)((byte)bit << 1))
-        {
-            if ((steps & bit) != 0)
-            {
-                ordinal++;
-            }
-        }
-
-        return ordinal;
-    }
-
+    public const int Columns = 3;
     public const float Touch = 44f;
-    public const float SectionGap = 22f;
-    public const float StepGap = 10f;
-    public const float StepDisc = 26f;
+    public const float SectionGap = 18f;
+    public const float HeadingGap = 8f;
     public const float CardPad = 14f;
-    public const float CardGap = 10f;
-    public const float TileGap = 12f;
-    public const float TileMinWidth = 132f;
-    public const float TileMaxWidth = 168f;
-    public const float TileArt = 96f;
-    public const float VisibleTiles = 2.2f;
-    public const float RailPad = 4f;
-    public const float ChoiceIcon = 40f;
-    public const float CheckSize = 22f;
+    public const float CardPadTop = 12f;
+    public const float CardPadBottom = 8f;
+    public const float CardGap = 8f;
+    public const float LineGap = 4f;
+    public const float HeaderPad = 12f;
+    public const float HeaderTile = 52f;
+    public const float HeaderGap = 12f;
+    public const float SwitcherGap = 6f;
+    public const float SwitcherHeight = 40f;
+    public const float SwitcherGlyph = 18f;
+    public const float ChoiceHeight = 88f;
+    public const float ChoiceIcon = 36f;
+    public const float ChoiceGap = 8f;
+    public const float ChoiceInnerGap = 7f;
+    public const float CheckSize = 18f;
+    public const float CheckInset = 7f;
+    public const float JoinHeight = 70f;
+    public const float JoinIcon = 20f;
+    public const float JoinInnerGap = 6f;
     public const float SeatDisc = 30f;
     public const float SeatGap = 6f;
-    public const float JoinIcon = 30f;
-    public const float LineGap = 4f;
+    public const float FieldHeight = 46f;
+    public const float RulesIcon = 38f;
+    public const float RulesPad = 12f;
+    public const float Chevron = 12f;
+    public const float SegmentTrack = 32f;
+    public const float RowPad = 12f;
+    public const float TogglePad = 11f;
     public const float FooterPad = 12f;
+    public const float FooterGap = 10f;
 
-    public static float StepHeight(float scale, float titleHeight) => MathF.Max(StepDisc * scale, titleHeight);
+    public static float ColumnWidth(float width, int columns, float gap) =>
+        MathF.Max(1f, (width - gap * (columns - 1)) / columns);
 
-    public static float TileWidth(float width, float scale) =>
-        Math.Clamp((width - TileGap * scale) / VisibleTiles, TileMinWidth * scale, TileMaxWidth * scale);
-
-    public static float TileHeight(float scale, float headlineHeight, float lineBlockHeight) =>
-        TileArt * scale + CardPad * scale + headlineHeight + LineGap * scale + lineBlockHeight + CardPad * scale;
-
-    public static float TileTextWidth(float tileWidth, float scale) => MathF.Max(1f, tileWidth - CardPad * 2f * scale);
-
-    public static Rect Tile(float left, float top, int index, float tileWidth, float tileHeight, float scale)
+    public static Rect GridCell(float left, float top, float width, int index, int columns, float height, float gap)
     {
-        var x = left + index * (tileWidth + TileGap * scale);
-        return new Rect(new Vector2(x, top), new Vector2(x + tileWidth, top + tileHeight));
+        var columnWidth = ColumnWidth(width, columns, gap);
+        var row = index / columns;
+        var column = index % columns;
+        var x = left + column * (columnWidth + gap);
+        var y = top + row * (height + gap);
+        return new Rect(new Vector2(x, y), new Vector2(x + columnWidth, y + height));
     }
 
-    public static float ChoiceTextLeft(float left, float scale) => left + CardPad * scale + ChoiceIcon * scale + CardPad * scale;
-
-    public static float ChoiceTextWidth(float width, float scale) =>
-        MathF.Max(1f, width - CardPad * 3f * scale - ChoiceIcon * scale - CheckSize * scale - CardPad * scale);
-
-    public static float ChoiceHeight(float scale, float titleHeight, float lineBlockHeight) =>
-        MathF.Max(MathF.Max(Touch, ChoiceIcon + CardPad * 2f) * scale,
-            CardPad * 2f * scale + titleHeight + LineGap * scale + lineBlockHeight);
-
-    public static Rect ChoiceIconRect(in Rect card, float scale)
+    public static float GridHeight(int count, int columns, float height, float gap)
     {
-        var size = ChoiceIcon * scale;
-        var min = new Vector2(card.Min.X + CardPad * scale, card.Center.Y - size * 0.5f);
-        return new Rect(min, min + new Vector2(size, size));
+        var rows = (count + columns - 1) / columns;
+        return rows <= 0 ? 0f : rows * height + (rows - 1) * gap;
     }
 
-    public static Vector2 ChoiceCheck(in Rect card, float scale) =>
-        new(card.Max.X - CardPad * scale - CheckSize * 0.5f * scale, card.Center.Y);
+    public static float HeaderHeight(float scale, float nameHeight, float lineBlockHeight) =>
+        HeaderPad * 2f * scale + MathF.Max(HeaderTile * scale, nameHeight + LineGap * scale + lineBlockHeight);
 
-    public static int SeatsPerRow(float width, float scale) =>
-        Math.Max(1, (int)MathF.Floor((width + SeatGap * scale) / ((Touch + SeatGap) * scale)));
+    public static float ChoiceTileHeight(float scale, float labelBlockHeight) =>
+        MathF.Max(ChoiceHeight * scale,
+            CardPad * 2f * scale + ChoiceIcon * scale + ChoiceInnerGap * scale + labelBlockHeight);
 
-    public static int SeatRows(float width, int seats, float scale)
+    public static float JoinTileHeight(float scale, float labelBlockHeight) =>
+        MathF.Max(JoinHeight * scale,
+            CardPad * 2f * scale + JoinIcon * scale + JoinInnerGap * scale + labelBlockHeight);
+
+    public static Vector2 CheckCenter(in Rect tile, float scale)
     {
-        var perRow = SeatsPerRow(width, scale);
-        return (seats + perRow - 1) / perRow;
+        var offset = (CheckInset + CheckSize * 0.5f) * scale;
+        return new Vector2(tile.Max.X - offset, tile.Min.Y + offset);
     }
 
-    public static Rect SeatTarget(float left, float top, float width, int index, int seats, float scale)
+    public static float SeatDiscSize(float width, int seats, float scale)
     {
-        var perRow = Math.Min(seats, SeatsPerRow(width, scale));
-        var row = index / perRow;
-        var column = index % perRow;
-        var target = Touch * scale;
-        var stride = MathF.Min((width - target) / MathF.Max(1, perRow - 1), target * 1.6f);
-        if (perRow == 1)
-        {
-            stride = 0f;
-        }
-
-        var x = left + column * stride;
-        var y = top + row * (target + SeatGap * scale);
-        return new Rect(new Vector2(x, y), new Vector2(x + target, y + target));
+        var fit = (width - SeatGap * scale * (seats - 1)) / Math.Max(1, seats);
+        return MathF.Max(1f, MathF.Min(SeatDisc * scale, fit));
     }
 
-    public static float SeatBlockHeight(float width, int seats, float scale)
+    public static Rect SeatSlot(float left, float top, float width, int index, int seats, float scale)
     {
-        var rows = SeatRows(width, seats, scale);
-        return rows * Touch * scale + (rows - 1) * SeatGap * scale;
+        var disc = SeatDiscSize(width, seats, scale);
+        var gap = SeatGap * scale;
+        var center = left + disc * 0.5f + index * (disc + gap);
+        var half = (disc + gap) * 0.5f;
+        var slotLeft = MathF.Max(left, center - half);
+        var slotRight = MathF.Min(left + width, center + half);
+        return new Rect(new Vector2(slotLeft, top), new Vector2(slotRight, top + Touch * scale));
     }
 
-    public static Rect JoinColumn(float left, float top, float width, int index, int count, float height, float scale)
+    public static Vector2 SeatCenter(float left, float top, float width, int index, int seats, float scale)
     {
-        var gap = CardGap * scale;
-        var columnWidth = (width - gap * (count - 1)) / count;
-        var x = left + index * (columnWidth + gap);
-        return new Rect(new Vector2(x, top), new Vector2(x + columnWidth, top + height));
+        var disc = SeatDiscSize(width, seats, scale);
+        return new Vector2(left + disc * 0.5f + index * (disc + SeatGap * scale), top + Touch * scale * 0.5f);
     }
 
-    public static float JoinColumnWidth(float width, int count, float scale) =>
-        (width - CardGap * scale * (count - 1)) / count;
-
-    public static float JoinHeight(float scale, float titleBlockHeight) =>
-        MathF.Max(Touch * scale, CardPad * 2f * scale + JoinIcon * scale + LineGap * scale + titleBlockHeight);
+    public static float SeatCardHeight(float scale, float headHeight) =>
+        (CardPadTop + CardPadBottom) * scale + headHeight + Touch * scale;
 
     public static float LadderHeight(float scale, float labelHeight, float valueHeight) =>
         labelHeight + valueHeight + LadderSlider.RowHeight * scale;
@@ -148,8 +113,33 @@ internal static class HostFlowLayout
         return new Rect(new Vector2(left, y), new Vector2(left + width, y + LadderSlider.RowHeight * scale));
     }
 
-    public static float FooterHeight(float scale, float summaryBlockHeight) =>
-        FooterPad * 2f * scale + summaryBlockHeight + StepGap * scale + Touch * scale;
+    public static float LadderBlockHeight(float scale, float labelHeight, float valueHeight, float hintHeight) =>
+        LadderHeight(scale, labelHeight, valueHeight) + (hintHeight > 0f ? hintHeight + LineGap * scale : 0f);
+
+    public static float LadderCardHeight(float scale, float blockHeight) =>
+        CardPadTop * scale + blockHeight + CardPadBottom * scale;
+
+    public static float RulesRowHeight(float scale, float titleHeight, float summaryBlockHeight) =>
+        RulesPad * 2f * scale + MathF.Max(RulesIcon * scale, titleHeight + 2f * scale + summaryBlockHeight);
+
+    public static float RulesTextWidth(float width, float scale) =>
+        MathF.Max(1f, width - (CardPad * 2f + RulesIcon + HeaderGap + Chevron + LineGap * 2f) * scale);
+
+    public static float SegmentRowHeight(float scale, float labelHeight, float hintHeight) =>
+        RowPad * 2f * scale + labelHeight + CardGap * scale + SegmentTrack * scale
+        + (hintHeight > 0f ? CardGap * scale + hintHeight : 0f);
+
+    public static float ToggleTextWidth(float innerWidth, float scale) =>
+        MathF.Max(1f, innerWidth - (Metrics.Size.ToggleWidth + HeaderGap) * scale);
+
+    public static float ToggleRowHeight(float scale, float textBlockHeight) =>
+        TogglePad * 2f * scale + MathF.Max(Touch * scale, textBlockHeight);
+
+    public static float LadderRowHeight(float scale, float blockHeight) =>
+        RowPad * scale + blockHeight + CardPadBottom * scale;
+
+    public static float FooterHeight(float scale, float blockHeight) =>
+        FooterPad * 2f * scale + blockHeight + FooterGap * scale + Touch * scale;
 
     public static Rect FooterButton(in Rect footer, float scale)
     {

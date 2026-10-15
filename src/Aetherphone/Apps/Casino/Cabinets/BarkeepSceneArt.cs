@@ -18,7 +18,11 @@ internal static class BarkeepSceneArt
     private const float GlowAlpha = 0.28f;
     private const float FeverGlowAlpha = 0.5f;
     private const float FeverCycleSpeed = 1.6f;
-    private const int BubbleGlyphStep = 22;
+    private const float BubbleGlyphStep = 34f;
+    private const float BubbleGlyphExtent = 11f;
+    private const float BubbleHeight = 40f;
+    private const float BubbleTail = 9f;
+    private const float BubblePad = 8f;
     private const float HatClearance = 1.12f;
 
     private static readonly Vector4 WallTop = new(0.07f, 0.035f, 0.03f, 0.96f);
@@ -29,8 +33,9 @@ internal static class BarkeepSceneArt
     private static readonly Vector4 CounterTop = new(0.42f, 0.23f, 0.11f, 1f);
     private static readonly Vector4 CounterFront = new(0.13f, 0.07f, 0.04f, 1f);
     private static readonly Vector4 Brass = new(0.92f, 0.74f, 0.40f, 1f);
-    private static readonly Vector4 BubbleFill = new(0.97f, 0.95f, 0.90f, 0.96f);
-    private static readonly Vector4 BubbleInk = new(0.16f, 0.10f, 0.08f, 1f);
+    private static readonly Vector4 BubbleFill = new(0.06f, 0.035f, 0.05f, 0.95f);
+    private static readonly Vector4 BubbleRim = BarkeepArt.PerfectGold with { W = 0.85f };
+    private static readonly Vector4 BubbleInk = CasinoColors.InkTitle;
     private static readonly Vector4 Eye = new(0.08f, 0.06f, 0.08f, 1f);
 
     private static readonly Vector4[] BottleColors =
@@ -192,31 +197,56 @@ internal static class BarkeepSceneArt
         }
 
         var step = BubbleGlyphStep * scale;
-        var width = steps * step + 14f * scale;
-        var height = 26f * scale;
-        var tail = 7f * scale;
+        var pad = BubblePad * scale;
+        var width = steps * step + pad * 2f;
+        var height = BubbleHeight * scale;
+        var tail = BubbleTail * scale;
+        var rimThickness = MathF.Max(1f, 1.6f * scale);
         var min = new Vector2(tip.X - width * 0.5f, tip.Y - tail - height);
         var max = new Vector2(tip.X + width * 0.5f, tip.Y - tail);
         var fill = ImGui.GetColorU32(BubbleFill);
+        var rim = ImGui.GetColorU32(BubbleRim);
         Squircle.Fill(drawList, min, max, height * 0.5f, fill);
-        drawList.AddTriangleFilled(new Vector2(tip.X - tail, max.Y - 1f), new Vector2(tip.X + tail, max.Y - 1f), tip, fill);
+        Squircle.Stroke(drawList, min, max, height * 0.5f, rim, rimThickness);
+        DrawBubbleTail(drawList, tip, max.Y, tail, rimThickness, fill, rim);
         for (var stepIndex = 0; stepIndex < steps; stepIndex++)
         {
-            var center = new Vector2(min.X + 7f * scale + step * (stepIndex + 0.5f), (min.Y + max.Y) * 0.5f);
+            var center = new Vector2(min.X + pad + step * (stepIndex + 0.5f), (min.Y + max.Y) * 0.5f);
+            var discRadius = step * 0.42f;
             var done = stepIndex < shift.CurrentStepIndex;
             var active = stepIndex == shift.CurrentStepIndex;
-            var ink = done
-                ? BarkeepArt.GradeTint(shift.CurrentOrderGrade(stepIndex), accent)
-                : active ? BubbleInk : Palette.WithAlpha(BubbleInk, 0.35f);
-            if (active)
+            Vector4 ink;
+            if (done)
             {
-                drawList.AddCircle(center, step * 0.46f, ImGui.GetColorU32(accent with { W = 0.4f + 0.4f * pulse }), 20,
-                    MathF.Max(1f, 1.6f * scale));
+                ink = BarkeepArt.GradeTint(shift.CurrentOrderGrade(stepIndex), accent);
+                drawList.AddCircleFilled(center, discRadius, ImGui.GetColorU32(ink with { W = 0.22f }), 24);
+            }
+            else if (active)
+            {
+                ink = BubbleInk;
+                drawList.AddCircleFilled(center, discRadius, ImGui.GetColorU32(BubbleInk with { W = 0.14f }), 24);
+                drawList.AddCircle(center, discRadius, ImGui.GetColorU32(accent with { W = 0.5f + 0.4f * pulse }), 24,
+                    MathF.Max(1f, 2f * scale));
+            }
+            else
+            {
+                ink = Palette.WithAlpha(BubbleInk, 0.45f);
             }
 
-            BarkeepArt.DrawVerbGlyph(drawList, shift.StepKindAt(shift.CurrentPatronIndex, stepIndex), center, 7f * scale,
-                ImGui.GetColorU32(ink));
+            BarkeepArt.DrawVerbGlyph(drawList, shift.StepKindAt(shift.CurrentPatronIndex, stepIndex), center,
+                BubbleGlyphExtent * scale, ImGui.GetColorU32(ink));
         }
+    }
+
+    private static void DrawBubbleTail(ImDrawListPtr drawList, Vector2 tip, float bubbleBottom, float tail,
+        float rimThickness, uint fill, uint rim)
+    {
+        var overlap = rimThickness * 1.5f;
+        var top = bubbleBottom - overlap;
+        var halfAtTop = tail * (tip.Y - top) / (tip.Y - bubbleBottom);
+        drawList.AddTriangleFilled(new Vector2(tip.X - halfAtTop, top), new Vector2(tip.X + halfAtTop, top), tip, fill);
+        drawList.AddLine(new Vector2(tip.X - tail, bubbleBottom), tip, rim, rimThickness);
+        drawList.AddLine(new Vector2(tip.X + tail, bubbleBottom), tip, rim, rimThickness);
     }
 
     private static void DrawBottle(ImDrawListPtr drawList, in BarkeepBottle bottle, Rect shelves, float plankY,

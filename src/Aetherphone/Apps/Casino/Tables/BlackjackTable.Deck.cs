@@ -193,6 +193,7 @@ internal sealed partial class BlackjackTable
         var canBet = onBoard && CasinoJoinGate.CanPlaceBet(board.Phase, true, seatFlow.Waiting, draining, floorPaused);
         var facts = new BlackjackDeckFacts(
             dealing,
+            banking,
             bought,
             onBoard,
             CasinoSeatMachine.Holds(seatFlow.Stage),
@@ -210,6 +211,11 @@ internal sealed partial class BlackjackTable
                 return;
             case BlackjackDeck.Dealer:
                 DrawDealerDeck(ui, board, row, scale);
+                return;
+            case BlackjackDeck.Bank:
+                StageText.Status(ImGui.GetWindowDrawList(), BlackjackDeckLayout.UpperRow(row, scale).Center,
+                    Loc.T(L.Tables.HostBanksNote), row.Width, scale);
+                DrawLedgerAction(stage, ui);
                 return;
             case BlackjackDeck.Rebuy:
                 DrawStand(stage, ui, state, draining, banked);
@@ -269,19 +275,10 @@ internal sealed partial class BlackjackTable
             return;
         }
 
-        var forfeits = ForfeitsTournament;
-        if (!stage.SecondaryAction(StandLabel(state, draining, banked, forfeits), !seatFlow.Busy, ui.Ink))
+        if (stage.SecondaryAction(StandLabel(state, draining, banked, ForfeitsTournament), !seatFlow.Busy, ui.Ink))
         {
-            return;
+            ConfirmLeave(standUp);
         }
-
-        if (forfeits)
-        {
-            ConfirmResign(resignSeat);
-            return;
-        }
-
-        StandUp();
     }
 
     private static string StandLabel(CasinoStateDto state, bool draining, bool banked, bool forfeits)
@@ -376,7 +373,7 @@ internal sealed partial class BlackjackTable
         var currency = CasinoCurrencies.Of(board);
         var minimum = board.MinBet > 0 ? board.MinBet : BlackjackRules.MinBet;
         var tableMax = board.MaxBet > 0 ? board.MaxBet : BlackjackRules.MaxBet;
-        var blocked = veiled || board.Paused || rooms.StakeInFlight || frame.Blocked;
+        var blocked = veiled || board.Paused || rooms.StakeInFlight;
         if (currency == CasinoCurrencies.Gil)
         {
             var inset = BetComposer.Pad * scale;

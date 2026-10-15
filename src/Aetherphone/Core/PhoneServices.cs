@@ -235,6 +235,7 @@ internal sealed class PhoneServices : IDisposable
     public required Feedback.FeedbackLauncher FeedbackLauncher { get; init; }
     public required Maps.HuntsMapMarkers HuntsMapMarkers { get; init; }
     public required Shell.MinimizedLayoutService MinimizedLayout { get; init; }
+    public required Shell.MinimizedPreview MinimizedPreview { get; init; }
     public required NameplateTitleService NameplateTitles { get; init; }
 
     public static PhoneServices Build(Configuration configuration, IChatGui chatGui, IDataManager dataManager,
@@ -485,6 +486,7 @@ internal sealed class PhoneServices : IDisposable
             Installer = installer,
             Configuration = configuration,
             MinimizedLayout = new Shell.MinimizedLayoutService(configuration),
+            MinimizedPreview = new Shell.MinimizedPreview(),
             Themes = themes,
             Looks = looks,
             GameData = gameData,

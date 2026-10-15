@@ -251,6 +251,19 @@ public sealed class TournamentPlaybackTests
     }
 
     [Fact]
+    public void OnlyAFreePlayBlackjackDoorOffersATournament()
+    {
+        Assert.True(TournamentDoorCard.Applies(
+            new CasinoTableRowDto(TableId: "t1", GameKind: CasinoWire.BlackjackKind, Practice: true)));
+        Assert.False(TournamentDoorCard.Applies(
+            new CasinoTableRowDto(TableId: "t1", GameKind: CasinoWire.BlackjackKind, Currency: CasinoCurrencies.Gil)));
+        Assert.False(TournamentDoorCard.Applies(new CasinoTableRowDto(TableId: "t1", GameKind: CasinoWire.BlackjackKind)));
+        Assert.False(TournamentDoorCard.Applies(
+            new CasinoTableRowDto(TableId: "t1", GameKind: HoldemRules.Kind, Practice: true)));
+        Assert.False(TournamentDoorCard.Applies(null));
+    }
+
+    [Fact]
     public void TournamentHandsAreTakenAsTypedAndGatedOnTheServerBand()
     {
         Assert.Equal(3, TournamentDoorCard.HandsFrom("3"));

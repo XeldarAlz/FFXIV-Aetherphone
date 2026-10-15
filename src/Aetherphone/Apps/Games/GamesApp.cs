@@ -956,7 +956,9 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     private CoinSessionChip BuildCoinSessionChip()
     {
         var wallet = coins.Wallet;
-        if (wallet is not null && RuleExhausted(wallet, "game.session") && RuleExhausted(wallet, "game.deep"))
+        var sessionSpent = wallet is not null && RuleExhausted(wallet, "game.session");
+        var deepSpent = wallet is not null && RuleExhausted(wallet, "game.deep");
+        if (sessionSpent && deepSpent)
         {
             return default;
         }
@@ -970,14 +972,14 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
                 : default;
         }
 
-        var minSeconds = coinSessions.OpenMinSeconds;
+        var minSeconds = sessionSpent ? 0 : coinSessions.OpenMinSeconds;
         if (seconds < minSeconds)
         {
             return new CoinSessionChip(TimeText.Duration(minSeconds - seconds), seconds / (float)minSeconds, false);
         }
 
         var deepSeconds = coinSessions.OpenDeepSeconds;
-        if (seconds < deepSeconds)
+        if (!deepSpent && seconds < deepSeconds)
         {
             return new CoinSessionChip(TimeText.Duration(deepSeconds - seconds),
                 (seconds - minSeconds) / (float)(deepSeconds - minSeconds), true);

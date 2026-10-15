@@ -94,34 +94,6 @@ public sealed class CasinoGetChipsTests
     }
 
     [Fact]
-    public void TheCashierQuickAmountsScaleWithTheWallet()
-    {
-        var quick = new long[ChipsAmounts.QuickCount];
-
-        Assert.Equal(3, ChipsAmounts.Quick(1_016_251, quick));
-        Assert.Equal(new long[] { 10_000, 50_000, 200_000 }, quick);
-
-        Assert.Equal(3, ChipsAmounts.Quick(150, quick));
-        Assert.Equal(new long[] { 1, 5, 20 }, quick);
-
-        Assert.Equal(1, ChipsAmounts.Quick(3, quick));
-        Assert.Equal(1, quick[0]);
-        Assert.Equal(0, ChipsAmounts.Quick(0, quick));
-    }
-
-    [Fact]
-    public void NiceFloorStepsOneTwoFive()
-    {
-        Assert.Equal(0, ChipsAmounts.NiceFloor(0));
-        Assert.Equal(1, ChipsAmounts.NiceFloor(1));
-        Assert.Equal(2, ChipsAmounts.NiceFloor(4));
-        Assert.Equal(5, ChipsAmounts.NiceFloor(9));
-        Assert.Equal(10, ChipsAmounts.NiceFloor(19));
-        Assert.Equal(200_000, ChipsAmounts.NiceFloor(254_062));
-        Assert.Equal(50_000, ChipsAmounts.NiceFloor(50_812));
-    }
-
-    [Fact]
     public void AutoTopUpBuysTenBetsWhenTheWalletCoversTheBet()
     {
         Assert.Equal(50, AutoTopUpRule.CoinsFor(true, 5_000, 0, 1_000, Rate));

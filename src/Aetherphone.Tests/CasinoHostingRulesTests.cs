@@ -10,7 +10,8 @@ public sealed class CasinoHostingRulesTests
     public void ConstantsMatchTheBackendHostingRules()
     {
         Assert.Equal(2, CasinoHostingRules.MinSeats);
-        Assert.Equal(6, CasinoHostingRules.MaxSeats);
+        Assert.Equal(7, CasinoHostingRules.MaxSeats);
+        Assert.Equal(7, CasinoHostingRules.DefaultSeats);
         Assert.Equal(24, CasinoHostingRules.NameMaxLength);
         Assert.Equal(1_000, CasinoHostingRules.MinPracticeStack);
         Assert.Equal(1_000_000_000, CasinoHostingRules.MaxPracticeStack);
@@ -111,7 +112,9 @@ public sealed class CasinoHostingRulesTests
     {
         var config = new CasinoTableConfigDto(Currency: CasinoCurrencies.Practice);
         Assert.Equal(CasinoReasons.ConfigInvalid, CasinoHostingRules.Check(config with { Seats = 1 }));
-        Assert.Equal(CasinoReasons.ConfigInvalid, CasinoHostingRules.Check(config with { Seats = 7 }));
+        Assert.Equal(CasinoReasons.ConfigInvalid,
+            CasinoHostingRules.Check(config with { Seats = CasinoHostingRules.MaxSeats + 1 }));
+        Assert.Equal(string.Empty, CasinoHostingRules.Check(config with { Seats = CasinoHostingRules.MaxSeats }));
         Assert.Equal(CasinoReasons.ConfigInvalid, CasinoHostingRules.Check(config with { TurnSeconds = 25 }));
         Assert.Equal(CasinoReasons.ConfigInvalid, CasinoHostingRules.Check(config with { TimeBankUses = 2 }));
         Assert.Equal(CasinoReasons.ConfigInvalid,

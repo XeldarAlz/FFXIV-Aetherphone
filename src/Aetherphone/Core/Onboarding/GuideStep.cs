@@ -32,6 +32,7 @@ internal enum HeroMotif
     Care,
     Finale,
     AppIcon,
+    Halloween,
 }
 
 internal enum GuideGesture
@@ -84,6 +85,10 @@ internal readonly struct GuideStep
     public static GuideStep Page(LocString title, LocString body, LocString buttonLabel,
         HeroMotif hero = HeroMotif.Constellation) =>
         new(title, body, buttonLabel, null, GuideSurface.FullCard, GuideAdvance.Button, null, hero);
+
+    public static GuideStep Page(LocString title, LocString body, LocString buttonLabel, HeroMotif hero,
+        Action<INavigator> onAdvance) =>
+        new(title, body, buttonLabel, null, GuideSurface.FullCard, GuideAdvance.Button, onAdvance, hero);
 
     public static GuideStep Note(LocString title, LocString body) =>
         new(title, body, L.Onboarding.GotIt, null, GuideSurface.Coachmark, GuideAdvance.Button, null);

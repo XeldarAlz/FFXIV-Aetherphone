@@ -26,12 +26,12 @@ internal struct LevelCapsule
 
     public static float TextBlock(BalanceTitle title, float scale)
     {
-        var lineHeight = Typography.LineHeight(LineStyle);
-        var tierLine = title == BalanceTitle.None
-            ? lineHeight
-            : MathF.Max(Typography.LineHeight(TierStyle), StatusTitle.PillHeight(title, scale));
-        return tierLine + LineGap * scale + BarHeight * scale + LineGap * scale + lineHeight;
+        var barBlock = BarHeight * scale + LineGap * scale + Typography.LineHeight(LineStyle);
+        return title == BalanceTitle.None ? barBlock : TierLine(title, scale) + LineGap * scale + barBlock;
     }
+
+    private static float TierLine(BalanceTitle title, float scale) =>
+        MathF.Max(Typography.LineHeight(TierStyle), StatusTitle.PillHeight(title, scale));
 
     public float Draw(ImDrawListPtr drawList, Rect rect, int level, float progress, long cap, BalanceTitle title,
         Vector4 accent, float scale)
@@ -59,17 +59,9 @@ internal struct LevelCapsule
         var textWidth = MathF.Max(1f, rect.Max.X - textLeft);
         var block = TextBlock(title, scale);
         var top = rect.Center.Y - block * 0.5f;
-        var lineHeight = Typography.LineHeight(LineStyle);
-        var levelText = levelLabel.Get(L.Strip.Level, level);
-        if (title == BalanceTitle.None)
+        if (title != BalanceTitle.None)
         {
-            Typography.Draw(drawList, new Vector2(textLeft, top), Typography.FitText(levelText, textWidth, LineStyle),
-                CasinoColors.InkTitle, LineStyle);
-            top += lineHeight;
-        }
-        else
-        {
-            var tierLine = MathF.Max(Typography.LineHeight(TierStyle), StatusTitle.PillHeight(title, scale));
+            var tierLine = TierLine(title, scale);
             var caption = Loc.T(L.Strip.CurrentTier);
             var pillMax = MathF.Max(1f, textWidth * 0.5f);
             var pillWidth = StatusTitle.Width(title, pillMax, scale);
@@ -82,10 +74,9 @@ internal struct LevelCapsule
             StatusTitle.Draw(drawList,
                 new Vector2(textLeft + captionSize.X + Metrics.Space.Xs * scale + pillWidth * 0.5f, lineCenter), title,
                 pillMax, scale);
-            top += tierLine;
+            top += tierLine + LineGap * scale;
         }
 
-        top += LineGap * scale;
         var barMin = new Vector2(textLeft, top);
         var barMax = new Vector2(rect.Max.X, top + BarHeight * scale);
         Squircle.Fill(drawList, barMin, barMax, BarHeight * 0.5f * scale,
@@ -100,13 +91,10 @@ internal struct LevelCapsule
         top = barMax.Y + LineGap * scale;
         var capText = cap > 0 ? CapText(cap) : string.Empty;
         var capSize = capText.Length > 0 ? Typography.Measure(capText, LineStyle) : Vector2.Zero;
-        if (title != BalanceTitle.None)
-        {
-            var levelWidth = MathF.Max(1f, textWidth - (capText.Length > 0 ? capSize.X + Metrics.Space.Sm * scale : 0f));
-            Typography.Draw(drawList, new Vector2(textLeft, top), Typography.FitText(levelText, levelWidth, LineStyle),
-                CasinoColors.InkTitle, LineStyle);
-        }
-
+        var levelWidth = MathF.Max(1f, textWidth - (capText.Length > 0 ? capSize.X + Metrics.Space.Sm * scale : 0f));
+        Typography.Draw(drawList, new Vector2(textLeft, top),
+            Typography.FitText(levelLabel.Get(L.Strip.Level, level), levelWidth, LineStyle), CasinoColors.InkTitle,
+            LineStyle);
         if (capText.Length > 0)
         {
             Typography.Draw(drawList, new Vector2(rect.Max.X - capSize.X, top), capText, CasinoColors.Money, LineStyle);

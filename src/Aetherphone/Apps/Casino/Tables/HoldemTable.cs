@@ -5,6 +5,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Casino;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
@@ -41,9 +42,11 @@ internal sealed partial class HoldemTable : ICabinetIdle
     private readonly CasinoTablesStore tables;
     private readonly HoldemStore store;
     private readonly CasinoTurnNotifier turns;
+    private readonly ConfirmService confirm;
     private readonly RemoteImageCache images;
     private readonly LodestoneService lodestone;
     private readonly Action leaveRoom;
+    private readonly Action standUp;
     private readonly HoldemPlayback playback = new();
     private readonly HoldemTableLayout layout = new();
     private readonly HoldemSeatFlow seatFlow;
@@ -86,7 +89,7 @@ internal sealed partial class HoldemTable : ICabinetIdle
     private Spring peel = new(0f);
 
     public HoldemTable(CasinoStore chips, CasinoRoomsStore rooms, CasinoTablesStore tables, HoldemStore store,
-        CasinoTurnNotifier turns, RemoteImageCache images, LodestoneService lodestone,
+        CasinoTurnNotifier turns, ConfirmService confirm, RemoteImageCache images, LodestoneService lodestone,
         Action leaveRoom)
     {
         this.chips = chips;
@@ -94,9 +97,11 @@ internal sealed partial class HoldemTable : ICabinetIdle
         this.tables = tables;
         this.store = store;
         this.turns = turns;
+        this.confirm = confirm;
         this.images = images;
         this.lodestone = lodestone;
         this.leaveRoom = leaveRoom;
+        standUp = StandUp;
         seatFlow = new HoldemSeatFlow(store);
         composer = new HoldemRaiseComposer(texts);
         historySheet = new HoldemHistorySheet(store, texts);
@@ -109,6 +114,9 @@ internal sealed partial class HoldemTable : ICabinetIdle
     public bool Practice => practice;
 
     public long HeroStack => heroStack;
+
+    public bool HoldsSeat => entered && !seatFlow.StandQueued
+                             && (mySeat >= 0 || CasinoSeatMachine.Holds(seatFlow.Stage));
 
     public float DeckHeight => deckMode switch
     {
@@ -189,19 +197,30 @@ internal sealed partial class HoldemTable : ICabinetIdle
         peel.SnapTo(0f);
     }
 
+    public void ConfirmLeave(Action leave)
+    {
+        TableLeaveConfirm.Ask(confirm, leave);
+    }
+
     private void AbandonSeatIfHeld()
     {
-        if (!entered || seatFlow.StandQueued)
-        {
-            return;
-        }
-
-        if (mySeat < 0 && !CasinoSeatMachine.Holds(seatFlow.Stage))
+        if (!HoldsSeat)
         {
             return;
         }
 
         store.Abandon(roomId);
+    }
+
+    private void StandUp()
+    {
+        if (!entered || seatFlow.Busy || seatFlow.StandQueued)
+        {
+            return;
+        }
+
+        inlineReason = string.Empty;
+        seatFlow.Stand(roomId);
     }
 
     public void Draw(CasinoStage stage, in CasinoStageFrame frame, AppSkin ui)

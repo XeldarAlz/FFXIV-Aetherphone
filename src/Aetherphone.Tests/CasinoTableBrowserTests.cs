@@ -125,13 +125,13 @@ public sealed class CasinoTableBrowserTests
             Config = new CasinoTableConfigDto(Currency: CasinoCurrencies.Gil, Bank: 20_000_000),
         };
 
-        var view = TableBrowser.ViewOf(gil, Me);
+        var view = TableRowViews.ViewOf(gil, Me);
 
         Assert.Equal("Rose Room", view.Name);
         Assert.Equal(CasinoCurrencies.Gil, view.Currency);
         Assert.Contains("20,000,000", view.Stakes, StringComparison.Ordinal);
 
-        var practice = TableBrowser.ViewOf(Row(currency: CasinoCurrencies.Practice), Me);
+        var practice = TableRowViews.ViewOf(Row(currency: CasinoCurrencies.Practice), Me);
         Assert.Equal(CasinoCurrencies.Practice, practice.Currency);
     }
 
@@ -147,7 +147,7 @@ public sealed class CasinoTableBrowserTests
                 Bank: 5_000_000),
         };
 
-        var counted = TableBrowser.ViewOf(book, Me, 12);
+        var counted = TableRowViews.ViewOf(book, Me, 12);
         Assert.True(counted.Book);
         Assert.Equal("Mist Lounge", counted.Name);
         Assert.Equal(Loc.T(L.Book.RowLine, "12"), counted.Stakes);
@@ -158,32 +158,37 @@ public sealed class CasinoTableBrowserTests
         Assert.Equal(CasinoCurrencies.Gil, counted.Currency);
         Assert.True(TableRow.Live(counted));
 
-        var unknown = TableBrowser.ViewOf(book, Me);
+        var unknown = TableRowViews.ViewOf(book, Me);
         Assert.Equal(Loc.T(L.Tables.HostedBy, "Emerald"), unknown.Stakes);
         Assert.Equal(string.Empty, unknown.Seats);
-        Assert.Equal(counted.Stakes, Apps.Casino.Venue.VenueContextCard.OwnLineOf(counted, 12));
-        Assert.Equal(Loc.T(L.Book.Plays), Apps.Casino.Venue.VenueContextCard.OwnLineOf(unknown, -1));
-        var table = TableBrowser.ViewOf(Row(), Me);
-        Assert.Equal(table.Seats, Apps.Casino.Venue.VenueContextCard.OwnLineOf(table, -1));
 
         var ledger = new CasinoTableLedgerDto("table-book", true, Currency: CasinoCurrencies.Gil,
             Entries: new[] { new CasinoLedgerEntryDto("g1"), new CasinoLedgerEntryDto("g2") });
-        Assert.Equal(2, TableBrowser.BookEntriesOf(book, ledger));
-        Assert.Equal(-1, TableBrowser.BookEntriesOf(book, ledger with { TableId = "other" }));
-        Assert.Equal(-1, TableBrowser.BookEntriesOf(book, null));
-        Assert.Equal(-1, TableBrowser.BookEntriesOf(Row(), ledger with { TableId = "blackjack-pit" }));
-        Assert.Equal(Loc.T(L.Book.Plays), TableBrowser.BookLine(-1, string.Empty));
+        Assert.Equal(2, TableRowViews.BookEntriesOf(book, ledger));
+        Assert.Equal(-1, TableRowViews.BookEntriesOf(book, ledger with { TableId = "other" }));
+        Assert.Equal(-1, TableRowViews.BookEntriesOf(book, null));
+        Assert.Equal(-1, TableRowViews.BookEntriesOf(Row(), ledger with { TableId = "blackjack-pit" }));
+        Assert.Equal(Loc.T(L.Book.Plays), TableRowViews.BookLine(-1, string.Empty));
     }
 
     [Fact]
     public void AnUnnamedHostedTableOrBookIsNamedForItsHostInTheReadersLanguage()
     {
         var table = Row(owner: true) with { Name = string.Empty };
-        Assert.Equal(Loc.T(L.Casino.TableHostedBy, table.OwnerName), TableBrowser.NameOf(table));
+        Assert.Equal(Loc.T(L.Casino.TableHostedBy, table.OwnerName), TableRowViews.NameOf(table));
         var book = table with { GameKind = CasinoWire.BookKind };
-        Assert.Equal(Loc.T(L.Book.HostedBy, table.OwnerName), TableBrowser.NameOf(book));
-        Assert.Equal("Mist Lounge", TableBrowser.NameOf(book with { Name = "Mist Lounge" }));
-        Assert.Equal(TableBrowser.NameOf(book), TableBrowser.ViewOf(book, Me).Name);
+        Assert.Equal(Loc.T(L.Book.HostedBy, table.OwnerName), TableRowViews.NameOf(book));
+        Assert.Equal("Mist Lounge", TableRowViews.NameOf(book with { Name = "Mist Lounge" }));
+        Assert.Equal(TableRowViews.NameOf(book), TableRowViews.ViewOf(book, Me).Name);
+    }
+
+    [Fact]
+    public void AnUnnamedTableWithoutAHostNameIsNamedForItsOwnGame()
+    {
+        var blackjack = Row() with { Name = string.Empty, OwnerName = string.Empty };
+        Assert.Equal(Loc.T(L.Casino.TableUnnamed), TableRowViews.NameOf(blackjack));
+        Assert.Equal(Loc.T(L.Venue.GameRaffle), TableRowViews.NameOf(blackjack with { GameKind = "casino.raffle" }));
+        Assert.Equal(Loc.T(L.Book.Game), TableRowViews.NameOf(blackjack with { GameKind = CasinoWire.BookKind }));
     }
 
     [Fact]

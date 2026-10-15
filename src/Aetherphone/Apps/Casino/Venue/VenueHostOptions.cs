@@ -1,9 +1,7 @@
-using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Casino;
 using Aetherphone.Core.Housing;
 using Aetherphone.Core.Localization;
-using Aetherphone.Windows.Components;
 
 namespace Aetherphone.Apps.Casino.Venue;
 
@@ -28,6 +26,17 @@ internal sealed class VenueHostOptions
     {
         this.venue = venue;
     }
+
+    public bool InWard
+    {
+        get
+        {
+            venue.EnsureNearby();
+            return venue.Position.InWard;
+        }
+    }
+
+    public bool Pinned => PinLocation && InWard;
 
     public void Reset()
     {
@@ -63,36 +72,15 @@ internal sealed class VenueHostOptions
         return notes;
     }
 
-    public void DrawLocation(AppSkin ui, int listing, float scale)
+    public string Place()
     {
         venue.EnsureNearby();
         var position = venue.Position;
-        var card = GroupCard.Begin(ui, 2, VenueFields.RowUnits);
-        VenueFields.ValueRow(ui, card.NextRow(VenueFields.RowUnits), Loc.T(L.Venue.Location),
-            position.InWard ? LocationText(position) : Loc.T(L.Venue.LocationNone), scale);
-        var pin = VenueFields.ToggleRow(ui, card.NextRow(VenueFields.RowUnits), "venue.pin", Loc.T(L.Venue.PinLocation),
-            PinLocation && position.InWard, scale);
-        if (position.InWard)
+        if (!position.InWard)
         {
-            PinLocation = pin;
+            return string.Empty;
         }
 
-        card.End();
-        VenueFields.Hint(ui, Loc.T(L.Venue.LocationHint), scale);
-        var notes = NotesFor(PinLocation, listing, position);
-        if ((notes & VenuePinNotes.InviteOnly) != 0)
-        {
-            VenueFields.Hint(ui, Loc.T(L.Venue.PinInviteOnlyNote), scale);
-        }
-
-        if ((notes & VenuePinNotes.NoPlot) != 0)
-        {
-            VenueFields.Hint(ui, Loc.T(L.Venue.PinNoPlotNote), scale);
-        }
-    }
-
-    private string LocationText(CasinoHousingPosition position)
-    {
         if (position == locationOf && ReferenceEquals(locationLanguage, Loc.Current) && locationText.Length > 0)
         {
             return locationText;

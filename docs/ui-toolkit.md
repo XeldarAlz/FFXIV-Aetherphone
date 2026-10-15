@@ -31,6 +31,7 @@ A component used by exactly one app does not belong here. It lives in that app, 
 | src/Aetherphone/Windows/Components/Layout/DragScrollHost.cs | Kinetic touch-style scrolling for child windows |
 | src/Aetherphone/Windows/Components/Layout/AppSurface.cs | Standard scrollable app body (child window + DragScrollHost) |
 | src/Aetherphone/Windows/Components/Layout/ScrollLayout.cs | `StableContentWidth()`, the scrollbar feedback-loop fix |
+| src/Aetherphone/Windows/Components/Layout/WheelLock.cs | Releases ImGui's mouse wheel lock once the locked phone window stops being drawn |
 | src/Aetherphone/Windows/Components/Layout/FeedVirtualizer.cs | Skips offscreen rows in long feeds |
 | src/Aetherphone/Windows/Components/Layout/FeedCell.cs | Edge-to-edge list cell: flat hover wash, whole-cell tap, trailing hairline |
 | src/Aetherphone/Windows/Components/Layout/GroupCard.cs | Grouped inset list card (theme or AppSkin overload) with fixed rows |
@@ -229,6 +230,10 @@ Most apps never call it directly. `AppSurface.Begin(area)` (src/Aetherphone/Wind
 ### StableContentWidth
 
 Drag scrolling is only active while the phone window position is locked (`PhoneWindow.PreDraw` sets `DragScrollHost.Enabled` from `Configuration.LockPosition`); with the window unlocked, dragging would move the window, so the native ImGui scrollbar comes back. With a native scrollbar a feedback loop becomes possible: content sized to the full available width forces a scrollbar, the scrollbar shrinks the available width, the content no longer overflows, the scrollbar disappears, and the layout shakes every frame. `ScrollLayout.StableContentWidth()` (src/Aetherphone/Windows/Components/Layout/ScrollLayout.cs) breaks the loop by reserving the scrollbar width whenever the scrollbar is not yet showing. Use it instead of `ImGui.GetContentRegionAvail().X` whenever you size rows or cards inside a scrollable region.
+
+### WheelLock
+
+Dear ImGui 1.88 (the version Dalamud ships) locks the mouse wheel onto the window it last scrolled for two seconds, released early only when the mouse moves. When a page is replaced under a still pointer (a wheel on the host sheet just before its Open table answer pushes the host console, a wheel on a list right before a click on the row under the cursor), the wheel keeps going to the window that is no longer drawn and the new page looks stuck until the lock runs out. `WheelLock.ReleaseStale()` (src/Aetherphone/Windows/Components/Layout/WheelLock.cs) runs at the end of `PhoneWindow.Draw` and clears the lock when the locked window belongs to the phone and was not drawn this frame, so the next wheel goes to the hovered page.
 
 ### FeedVirtualizer
 

@@ -34,7 +34,7 @@ internal sealed class BlackjackTableLayout
     public const float RailPlateHeight = 32f;
     public const float RailArcLift = 12f;
     public const float SpotRadiusMax = 28f;
-    public const float SpotRadiusMin = 22f;
+    public const float SpotRadiusMin = 18f;
     public const float SpotGap = 6f;
     public const float SideStakeHeight = 14f;
     public const float SideStakeGap = 3f;
@@ -114,8 +114,8 @@ internal sealed class BlackjackTableLayout
             CapsuleHeight = capsuleHeight;
         }
 
-        public float PlateTop(float puckRadius) =>
-            Compact ? puckRadius * CompactPlateRise : puckRadius + RailPlateGap;
+        public float PlateTop(float puckRadius, float scale) =>
+            Compact ? puckRadius * CompactPlateRise : puckRadius + RailPlateGap * scale;
     }
 
     private static readonly Tier RegularTier = new(false, DealerPuckRadius, StateBandHeight, RailPuckRadius,
@@ -282,10 +282,12 @@ internal sealed class BlackjackTableLayout
     public Rect RailPlateRect(int slot)
     {
         var puck = RailPuckCenter(slot);
-        var half = (ColumnWidth - 2f * Scale) * 0.5f;
+        var half = RailPlateWidth * 0.5f;
         var top = puck.Y + RailPlateTop;
         return new Rect(new Vector2(puck.X - half, top), new Vector2(puck.X + half, top + RailPlateHeight * Scale));
     }
+
+    public float RailPlateWidth => MathF.Min(ColumnWidth - 2f * Scale, (ColumnWidth - PuckRadius - Scale) * 2f);
 
     public float SideStakeFloor => Seated ? HeroTop + RaisePixels : HeroTop;
 
@@ -430,7 +432,7 @@ internal sealed class BlackjackTableLayout
         Compact = next.Compact;
         SpotRadius = SpotRadiusFor(ColumnWidth, Scale, next);
         SpotScale = SpotRadius / Stage.SeatSpot.MinimumRadius;
-        PuckRadius = next.RailPuckRadius * Scale;
+        PuckRadius = MathF.Min(next.RailPuckRadius * Scale, SpotRadius);
         Stagger = RailStagger(ColumnWidth, SpotRadius, RailCount, Scale);
     }
 
@@ -494,7 +496,7 @@ internal sealed class BlackjackTableLayout
             : DealerPuckDrop + tier.DealerPuckRadius + PillHeight + tier.StateBandHeight;
         var rail = railCount > 0
             ? PlayingCards.HeightFor(tier.RailCardWidth) + BetPlateHeight + tier.RailPuckRadius
-              + tier.PlateTop(tier.RailPuckRadius) + RailPlateHeight + staggerUnits
+              + tier.PlateTop(tier.RailPuckRadius, 1f) + RailPlateHeight + staggerUnits
             : 0f;
         var totalReach = tier.Compact ? TotalCapsuleHeight - CompactTotalOverlap : TotalCapsuleHeight;
         var hero = seated
@@ -615,7 +617,7 @@ internal sealed class BlackjackTableLayout
     {
         RailBetLift = PuckRadius + RailInnerGap * GapFit * scale + BetPlateHeight * 0.5f * scale;
         RailCardsLift = RailBetLift + BetPlateHeight * 0.5f * scale + RailInnerGap * GapFit * scale + RailHandHalf();
-        RailPlateTop = tier.PlateTop(tier.RailPuckRadius) * scale;
+        RailPlateTop = tier.PlateTop(PuckRadius, scale);
         var above = RailCardsLift + RailHandHalf();
         var below = RailPlateTop + RailPlateHeight * scale;
         var lift = RailCount > 1 ? RailArcLift * GapFit * scale : 0f;

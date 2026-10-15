@@ -114,19 +114,12 @@ internal sealed class TournamentDoorCard
 
     public void Draw(AppSkin ui, CasinoTableRowDto? card, CasinoTableDoorDto? door, string roomId)
     {
-        if (card is null || !IsBlackjack(card))
+        if (card is null || !Applies(card))
         {
             return;
         }
 
         var scale = UiScale.Current;
-        if (!Applies(card))
-        {
-            ui.SectionHeading(Loc.T(L.Venue.TournamentHeading), Metrics.Space.Md);
-            VenueFields.Hint(ui, Loc.T(L.Venue.TournamentHint), scale);
-            return;
-        }
-
         var outcome = venue.TakeHostOutcome();
         if (outcome is not null)
         {

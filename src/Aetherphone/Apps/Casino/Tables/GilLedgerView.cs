@@ -10,7 +10,7 @@ namespace Aetherphone.Apps.Casino.Tables;
 internal sealed class GilLedgerView
 {
     private readonly CasinoTablesStore tables;
-    private readonly LedgerEntryCards cards = new();
+    private readonly LedgerEntryRows rows = new();
 
     private CasinoLedgerEntryDto[]? owedSource;
     private LanguageInfo? owedLanguage;
@@ -40,8 +40,8 @@ internal sealed class GilLedgerView
         }
 
         var entries = tables.MyEntries;
-        cards.Refresh(entries, false, CasinoCurrencies.Gil);
-        if (cards.Count == 0)
+        rows.Refresh(entries, tables.AccountId, false, CasinoCurrencies.Gil);
+        if (rows.Count == 0)
         {
             TableLedger.Note(ui, Loc.T(L.Tables.MyLedgerEmpty), ui.MutedInk, scale);
             return;
@@ -53,7 +53,7 @@ internal sealed class GilLedgerView
             TableLedger.Note(ui, owedNote, TableLedger.Amber, scale);
         }
 
-        _ = cards.Draw(ui, false, scale);
+        _ = rows.Draw(ui, false, scale);
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
     }
 

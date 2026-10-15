@@ -52,7 +52,7 @@ public sealed class RacePlaybackTests
         var board = Board(vector, true);
         for (var elapsed = 0L; elapsed <= untilMilliseconds; elapsed += 16)
         {
-            playback.Update(Snapshot(CasinoRoomPhases.Locked), board, At(elapsed), false);
+            playback.Update(Snapshot(CasinoRoomPhases.Locked), board, At(elapsed));
             cues.AddRange(Drain(playback));
         }
 
@@ -64,7 +64,7 @@ public sealed class RacePlaybackTests
     {
         var vector = RaceVectors.Load()[0];
         var playback = new RaceRoundPlayback();
-        playback.Update(Snapshot(CasinoRoomPhases.Open), Board(vector, false), At(-30_000), false);
+        playback.Update(Snapshot(CasinoRoomPhases.Open), Board(vector, false), At(-30_000));
         Assert.Equal(RaceStage.Paddock, playback.Stage);
         Assert.False(playback.HasOrder);
         Assert.Equal("race-track#0", playback.RoundKey);
@@ -75,7 +75,7 @@ public sealed class RacePlaybackTests
     {
         var vector = RaceVectors.Load()[0];
         var playback = new RaceRoundPlayback();
-        playback.Update(Snapshot(CasinoRoomPhases.Locked), Board(vector, false), At(200), false);
+        playback.Update(Snapshot(CasinoRoomPhases.Locked), Board(vector, false), At(200));
         Assert.Equal(RaceStage.Gates, playback.Stage);
         Assert.Empty(Drain(playback));
     }
@@ -86,7 +86,7 @@ public sealed class RacePlaybackTests
         var vector = RaceVectors.Load()[0];
         var plan = RaceScript.Build(vector.Order, vector.Seed);
         var playback = new RaceRoundPlayback();
-        playback.Update(Snapshot(CasinoRoomPhases.Locked), Board(vector, true), At(12_000), false);
+        playback.Update(Snapshot(CasinoRoomPhases.Locked), Board(vector, true), At(12_000));
         Assert.Equal(RaceStage.Running, playback.Stage);
         Assert.Empty(Drain(playback));
         var subTick = 12_000L * RaceScript.SubTicks / RaceRules.MillisecondsPerTick;
@@ -106,7 +106,7 @@ public sealed class RacePlaybackTests
         var vector = RaceVectors.Load()[0];
         var playback = new RaceRoundPlayback();
         var winner = RaceRules.MillisecondsOf(vector.FinishSubTicks[vector.Order[0]]);
-        playback.Update(Snapshot(CasinoRoomPhases.Locked), Board(vector, true), At(winner + 100), false);
+        playback.Update(Snapshot(CasinoRoomPhases.Locked), Board(vector, true), At(winner + 100));
         Assert.False(playback.WatchedLive);
         Assert.Empty(Drain(playback));
     }
@@ -164,7 +164,7 @@ public sealed class RacePlaybackTests
         Assert.InRange(playback.DisplaySubTick, winner - RaceRoundPlayback.ReplayWindowSubTicks / 2,
             winner + RaceRoundPlayback.ReplayWindowSubTicks / 2);
         playback.Update(Snapshot(CasinoRoomPhases.Locked), Board(vector, true),
-            At(last + RaceRoundPlayback.ReplayMilliseconds + 50), false);
+            At(last + RaceRoundPlayback.ReplayMilliseconds + 50));
         Assert.Equal(RaceStage.Finished, playback.Stage);
         Assert.Equal(vector.Order, playback.Ranking.ToArray());
     }
@@ -174,7 +174,7 @@ public sealed class RacePlaybackTests
     {
         var vector = RaceVectors.Load()[5];
         var playback = new RaceRoundPlayback();
-        playback.Update(Snapshot(CasinoRoomPhases.Result), Board(vector, true), At(40_000), false);
+        playback.Update(Snapshot(CasinoRoomPhases.Result), Board(vector, true), At(40_000));
         Assert.Equal(RaceStage.Result, playback.Stage);
         Assert.Equal(vector.Order, playback.Ranking.ToArray());
         for (var slot = 0; slot < RaceRules.FieldSize; slot++)
@@ -186,23 +186,12 @@ public sealed class RacePlaybackTests
     }
 
     [Fact]
-    public void InstantModeSkipsStraightToTheFinish()
-    {
-        var vector = RaceVectors.Load()[2];
-        var playback = new RaceRoundPlayback();
-        playback.Update(Snapshot(CasinoRoomPhases.Locked), Board(vector, true), At(100), true);
-        Assert.Equal(RaceStage.Finished, playback.Stage);
-        Assert.Equal(vector.Order, playback.Ranking.ToArray());
-        Assert.Empty(Drain(playback));
-    }
-
-    [Fact]
     public void ANewRoundClearsTheOldRace()
     {
         var vector = RaceVectors.Load()[0];
         var playback = new RaceRoundPlayback();
         RunLive(playback, vector, 10_000);
-        playback.Update(Snapshot(CasinoRoomPhases.Open, 1), Board(vector, false), At(60_000), false);
+        playback.Update(Snapshot(CasinoRoomPhases.Open, 1), Board(vector, false), At(60_000));
         Assert.Equal(RaceStage.Paddock, playback.Stage);
         Assert.False(playback.HasOrder);
         Assert.Equal("race-track#1", playback.RoundKey);
@@ -216,7 +205,7 @@ public sealed class RacePlaybackTests
         var board = new CasinoRaceRoomStateDto(Runners: Field(), Seed: vector.Seed, Order: new[] { 0, 0, 1, 2, 3, 4, 5, 6 },
             RaceStartUnixMs: Start);
         var playback = new RaceRoundPlayback();
-        playback.Update(Snapshot(CasinoRoomPhases.Locked), board, At(5_000), false);
+        playback.Update(Snapshot(CasinoRoomPhases.Locked), board, At(5_000));
         Assert.False(playback.HasOrder);
         Assert.Equal(RaceStage.Gates, playback.Stage);
     }

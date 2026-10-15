@@ -22,10 +22,17 @@ internal static class StatusTitle
     public const long Whale = 1_000_000_000;
     public const long Legend = 1_000_000_000_000;
 
+    public const int SharkLevel = 20;
+    public const int HighRollerLevel = 40;
+    public const int VipLevel = 60;
+    public const int WhaleLevel = 80;
+    public const int LegendLevel = 100;
+
     private const float PaddingX = 9f;
     private const float Height = 24f;
 
     private static readonly long[] Thresholds = { Legend, Whale, Vip, HighRoller, Shark };
+    private static readonly int[] LevelThresholds = { LegendLevel, WhaleLevel, VipLevel, HighRollerLevel, SharkLevel };
     private static readonly BalanceTitle[] Titles =
     {
         BalanceTitle.Legend, BalanceTitle.Whale, BalanceTitle.Vip, BalanceTitle.HighRoller, BalanceTitle.Shark,
@@ -46,6 +53,19 @@ internal static class StatusTitle
         for (var index = 0; index < Thresholds.Length; index++)
         {
             if (balance >= Thresholds[index])
+            {
+                return Titles[index];
+            }
+        }
+
+        return BalanceTitle.None;
+    }
+
+    public static BalanceTitle ForLevel(int level)
+    {
+        for (var index = 0; index < LevelThresholds.Length; index++)
+        {
+            if (level >= LevelThresholds[index])
             {
                 return Titles[index];
             }

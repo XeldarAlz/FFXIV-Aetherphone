@@ -9,7 +9,6 @@ namespace Aetherphone.Apps.Casino.Venue;
 internal static class VenueFields
 {
     public const float RowUnits = 52f;
-    public const float SegmentRowUnits = 80f;
     public const int AmountDigits = 11;
 
     private const float FieldWidthFraction = 0.46f;
@@ -24,19 +23,14 @@ internal static class VenueFields
     }
 
     public static void DrawLabel(ImDrawListPtr drawList, float left, float centerY, string label, float width,
-        Vector4 ink) =>
-        DrawLines(drawList, left, centerY, label, width, ink, false);
-
-    private static void DrawLines(ImDrawListPtr drawList, float left, float centerY, string text, float width,
-        Vector4 ink, bool alignRight)
+        Vector4 ink)
     {
-        var lines = FitLines(text, MathF.Max(1f, width), out var style);
+        var lines = FitLines(label, MathF.Max(1f, width), out var style);
         var lineHeight = Typography.LineHeight(style);
         var top = centerY - lines.Length * lineHeight * 0.5f;
         for (var line = 0; line < lines.Length; line++)
         {
-            var x = alignRight ? left + width - Typography.Measure(lines[line], style).X : left;
-            Typography.Draw(drawList, new Vector2(x, top + line * lineHeight), lines[line], ink, style);
+            Typography.Draw(drawList, new Vector2(left, top + line * lineHeight), lines[line], ink, style);
         }
     }
 
@@ -96,26 +90,6 @@ internal static class VenueFields
         var toggleMin = new Vector2(row.Max.X - width, row.Center.Y - height * 0.5f);
         return Toggle.Draw(id, new Rect(toggleMin, toggleMin + new Vector2(width, height)), value, ui.Theme,
             overlay: overlay);
-    }
-
-    public static int Segment(AppSkin ui, in Rect row, string id, string label, string[] options, int selected,
-        float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var top = row.Min.Y + Metrics.Space.Sm * scale;
-        Typography.Draw(drawList, new Vector2(row.Min.X, top), Typography.FitText(label, row.Width, TextStyles.Body),
-            ui.TitleInk, TextStyles.Body);
-        var stripTop = top + Typography.LineHeight(TextStyles.Body) + Metrics.Space.Sm * scale;
-        var strip = new Rect(new Vector2(row.Min.X, stripTop),
-            new Vector2(row.Max.X, MathF.Max(stripTop + 30f * scale, row.Max.Y - Metrics.Space.Sm * scale)));
-        return SegmentStrip.Draw(id, strip, options, Math.Clamp(selected, 0, options.Length - 1), ui.Palette);
-    }
-
-    public static void ValueRow(AppSkin ui, in Rect row, string label, string value, float scale)
-    {
-        Label(ui, row, label, scale);
-        var width = row.Width * FieldWidthFraction;
-        DrawLines(ImGui.GetWindowDrawList(), row.Max.X - width, row.Center.Y, value, width, ui.BodyInk, true);
     }
 
     public static float Hint(AppSkin ui, string text, float scale)

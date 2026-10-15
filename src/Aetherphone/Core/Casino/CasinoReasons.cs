@@ -74,6 +74,7 @@ internal static class CasinoReasons
     public const string PracticeOnly = "practice_only";
     public const string NotDealer = "not_dealer";
     public const string DealerCannotSit = "dealer_cannot_sit";
+    public const string HostCannotSit = "host_cannot_sit";
     public const string RebuyOff = "rebuy_off";
     public const string TournamentLive = "tournament_live";
     public const string NoTournament = "no_tournament";
@@ -120,6 +121,7 @@ internal static class CasinoReasons
         PracticeOnly,
         NotDealer,
         DealerCannotSit,
+        HostCannotSit,
         RebuyOff,
         TournamentLive,
         NoTournament,
@@ -221,6 +223,7 @@ internal static class CasinoReasons
         [PracticeOnly] = L.Tables.ReasonPracticeOnly,
         [NotDealer] = L.Tables.ReasonNotDealer,
         [DealerCannotSit] = L.Tables.ReasonDealerCannotSit,
+        [HostCannotSit] = L.Tables.ReasonHostCannotSit,
         [RebuyOff] = L.Tables.ReasonRebuyOff,
         [TournamentLive] = L.Tables.ReasonTournamentLive,
         [NoTournament] = L.Tables.ReasonNoTournament,

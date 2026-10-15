@@ -184,8 +184,7 @@ internal sealed class CasinoClaimWidget : IHomeWidget
         var level = sample ? WidgetSamples.CasinoLevel : progress?.Level ?? 1;
         var fraction = sample ? WidgetSamples.CasinoLevelFraction : LevelFraction(progress);
         var cap = sample ? WidgetSamples.CasinoLevelCap : casino.Ceiling.LevelCap;
-        var balance = sample ? WidgetSamples.CasinoBalance : FloorBalance();
-        var title = StatusTitle.For(balance);
+        var title = StatusTitle.ForLevel(level);
         var ring = MathF.Min(RingUnits * scale, area.Height);
         var radius = ring * 0.5f;
         var ringCenter = new Vector2(area.Min.X + radius, area.Min.Y + radius);
@@ -224,12 +223,6 @@ internal sealed class CasinoClaimWidget : IHomeWidget
         WidgetText.DrawRight(drawList, area.Max.X,
             barRect.Min.Y - WidgetMetrics.Gutter * scale - WidgetText.SpacedLineHeight(WidgetType.Caption),
             WidgetText.Fit(capLine, textWidth, WidgetType.Caption, out _), ink.Secondary, WidgetType.Caption);
-    }
-
-    private long FloorBalance()
-    {
-        var state = casino.State;
-        return (state?.Sitting?.Stack ?? 0) + (state?.TableSitting?.Stack ?? 0);
     }
 
     private void RefreshWhenExpired(CasinoBonusDto timed, long nowUnix)

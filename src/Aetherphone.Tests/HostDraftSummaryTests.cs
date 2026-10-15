@@ -58,7 +58,7 @@ public sealed class HostDraftSummaryTests
         var dice = new HostDraft();
         dice.SelectGame(HostGame.DiceTable, false);
         dice.Normalize(false);
-        Assert.Equal("Dice table, Practice", HostDraftSummary.Of(dice));
+        Assert.Equal("Dice table, Free play", HostDraftSummary.Of(dice));
 
         dice.SelectCurrency(CasinoCurrencies.Gil, true);
         dice.Normalize(true);

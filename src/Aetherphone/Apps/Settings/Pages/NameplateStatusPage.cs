@@ -77,11 +77,10 @@ internal sealed class NameplateStatusPage : ISettingsPage
     {
         var theme = context.Theme;
         var scale = UiScale.Current;
-        using (AppSurface.Begin(body))
+        var previewBottom = DrawPreview(body, theme, scale);
+        using (AppSurface.Begin(new Rect(new Vector2(body.Min.X, previewBottom), body.Max)))
         {
-            ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
-            DrawPreview(theme, scale);
-            ImGui.Dummy(new Vector2(0f, Metrics.Space.Xl * scale));
+            ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
             DrawShowSwitch(theme);
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Xl * scale));
             DrawText(theme, scale);
@@ -90,7 +89,7 @@ internal sealed class NameplateStatusPage : ISettingsPage
         }
     }
 
-    private void DrawPreview(PhoneTheme theme, float scale)
+    private float DrawPreview(Rect body, PhoneTheme theme, float scale)
     {
         var template = titles.TemplateFor(status);
         var tick = status == NameplateStatus.NowPlaying ? titles.TurnTick : 0L;
@@ -101,10 +100,7 @@ internal sealed class NameplateStatusPage : ISettingsPage
             sample = titles.Sample(status);
         }
 
-        var name = titles.CharacterName.Length > 0 ? titles.CharacterName : Loc.T(L.Nameplate.Example);
-        stage.Draw(theme, scale, name, sample);
-        ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
-        SettingsSection.Hint(LengthLine(), theme);
+        return stage.DrawPinned(body, theme, scale, NameplateStage.NameOf(titles), sample, LengthLine());
     }
 
     private void DrawShowSwitch(PhoneTheme theme)

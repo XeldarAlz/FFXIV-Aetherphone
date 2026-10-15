@@ -30,19 +30,19 @@ internal static class BarkeepRules
 
     public const long EntryChips = 2_000;
 
-    public const long MaxPayout = 1_900;
+    public const long MaxPayout = 4_000;
 
-    public const long DailyNetWinCap = 100_000;
+    public const long DailyNetWinCap = 20_000;
 
-    public const int ReturnBasisPointsAtPerfectPlay = (int)(MaxPayout * 10_000 / EntryChips);
+    public const int TopPayTenths = (int)(MaxPayout * 10 / EntryChips);
 
     public static readonly int[] GradeDomain = { 0, 40, 70, 100 };
 
     public static readonly int[] PatronBuckets = { 8, 8, 8, 8, 9, 9, 9, 10, 10, 10, 11, 11, 11, 12, 13, 14 };
 
-    public static readonly int[] LadderRatioFloors = { 450, 700, 850, 950 };
+    public static readonly int[] LadderRatioFloors = { 400, 600, 800, 950 };
 
-    public static readonly long[] LadderPays = { 650, 1_000, 1_450, MaxPayout };
+    public static readonly long[] LadderPays = { 1_000, EntryChips, 3_000, MaxPayout };
 
     public static bool IsValidGrade(int grade)
     {
