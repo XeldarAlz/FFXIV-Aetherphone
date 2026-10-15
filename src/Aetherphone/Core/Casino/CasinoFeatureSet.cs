@@ -24,6 +24,7 @@ internal sealed class CasinoFeatureSet
         CasinoFeatures.Plinko,
         CasinoFeatures.Originals,
         CasinoFeatures.VenueBook,
+        CasinoFeatures.PartialCashOut,
     };
 
     private readonly ulong mask;

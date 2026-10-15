@@ -142,7 +142,9 @@ internal sealed class AppearancePage : ISettingsPage
         SettingsSection.Header(Loc.T(L.Settings.SeasonalThemeTitle), theme);
         var decorated = configuration.SeasonalThemeMode != SeasonalThemeMode.Off;
         var card = GroupCard.Begin(theme, decorated ? 3 : 1);
-        var seasonal = SeasonalOrder[SegmentStrip.Draw("settings.seasonalTheme", card.NextRow(), seasonalLabels,
+        var seasonalRow = card.NextRow();
+        UiAnchors.Report("settings.appearance.seasonal", seasonalRow);
+        var seasonal = SeasonalOrder[SegmentStrip.Draw("settings.seasonalTheme", seasonalRow, seasonalLabels,
             Array.IndexOf(SeasonalOrder, configuration.SeasonalThemeMode), theme)];
         var nameFont = decorated
             ? SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.SeasonalNameFont), configuration.SeasonalNameFont,

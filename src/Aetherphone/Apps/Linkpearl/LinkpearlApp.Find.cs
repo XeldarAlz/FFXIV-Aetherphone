@@ -537,6 +537,12 @@ internal sealed partial class LinkpearlApp
         return false;
     }
 
+    private void OpenLodestoneProfile(string name, string world)
+    {
+        var seededWorld = world.Length > 0 ? world : gameData.WorldName(gameData.LocalHomeWorldId);
+        router.Push(LinkpearlRoute.Character(string.Empty, name, seededWorld));
+    }
+
     private static string SendTarget(string name, string world) =>
         world.Length > 0 ? string.Concat(name, "@", world) : name;
 }

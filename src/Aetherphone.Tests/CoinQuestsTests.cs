@@ -106,7 +106,7 @@ public sealed class CoinQuestsTests
     {
         Assert.Equal("Listen to community radio for 20 minutes",
             CoinQuests.Title(Quest(CoinQuests.RadioQuestId, 0, 20)));
-        Assert.Equal("Play 3 games", CoinQuests.Title(Quest("play.three", 0, 3)));
+        Assert.Equal("Play a game for three minutes, 3 times", CoinQuests.Title(Quest("play.three", 0, 3)));
         Assert.Equal("Post a story", CoinQuests.Title(Quest("social.story", 0, 1)));
     }
 

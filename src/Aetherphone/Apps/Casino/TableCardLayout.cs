@@ -12,7 +12,6 @@ internal readonly record struct TableCardLayout(
     float NameTop,
     float LineTop,
     float RowTop,
-    float ReputationTop,
     Rect Phase,
     Vector2 Chevron)
 {
@@ -30,9 +29,8 @@ internal readonly record struct TableCardLayout(
         MathF.Max(0f, card.Max.X - Pad * scale - ChevronUnits * scale - PhaseGap * scale
             - (card.Min.X + Pad * scale + ArtSize * scale + AvatarOverhang * scale + TextGap * scale));
 
-    public static float Height(float scale, float headline, float footnote, float rowHeight, float reputation) =>
-        MathF.Max(MinHeight * scale,
-            Pad * 2f * scale + headline + footnote + rowHeight + LineGap * 2f * scale + reputation);
+    public static float Height(float scale, float headline, float footnote, float rowHeight) =>
+        MathF.Max(MinHeight * scale, Pad * 2f * scale + headline + footnote + rowHeight + LineGap * 2f * scale);
 
     public static TableCardLayout Compute(in Rect card, float scale, float headline, float footnote,
         float rowHeight, float phaseWidth, float phaseHeight)
@@ -53,6 +51,6 @@ internal readonly record struct TableCardLayout(
         var lineTop = nameTop + headline + LineGap * scale;
         var rowTop = lineTop + footnote + LineGap * scale;
         return new TableCardLayout(artRect, avatar, avatarRadius, textLeft, phase.Min.X - PhaseGap * scale,
-            lineRight, nameTop, lineTop, rowTop, rowTop + rowHeight, phase, chevron);
+            lineRight, nameTop, lineTop, rowTop, phase, chevron);
     }
 }

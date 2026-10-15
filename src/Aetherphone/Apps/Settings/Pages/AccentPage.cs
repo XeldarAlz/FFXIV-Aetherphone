@@ -5,16 +5,12 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Settings.Pages;
 
 internal sealed class AccentPage : ISettingsPage
 {
     private const string FieldId = "##settingsAccentHex";
-    private const int HexDigitCount = 6;
-    private const float PickerHeight = 210f;
-    private static readonly Vector4 Transparent = new(0f, 0f, 0f, 0f);
 
     public string Title => Loc.T(L.Settings.Accent);
     public string Summary => CatalogLabels.Accent(configuration.AccentName);
@@ -43,13 +39,7 @@ internal sealed class AccentPage : ISettingsPage
         using (var surface = AppSurface.Begin(body))
         {
             SettingsSection.Header(Loc.T(L.Settings.AccentCustom), theme);
-            var card = GroupCard.Begin(theme, 1, PickerHeight);
-            var row = card.NextRow();
-            var pad = Metrics.Space.Lg * scale;
-            var field = new Rect(new Vector2(row.Min.X, row.Min.Y + pad), new Vector2(row.Max.X, row.Max.Y - pad));
-            var result = ColorField.Draw("settings.accent", field, picker, theme,
-                ImGui.GetColorU32(theme.GroupedCard));
-            card.End();
+            var result = ColorField.DrawCard("settings.accent", picker, theme);
             if (result.Dragging || result.Released)
             {
                 surface.CancelDrag();
@@ -57,44 +47,11 @@ internal sealed class AccentPage : ISettingsPage
             }
 
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
-            DrawHexField(theme, scale);
-        }
-    }
-
-    private void DrawHexField(PhoneTheme theme, float scale)
-    {
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var height = Metrics.Size.FieldHeight * scale;
-        var drawList = ImGui.GetWindowDrawList();
-        var field = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
-        SearchBar.Surface(drawList, field, ControlInk.From(theme));
-        var chipRadius = SearchBar.Capsule(field).Height * 0.5f - Metrics.Space.Xxs * scale;
-        var chipCenter = new Vector2(origin.X + Metrics.Space.Md * scale + chipRadius, origin.Y + height * 0.5f);
-        drawList.AddCircleFilled(chipCenter, chipRadius, ImGui.GetColorU32(picker.ToRgb()), 24);
-        drawList.AddCircle(chipCenter, chipRadius, ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.18f)), 24,
-            Metrics.Stroke.Hairline * scale);
-        var hashLeft = chipCenter.X + chipRadius + Metrics.Space.Md * scale;
-        var hashSize = Typography.Measure("#", TextStyles.BodyEmphasized);
-        Typography.Draw(drawList, new Vector2(hashLeft, origin.Y + height * 0.5f - hashSize.Y * 0.5f), "#",
-            theme.TextMuted, TextStyles.BodyEmphasized);
-        var inputLeft = hashLeft + hashSize.X + Metrics.Space.Xxs * scale;
-        ImGui.SetCursorScreenPos(new Vector2(inputLeft, origin.Y + height * 0.5f - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(origin.X + width - Metrics.Space.Md * scale - inputLeft);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, Transparent)
-                   .Push(ImGuiCol.FrameBgHovered, Transparent)
-                   .Push(ImGuiCol.FrameBgActive, Transparent)
-                   .Push(ImGuiCol.Text, theme.TextStrong))
-        {
-            if (ImGui.InputText(FieldId, ref hexDigits, HexDigitCount,
-                    ImGuiInputTextFlags.CharsHexadecimal | ImGuiInputTextFlags.CharsUppercase))
+            if (HexField.Draw(FieldId, ref hexDigits, picker.ToRgb(), theme, scale))
             {
                 Type();
             }
         }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, height));
     }
 
     private void Pick(HsvColor color, bool released)

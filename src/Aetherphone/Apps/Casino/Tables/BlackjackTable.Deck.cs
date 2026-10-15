@@ -12,7 +12,6 @@ namespace Aetherphone.Apps.Casino.Tables;
 internal sealed partial class BlackjackTable
 {
     private const int MainTarget = -1;
-    private const float SideCaptionGap = 3f;
     private const string WaitMarquee = "casino.blackjack.deck.wait";
 
     private static readonly int[] MainActions =
@@ -73,6 +72,11 @@ internal sealed partial class BlackjackTable
         var mainRadius = layout.BetSpotPixels;
         var ring = ImGui.GetColorU32(CasinoColors.Money with { W = sideTarget == MainTarget ? 0.7f : 0.35f });
         drawList.AddCircle(layout.BetSpot, mainRadius, ring, 40, MathF.Max(1.2f, 1.6f * scale));
+        if (motions[mySeat].ShownBet <= 0)
+        {
+            DrawSpotCaption(drawList, layout.BetSpot, Loc.T(L.Blackjack.MainSpot), sideTarget == MainTarget);
+        }
+
         if (!BlackjackRecap.SideBetsOffered(board))
         {
             return;
@@ -98,7 +102,23 @@ internal sealed partial class BlackjackTable
             {
                 TapSideSpot(index);
             }
+
+            if (label.Length == 0)
+            {
+                DrawSpotCaption(drawList, center,
+                    Loc.T(bet == BlackjackSideBet.PerfectPairs ? L.Blackjack.SidePairs : L.Blackjack.SideThree),
+                    sideTarget == index);
+            }
         }
+    }
+
+    private void DrawSpotCaption(ImDrawListPtr drawList, Vector2 center, string name, bool targeted)
+    {
+        var width = layout.SpotCaptionWidth;
+        var weight = TextStyles.Caption2.Weight;
+        var fit = Typography.FitScale(name, width, TextStyles.Caption1.Scale, TextStyles.Caption2.Scale, weight);
+        Typography.DrawCentered(drawList, center, Typography.FitText(name, width, fit, weight),
+            targeted ? CasinoColors.LightB : StageText.Body, fit, weight);
     }
 
     private bool DrawSideSpot(ImDrawListPtr drawList, Vector2 center, BlackjackSideBet bet, string label,
@@ -124,14 +144,6 @@ internal sealed partial class BlackjackTable
             var fit = StageText.FitScale(label, inner, style, StageTextRole.Label);
             Typography.DrawCentered(drawList, center, Typography.FitText(label, inner, fit, style.Weight),
                 lost ? StageText.Muted : CasinoColors.Money, fit, style.Weight);
-        }
-        else if (interactive)
-        {
-            var name = Loc.T(bet == BlackjackSideBet.PerfectPairs ? L.Blackjack.SidePairs : L.Blackjack.SideThree);
-            var captionHeight = Typography.LineHeight(style);
-            var captionCenter = new Vector2(center.X, center.Y - radius - SideCaptionGap * scale - captionHeight * 0.5f);
-            Typography.DrawCentered(drawList, captionCenter,
-                Typography.FitText(name, layout.SideCaptionWidth, style), StageText.Strong, style);
         }
 
         if (hovered)
@@ -181,6 +193,7 @@ internal sealed partial class BlackjackTable
         var canBet = onBoard && CasinoJoinGate.CanPlaceBet(board.Phase, true, seatFlow.Waiting, draining, floorPaused);
         var facts = new BlackjackDeckFacts(
             dealing,
+            banking,
             bought,
             onBoard,
             CasinoSeatMachine.Holds(seatFlow.Stage),
@@ -198,6 +211,11 @@ internal sealed partial class BlackjackTable
                 return;
             case BlackjackDeck.Dealer:
                 DrawDealerDeck(ui, board, row, scale);
+                return;
+            case BlackjackDeck.Bank:
+                StageText.Status(ImGui.GetWindowDrawList(), BlackjackDeckLayout.UpperRow(row, scale).Center,
+                    Loc.T(L.Tables.HostBanksNote), row.Width, scale);
+                DrawLedgerAction(stage, ui);
                 return;
             case BlackjackDeck.Rebuy:
                 DrawStand(stage, ui, state, draining, banked);
@@ -257,13 +275,32 @@ internal sealed partial class BlackjackTable
             return;
         }
 
-        var stakeBlocked = draining || (!banked && (state.Draining || state.StakesPaused));
-        var standLabel = stakeBlocked ? Loc.T(L.Casino.CashOut) : Loc.T(L.Casino.StandAction);
-        if (stage.SecondaryAction(standLabel, !seatFlow.Busy, ui.Ink))
+        if (stage.SecondaryAction(StandLabel(state, draining, banked, ForfeitsTournament), !seatFlow.Busy, ui.Ink))
         {
-            inlineReason = string.Empty;
-            seatFlow.Stand(roomId);
+            ConfirmLeave(standUp);
         }
+    }
+
+    private static string StandLabel(CasinoStateDto state, bool draining, bool banked, bool forfeits)
+    {
+        if (forfeits)
+        {
+            return Loc.T(L.Venue.TournamentResign);
+        }
+
+        var stakeBlocked = draining || (!banked && (state.Draining || state.StakesPaused));
+        return stakeBlocked ? Loc.T(L.Casino.CashOut) : Loc.T(L.Casino.StandAction);
+    }
+
+    private void StandUp()
+    {
+        if (!entered || seatFlow.StandQueued || seatFlow.Busy)
+        {
+            return;
+        }
+
+        inlineReason = string.Empty;
+        seatFlow.Stand(roomId);
     }
 
     private void DrawDealerDeck(AppSkin ui, CasinoBlackjackRoomStateDto board, Rect row, float scale)
@@ -276,14 +313,15 @@ internal sealed partial class BlackjackTable
             return;
         }
 
-        if (deck == DealerDeck.WaitingBets)
+        if (BlackjackHosting.TryDealerStatus(board, deck, out var status))
         {
-            StageText.Status(drawList, BlackjackDeckLayout.UpperRow(row, scale).Center,
-                Loc.T(L.Tables.DealerWaitingBets), row.Width, scale);
+            StageText.Status(drawList, BlackjackDeckLayout.UpperRow(row, scale).Center, Loc.T(status), row.Width,
+                scale);
         }
 
         var enabled = deck == DealerDeck.Deal && !tables.IntentInFlight;
-        if (!DeckActions.DrawPrimary(row, Loc.T(L.Tables.Deal), ui.Ink, enabled, "blackjack.deal"))
+        if (!DeckActions.DrawPrimary(row, Loc.T(BlackjackHosting.DealLabel(board)), ui.Ink, enabled,
+                "blackjack.deal"))
         {
             return;
         }
@@ -335,7 +373,7 @@ internal sealed partial class BlackjackTable
         var currency = CasinoCurrencies.Of(board);
         var minimum = board.MinBet > 0 ? board.MinBet : BlackjackRules.MinBet;
         var tableMax = board.MaxBet > 0 ? board.MaxBet : BlackjackRules.MaxBet;
-        var blocked = veiled || board.Paused || rooms.StakeInFlight || frame.Blocked;
+        var blocked = veiled || board.Paused || rooms.StakeInFlight;
         if (currency == CasinoCurrencies.Gil)
         {
             var inset = BetComposer.Pad * scale;

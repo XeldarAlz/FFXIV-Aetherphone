@@ -137,8 +137,9 @@ public sealed class BlackjackRulesTests
     }
 
     [Fact]
-    public void OnlyTheSixSeatsExist()
+    public void OnlyTheSevenSeatsExist()
     {
+        Assert.Equal(7, BlackjackRules.SeatCount);
         Assert.False(BlackjackRules.IsSeat(-1));
         Assert.True(BlackjackRules.IsSeat(0));
         Assert.True(BlackjackRules.IsSeat(BlackjackRules.SeatCount - 1));

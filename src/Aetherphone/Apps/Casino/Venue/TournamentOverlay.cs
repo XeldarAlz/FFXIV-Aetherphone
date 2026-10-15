@@ -26,6 +26,7 @@ internal sealed class TournamentOverlay
     private readonly VenueCheer cheer = new();
 
     private bool expanded;
+    private bool dismissed;
 
     public TournamentPlayback Playback => playback;
 
@@ -37,18 +38,36 @@ internal sealed class TournamentOverlay
 
     public static float Reserve(float scale) => (StripHeight + StripGap) * scale;
 
+    public bool Showing(CasinoBlackjackRoomStateDto? board)
+    {
+        var tournament = board?.Tournament;
+        return tournament is not null && Shows(board) && (tournament.Live || !dismissed);
+    }
+
+    public void CloseBoard(CasinoBlackjackTournamentDto tournament)
+    {
+        expanded = false;
+        dismissed = !tournament.Live;
+    }
+
     public void Reset()
     {
         playback.Reset();
         cheer.Clear();
         expanded = false;
+        dismissed = false;
     }
 
     public void Draw(CasinoStage stage, in CasinoStageFrame frame, CasinoBlackjackRoomStateDto? board, string me)
     {
         var tournament = board?.Tournament;
         playback.Update(tournament, frame.DeltaSeconds, frame.SnapToTruth);
-        if (tournament is null || !Shows(board))
+        if (tournament is null || tournament.Live)
+        {
+            dismissed = false;
+        }
+
+        if (tournament is null || !Showing(board))
         {
             return;
         }
@@ -61,7 +80,15 @@ internal sealed class TournamentOverlay
         DrawStrip(drawList, tournament, strip, scale);
         if (UiInteract.Click(strip.Min, strip.Max, UiInteract.HoverOverlay(strip)))
         {
-            expanded = !expanded;
+            if (expanded)
+            {
+                CloseBoard(tournament);
+            }
+            else
+            {
+                expanded = true;
+            }
+
             CasinoSfx.Play(UiSound.CardSnap);
         }
 
@@ -71,7 +98,7 @@ internal sealed class TournamentOverlay
                 new Rect(new Vector2(safe.Min.X, strip.Max.Y + StripGap * scale), safe.Max), me, scale);
             if (panel.Height > 0f && UiInteract.Click(panel.Min, panel.Max, UiInteract.HoverOverlay(panel)))
             {
-                expanded = false;
+                CloseBoard(tournament);
                 CasinoSfx.Play(UiSound.CardSnap);
             }
         }

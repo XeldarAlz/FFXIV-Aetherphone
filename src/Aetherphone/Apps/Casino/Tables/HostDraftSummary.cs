@@ -33,6 +33,8 @@ internal static class HostDraftSummary
                     NumberText.Compact(draft.BigBlindValue));
             case HostGame.Deathroll:
                 return Loc.T(L.VenueHub.DraftSummaryStake, game, currency, NumberText.Compact(draft.StakeValue));
+            case HostGame.DiceTable when draft.DiceStakeValue > 0:
+                return Loc.T(L.VenueHub.DraftSummaryStake, game, currency, NumberText.Compact(draft.DiceStakeValue));
             default:
                 return Loc.T(L.VenueHub.DraftSummaryPlain, game, currency);
         }

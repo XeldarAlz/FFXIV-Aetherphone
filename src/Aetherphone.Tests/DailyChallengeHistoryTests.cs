@@ -120,7 +120,7 @@ public sealed class DailyChallengeHistoryTests
     }
 
     [Fact]
-    public void AClockThatRanBackwardsStartsAFreshHistory()
+    public void ALastDayAheadOfTodayChangesNothing()
     {
         var configuration = new FakeStatsConfiguration();
         var stats = Build(configuration);
@@ -129,9 +129,42 @@ public sealed class DailyChallengeHistoryTests
 
         stats.CompleteDaily(DailyId, Start - 3);
 
-        Assert.Equal(1UL, configuration.DailyChallengeHistory);
-        Assert.Equal(Start - 3, configuration.DailyChallengeLastDay);
-        Assert.Equal(2, stats.DailyBestStreak);
+        Assert.Equal(0b11UL, configuration.DailyChallengeHistory);
+        Assert.Equal(Start + 1, configuration.DailyChallengeLastDay);
+        Assert.Equal(2, configuration.DailyChallengeStreak);
+        Assert.Equal(2, configuration.Saves);
+    }
+
+    [Fact]
+    public void TheCoinDayShiftOnUpgradeDayKeepsTheStreak()
+    {
+        var configuration = new FakeStatsConfiguration
+        {
+            DailyChallengeStreak = 3,
+            DailyChallengeLastDay = Start + 1,
+        };
+        var stats = Build(configuration);
+
+        stats.CompleteDaily(DailyId, Start);
+        stats.CompleteDaily(DailyId, Start + 2);
+
+        Assert.Equal(4, configuration.DailyChallengeStreak);
+        Assert.Equal(0b1111UL, configuration.DailyChallengeHistory);
+        Assert.Equal(Start + 2, configuration.DailyChallengeLastDay);
+    }
+
+    [Fact]
+    public void ALastDayAheadOfTodayStillReadsDone()
+    {
+        var configuration = new FakeStatsConfiguration
+        {
+            DailyChallengeStreak = 2,
+            DailyChallengeLastDay = GameStatsStore.TodayIndex + 1,
+        };
+        var stats = Build(configuration);
+
+        Assert.True(stats.DailyDone);
+        Assert.Equal(2, stats.DailyStreak);
     }
 
     [Fact]

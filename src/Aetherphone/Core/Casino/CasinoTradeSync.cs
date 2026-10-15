@@ -1,4 +1,5 @@
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
@@ -6,400 +7,342 @@ using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Core.Casino;
 
+internal sealed record TradeRecorded(CasinoLedgerEntryDto Entry, string PartnerName, long Received, long Sent,
+    long ShownAtTick)
+{
+    public bool Incoming => Received > Sent;
+
+    public long Amount => Math.Abs(Received - Sent);
+}
+
+internal sealed record TradeRecordAnswer(CasinoLedgerTradeRequest Request, string AccountId,
+    CasinoLedgerResultDto? Answer);
+
 internal sealed class CasinoTradeSync : IDisposable
 {
-    private const long LocateEveryMilliseconds = 1_000;
-    private const long ProbeMilliseconds = 30_000;
-    private const long ProbeEveryMilliseconds = 5_000;
+    public const long RecordedShownMilliseconds = 8_000;
+
+    private static readonly int[] RetryDelaysMilliseconds = { 2_000, 5_000, 10_000 };
 
     private readonly Configuration configuration;
     private readonly AethernetSession session;
-    private readonly ITradeWindowReader reader;
-    private readonly CasinoRoomsStore rooms;
+    private readonly CasinoClient casino;
     private readonly CasinoTablesStore tables;
     private readonly CasinoVenueStore venue;
-    private readonly CasinoStore chips;
     private readonly NotificationService notifications;
     private readonly Vector4 accent;
+    private readonly TradeWindowReader reader = new();
     private readonly TradeSyncTracker tracker = new();
-    private readonly TradeTableMemory memory = new();
-    private readonly TradeProposalQueue queue = new();
-    private readonly ITradeMatchSource source;
+    private readonly Queue<CasinoLedgerTradeRequest> pending = new();
     private readonly StoreWork work = new("CasinoTradeSync");
-    private readonly Func<string, CasinoTableRowDto?> cardFor;
-    private readonly Func<string, CasinoTableLedgerDto?> ledgerFor;
 
-    private volatile TradeMatchHolder? serverAnswer;
-    private volatile TradeMiss? lastMiss;
-    private volatile GuestOffer? pendingGuest;
-    private int matching;
-    private bool wasOpen;
-    private long locatedAtTick;
-    private TradeCompletion? heldCompletion;
-    private TradeMiss? probedMiss;
-    private CasinoTableLedgerDto? probedLedger;
-    private string probeHost = string.Empty;
-    private long probedAtTick;
+    private TradeRecordAnswer? answer;
+    private CasinoStakeOutcome? undoOutcome;
+    private volatile TradeRecorded? recorded;
+    private volatile bool undoing;
+    private bool sending;
+    private bool tracking;
+    private string accountId = string.Empty;
 
-    public CasinoTradeSync(Configuration configuration, AethernetSession session, ITradeWindowReader reader,
-        ITradeMatchSource source, CasinoRoomsStore rooms, CasinoTablesStore tables, CasinoVenueStore venue,
-        CasinoStore chips, NotificationService notifications, Vector4 accent)
+    public CasinoTradeSync(Configuration configuration, AethernetSession session, CasinoClient casino,
+        CasinoTablesStore tables, CasinoVenueStore venue, NotificationService notifications, Vector4 accent)
     {
         this.configuration = configuration;
         this.session = session;
-        this.reader = reader;
-        this.source = source;
-        this.rooms = rooms;
+        this.casino = casino;
         this.tables = tables;
         this.venue = venue;
-        this.chips = chips;
         this.notifications = notifications;
         this.accent = accent;
-        cardFor = tables.CardFor;
-        ledgerFor = tables.LedgerFor;
         Plugin.Framework.Update += OnFrameworkUpdate;
     }
 
     public bool Enabled
     {
-        get => configuration.CasinoTradeSync;
+        get => configuration.CasinoHostTradeSync;
         set
         {
-            if (configuration.CasinoTradeSync == value)
+            if (configuration.CasinoHostTradeSync == value)
             {
                 return;
             }
 
-            configuration.CasinoTradeSync = value;
+            configuration.CasinoHostTradeSync = value;
             configuration.Save();
             tracker.Reset();
+            AepLog.Info($"[TradeSync] Trade sync turned {(value ? "on" : "off")}");
         }
     }
 
-    public bool AutoConfirm
-    {
-        get => configuration.CasinoTradeAutoConfirm;
-        set
-        {
-            if (configuration.CasinoTradeAutoConfirm == value)
-            {
-                return;
-            }
+    public bool Undoing => undoing;
 
-            configuration.CasinoTradeAutoConfirm = value;
-            configuration.Save();
-        }
+    public TradeRecorded? RecordedAt(long nowTick)
+    {
+        var shown = recorded;
+        return shown is not null && nowTick - shown.ShownAtTick < RecordedShownMilliseconds ? shown : null;
     }
 
-    public TradeProposal Pending => queue.Head;
-
-    public TradeMiss? LastMiss => lastMiss;
-
-    public GuestOffer? PendingGuest => GuestLedger.Shown(pendingGuest, chips.HasFeature(CasinoFeatures.VenueBook));
-
-    public bool Busy => venue.HostInFlight;
-
-    public bool GuestBusy => tables.IntentInFlight;
-
-    public CasinoStakeOutcome? TakeOutcome()
+    public void DismissRecorded()
     {
-        return venue.TakeTradeOutcome();
+        recorded = null;
     }
 
-    public CasinoStakeOutcome? TakeGuestOutcome()
+    public CasinoStakeOutcome? TakeUndoOutcome()
     {
-        return tables.TakeGuestOutcome();
+        return Interlocked.Exchange(ref undoOutcome, null);
     }
 
-    public void Accept()
+    public void Undo()
     {
-        if (queue.TryTake(out var proposal))
-        {
-            venue.ProposeTrade(proposal);
-        }
-    }
-
-    public void Dismiss()
-    {
-        queue.TryTake(out _);
-    }
-
-    public void RecordGuest()
-    {
-        var offer = Interlocked.Exchange(ref pendingGuest, null);
-        if (offer is null)
+        var shown = recorded;
+        if (shown is null || undoing)
         {
             return;
         }
 
-        lastMiss = null;
-        AepLog.Info($"[TradeSync] Recording a guest {offer.LedgerKind} of {offer.Amount} gil at table {offer.TableId}");
-        tables.ProposeGuestEntry(offer.TableId, offer.LedgerKind, offer.GuestName, offer.Amount,
-            CasinoLedgerKinds.Trade);
-    }
-
-    public void DismissGuest()
-    {
-        pendingGuest = null;
-    }
-
-    public TradeTableContext Context()
-    {
-        var view = View();
-        return TradeContexts.Build(memory.Resolve(view, Environment.TickCount64), view);
-    }
-
-    private TradeTableView View()
-    {
-        return new TradeTableView(session.CurrentUser?.Id ?? string.Empty, rooms.Room.RoomId,
-            rooms.Room.State?.Blackjack, venue.View, tables.Door, tables.Listed, cardFor, ledgerFor,
-            tables.LedgerRoomId);
+        recorded = null;
+        undoing = true;
+        var tableId = shown.Entry.TableId;
+        var entryId = shown.Entry.EntryId;
+        AepLog.Info($"[TradeSync] Undoing the {shown.Entry.Kind} of {shown.Amount} gil at table {tableId}");
+        work.Run("trade undo", async token =>
+        {
+            var result = await tables.RemoveEntryAsync(tableId, entryId, token).ConfigureAwait(false);
+            AepLog.Info(result is null
+                ? "[TradeSync] Undo got no answer"
+                : $"[TradeSync] Undo answered granted {result.Granted}, reason {result.Reason}");
+            Interlocked.Exchange(ref undoOutcome, result is null
+                ? new CasinoStakeOutcome(false, CasinoReasons.Unreachable)
+                : new CasinoStakeOutcome(result.Granted, CasinoTablesStore.Named(result.Reason)));
+        }, () => undoing = false);
     }
 
     private void OnFrameworkUpdate(IFramework framework)
     {
-        if (!configuration.CasinoTradeSync || !session.IsSignedIn)
+        var account = session.CurrentUser?.Id ?? string.Empty;
+        if (!string.Equals(account, accountId, StringComparison.Ordinal))
         {
-            heldCompletion = null;
-            probedMiss = null;
+            SwitchAccount(account);
+        }
+
+        TakeAnswer();
+        if (!session.IsSignedIn)
+        {
+            StopTracking();
             return;
         }
 
-        var now = Environment.TickCount64;
-        var sample = reader.Sample();
-        if (sample.Open && !wasOpen)
+        Send();
+        if (!configuration.CasinoHostTradeSync)
         {
-            Opened(memory.Resolve(View(), now));
-        }
-        else if (now - locatedAtTick >= LocateEveryMilliseconds)
-        {
-            locatedAtTick = now;
-            memory.Resolve(View(), now);
+            StopTracking();
+            return;
         }
 
-        wasOpen = sample.Open;
-        var answered = Interlocked.Exchange(ref serverAnswer, null);
-        if (answered is not null)
-        {
-            Answered(answered);
-        }
-
-        if (heldCompletion is { } held && Volatile.Read(ref matching) == 0)
-        {
-            heldCompletion = null;
-            AepLog.Info("[TradeSync] The server match finished, matching the trade that waited for it");
-            Match(held);
-        }
-
-        Probe(now);
-        var completion = tracker.Observe(sample, now);
+        tracking = true;
+        var completion = tracker.Observe(reader.Sample(), Environment.TickCount64);
         if (completion is { } done)
         {
             Completed(done);
         }
     }
 
-    private void Completed(TradeCompletion completion)
+    private void StopTracking()
     {
-        AepLog.Info($"[TradeSync] Trade completed: net {completion.Net} gil, "
-            + $"{completion.NameCandidates.Length} name candidates, partner read {completion.PartnerRead}");
-        Match(completion);
+        if (!tracking)
+        {
+            return;
+        }
+
+        tracking = false;
+        tracker.Reset();
     }
 
-    private void Match(TradeCompletion completion)
+    private void SwitchAccount(string account)
     {
-        var context = Context();
-        var local = TradeMatchFlow.Local(completion, context);
-        if (local.Route == TradeMatchRoute.NoTable)
+        accountId = account;
+        tracker.Reset();
+        if (pending.Count > 0)
         {
-            AepLog.Info("[TradeSync] No gil table is known for this trade, nothing to match");
+            AepLog.Info($"[TradeSync] The account changed, {pending.Count} unsent trades dropped");
+        }
+
+        pending.Clear();
+        recorded = null;
+    }
+
+    private void Completed(in TradeCompletion completion)
+    {
+        var amount = Math.Abs(completion.Net);
+        if (completion.PartnerName.Length == 0)
+        {
+            AepLog.Info($"[TradeSync] A trade of {amount} gil completed without a partner name, not recorded");
+            NotifyFailure(amount);
             return;
         }
 
-        if (local.Route == TradeMatchRoute.Local)
+        var hint = HintTableId();
+        pending.Enqueue(new CasinoLedgerTradeRequest(Guid.NewGuid().ToString("N"), completion.PartnerName,
+            completion.PartnerWorld, completion.Received, completion.Sent, hint));
+        AepLog.Info($"[TradeSync] Trade completed: received {completion.Received} gil, sent {completion.Sent} gil, "
+            + (hint.Length > 0 ? $"hint table {hint}" : "no table hint") + $", {pending.Count} waiting to send");
+    }
+
+    private void Send()
+    {
+        if (sending || pending.Count == 0)
         {
-            AepLog.Info($"[TradeSync] Matched by display name at table {context.TableId}");
-            Offer(local.Proposal);
             return;
         }
 
-        var partner = GuestLedger.PartnerNameOf(completion);
-        if (Interlocked.Exchange(ref matching, 1) != 0)
+        var request = pending.Dequeue();
+        var account = accountId;
+        sending = true;
+        work.Run("trade record", async token =>
         {
-            if (heldCompletion is null)
+            CasinoLedgerResultDto? result = null;
+            try
             {
-                AepLog.Info("[TradeSync] A server match is still in flight, this trade waits for it");
-                heldCompletion = completion;
-                return;
+                result = await RecordAsync(request, token).ConfigureAwait(false);
             }
-
-            AepLog.Info("[TradeSync] A server match is in flight and a trade already waits, this one is not matched");
-            Missed(new TradeMiss(context.TableId, Math.Abs(completion.Net), Environment.TickCount64, partner,
-                completion.Net > 0, TradeMissKind.Unread), context);
-            return;
-        }
-
-        AepLog.Info($"[TradeSync] No display name matched at table {context.TableId}, asking the server");
-        work.Run("trade match", async token =>
-        {
-            var result = await TradeMatchFlow.ServerAsync(source, completion, context, token).ConfigureAwait(false);
-            Interlocked.Exchange(ref serverAnswer,
-                new TradeMatchHolder(result, context.MyUserId, context.TableId, completion.Net, partner));
-        }, () => Interlocked.Exchange(ref matching, 0));
-    }
-
-    private void Answered(TradeMatchHolder answered)
-    {
-        if (!string.Equals(answered.AccountId, session.CurrentUser?.Id, StringComparison.Ordinal))
-        {
-            AepLog.Info("[TradeSync] Server match arrived after the account changed, dropped");
-            return;
-        }
-
-        var result = answered.Result;
-        if (result.Route != TradeMatchRoute.Server)
-        {
-            AepLog.Info(MissNote(result));
-            Missed(new TradeMiss(answered.TableId, Math.Abs(answered.Net), Environment.TickCount64,
-                answered.PartnerName, answered.Net > 0, TradeMatchFlow.MissKindOf(result.Route)), Context());
-            return;
-        }
-
-        AepLog.Info("[TradeSync] Matched by character name on the server");
-        Offer(result.Proposal);
-    }
-
-    private static string MissNote(in TradeMatchResult result) => result.Route switch
-    {
-        TradeMatchRoute.Refused => $"[TradeSync] Server refused the match: {result.Reason}",
-        TradeMatchRoute.Unreachable => $"[TradeSync] Server match unavailable ({result.Reason}), treated as no match",
-        TradeMatchRoute.Mismatch => "[TradeSync] Server match does not fit this table's side, dropped",
-        TradeMatchRoute.Unrecordable =>
-            "[TradeSync] Server matched a counterparty, but no ledger entry can take this trade",
-        TradeMatchRoute.NoNames => "[TradeSync] No names were read from the trade window",
-        _ => "[TradeSync] Server found no counterparty for this trade",
-    };
-
-    private void Missed(TradeMiss miss, in TradeTableContext context)
-    {
-        lastMiss = miss;
-        var offer = GuestLedger.Offer(miss, context.Hosting, context.Entries);
-        pendingGuest = offer;
-        if (context.Hosting)
-        {
-            Arm(miss, context.MyUserId);
-        }
-
-        if (offer is null)
-        {
-            return;
-        }
-
-        AepLog.Info($"[TradeSync] Offering a guest {offer.LedgerKind} of {offer.Amount} gil to the host");
-        Notify(offer.TableId, offer.Incoming, offer.GuestName, offer.Amount);
-    }
-
-    private void Arm(TradeMiss miss, string hostUserId)
-    {
-        probedMiss = miss;
-        probeHost = hostUserId;
-        probedLedger = tables.LedgerFor(miss.TableId);
-        probedAtTick = 0;
-    }
-
-    private void Probe(long now)
-    {
-        var miss = probedMiss;
-        if (miss is null)
-        {
-            return;
-        }
-
-        if (!ReferenceEquals(lastMiss, miss) || now - miss.AtTick > ProbeMilliseconds)
-        {
-            probedMiss = null;
-            probedLedger = null;
-            return;
-        }
-
-        var ledger = tables.LedgerFor(miss.TableId);
-        if (ledger is not null && !ReferenceEquals(ledger, probedLedger))
-        {
-            probedLedger = ledger;
-            var waiting = TradeMatchFlow.WaitingOnHost(miss, probeHost,
-                ledger.Entries ?? Array.Empty<CasinoLedgerEntryDto>());
-            if (waiting.Kind != TradeProposalKind.None)
+            finally
             {
-                AepLog.Info("[TradeSync] The ledger now holds an entry for that trade waiting on the host");
-                probedMiss = null;
-                Offer(waiting);
-                return;
+                Interlocked.Exchange(ref answer, new TradeRecordAnswer(request, account, result));
             }
-        }
-
-        if (now - probedAtTick < ProbeEveryMilliseconds
-            || !string.Equals(tables.LedgerRoomId, miss.TableId, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        probedAtTick = now;
-        tables.RefreshLedgerNow(miss.TableId);
-    }
-
-    private void Offer(in TradeProposal proposal)
-    {
-        lastMiss = null;
-        pendingGuest = null;
-        probedMiss = null;
-        var automatic = !proposal.HostSide && configuration.CasinoTradeAutoConfirm;
-        AepLog.Info($"[TradeSync] {proposal.Kind} {proposal.LedgerKind} for {proposal.Amount} gil, "
-            + $"host side {proposal.HostSide}, incoming {proposal.Incoming}, automatic {automatic}");
-        if (automatic && !venue.HostInFlight)
-        {
-            venue.ProposeTrade(proposal);
-            return;
-        }
-
-        if (!queue.Add(proposal))
-        {
-            AepLog.Info("[TradeSync] Prompt queue full, the oldest unanswered prompt was dropped");
-        }
-
-        Notify(proposal.TableId, proposal.Incoming, proposal.CounterpartyName, proposal.Amount);
-    }
-
-    private void Notify(string tableId, bool incoming, string name, long amount)
-    {
-        notifications.Notify(new PhoneNotification(CasinoTurnNotifier.AppId, Loc.T(L.Venue.TradeNotifyTitle),
-            Loc.T(incoming ? L.Venue.TradeReceivedFrom : L.Venue.TradeSentTo, name, NumberText.Group(amount)),
-            DateTime.Now, accent, string.Concat(CasinoTurnNotifier.GroupPrefix, tableId))
-        {
-            CreatedAtUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
         });
     }
 
-    private void Opened(in TradeTableRef table)
+    private async Task<CasinoLedgerResultDto?> RecordAsync(CasinoLedgerTradeRequest request, CancellationToken token)
     {
-        if (!table.Located)
+        var result = await casino.RecordTradeAsync(request, token).ConfigureAwait(false);
+        for (var attempt = 0; result is null && attempt < RetryDelaysMilliseconds.Length; attempt++)
+        {
+            var delay = RetryDelaysMilliseconds[attempt];
+            AepLog.Info($"[TradeSync] Recording the trade got no answer, retrying in {delay} ms");
+            await Task.Delay(delay, token).ConfigureAwait(false);
+            result = await casino.RecordTradeAsync(request, token).ConfigureAwait(false);
+        }
+
+        return result;
+    }
+
+    private void TakeAnswer()
+    {
+        var taken = Interlocked.Exchange(ref answer, null);
+        if (taken is null)
         {
             return;
         }
 
-        tables.RefreshLedgerNow(table.TableId);
-        if (!table.Known)
+        sending = false;
+        if (!string.Equals(taken.AccountId, accountId, StringComparison.Ordinal))
         {
-            tables.RefreshCard(table.TableId);
+            AepLog.Info("[TradeSync] A trade answer arrived after the account changed, dropped");
+            return;
         }
+
+        var request = taken.Request;
+        var amount = Math.Abs(request.Received - request.Sent);
+        var result = taken.Answer;
+        if (result is null)
+        {
+            AepLog.Info($"[TradeSync] Gave up recording a trade of {amount} gil after every retry");
+            NotifyFailure(amount);
+            return;
+        }
+
+        if (!result.Granted)
+        {
+            AepLog.Info($"[TradeSync] A trade of {amount} gil was refused: {result.Reason}");
+            if (!string.Equals(result.Reason, CasinoReasons.NoGilTable, StringComparison.Ordinal)
+                && !string.Equals(result.Reason, CasinoReasons.ConfigInvalid, StringComparison.Ordinal))
+            {
+                NotifyFailure(amount);
+            }
+
+            return;
+        }
+
+        var entry = result.Entry;
+        if (entry is null)
+        {
+            AepLog.Info($"[TradeSync] A trade of {amount} gil was granted without an entry");
+            return;
+        }
+
+        tables.UpsertLedgerEntry(entry.TableId, entry);
+        tables.RefreshLedgerNow(entry.TableId);
+        AepLog.Info($"[TradeSync] Recorded as a {entry.Kind} of {entry.Amount} gil at table {entry.TableId}, "
+            + $"guest {entry.Guest}");
+        var shown = new TradeRecorded(entry, PartnerOf(entry, request), request.Received, request.Sent,
+            Environment.TickCount64);
+        recorded = shown;
+        NotifyRecorded(shown);
+    }
+
+    private static string PartnerOf(CasinoLedgerEntryDto entry, CasinoLedgerTradeRequest request)
+    {
+        var incoming = request.Received > request.Sent;
+        var userId = incoming ? entry.PayerUserId : entry.PayeeUserId;
+        var name = entry.Guest && userId.Length == 0 && entry.GuestName.Length > 0
+            ? entry.GuestName
+            : incoming ? entry.PayerName : entry.PayeeName;
+        return name.Length > 0 ? name : request.PartnerName;
+    }
+
+    private string HintTableId()
+    {
+        var view = venue.View;
+        if (view is not null && view.Gil && OwnsGil(view.RoomId))
+        {
+            return view.RoomId;
+        }
+
+        var attended = tables.AttendedTableId(Environment.TickCount64);
+        return OwnsGil(attended) ? attended : string.Empty;
+    }
+
+    private bool OwnsGil(string tableId)
+    {
+        if (tableId.Length == 0)
+        {
+            return false;
+        }
+
+        var ledger = tables.LedgerFor(tableId);
+        if (ledger is not null)
+        {
+            return ledger.Owner && ledger.Currency == CasinoCurrencies.Gil;
+        }
+
+        var card = tables.CardFor(tableId);
+        return card is not null && tables.Owns(card) && CasinoCurrencies.Of(card) == CasinoCurrencies.Gil;
+    }
+
+    private void NotifyRecorded(TradeRecorded shown)
+    {
+        Notify(shown.Entry.TableId, Loc.T(L.Venue.TradeRecorded, Loc.T(CasinoGilLedger.KindLabel(shown.Entry.Kind))),
+            Loc.T(shown.Incoming ? L.Venue.TradeReceivedFrom : L.Venue.TradeSentTo, shown.PartnerName,
+                NumberText.Group(shown.Amount)));
+    }
+
+    private void NotifyFailure(long amount)
+    {
+        Notify(string.Empty, Loc.T(L.Venue.TradeFailedTitle), Loc.T(L.Venue.TradeFailedBody, NumberText.Group(amount)));
+    }
+
+    private void Notify(string tableId, string title, string body)
+    {
+        notifications.Notify(new PhoneNotification(CasinoTurnNotifier.AppId, title, body, DateTime.Now, accent,
+            string.Concat(CasinoTurnNotifier.GroupPrefix, tableId))
+        {
+            CreatedAtUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+        });
     }
 
     public void Dispose()
     {
         Plugin.Framework.Update -= OnFrameworkUpdate;
         work.Dispose();
-        reader.Dispose();
     }
-
-    private sealed record TradeMatchHolder(TradeMatchResult Result, string AccountId, string TableId, long Net,
-        string PartnerName);
 }

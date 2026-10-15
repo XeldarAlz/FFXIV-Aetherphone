@@ -35,13 +35,13 @@ internal static class HostGames
         new(HostGame.Holdem, CasinoGames.Holdem, L.Casino.GameHoldem, L.Tables.GameHoldemLine, CasinoSign.Holdem,
             FontAwesomeIcon.Clone, true, VenueRoomKind.None, AccentRing.Red),
         new(HostGame.DiceTable, CasinoGames.DiceTable, L.Venue.GameDiceTable, L.Tables.GameDiceLine, CasinoSign.Dice,
-            FontAwesomeIcon.Dice, false, VenueRoomKind.Dice, AccentRing.Indigo),
+            FontAwesomeIcon.Dice, true, VenueRoomKind.Dice, AccentRing.Indigo),
         new(HostGame.Deathroll, CasinoGames.Deathroll, L.Venue.GameDeathroll, L.Tables.GameDeathrollLine,
-            CasinoSign.Deathroll, FontAwesomeIcon.Skull, false, VenueRoomKind.Deathroll, AccentRing.Orange),
+            CasinoSign.Deathroll, FontAwesomeIcon.Skull, true, VenueRoomKind.Deathroll, AccentRing.Orange),
         new(HostGame.Raffle, CasinoGames.Raffle, L.Venue.GameRaffle, L.Tables.GameRaffleLine, CasinoSign.Raffle,
-            FontAwesomeIcon.Ticket, false, VenueRoomKind.Raffle, AccentRing.Gold),
+            FontAwesomeIcon.Ticket, true, VenueRoomKind.Raffle, AccentRing.Gold),
         new(HostGame.Book, CasinoGames.Book, L.Book.Game, L.Book.Line, CasinoSign.Book, FontAwesomeIcon.Book,
-            false, VenueRoomKind.None, AccentRing.Violet),
+            true, VenueRoomKind.None, AccentRing.Violet),
     };
 
     public static ref readonly HostGameInfo Of(HostGame game) => ref All[(int)game];
@@ -56,6 +56,9 @@ internal static class HostGames
 
     public static int MaxSeats(HostGame game) =>
         game == HostGame.Holdem ? HoldemRules.MaxSeats : CasinoHostingRules.MaxSeats;
+
+    public static int DefaultSeats(HostGame game) =>
+        game == HostGame.Holdem ? HoldemRules.HouseSeats : CasinoHostingRules.DefaultSeats;
 
     public static HostGame FromVenue(VenueRoomKind kind) => kind switch
     {

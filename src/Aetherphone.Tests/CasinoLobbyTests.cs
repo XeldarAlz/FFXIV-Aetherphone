@@ -95,40 +95,6 @@ public sealed class CasinoLobbyTests
     }
 
     [Fact]
-    public void RecentGamesAreDistinctNewestFirstAndSkipUnknownKinds()
-    {
-        var rounds = new[]
-        {
-            Round("casino.slots", 10),
-            Round("casino.dailyspin", 9),
-            Round("casino.slots", 8),
-            Round("casino.wheel", 7),
-            Round("poker", 6),
-            Round("casino.bartender", 5),
-        };
-        string[] playable = { "blackjack", "slots", "scratch", "bartender", "bingo", "wheel" };
-        Span<int> picked = stackalloc int[4];
-        var count = CasinoRecentGames.Collect(rounds, playable, picked);
-        Assert.Equal(3, count);
-        Assert.Equal(1, picked[0]);
-        Assert.Equal(5, picked[1]);
-        Assert.Equal(3, picked[2]);
-    }
-
-    [Fact]
-    public void RecentGamesStopAtTheShelfSize()
-    {
-        var rounds = new[]
-        {
-            Round("casino.slots", 6), Round("casino.wheel", 5), Round("casino.bingo", 4),
-            Round("casino.scratch", 3), Round("casino.blackjack", 2),
-        };
-        string[] playable = { "blackjack", "slots", "scratch", "bartender", "bingo", "wheel" };
-        Span<int> picked = stackalloc int[2];
-        Assert.Equal(2, CasinoRecentGames.Collect(rounds, playable, picked));
-    }
-
-    [Fact]
     public void HistoryDaysTotalOnlySettledRoundsAndFlagTheTruncatedDay()
     {
         var rounds = new[]

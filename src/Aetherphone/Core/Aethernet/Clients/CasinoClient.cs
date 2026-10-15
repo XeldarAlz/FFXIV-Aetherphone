@@ -5,10 +5,11 @@ using Aetherphone.Core.Net;
 
 namespace Aetherphone.Core.Aethernet.Clients;
 
-internal sealed partial class CasinoClient : ITradeMatchSource
+internal sealed partial class CasinoClient
 {
     internal const string StatePath = "/casino";
     internal const string BuyChipsPath = "/casino/chips/buy";
+    internal const string CashOutChipsPath = "/casino/chips/cashout";
     internal const string CloseSittingPath = "/casino/sittings/close";
     internal const string LimitsPath = "/casino/limits";
     internal const string SpinSlotsPath = "/casino/slots/spin";
@@ -34,6 +35,7 @@ internal sealed partial class CasinoClient : ITradeMatchSource
     internal const string JoinTablePath = "/casino/tables/join";
     internal const string BlackjackRebuyPath = "/casino/blackjack/rebuy";
     internal const string LedgerPath = "/casino/ledger";
+    internal const string LedgerTradePath = "/casino/ledger/trade";
     internal const string BonusPath = "/casino/bonus";
     internal const string VenuePath = "/casino/venue";
 
@@ -44,7 +46,9 @@ internal sealed partial class CasinoClient : ITradeMatchSource
     internal const string TournamentLeaf = "tournament";
     internal const string TournamentStopLeaf = "tournament/stop";
     internal const string LedgerLeaf = "ledger";
-    internal const string LedgerMatchLeaf = "ledger/match";
+    internal const string LedgerJoinLeaf = "ledger/join";
+    internal const string SettleLeaf = "settle";
+    internal const string RemoveLeaf = "remove";
     internal const string CloseLeaf = "close";
 
     internal static string BonusClaimPath(string kind)
@@ -159,6 +163,14 @@ internal sealed partial class CasinoClient : ITradeMatchSource
         return net.PostAsync(BuyChipsPath, new CasinoBuyChipsRequest(coins, clientActionId),
             AethernetJsonContext.Default.CasinoBuyChipsRequest, AethernetJsonContext.Default.CasinoBuyChipsDto, token,
             null, onFailure);
+    }
+
+    public Task<CasinoCashOutChipsDto?> CashOutChipsAsync(long coins, string clientActionId, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.PostAsync(CashOutChipsPath, new CasinoCashOutChipsRequest(coins, clientActionId),
+            AethernetJsonContext.Default.CasinoCashOutChipsRequest,
+            AethernetJsonContext.Default.CasinoCashOutChipsDto, token, null, onFailure);
     }
 
     public Task<CasinoSittingResultDto?> CloseSittingAsync(string sittingId, CancellationToken token,
@@ -391,6 +403,13 @@ internal sealed partial class CasinoClient : ITradeMatchSource
             AethernetJsonContext.Default.CasinoTableJoinDto, token, null, onFailure);
     }
 
+    public Task<CasinoTableActionDto?> JoinBookLedgerAsync(string roomId, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.RequestAsync(HttpMethod.Post, TablePath(roomId, LedgerJoinLeaf),
+            AethernetJsonContext.Default.CasinoTableActionDto, token, null, onFailure);
+    }
+
     public Task<CasinoTableListDto?> NearbyTablesAsync(int world, int territory, int ward, CancellationToken token,
         Action<AepFailure>? onFailure = null)
     {
@@ -466,25 +485,24 @@ internal sealed partial class CasinoClient : ITradeMatchSource
             AethernetJsonContext.Default.CasinoLedgerResultDto, token, null, onFailure);
     }
 
-    public Task<CasinoLedgerTradeMatchDto?> MatchTradeAsync(string roomId, CasinoLedgerTradeMatchRequest request,
-        CancellationToken token, Action<AepFailure>? onFailure = null)
-    {
-        return net.PostAsync(TablePath(roomId, LedgerMatchLeaf), request,
-            AethernetJsonContext.Default.CasinoLedgerTradeMatchRequest,
-            AethernetJsonContext.Default.CasinoLedgerTradeMatchDto, token, null, onFailure);
-    }
-
-    public Task<CasinoLedgerResultDto?> ConfirmLedgerEntryAsync(string entryId, CancellationToken token,
+    public Task<CasinoLedgerResultDto?> RecordTradeAsync(CasinoLedgerTradeRequest request, CancellationToken token,
         Action<AepFailure>? onFailure = null)
     {
-        return net.RequestAsync(HttpMethod.Post, LedgerEntryPath(entryId, "confirm"),
+        return net.PostAsync(LedgerTradePath, request, AethernetJsonContext.Default.CasinoLedgerTradeRequest,
             AethernetJsonContext.Default.CasinoLedgerResultDto, token, null, onFailure);
     }
 
-    public Task<CasinoLedgerResultDto?> DisputeLedgerEntryAsync(string entryId, CancellationToken token,
+    public Task<CasinoLedgerResultDto?> SettleLedgerEntryAsync(string entryId, CancellationToken token,
         Action<AepFailure>? onFailure = null)
     {
-        return net.RequestAsync(HttpMethod.Post, LedgerEntryPath(entryId, "dispute"),
+        return net.RequestAsync(HttpMethod.Post, LedgerEntryPath(entryId, SettleLeaf),
+            AethernetJsonContext.Default.CasinoLedgerResultDto, token, null, onFailure);
+    }
+
+    public Task<CasinoLedgerResultDto?> RemoveLedgerEntryAsync(string entryId, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.RequestAsync(HttpMethod.Post, LedgerEntryPath(entryId, RemoveLeaf),
             AethernetJsonContext.Default.CasinoLedgerResultDto, token, null, onFailure);
     }
 

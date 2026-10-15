@@ -106,7 +106,7 @@ internal static class AppRegistry
         apps.Add(new CameraApp(new PhotoCaptureService(), photoLibrary, services.Configuration, services.GameUiVisibility, services.CameraShutter));
         apps.Add(new PhotosApp(photoLibrary, services.Confirm, services.Share, services.Configuration));
         apps.Add(new SkywatcherApp(services.Weather, services.WeatherControl, services.Configuration));
-        apps.Add(new VenuesApp(services.Venues, services.RemoteImages, services.Artwork, services.GameData, services.Configuration, services.Confirm, services.Translation, new VenueCasinoPill(services.CasinoVenue, services.CasinoLauncher)));
+        apps.Add(new VenuesApp(services.Venues, services.RemoteImages, services.Artwork, services.GameData, services.Configuration, services.Confirm, services.Translation));
         apps.Add(new StratsApp(services.StratsManifest, services.StratsGuides, services.RemoteImages, services.Configuration));
         apps.Add(new MusterApp(services.Musters, services.MusterLauncher, services.Aethernet, services.GameData, services.RemoteImages, services.Lodestone, services.Configuration, services.Confirm, services.Translation, services.Report, services.Conduct));
         apps.Add(new YellowPagesApp(services.YellowPages, services.AdInquiries, services.YellowPagesLauncher, services.SocialNotifications, services.Musters, new AethernetApi(services.Http, services.AethernetSession, "yellowpages"), services.GameData, services.RemoteImages, services.Lodestone, photoLibrary, services.WallpaperImages, services.Configuration, services.Confirm, services.Translation, services.Report, services.Conduct, services.EncryptionHelp, services.Http));
@@ -131,7 +131,8 @@ internal static class AppRegistry
         apps.Add(new FishingApp(services.Fishing, services.FishingAlerts, services.Textures));
         apps.Add(new GamesApp(services.GameStats, services.GameData, services.Textures, services.Coins,
             services.CoinSessions, services.GameRooms, services.Configuration, services.Leaderboard,
-            services.RemoteImages, services.Lodestone, services.MoogleClicker, services.SettingsLauncher));
+            services.RemoteImages, services.Lodestone, services.MoogleClicker, services.SettingsLauncher,
+            services.Confirm));
         apps.Add(new NotificationsApp(services, apps));
         var calendarEvents = new CalendarEvents(services.Http, services.AethernetSession);
         apps.Add(new CalendarApp(services.Configuration, calendarEvents, services.Confirm));

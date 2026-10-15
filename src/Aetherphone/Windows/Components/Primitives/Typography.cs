@@ -9,6 +9,7 @@ internal static partial class Typography
 {
     private const string Ellipsis = "…";
     private const float FitTolerance = 0.5f;
+    private const int QuadVertices = 4;
 
     private static readonly Vector2[] HaloOffsets =
     {
@@ -445,6 +446,66 @@ internal static partial class Typography
             }
 
             drawList.AddText(font, fontSize, origin, ImGui.GetColorU32(color), display);
+        }
+    }
+
+    public static void DrawCenteredHalo(Vector2 center, string text, Vector4 color, ReadOnlySpan<Vector4> halos,
+        float haloRadius, float maxWidth, in TextStyle style)
+    {
+        using (Plugin.Fonts.Push(style.Scale, style.Weight))
+        {
+            Plugin.Fonts.NoticeText(text);
+            var display = Fit(text, maxWidth);
+            var drawList = ImGui.GetWindowDrawList();
+            var font = ImGui.GetFont();
+            var fontSize = ImGui.GetFontSize();
+            var origin = center - ImGui.CalcTextSize(display) * 0.5f;
+            Span<int> glyphCharacters = stackalloc int[display.Length];
+            var glyphCount = VisibleGlyphs(display, glyphCharacters);
+            for (var offsetIndex = 0; offsetIndex < HaloOffsets.Length; offsetIndex++)
+            {
+                var firstVertex = drawList.VtxBuffer.Size;
+                drawList.AddText(font, fontSize, origin + HaloOffsets[offsetIndex] * haloRadius, uint.MaxValue,
+                    display);
+                TintGlyphs(drawList, firstVertex, glyphCharacters[..glyphCount], halos);
+            }
+
+            drawList.AddText(font, fontSize, origin, ImGui.GetColorU32(color), display);
+        }
+    }
+
+    private static int VisibleGlyphs(string text, Span<int> characters)
+    {
+        var count = 0;
+        for (var index = 0; index < text.Length; index++)
+        {
+            var character = text[index];
+            if (char.IsWhiteSpace(character) || char.IsLowSurrogate(character))
+            {
+                continue;
+            }
+
+            characters[count] = index;
+            count++;
+        }
+
+        return count;
+    }
+
+    private static void TintGlyphs(ImDrawListPtr drawList, int firstVertex, ReadOnlySpan<int> characters,
+        ReadOnlySpan<Vector4> colors)
+    {
+        var vertices = drawList.VtxBuffer.AsSpan()[firstVertex..];
+        var quadCount = vertices.Length / QuadVertices;
+        for (var quadIndex = 0; quadIndex < quadCount; quadIndex++)
+        {
+            var character = quadIndex < characters.Length ? characters[quadIndex] : colors.Length - 1;
+            var packed = ImGui.GetColorU32(colors[Math.Min(character, colors.Length - 1)]);
+            var first = quadIndex * QuadVertices;
+            for (var corner = 0; corner < QuadVertices; corner++)
+            {
+                vertices[first + corner].Col = packed;
+            }
         }
     }
 

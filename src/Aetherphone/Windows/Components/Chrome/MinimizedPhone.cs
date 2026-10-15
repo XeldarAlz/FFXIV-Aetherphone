@@ -143,8 +143,9 @@ internal sealed partial class MinimizedPhone : IDisposable
     private bool frameBodyHovered;
 
     public MinimizedPhone(PhoneServices services, NotificationRouter router, INavigator navigation,
-        MinimizedLayoutService layout)
+        MinimizedLayoutService layout, bool demo = false)
     {
+        this.demo = demo;
         playback = services.Playback;
         pcMedia = services.PcMedia;
         calls = services.Calls;
@@ -238,7 +239,7 @@ internal sealed partial class MinimizedPhone : IDisposable
         var scale = Scale;
         var body = geometry.Body;
         var bodyHovered = interactive && UiInteract.Hover(body.Min, body.Max);
-        var view = calls.Snapshot();
+        var view = demo ? DemoCall() : calls.Snapshot();
         StepState(delta, interactive, bodyHovered, view);
         if (alpha <= 0.001f)
         {
@@ -443,15 +444,22 @@ internal sealed partial class MinimizedPhone : IDisposable
             pulseRemaining = MathF.Max(0f, pulseRemaining - delta);
         }
 
+        if (demo)
+        {
+            StepDemo(delta);
+        }
+
         var callActive = view.State is CallState.Dialing or CallState.Connecting or CallState.Active;
         liveCall = callActive && layout.IsEnabled(MinimizedPart.Calls);
-        liveMusic = layout.IsEnabled(MinimizedPart.NowPlaying) && (playback.IsActive || ReadPcMusic());
+        liveMusic = layout.IsEnabled(MinimizedPart.NowPlaying) &&
+                    (demo ? demoStage == MinimizedDemoStage.Music : playback.IsActive || ReadPcMusic());
         RefreshPages();
+        ApplyFocus();
         StepSlot(delta);
         island.Step(liveCall && liveMusic ? 1f : 0f, Motion.Island, delta);
         badge.Step(badgeAppId is null ? 0f : 1f, Motion.Appear, delta);
         dnd.Step(configuration.DoNotDisturb ? 1f : 0f, Motion.Appear, delta);
-        AdvanceCard(delta, bodyHovered);
+        AdvanceCard(delta, bodyHovered || demoHeld);
         hover.Step(interactive && bodyHovered ? 1f : 0f, Motion.HoverLift, delta);
         pagePosition.Step(pageIndex, Motion.PageSettle, delta);
         mapSpan.Step(MinimizedShapes.MapSpan(configuration.MinimizedMapZoom), Motion.PageSettle, delta);

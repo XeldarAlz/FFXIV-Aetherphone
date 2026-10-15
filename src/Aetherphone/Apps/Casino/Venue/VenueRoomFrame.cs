@@ -41,7 +41,7 @@ internal readonly ref struct VenueRoomFrame
 
     public bool Gil => View.Gil;
 
-    public bool Enabled => !Busy && !Frame.Blocked;
+    public bool Enabled => !Busy;
 
     public bool IsMe(string userId) => Me.Length > 0 && string.Equals(userId, Me, StringComparison.Ordinal);
 }

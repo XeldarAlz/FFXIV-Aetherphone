@@ -109,6 +109,10 @@ Aethernet opened on 2 July 2026. By the end of the season, players on 113 worlds
 
 One Aethernet account signs you in to every social app, and each app can keep its own display name and username.
 
+Badge name colors stay readable on light and dark backgrounds, with clear lettering inside animated fire effects.
+
+Transparent images shared in Chirper, Aethergram and Velvet posts keep their clear backgrounds and soft edges. Stories and social comment attachments preserve transparency too.
+
 ## Watch, listen and play together
 
 <table>
@@ -154,6 +158,10 @@ One Aethernet account signs you in to every social app, and each app can keep it
   </tr>
 </table>
 
+Gamba's hero shows the coin value under your chips and a tier card with your level ring, current tier (set by your level, from Shark at level 20 to Legend at level 100), level bar and cap, and a Gamba home screen widget keeps the three-hour coin claim one tap away, with your level and tier on the medium size. Gamba's table ledger has a refresh button to fetch the latest gil entries without leaving the page. Gil Deathroll, dice and raffle rooms also open My gil ledger directly, with Back returning to the room. The blackjack felt switches to a compact layout on shorter screens, such as during a tournament, so cards, seats and bets never overlap. A blackjack tournament asks before you leave it: while you are still in, the leave button reads Resign and the back button warns first.
+
+Gamba's Floor shows every game on one page: Cards and Slots as three-column poster grids, the slot posters running their reels live under a bulb-lit jackpot marquee, and Quick bets as a four-column grid. Shortcuts open Missions, Club, Hall of Fame and History in one tap, the chips card spells out your Daily streak as Day 3 of 7 with numbered days, and Live now counts down the race, wheel and bingo rounds. On Live and on the Floor's Blackjack page, house blackjack lists its four tables, seven seats at each, every one with its own stakes from The Pit (500 to 10K a hand) up to The Vault (500K to 10M), how full it is, and the rules they all share (blackjack pays 3:2). A table above your max bet is watch only, and Find me a seat picks the busiest table you can play. Live also shows the floor challenges that are running or about to start, with the goal, the leader, your wins, the prize and the time left.
+
 ## And everything else a phone should do
 
 **Plays the game with you**<br>
@@ -164,6 +172,8 @@ One Aethernet account signs you in to every social app, and each app can keep it
 <img src="docs/media/readme/icons/muster.png" width="36" alt="Muster" title="Muster" /> <img src="docs/media/readme/icons/yellowpages.png" width="36" alt="Yellow Pages" title="Yellow Pages" /> <img src="docs/media/readme/icons/announcements.png" width="36" alt="Announcements" title="Announcements" /> <img src="docs/media/readme/icons/polls.png" width="36" alt="Polls" title="Polls" /> <img src="docs/media/readme/icons/coin.png" width="36" alt="Aether Coin" title="Aether Coin" /><br>
 <sub>Muster meetups · Yellow Pages classifieds · Announcements · Polls · Aether Coin badges and frames</sub>
 
+Aether Coin's product buttons keep their rounded edges and glow visible when highlighted.
+
 **Everyday utilities**<br>
 <img src="docs/media/readme/icons/camera.png" width="36" alt="Camera" title="Camera" /> <img src="docs/media/readme/icons/photos.png" width="36" alt="Photos" title="Photos" /> <img src="docs/media/readme/icons/notes.png" width="36" alt="Notes" title="Notes" /> <img src="docs/media/readme/icons/calendar.png" width="36" alt="Calendar" title="Calendar" /> <img src="docs/media/readme/icons/clock.png" width="36" alt="Clock" title="Clock" /> <img src="docs/media/readme/icons/skywatcher.png" width="36" alt="Skywatcher" title="Skywatcher" /> <img src="docs/media/readme/icons/wallet.png" width="36" alt="Wallet" title="Wallet" /> <img src="docs/media/readme/icons/health.png" width="36" alt="Health" title="Health" /> <img src="docs/media/readme/icons/shortcuts.png" width="36" alt="Shortcuts" title="Shortcuts" /> <img src="docs/media/readme/icons/news.png" width="36" alt="News" title="News" /><br>
 <sub>Camera · Photos with a photo editor · Notes · Calendar · Clock with Eorzea time · Skywatcher weather · Wallet · Health · Shortcuts · Lodestone News · Calculator · Activity rings</sub>
@@ -172,9 +182,15 @@ One Aethernet account signs you in to every social app, and each app can keep it
 <img src="docs/media/readme/icons/games.png" width="36" alt="Games" title="Games" /> <img src="docs/media/readme/icons/doom.png" width="36" alt="Doom" title="Doom" /> <img src="docs/media/readme/icons/chess.png" width="36" alt="Chess" title="Chess" /> <img src="docs/media/readme/icons/tetris.png" width="36" alt="Tetris" title="Tetris" /> <img src="docs/media/readme/icons/wordrun.png" width="36" alt="Word Run" title="Word Run" /> <img src="docs/media/readme/icons/solitaire.png" width="36" alt="Solitaire" title="Solitaire" /> <img src="docs/media/readme/icons/2048.png" width="36" alt="2048" title="2048" /><br>
 <sub>An arcade of fifty-nine games, Doom among them, each full screen with an intro, a countdown, a pause menu and a result card · Home, Together, Library and Profile tabs, with today's game playing live up top, a daily streak calendar and a painted icon for every game · Doom and Moogle War play sideways, and so do 8-Ball Pool and Moogle War rooms · a daily board that is the same for everyone · global and friends leaderboards you join only if you choose to, all time and this week · plus Uno, Chess, 8-Ball Pool, Connect Four, Broadside, Lucky Draw, Moogle War and Mini Golf online with friends</sub>
 
+Gamba's Book hosting flow uses Open the ledger for its final action, and a new Book is open to all by default so patrons can find it. Opening a Book's ledger registers an admitted patron so the host's trades can be matched to their account before their first entry. With trade sync on, every gil trade the host makes is recorded at once in the ledger of their open gil table: gil received is a buy-in, gil sent is a payout, a trade that pays an owed line settles it, players are matched by character name, and anyone else is booked as a guest. A card offers Undo for eight seconds, the host can Remove an entry or mark an owed line paid, and players see their entries read-only. At gil blackjack, gil handed over before sitting becomes the stack when the patron sits, and dice rounds close as soon as everyone in the room has rolled.
+
+Gamba's Host tab shows your open table with its code, who is here and who is knocking, or a poster for each of the six games you can host. Your table's console lets knockers in, merges everyone at the table into one Players list with a menu to make a co-dealer or remove someone, sums the gil ledger as taken in, paid out and owed, and explains every Manage action. The gil ledger lists each trade with its direction and a Recorded or Owed tag, and a trade the sync missed can still be added by hand. While you sit at your own table, a Host pill at the top takes you back to the console and counts the knocks waiting.
+
 ## Built like the phone in your pocket
 
-**Lives in your HUD.** Drag it anywhere, resize it, or shrink it to a mini phone with the clock, widgets, music, calls and an optional FPS counter. Keep it on screen through Group Pose and cutscenes if it lives on a second monitor.
+**Lives in your HUD.** Drag it anywhere, resize it, or shrink it to a mini phone with the clock, widgets, music, calls and an optional FPS counter. The counter uses larger, brighter text, with a compact fallback for large text settings. Keep it on screen through Group Pose and cutscenes if it lives on a second monitor.
+
+**In the server info bar.** The phone sits in the game's server info bar with your unread count, and a click opens it. Settings → General → Server info bar picks Icon + text (the default), Text or Icon, and lets you rename the label. If the icon doesn't show in Umbra, pick a style with text.
 
 **Widgets and Smart Stacks.** Widgets for most apps, resized from the corner and stacked by dropping one onto another.
 
@@ -186,9 +202,11 @@ One Aethernet account signs you in to every social app, and each app can keep it
 
 **Feeds that move on their own.** Settings → General → Auto-advance posts (off by default) steps a feed to the next post when you leave it alone, every 3 to 30 seconds (8 by default). Moving the mouse, scrolling, clicking or typing restarts the wait.
 
-**Seasonal nights.** Around Halloween, Chirper becomes a moonlit forest, Aethergram a blood-moon castle and Velvet a candlelit witching hour, each with its own icons, moments and quiet sounds, while the phone's everyday sounds trail off into a faint ghostly moan. Bats cross the home screen through a low mist, Skywatcher's skies fill with ghosts, wisps and falling leaves, and the calendar marks the night itself. Thirteen treats hide around the phone during All Saints' Wake, one more each day (miss a day and you can catch up later), each turning up a while into your session; the Aether Coin wallet tracks how many you have found and where the next one is hiding. Find them all and your name burns with Witchfire until the season ends (only you see it), and the Halloween widget counts down to the night. Settings → Appearance → Seasonal Theme picks when the theme shows: Automatic brings it out for the season, Halloween keeps it all year, and Off turns it off. The treat hunt only runs during the season either way. The night scenes drift gently as you scroll and move the cursor; Background Parallax, under Seasonal Theme, keeps them still, and Seasonal Name Font, right beside it, turns off just the blackletter names. Settings → Sounds → Seasonal Sounds keeps the look with the usual sounds.
+**Seasonal nights.** With the Halloween theme on, Chirper becomes a moonlit forest, Aethergram a blood-moon castle and Velvet a candlelit witching hour, each with its own icons, moments and quiet sounds, while the phone's everyday sounds trail off into a faint ghostly moan. Bats cross the home screen through a low mist, Skywatcher's skies fill with ghosts, wisps and falling leaves, and the calendar marks the night itself. Thirteen treats hide around the phone during All Saints' Wake, one more each day (miss a day and you can catch up later), each turning up a while into your session; the Aether Coin wallet tracks how many you have found and where the next one is hiding. Find them all to unlock the pumpkin badge, whose Witchfire name effect everyone sees, and wear it from Aether Coin's Items like any other badge. The Halloween widget counts down to the night. Settings → Appearance → Seasonal Theme picks when the theme shows: it starts Off, Automatic brings it out for the season, and Halloween keeps it all year. The first time you open the phone during the season, a short guide walks you there so you can choose. The treat hunt only runs during the season either way. The night scenes drift gently as you scroll and move the cursor; Background Parallax, under Seasonal Theme, keeps them still, and Seasonal Name Font, right beside it, turns off just the blackletter names. Settings → Sounds → Seasonal Sounds keeps the look with the usual sounds.
 
 **Speaks your language.** Nine interface languages and one-tap translation on posts, profiles and messages.
+
+**Emoji as you type.** Type `:` and two or more letters in a chat, comment, caption or chirp to get emoji suggestions. Arrow keys move through them and Enter or Tab picks one, or just click it. In Linkpearl this follows the emoji picker and shortcode settings.
 
 **Private by design.** Messages, photos and voice notes are end-to-end encrypted. A Velvet intro is sent as plain text. A human moderation team reviews reported content.
 

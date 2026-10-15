@@ -21,6 +21,7 @@ internal sealed class DiceTableRoom
     private const string Tumbling = "...";
     private const string StateMarquee = "venue.dice.state";
     private const string CaptionMarquee = "venue.dice.caption";
+    private const string StakeMarquee = "venue.dice.stake";
     private const string LogChildId = "##diceLog";
 
     private readonly CasinoTextCache texts;
@@ -89,6 +90,7 @@ internal sealed class DiceTableRoom
         DrawHero(room, tile);
         var cursor = tile.Max.Y + VenueArt.SignGap * scale;
         cursor = DrawRoundLine(room, board, cursor);
+        cursor = DrawStakeLine(room, board, cursor);
         DrawLog(room, board, new Rect(new Vector2(world.Min.X, cursor + LogTopGap * scale), world.Max));
         CelebrateRound(room, board, tile.Center);
         cheer.Draw(drawList, room.Frame.Safe, room.Frame.DeltaSeconds);
@@ -274,6 +276,20 @@ internal sealed class DiceTableRoom
             CasinoSfx.Play(UiSound.ChipSlide);
             act(new VenueActDraft(VenueActions.Roll));
         }
+    }
+
+    private float DrawStakeLine(in VenueRoomFrame room, CasinoDiceTableStateDto board, float top)
+    {
+        if (board.Stake <= 0)
+        {
+            return top;
+        }
+
+        var lineHeight = Typography.LineHeight(TextStyles.Subheadline);
+        var lineTop = top + VenueArt.LineGap * room.Scale;
+        StageText.Label(room.DrawList, new Vector2(room.World.Center.X, lineTop + lineHeight * 0.5f),
+            texts.Number(L.Venue.StakeGil, board.Stake), room.World.Width, StakeMarquee, TextStyles.Subheadline, false);
+        return lineTop + lineHeight;
     }
 }
 

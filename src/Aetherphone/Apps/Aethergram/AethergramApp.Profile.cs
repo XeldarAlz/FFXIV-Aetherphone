@@ -252,7 +252,7 @@ internal sealed partial class AethergramApp
             DrawProfileStats(drawList, user, innerLeft, innerRight, statsRowTop + statsHeight * 0.5f);
         }
         UserName.DrawAuto(drawList, "aethergram.profile.name." + user.Id, displayName, user.Badges, user.ProfileBadges,
-            innerLeft, nameTop, innerWidth, ProfileNameStyle, Ink.TitleInk, theme, self: RewardedSelf(user.Id));
+            innerLeft, nameTop, innerWidth, ProfileNameStyle, Ink.TitleInk, theme);
         if (bioHeight > 0f)
         {
             Typography.DrawWrappedLeft(new Vector2(innerLeft, bioTop), bioText, Ink.BodyInk, TextStyles.Body, innerWidth);

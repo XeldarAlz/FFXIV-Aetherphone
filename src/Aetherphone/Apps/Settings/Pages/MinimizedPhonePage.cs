@@ -14,21 +14,24 @@ internal sealed class MinimizedPhonePage : ISettingsPage
     private const float ReorderRadius = 10f;
     private const float ReorderGap = 3f;
     private const float ToggleGap = 10f;
+    private const float StagePadding = Metrics.Space.Lg;
 
     public string Title => Loc.T(L.Minimized.Title);
     public string Summary => string.Empty;
     public FontAwesomeIcon Icon => FontAwesomeIcon.MobileAlt;
-    public Vector4 Tint => new(0.30f, 0.62f, 0.92f, 1f);
+    public Vector4 Tint => new(0.98f, 0.58f, 0.16f, 1f);
     private readonly MinimizedLayoutService layout;
+    private readonly MinimizedPreview preview;
     private readonly Configuration configuration;
     private readonly string[] shapeLabels = new string[MinimizedShapes.ShapeCount];
     private static readonly string[] RowIds = BuildRowIds();
     private int moveIndex = -1;
     private int moveDelta;
 
-    public MinimizedPhonePage(MinimizedLayoutService layout, Configuration configuration)
+    public MinimizedPhonePage(MinimizedLayoutService layout, MinimizedPreview preview, Configuration configuration)
     {
         this.layout = layout;
+        this.preview = preview;
         this.configuration = configuration;
     }
 
@@ -36,7 +39,8 @@ internal sealed class MinimizedPhonePage : ISettingsPage
     {
         var scale = UiScale.Current;
         var theme = context.Theme;
-        using (AppSurface.Begin(body))
+        var stageBottom = DrawStage(body, theme, scale);
+        using (AppSurface.Begin(new Rect(new Vector2(body.Min.X, stageBottom), body.Max)))
         {
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
             SettingsSection.Header(Loc.T(L.Minimized.Shape), theme);
@@ -59,6 +63,20 @@ internal sealed class MinimizedPhonePage : ISettingsPage
         }
 
         ApplyPendingMove();
+    }
+
+    private float DrawStage(Rect body, PhoneTheme theme, float scale)
+    {
+        var phoneSize = new Vector2(MinimizedShapes.BodyWidth, MinimizedShapes.BodyHeight) * scale;
+        var inset = AppSurface.SidePadding * scale;
+        var padding = StagePadding * scale;
+        var stageMin = new Vector2(body.Min.X + inset, body.Min.Y + Metrics.Space.Md * scale);
+        var stageMax = new Vector2(body.Max.X - inset, stageMin.Y + phoneSize.Y + padding * 2f);
+        var drawList = ImGui.GetWindowDrawList();
+        GroupCard.DrawSurface(drawList, stageMin, stageMax, theme, scale);
+        var phoneMin = new Vector2((stageMin.X + stageMax.X - phoneSize.X) * 0.5f, stageMin.Y + padding);
+        preview.Draw(drawList, new Rect(phoneMin, phoneMin + phoneSize), ImGui.GetIO().DeltaTime);
+        return stageMax.Y;
     }
 
     private void DrawShapePicker(PhoneTheme theme)
@@ -105,9 +123,15 @@ internal sealed class MinimizedPhonePage : ISettingsPage
 
             var enabled = SettingsRow.Bool(card.NextRow(), Loc.T(MinimizedParts.Label(slot.Part)), slot.Enabled, theme,
                 RowIds[(int)slot.Part]);
-            if (enabled != slot.Enabled)
+            if (enabled == slot.Enabled)
             {
-                layout.SetEnabled(index, enabled);
+                continue;
+            }
+
+            layout.SetEnabled(index, enabled);
+            if (enabled)
+            {
+                preview.Show(slot.Part);
             }
         }
 
@@ -206,6 +230,7 @@ internal sealed class MinimizedPhonePage : ISettingsPage
             if (enabled != slots[index].Enabled)
             {
                 layout.SetEnabled(index, enabled);
+                preview.Show(part);
             }
 
             return;
@@ -241,9 +266,15 @@ internal sealed class MinimizedPhonePage : ISettingsPage
 
         var enabled = Toggle.Draw(rowId, new Rect(toggleMin, toggleMin + new Vector2(toggleWidth, toggleHeight)),
             slot.Enabled, theme);
-        if (enabled != slot.Enabled)
+        if (enabled == slot.Enabled)
         {
-            layout.SetEnabled(index, enabled);
+            return;
+        }
+
+        layout.SetEnabled(index, enabled);
+        if (enabled)
+        {
+            preview.Show(slot.Part);
         }
     }
 
@@ -254,7 +285,9 @@ internal sealed class MinimizedPhonePage : ISettingsPage
             return;
         }
 
+        var part = layout.Slots[moveIndex].Part;
         layout.MovePage(moveIndex, moveDelta);
+        preview.Show(part);
         moveIndex = -1;
         moveDelta = 0;
     }

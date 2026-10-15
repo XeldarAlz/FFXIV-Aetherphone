@@ -31,6 +31,7 @@ A component used by exactly one app does not belong here. It lives in that app, 
 | src/Aetherphone/Windows/Components/Layout/DragScrollHost.cs | Kinetic touch-style scrolling for child windows |
 | src/Aetherphone/Windows/Components/Layout/AppSurface.cs | Standard scrollable app body (child window + DragScrollHost) |
 | src/Aetherphone/Windows/Components/Layout/ScrollLayout.cs | `StableContentWidth()`, the scrollbar feedback-loop fix |
+| src/Aetherphone/Windows/Components/Layout/WheelLock.cs | Releases ImGui's mouse wheel lock once the locked phone window stops being drawn |
 | src/Aetherphone/Windows/Components/Layout/FeedVirtualizer.cs | Skips offscreen rows in long feeds |
 | src/Aetherphone/Windows/Components/Layout/FeedCell.cs | Edge-to-edge list cell: flat hover wash, whole-cell tap, trailing hairline |
 | src/Aetherphone/Windows/Components/Layout/GroupCard.cs | Grouped inset list card (theme or AppSkin overload) with fixed rows |
@@ -230,6 +231,10 @@ Most apps never call it directly. `AppSurface.Begin(area)` (src/Aetherphone/Wind
 
 Drag scrolling is only active while the phone window position is locked (`PhoneWindow.PreDraw` sets `DragScrollHost.Enabled` from `Configuration.LockPosition`); with the window unlocked, dragging would move the window, so the native ImGui scrollbar comes back. With a native scrollbar a feedback loop becomes possible: content sized to the full available width forces a scrollbar, the scrollbar shrinks the available width, the content no longer overflows, the scrollbar disappears, and the layout shakes every frame. `ScrollLayout.StableContentWidth()` (src/Aetherphone/Windows/Components/Layout/ScrollLayout.cs) breaks the loop by reserving the scrollbar width whenever the scrollbar is not yet showing. Use it instead of `ImGui.GetContentRegionAvail().X` whenever you size rows or cards inside a scrollable region.
 
+### WheelLock
+
+Dear ImGui 1.88 (the version Dalamud ships) locks the mouse wheel onto the window it last scrolled for two seconds, released early only when the mouse moves. When a page is replaced under a still pointer (a wheel on the host sheet just before its Open table answer pushes the host console, a wheel on a list right before a click on the row under the cursor), the wheel keeps going to the window that is no longer drawn and the new page looks stuck until the lock runs out. `WheelLock.ReleaseStale()` (src/Aetherphone/Windows/Components/Layout/WheelLock.cs) runs at the end of `PhoneWindow.Draw` and clears the lock when the locked window belongs to the phone and was not drawn this frame, so the next wheel goes to the hovered page.
+
 ### FeedVirtualizer
 
 `FeedVirtualizer` (src/Aetherphone/Windows/Components/Layout/FeedVirtualizer.cs) keeps long feeds cheap by caching each row's measured height and skipping the draw when the row is offscreen. Pattern from src/Aetherphone/Apps/Aethergram/AethergramApp.cs:
@@ -318,7 +323,7 @@ A tap only registers if the pointer traveled less than the drag slop, so panning
 
 | Widget | One-liner |
 | --- | --- |
-| `Button.Draw(rect, label, ink, style, role)` | The one labelled button: Prominent, Tinted, Gray or Plain capsule; sizes `ButtonSize.Small` 28, `Regular` 34 and `Large` 44 (`Button.Height`, `Button.WidthFor`); `ButtonRole.Destructive` swaps in the danger colour; hover lift and press sink come from `MotionButton`; `ui.Ink` or `ControlInk.From(theme)` supplies the colours (src/Aetherphone/Windows/Components/Fields/Button.cs) |
+| `Button.Draw(rect, label, ink, style, role)` | The one labelled button: Prominent, Tinted, Gray or Plain capsule; sizes `ButtonSize.Small` 28, `Regular` 34 and `Large` 44 (`Button.Height`, `Button.WidthFor`); `ButtonRole.Destructive` swaps in the danger colour; hover lift and press sink come from `MotionButton`, whose Prominent halo can widen the host surface's own padding clip by its reach (`MotionButton.HaloClip`, never a clip a caller pushed tighter). When the row reaches the child window's outer clip, use `MotionButton.FitHaloWidth` to reserve space for the full hovered halo; Coin product actions use this for consistent Wear, Buy and Save widths. `ui.Ink` or `ControlInk.From(theme)` supplies the colours (src/Aetherphone/Windows/Components/Fields/Button.cs) |
 | `RoundButton.Icon(drawList, center, radius, glyph, ink, style)` | Content-layer circular icon button in the same styles, with an optional hover label (src/Aetherphone/Windows/Components/Fields/RoundButton.cs) |
 | `SearchBar.Surface` / `SearchBar.Draw` | Filled 36 tall capsule on `Fill.Tertiary`; `Draw` paints it and runs `GlassField.Search` on top, and `Surface` goes under `GlassField.Text` or `GlassField.Search` when you lay the field out yourself (src/Aetherphone/Windows/Components/Fields/SearchBar.cs) |
 | `Surfaces.Fill(ink, FillLevel)` | Content fill ladder derived from the title ink, right in dark and light (src/Aetherphone/Windows/Components/Primitives/Surfaces.cs) |

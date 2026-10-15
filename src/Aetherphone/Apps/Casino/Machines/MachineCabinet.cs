@@ -243,7 +243,7 @@ internal sealed partial class MachineCabinet
         DrawBanners(drawList, frame, scale);
         DrawGamble(drawList, ui, frame, scale);
         DrawStrip(drawList, scale);
-        HandleWindowTap(frame);
+        HandleWindowTap();
         DrawDeck(stage, frame, ui, state, state.Sitting ?? CasinoWire.NoBankroll, scale);
     }
 
@@ -536,9 +536,9 @@ internal sealed partial class MachineCabinet
         strip = layout.Strip;
     }
 
-    private void HandleWindowTap(in CasinoStageFrame frame)
+    private void HandleWindowTap()
     {
-        if (frame.Blocked || gamble.Open)
+        if (gamble.Open)
         {
             return;
         }
@@ -570,7 +570,7 @@ internal sealed partial class MachineCabinet
             autoPause -= frame.DeltaSeconds;
         }
 
-        var blocked = state.StakesPaused || state.Draining || frame.Blocked;
+        var blocked = state.StakesPaused || state.Draining;
         var bet = Composer.Amount;
         var cost = SlotsRules.CostOf(Mode, bet);
         var busy = Busy;

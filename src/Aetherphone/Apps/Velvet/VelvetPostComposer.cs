@@ -73,6 +73,8 @@ internal sealed class VelvetPostComposer
     private volatile bool editBusy;
     private string tagsLabel = string.Empty;
     private bool storyMode;
+    private bool captionFocus;
+    private bool captionTyping;
     private volatile int outcome;
     private bool closeRequested;
     private string caption = string.Empty;
@@ -381,6 +383,11 @@ internal sealed class VelvetPostComposer
         }
 
         DrawCaptionCard(captionCard, ui, scale);
+        if (captionEmoji.DrawSuggestions(captionCard, area, ui, ref caption, CaptionLimit, captionTyping))
+        {
+            captionFocus = true;
+        }
+
         if (!storyMode)
         {
             DrawOptionsCard(optionsCard, scale);
@@ -433,6 +440,13 @@ internal sealed class VelvetPostComposer
             Surfaces.Fill(VelvetTheme.Ink, FillLevel.Tertiary).Packed());
         var padding = ImGui.GetStyle().FramePadding;
         ImGui.SetCursorScreenPos(field.Min);
+        if (captionFocus)
+        {
+            ImGui.SetKeyboardFocusHere();
+            SoftWrapField.CaretToEnd(storyMode ? "##velvetStoryCaption" : "##velvetCaption");
+            captionFocus = false;
+        }
+
         using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
         using (ImRaii.PushColor(ImGuiCol.Text, VelvetTheme.TitleInk))
         {
@@ -448,6 +462,8 @@ internal sealed class VelvetPostComposer
                     captionMentions);
             }
         }
+
+        captionTyping = EmojiSuggestions.FieldTyping();
 
         if (caption.Length > 0)
         {

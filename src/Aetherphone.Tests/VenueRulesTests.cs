@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Aetherphone.Core.Aethernet.Contracts;
@@ -35,7 +36,9 @@ public sealed class VenueRulesTests
         Assert.Equal(120, VenueRules.ChallengeLapseSeconds);
         Assert.Equal(60, VenueRules.MinRaffleSeconds);
         Assert.Equal(86_400, VenueRules.MaxRaffleSeconds);
-        Assert.Equal(100, VenueRules.MaxTicketsPerPerson);
+        Assert.Equal(1000, VenueRules.MaxTicketsPerPerson);
+        Assert.Equal(VenueRules.TicketDigits,
+            VenueRules.MaxTicketsPerPerson.ToString(CultureInfo.InvariantCulture).Length);
         Assert.Equal(10, VenueRules.MaxWinners);
         Assert.Equal(100, VenueRules.MaxEntrants);
         Assert.Equal(48, VenueRules.TitleMaxLength);
@@ -69,6 +72,24 @@ public sealed class VenueRulesTests
     }
 
     [Fact]
+    public void ADiceStakeNeedsGilAndHighestRollRounds()
+    {
+        var staked = new CasinoTableConfigDto(GameKind: VenueKinds.DiceTable, Currency: CasinoCurrencies.Gil,
+            Dice: new CasinoDiceTableOptionsDto(HighestWins: true, Stake: 50_000));
+        Assert.Equal(string.Empty, VenueRules.Check(staked));
+        Assert.Equal(string.Empty, VenueRules.Check(staked with { Dice = new CasinoDiceTableOptionsDto(Stake: 0) }));
+        Assert.Equal(CasinoReasons.ConfigInvalid, VenueRules.Check(staked with { Currency = CasinoCurrencies.Practice }));
+        Assert.Equal(CasinoReasons.ConfigInvalid,
+            VenueRules.Check(staked with { Dice = new CasinoDiceTableOptionsDto(Stake: 50_000) }));
+        Assert.Equal(CasinoReasons.ConfigInvalid,
+            VenueRules.Check(staked with { Dice = new CasinoDiceTableOptionsDto(HighestWins: true, Stake: -1) }));
+        Assert.Equal(CasinoReasons.ConfigInvalid, VenueRules.Check(staked with
+        {
+            Dice = new CasinoDiceTableOptionsDto(HighestWins: true, Stake: CasinoHostingRules.MaxGil + 1),
+        }));
+    }
+
+    [Fact]
     public void APracticeDeathrollStakeMustFitTheStack()
     {
         var config = new CasinoTableConfigDto(GameKind: VenueKinds.Deathroll, Currency: CasinoCurrencies.Practice,
@@ -84,9 +105,31 @@ public sealed class VenueRulesTests
         Assert.True(VenueRules.IsRaffle("Bar tab", 3, 1, 600));
         Assert.False(VenueRules.IsRaffle("  ", 3, 1, 600));
         Assert.False(VenueRules.IsRaffle(new string('a', 49), 3, 1, 600));
-        Assert.False(VenueRules.IsRaffle("Bar tab", 101, 1, 600));
+        Assert.True(VenueRules.IsRaffle("Bar tab", 250, 1, 600));
+        Assert.True(VenueRules.IsRaffle("Bar tab", 1000, 1, 600));
+        Assert.False(VenueRules.IsRaffle("Bar tab", 1001, 1, 600));
         Assert.False(VenueRules.IsRaffle("Bar tab", 3, 11, 600));
         Assert.False(VenueRules.IsRaffle("Bar tab", 3, 1, 59));
+    }
+
+    [Fact]
+    public void TicketCountsAreBoundedByWhatIsLeft()
+    {
+        Assert.Equal(3, VenueRules.TicketsLeft(2, 5));
+        Assert.Equal(0, VenueRules.TicketsLeft(5, 5));
+        Assert.Equal(0, VenueRules.TicketsLeft(7, 5));
+        Assert.True(VenueRules.IsTicketCount(3, 2, 5));
+        Assert.True(VenueRules.IsTicketCount(1, 4, 5));
+        Assert.False(VenueRules.IsTicketCount(4, 2, 5));
+        Assert.False(VenueRules.IsTicketCount(0, 0, 5));
+        Assert.False(VenueRules.IsTicketCount(1, 5, 5));
+        Assert.Equal(1, VenueRules.ClampTicketCount(0, 0, 5));
+        Assert.Equal(3, VenueRules.ClampTicketCount(9, 2, 5));
+        Assert.Equal(2, VenueRules.ClampTicketCount(2, 2, 5));
+        Assert.Equal(0, VenueRules.ClampTicketCount(1, 5, 5));
+        Assert.Equal(5_000, VenueRules.TicketsTotal(5, 1_000));
+        Assert.Equal(0, VenueRules.TicketsTotal(5, 0));
+        Assert.Equal(0, VenueRules.TicketsTotal(0, 1_000));
     }
 
     [Fact]

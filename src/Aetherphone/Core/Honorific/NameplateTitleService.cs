@@ -563,8 +563,7 @@ internal sealed class NameplateTitleService : IDisposable
             case NameplateTitleStyle.MatchMine when ownLook is { } own:
                 return own;
             case NameplateTitleStyle.Custom:
-                return TitleLook.Solid(NameplatePalette.At(settings.CustomColor),
-                    NameplatePalette.At(settings.CustomGlow));
+                return settings.CustomLook();
             default:
                 return TitleLook.Solid(new Vector3(accent.X, accent.Y, accent.Z), NameplatePalette.DarkGlow);
         }

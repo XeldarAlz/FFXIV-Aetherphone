@@ -1,11 +1,6 @@
-using Aetherphone.Apps.Casino.Stage;
-using Aetherphone.Core;
-using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Casino;
-using Aetherphone.Core.Confirm;
+using Aetherphone.Core.Coins;
 using Aetherphone.Core.Localization;
-using Aetherphone.Windows.Components;
-using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Casino;
 
@@ -14,76 +9,140 @@ internal sealed class CashierCashOut
     private const long RiskCheckTimeoutMilliseconds = 4_000;
 
     private readonly CasinoStore store;
-    private readonly ConfirmService confirm;
+    private readonly CoinStore coins;
     private readonly CasinoTextCache texts = new();
-    private readonly Action closeSitting;
+    private readonly CashierField amount = new("##cashierCashOutCoins");
+    private readonly long[] tiles = new long[CashierAmounts.TileCount];
+    private int tileCount;
+    private CashOutRoute checkedRoute;
+    private long checkedCoins;
     private long riskCheckAtTick;
 
-    public CashierCashOut(CasinoStore store, ConfirmService confirm)
+    public CashierCashOut(CasinoStore store, CoinStore coins)
     {
         this.store = store;
-        this.confirm = confirm;
-        closeSitting = store.CloseSitting;
+        this.coins = coins;
     }
 
-    public void Draw(ImDrawListPtr drawList, AppSkin ui, in CashierLayout layout, long stack, long rate,
-        bool interactive, bool overlay)
-    {
-        var line = layout.CashLine;
-        var amount = NumberText.Group(ChipValue.Coins(stack, rate));
-        var amountSize = CurrencyGlyph.MeasureAmount(amount, TextStyles.Title3);
-        var labelHeight = Typography.LineHeight(TextStyles.Subheadline);
-        Typography.Draw(drawList, new Vector2(line.Min.X, line.Center.Y - labelHeight * 0.5f),
-            Typography.FitText(Loc.T(L.Chips.YouGet), MathF.Max(1f, line.Width - amountSize.X - CashierLayout.Gap
-                * UiScale.Current), TextStyles.Subheadline), ui.BodyInk, TextStyles.Subheadline);
-        CurrencyGlyph.DrawAmount(drawList, new Vector2(line.Max.X - amountSize.X, line.Center.Y - amountSize.Y * 0.5f),
-            amount, CurrencyKind.Coins, CasinoColors.Money, TextStyles.Title3);
+    public CashierField Field => amount;
 
-        ResolveRiskCheck();
-        var enabled = interactive && stack > 0 && !store.MovingMoney && riskCheckAtTick == 0;
-        if (Button.Draw(drawList, layout.CashOut, Loc.T(L.Casino.CashOut), ui.Ink, ButtonStyle.Tinted,
-                enabled: enabled, overlay: overlay, id: "cashier.cashout"))
+    public bool Partial => CashierAmounts.PartialAllowed(store.HasFeature(CasinoFeatures.PartialCashOut),
+        coins.Wallet?.FrozenUntilUnix is not null);
+
+    public long Rate => CashierAmounts.BankrollRate(store.State?.Sitting, store.Rate);
+
+    public long Stack => store.State?.Sitting?.Stack ?? 0;
+
+    public bool Checking => riskCheckAtTick != 0;
+
+    public void Clear()
+    {
+        amount.Clear();
+    }
+
+    public void Cancel()
+    {
+        riskCheckAtTick = 0;
+    }
+
+    public void Sync(long stackChips, long rate, bool partial)
+    {
+        if (!partial)
         {
-            Press();
+            amount.Set(ChipValue.Coins(stackChips, rate));
         }
     }
 
-    public string ResultLine(CasinoSittingResultDto result) => texts.Number(L.Strip.CashedOut, result.ConvertedCoins);
-
-    private void Press()
+    public int Tiles(long wholeCoins, bool partial)
     {
+        tileCount = CashierAmounts.CashOutTiles(wholeCoins, partial, tiles);
+        return tileCount;
+    }
+
+    public long Tile(int index) => tiles[index];
+
+    public string TileLabel(int index) => index == tileCount - 1
+        ? Loc.T(L.CashierDesk.TileAll)
+        : texts.Number(L.CashierDesk.TilePercent, CashierAmounts.CashOutPercents[index]);
+
+    public void Pick(int index)
+    {
+        amount.Set(tiles[index]);
+    }
+
+    public CashOutPlan Plan(long stackChips, long rate, bool partial) =>
+        CashierAmounts.PlanCashOut(amount.Coins, stackChips, rate, partial);
+
+    public string Status(in CashOutPlan plan, long stackChips, long rate, out CashierTone tone)
+    {
+        switch (plan.State)
+        {
+            case CashierAmountState.Ready:
+                tone = CashierTone.Ready;
+                return texts.Number(L.CashierDesk.CashOutReady,
+                    plan.Route == CashOutRoute.Whole ? stackChips : plan.Coins * rate);
+            case CashierAmountState.Over:
+                tone = CashierTone.Warn;
+                return texts.Number(L.CashierDesk.CashOutOver, ChipValue.Coins(stackChips, rate));
+            default:
+                tone = CashierTone.Idle;
+                return texts.Number(L.CashierDesk.CashOutIdle, ChipValue.Coins(stackChips, rate));
+        }
+    }
+
+    public string Primary(in CashOutPlan plan, bool compact)
+    {
+        if (plan.State != CashierAmountState.Ready)
+        {
+            return Loc.T(L.Casino.CashOut);
+        }
+
+        return compact
+            ? texts.Compact(L.CashierDesk.CashOutAction, plan.Coins)
+            : texts.Number(L.CashierDesk.CashOutAction, plan.Coins);
+    }
+
+    public string ResultLine(long coinsBack) => texts.Number(L.Strip.CashedOut, coinsBack);
+
+    public void BeginCheck(in CashOutPlan plan)
+    {
+        checkedRoute = plan.Route;
+        checkedCoins = plan.Coins;
         riskCheckAtTick = Environment.TickCount64;
         store.RefreshNow();
     }
 
-    private void ResolveRiskCheck()
+    public bool ResolveCheck(out CashOutRoute route, out long coinsBack, out bool atRisk)
     {
+        route = checkedRoute;
+        coinsBack = checkedCoins;
+        atRisk = false;
         if (riskCheckAtTick == 0)
         {
-            return;
+            return false;
         }
 
         var fresh = store.StateLoadedAtTick >= riskCheckAtTick;
         if (!fresh && Environment.TickCount64 - riskCheckAtTick < RiskCheckTimeoutMilliseconds)
         {
-            return;
+            return false;
         }
 
         riskCheckAtTick = 0;
-        if ((store.State?.AtRisk ?? 0) <= 0)
-        {
-            store.CloseSitting();
-            return;
-        }
+        atRisk = (store.State?.AtRisk ?? 0) > 0;
+        return true;
+    }
 
-        confirm.Ask(new ConfirmRequest
+    public bool Execute(in CashOutPlan plan)
+    {
+        switch (plan.Route)
         {
-            Title = Loc.T(L.Chips.RoundOpenTitle),
-            Message = Loc.T(L.Chips.RoundOpenBody),
-            ConfirmLabel = Loc.T(L.Casino.CashOut),
-            CancelLabel = Loc.T(L.Common.Cancel),
-            Danger = false,
-            Confirm = closeSitting,
-        });
+            case CashOutRoute.Whole:
+                return store.CloseSitting();
+            case CashOutRoute.Partial:
+                return store.CashOutChips(plan.Coins);
+            default:
+                return false;
+        }
     }
 }

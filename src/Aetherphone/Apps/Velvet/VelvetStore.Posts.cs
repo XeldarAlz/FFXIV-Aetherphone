@@ -368,15 +368,15 @@ internal sealed partial class VelvetStore
             for (var index = 0; index < sourcePaths.Length; index++)
             {
                 var (bakedWidth, bakedHeight) = PostAspects.Size(aspects[index], PostSize);
-                var baked = ImageProcessor.BakeCroppedJpeg(sourcePaths[index], crops[index], bakedWidth, bakedHeight,
+                var baked = ImageProcessor.BakeCroppedUpload(sourcePaths[index], crops[index], bakedWidth, bakedHeight,
                     PostAspects.RevealsWholeImage(aspects[index]), edits[index]);
-                var upload = await media.UploadUrlAsync("image/jpeg", "velvet", token).ConfigureAwait(false);
+                var upload = await media.UploadUrlAsync(baked.ContentType, "velvet", token).ConfigureAwait(false);
                 if (upload is null)
                 {
                     return false;
                 }
 
-                var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+                var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, baked.ContentType, token)
                     .ConfigureAwait(false);
                 if (!uploaded)
                 {

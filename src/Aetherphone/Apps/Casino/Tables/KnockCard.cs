@@ -1,5 +1,7 @@
+using Aetherphone.Apps.Casino.Stage;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
 using Aetherphone.Windows.Components;
@@ -17,40 +19,57 @@ internal enum KnockAnswer : byte
 internal static class KnockCard
 {
     private const int AvatarSegments = 32;
+    private const float Radius = 18f;
+    private const float WashAlpha = 0.18f;
+    private const float WashFloorAlpha = 0.03f;
+    private const float RimAlpha = 0.55f;
+    private const float PulseAlpha = 0.5f;
+    private const float PulseSpread = 7f;
+    private const double PulsePeriod = 1600.0;
+
+    private static readonly Vector4 KnockInk = new(1f, 0.847f, 0.467f, 1f);
+    private static readonly Vector4 OnGold = new(0.141f, 0.082f, 0.012f, 1f);
 
     public static float Height(float width, float scale)
     {
         return DoorLayout.KnockHeight(scale, Typography.LineHeight(TextStyles.Headline),
-            Typography.LineHeight(TextStyles.Subheadline), SideBySide(width, scale));
+            Typography.LineHeight(TextStyles.FootnoteEmphasized), Inline(width, scale));
     }
 
     public static KnockAnswer Draw(ImDrawListPtr drawList, AppSkin ui, CasinoTableKnockDto knocker, Vector2 origin,
         float width, bool enabled, float scale)
     {
         var nameHeight = Typography.LineHeight(TextStyles.Headline);
-        var lineHeight = Typography.LineHeight(TextStyles.Subheadline);
-        var sideBySide = SideBySide(width, scale);
-        var height = DoorLayout.KnockHeight(scale, nameHeight, lineHeight, sideBySide);
+        var lineHeight = Typography.LineHeight(TextStyles.FootnoteEmphasized);
+        var declineLabel = Loc.T(L.HostDesk.Decline);
+        var approveLabel = Loc.T(L.Casino.DoorApprove);
+        var pill = DoorLayout.KnockPill * scale;
+        var declineWidth = DoorPill.WidthFor(declineLabel, pill, scale);
+        var approveWidth = DoorPill.WidthFor(approveLabel, pill, scale);
+        var inline = DoorLayout.KnockInline(width, declineWidth, approveWidth, scale);
+        var height = DoorLayout.KnockHeight(scale, nameHeight, lineHeight, inline);
         var card = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
-        ui.Card(drawList, card.Min, card.Max, Metrics.Radius.Grouped * scale);
-        var avatar = DoorLayout.KnockAvatar(card, scale);
+        DrawFrame(drawList, ui, card, scale);
+        var avatar = DoorLayout.KnockAvatar(card, nameHeight, lineHeight, inline, scale);
         DrawAvatar(drawList, ui, avatar, knocker.DisplayName, scale);
-        var textLeft = DoorLayout.TextLeft(card, scale);
-        var textWidth = MathF.Max(1f, card.Max.X - DoorLayout.Pad * scale - textLeft);
+        var buttons = DoorLayout.KnockButtonRects(card, declineWidth, approveWidth, inline, scale);
+        var textLeft = DoorLayout.KnockTextLeft(card, scale);
+        var textRight = inline ? buttons.Decline.Min.X - DoorLayout.TextGap * scale : card.Max.X - DoorLayout.Pad * scale;
+        var textWidth = MathF.Max(1f, textRight - textLeft);
         var top = avatar.Y - (nameHeight + lineHeight) * 0.5f;
         Typography.Draw(drawList, new Vector2(textLeft, top),
             Typography.FitText(knocker.DisplayName, textWidth, TextStyles.Headline), ui.TitleInk, TextStyles.Headline);
         Typography.Draw(drawList, new Vector2(textLeft, top + nameHeight),
-            Typography.FitText(Loc.T(L.Tables.KnockLine), textWidth, TextStyles.Subheadline), ui.BodyInk,
-            TextStyles.Subheadline);
-        if (Button.Draw(drawList, DoorLayout.KnockButton(card, 0, sideBySide, scale), Loc.T(L.Casino.DoorApprove),
-                ui.Ink, ButtonStyle.Prominent, enabled: enabled, id: "casino.door.approve"))
+            Typography.FitText(Loc.T(L.HostDesk.WantsToJoin), textWidth, TextStyles.FootnoteEmphasized), KnockInk,
+            TextStyles.FootnoteEmphasized);
+        if (DoorPill.Draw(drawList, buttons.Approve, approveLabel, ui.Ink.WithAccent(CasinoColors.Money),
+                ButtonStyle.Prominent, OnGold, enabled, "casino.door.approve", scale))
         {
             return KnockAnswer.Approve;
         }
 
-        return Button.Draw(drawList, DoorLayout.KnockButton(card, 1, sideBySide, scale), Loc.T(L.Casino.DoorDeny),
-            ui.Ink, ButtonStyle.Gray, enabled: enabled, id: "casino.door.deny")
+        return DoorPill.Draw(drawList, buttons.Decline, declineLabel, ui.Ink, ButtonStyle.Gray, null, enabled,
+            "casino.door.deny", scale)
             ? KnockAnswer.Deny
             : KnockAnswer.None;
     }
@@ -61,10 +80,26 @@ internal static class KnockCard
             TextStyles.Headline.Scale, AvatarHandle.Disabled, AvatarSegments);
     }
 
-    private static bool SideBySide(float width, float scale)
+    private static void DrawFrame(ImDrawListPtr drawList, AppSkin ui, in Rect card, float scale)
     {
-        var buttonStyle = Button.LabelStyle(DoorLayout.Touch * scale);
-        return DoorLayout.KnockSideBySide(width, Typography.Measure(Loc.T(L.Casino.DoorApprove), buttonStyle).X,
-            Typography.Measure(Loc.T(L.Casino.DoorDeny), buttonStyle).X, scale);
+        var radius = Radius * scale;
+        var phase = Pulse.Phase(PulsePeriod);
+        var spread = PulseSpread * scale * phase;
+        var reach = new Vector2(spread, spread);
+        Squircle.Stroke(drawList, card.Min - reach, card.Max + reach, radius + spread,
+            ImGui.GetColorU32(CasinoColors.Money with { W = PulseAlpha * (1f - phase) }), 2f * scale);
+        ui.Card(drawList, card.Min, card.Max, radius);
+        Squircle.FillVerticalGradient(drawList, card.Min, card.Max, radius,
+            ImGui.GetColorU32(CasinoColors.Money with { W = WashAlpha }),
+            ImGui.GetColorU32(CasinoColors.Money with { W = WashFloorAlpha }));
+        Squircle.Stroke(drawList, card.Min, card.Max, radius,
+            ImGui.GetColorU32(CasinoColors.Money with { W = RimAlpha }), 1f * scale);
+    }
+
+    private static bool Inline(float width, float scale)
+    {
+        var pill = DoorLayout.KnockPill * scale;
+        return DoorLayout.KnockInline(width, DoorPill.WidthFor(Loc.T(L.HostDesk.Decline), pill, scale),
+            DoorPill.WidthFor(Loc.T(L.Casino.DoorApprove), pill, scale), scale);
     }
 }

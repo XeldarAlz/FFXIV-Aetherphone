@@ -176,7 +176,7 @@ internal sealed partial class LinkpearlApp
             }
         }
 
-        router.Push(LinkpearlRoute.Character(string.Empty, row.Title, row.World));
+        OpenLodestoneProfile(row.Title, row.World);
     }
 
     private void OpenThread(InboxRow row)

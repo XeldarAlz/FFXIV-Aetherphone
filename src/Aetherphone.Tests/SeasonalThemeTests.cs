@@ -32,7 +32,7 @@ public sealed class SeasonalThemeTests
     [Fact]
     public void HalloweenShowsInsideTheWindowWhenDecorationsAreOn()
     {
-        SeasonalTheme.Update(new Configuration(), HalloweenNight);
+        SeasonalTheme.Update(Automatic(),HalloweenNight);
 
         Assert.True(SeasonalTheme.Halloween);
     }
@@ -48,7 +48,7 @@ public sealed class SeasonalThemeTests
     [Fact]
     public void HalloweenStaysHiddenOutsideTheWindow()
     {
-        SeasonalTheme.Update(new Configuration(), Midsummer);
+        SeasonalTheme.Update(Automatic(),Midsummer);
 
         Assert.False(SeasonalTheme.Halloween);
     }
@@ -65,27 +65,31 @@ public sealed class SeasonalThemeTests
     [Fact]
     public void BlackletterNamesFollowTheNameFontSwitch()
     {
-        SeasonalTheme.Update(new Configuration(), HalloweenNight);
+        SeasonalTheme.Update(Automatic(),HalloweenNight);
         Assert.True(SeasonalTheme.BlackletterNames);
 
-        SeasonalTheme.Update(new Configuration { SeasonalNameFont = false }, HalloweenNight);
+        var plainNames = Automatic();
+        plainNames.SeasonalNameFont = false;
+        SeasonalTheme.Update(plainNames, HalloweenNight);
         Assert.False(SeasonalTheme.BlackletterNames);
     }
 
     [Fact]
     public void ParallaxFollowsItsSwitch()
     {
-        SeasonalTheme.Update(new Configuration(), HalloweenNight);
+        SeasonalTheme.Update(Automatic(),HalloweenNight);
         Assert.True(SeasonalTheme.Parallax);
 
-        SeasonalTheme.Update(new Configuration { SeasonalParallax = false }, HalloweenNight);
+        var still = Automatic();
+        still.SeasonalParallax = false;
+        SeasonalTheme.Update(still, HalloweenNight);
         Assert.False(SeasonalTheme.Parallax);
     }
 
     [Fact]
     public void ParallaxNeedsHalloween()
     {
-        SeasonalTheme.Update(new Configuration(), Midsummer);
+        SeasonalTheme.Update(Automatic(),Midsummer);
 
         Assert.False(SeasonalTheme.Parallax);
     }
@@ -93,7 +97,7 @@ public sealed class SeasonalThemeTests
     [Fact]
     public void BlackletterNamesNeedHalloween()
     {
-        SeasonalTheme.Update(new Configuration(), Midsummer);
+        SeasonalTheme.Update(Automatic(),Midsummer);
 
         Assert.False(SeasonalTheme.BlackletterNames);
     }
@@ -101,7 +105,7 @@ public sealed class SeasonalThemeTests
     [Fact]
     public void OnlyTheThirtyFirstIsHalloweenNight()
     {
-        SeasonalTheme.Update(new Configuration(), HalloweenNight);
+        SeasonalTheme.Update(Automatic(),HalloweenNight);
 
         Assert.True(SeasonalTheme.IsHalloweenNight(new DateTime(2026, 10, 31)));
         Assert.False(SeasonalTheme.IsHalloweenNight(new DateTime(2026, 10, 30)));
@@ -123,8 +127,40 @@ public sealed class SeasonalThemeTests
     }
 
     [Fact]
-    public void AutomaticIsTheDefault()
+    public void OffIsTheDefault()
     {
-        Assert.Equal(SeasonalThemeMode.Automatic, new Configuration().SeasonalThemeMode);
+        Assert.Equal(SeasonalThemeMode.Off, new Configuration().SeasonalThemeMode);
     }
+
+    [Fact]
+    public void TheOptInTurnsAutomaticOff()
+    {
+        var configuration = Automatic();
+
+        Assert.True(configuration.ApplySeasonalThemeOptIn());
+        Assert.Equal(SeasonalThemeMode.Off, configuration.SeasonalThemeMode);
+        Assert.True(configuration.SeasonalThemeOptInApplied);
+    }
+
+    [Fact]
+    public void TheOptInKeepsAPickedHalloween()
+    {
+        var configuration = new Configuration { SeasonalThemeMode = SeasonalThemeMode.Halloween };
+
+        Assert.True(configuration.ApplySeasonalThemeOptIn());
+        Assert.Equal(SeasonalThemeMode.Halloween, configuration.SeasonalThemeMode);
+    }
+
+    [Fact]
+    public void TheOptInRunsOnlyOnce()
+    {
+        var configuration = new Configuration();
+        configuration.ApplySeasonalThemeOptIn();
+        configuration.SeasonalThemeMode = SeasonalThemeMode.Automatic;
+
+        Assert.False(configuration.ApplySeasonalThemeOptIn());
+        Assert.Equal(SeasonalThemeMode.Automatic, configuration.SeasonalThemeMode);
+    }
+
+    private static Configuration Automatic() => new() { SeasonalThemeMode = SeasonalThemeMode.Automatic };
 }

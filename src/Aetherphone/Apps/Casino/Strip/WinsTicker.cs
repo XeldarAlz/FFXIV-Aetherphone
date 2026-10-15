@@ -12,12 +12,16 @@ namespace Aetherphone.Apps.Casino.Strip;
 
 internal sealed class WinsTicker
 {
-    public const float Height = 40f;
+    public const float Height = 36f;
     public const string Separator = "     ·     ";
 
-    private const float Pad = 14f;
+    private const float Pad = 12f;
+    private const float DotGap = 8f;
     private const float EyebrowShare = 0.45f;
-    private const string MarqueeKey = "casino.floor.ticker";
+    private const float RimAlpha = 0.45f;
+    private const string MarqueeKey = "casino.live.ticker";
+
+    private static readonly Vector4 Fill = new(0.055f, 0.039f, 0.078f, 0.75f);
 
     private readonly StringBuilder builder = new();
     private string text = string.Empty;
@@ -51,8 +55,8 @@ internal sealed class WinsTicker
         var min = origin;
         var max = new Vector2(origin.X + width, origin.Y + height);
         var radius = height * 0.5f;
-        Squircle.Fill(drawList, min, max, radius, ImGui.GetColorU32(StageText.CapsuleFill));
-        Squircle.Stroke(drawList, min, max, radius, ImGui.GetColorU32(CasinoColors.Money with { W = 0.35f }),
+        Squircle.Fill(drawList, min, max, radius, ImGui.GetColorU32(Fill));
+        Squircle.Stroke(drawList, min, max, radius, ImGui.GetColorU32(CasinoColors.Money with { W = RimAlpha }),
             MathF.Max(1f, scale));
         var pad = Pad * scale;
         var eyebrowStyle = TextStyles.FootnoteEmphasized;
@@ -60,12 +64,12 @@ internal sealed class WinsTicker
         var eyebrowSize = Typography.Measure(eyebrow, eyebrowStyle);
         var dotCenter = new Vector2(min.X + pad + CasinoArt.LiveDotRadius * scale, min.Y + height * 0.5f);
         CasinoArt.LiveDot(drawList, dotCenter, scale, CasinoColors.LightA, true);
-        var eyebrowLeft = dotCenter.X + (CasinoArt.LiveDotRadius + 6f) * scale;
+        var eyebrowLeft = dotCenter.X + CasinoArt.LiveDotRadius * scale + DotGap * scale;
         Typography.Draw(drawList, new Vector2(eyebrowLeft, min.Y + (height - eyebrowSize.Y) * 0.5f), eyebrow,
             CasinoColors.Money, eyebrowStyle);
-        var lineLeft = eyebrowLeft + eyebrowSize.X + Metrics.Space.Md * scale;
+        var lineLeft = eyebrowLeft + eyebrowSize.X + DotGap * scale;
         var lineWidth = MathF.Max(1f, max.X - pad - lineLeft);
-        var style = TextStyles.Subheadline;
+        var style = TextStyles.SubheadlineEmphasized;
         var lineTop = min.Y + (height - Typography.LineHeight(style)) * 0.5f;
         drawList.PushClipRect(new Vector2(lineLeft, min.Y), new Vector2(lineLeft + lineWidth, max.Y), true);
         Marquee.DrawLeft(drawList, MarqueeKey, text, lineLeft, lineTop, lineWidth, style, CasinoColors.InkTitle, true);

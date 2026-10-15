@@ -5,6 +5,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Coins;
 using Aetherphone.Core.Conduct;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Moderation;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
@@ -39,6 +40,7 @@ internal sealed partial class CoinApp
     private RollingValue balanceRoll;
     private Vector2 checkInAnchor;
     private CachedText lifetimeText;
+    private CachedText frozenText;
 
     private void PrimeWallet()
     {
@@ -107,7 +109,7 @@ internal sealed partial class CoinApp
         if (frozen)
         {
             cursorY = CoinArt.DrawPanel(ui, new Vector2(origin.X, cursorY), width, FontAwesomeIcon.Snowflake,
-                ui.Accent, Loc.T(L.Coin.FrozenTitle), Loc.T(L.Coin.FrozenHint), scale) + Metrics.Space.Md * scale;
+                ui.Accent, Loc.T(L.Coin.FrozenTitle), FrozenLine(wallet), scale) + Metrics.Space.Md * scale;
         }
 
         cursorY = DrawBalanceCard(drawList, new Vector2(origin.X, cursorY), width, wallet, scale);
@@ -116,7 +118,11 @@ internal sealed partial class CoinApp
         if (SeasonalTheme.Halloween)
         {
             cursorY = treatCard.Draw(ui, new Vector2(origin.X, cursorY + Metrics.Space.Md * scale), width,
-                CharacterName());
+                out var openItems);
+            if (openItems)
+            {
+                SelectTab(CoinTab.Items);
+            }
         }
 
         if (wallet.Paused)
@@ -241,6 +247,22 @@ internal sealed partial class CoinApp
             ? Loc.T(L.Coin.LifetimeSummary, NumberText.Group(wallet.LifetimeEarned),
                 NumberText.Group(wallet.LifetimeSpent))
             : Loc.T(L.Coin.LifetimeEarnedOnly, NumberText.Group(wallet.LifetimeEarned)));
+    }
+
+    private string FrozenLine(CoinWalletDto wallet)
+    {
+        var until = wallet.FrozenUntilUnix ?? 0L;
+        var key = until ^ ((long)wallet.FreezeReason.GetHashCode() << 32);
+        if (frozenText.IsCurrent(key))
+        {
+            return frozenText.Value;
+        }
+
+        var hold = Loc.T(L.Coin.FrozenUntil, ModerationNoticeText.LiftMoment(until));
+        var ticket = Loc.T(L.Coin.FrozenTicket);
+        return frozenText.Store(key, wallet.FreezeReason.Length > 0
+            ? hold + "\n" + Loc.T(L.Moderation.NoticeModeratorNote, wallet.FreezeReason) + "\n" + ticket
+            : hold + "\n" + ticket);
     }
 
     private string CharacterName()

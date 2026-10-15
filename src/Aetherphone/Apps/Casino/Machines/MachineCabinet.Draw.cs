@@ -544,7 +544,7 @@ internal sealed partial class MachineCabinet
             DrawCard(drawList, cardArea, scale);
         }
 
-        var choosing = gamble.Phase == GamblePhase.Choosing && !play.RoundInFlight && !frame.Blocked;
+        var choosing = gamble.Phase == GamblePhase.Choosing && !play.RoundInFlight;
         if (Button.Draw(drawList, buttons.Red, Loc.T(L.Machines.Red), ui.Ink, ButtonStyle.Prominent, ButtonRole.Destructive,
                 enabled: choosing, id: "casino.machines.red") && gamble.Pick(play, SlotsRules.GambleRed))
         {

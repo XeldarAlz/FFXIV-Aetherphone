@@ -89,6 +89,7 @@ internal static class WidgetCatalog
         widgets.Add(new MarketWatchWidget(phone.MarketAlerts, phone.MarketWatchlist, phone.MarketIndex, phone.Textures));
         widgets.Add(new DailyGameWidget(phone.GameStats));
         widgets.Add(new DailySpinWidget(phone.CasinoSpin, phone.AethernetSession));
+        widgets.Add(new CasinoClaimWidget(phone.Casino, phone.AethernetSession));
         widgets.Add(new LodestoneWidget(phone.News, phone.GameData, phone.RemoteImages));
     }
 }

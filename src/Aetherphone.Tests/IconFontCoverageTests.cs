@@ -73,41 +73,54 @@ public sealed class IconFontCoverageTests
     [Fact]
     public void AFreshInstallComposesAnIconRangeBothFontsCanSatisfy()
     {
-        var service = (FontService)RuntimeHelpers.GetUninitializedObject(typeof(FontService));
-        Field("iconCoverage").SetValue(service, new GlyphCoverage());
-        Field("learnedIcons").SetValue(service, new HashSet<ushort>());
-
-        typeof(FontService).GetMethod("ComposeIconRanges", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .Invoke(service, null);
-
-        var composed = new GlyphCoverage();
-        composed.AddRanges((ushort[])Field("iconRanges").GetValue(service)!);
+        var service = ComposedIconService(new HashSet<ushort>());
+        var tabler = Coverage((ushort[])StaticField("TablerRanges").GetValue(null)!);
+        var fontAwesome = Coverage((ushort[])Field("fontAwesomeRanges").GetValue(service)!);
 
         var covered = TablerCodepoints();
         foreach (var codepoint in covered)
         {
-            Assert.True(composed.Contains(codepoint),
-                $"A fresh install asks the atlas for a range that omits U+{codepoint:X4}, which TablerIcons.ttf supplies.");
+            Assert.True(tabler.Contains(codepoint),
+                $"A fresh install asks TablerIcons.ttf for a range that omits U+{codepoint:X4}, which the file supplies.");
         }
 
         var catalog = IconPlan.FontAwesome;
         for (var index = 0; index < catalog.Length; index++)
         {
-            Assert.True(composed.Contains(catalog[index]),
+            Assert.True(fontAwesome.Contains(catalog[index]),
                 $"A fresh install asks FontAwesome for a range that omits U+{catalog[index]:X4}.");
+        }
+    }
+
+    [Fact]
+    public void FontAwesomeIsNeverAskedForTheTablerBlock()
+    {
+        var service = ComposedIconService(new HashSet<ushort>());
+        var fontAwesome = Coverage((ushort[])Field("fontAwesomeRanges").GetValue(service)!);
+
+        for (var codepoint = IconPlan.FirstTablerCodepoint; codepoint <= IconPlan.LastTablerCodepoint; codepoint++)
+        {
+            Assert.False(fontAwesome.Contains(codepoint),
+                $"FontAwesome is asked for U+{codepoint:X4}; the first font in a merge wins, so a FontAwesome glyph "
+                + "there would replace the Tabler icon.");
+        }
+    }
+
+    [Fact]
+    public void NoFontAwesomeIconTheSourceDrawsSitsInTheTablerBlock()
+    {
+        foreach (var (name, codepoint) in FontAwesomeIconsUsedInSource())
+        {
+            Assert.False(codepoint >= IconPlan.FirstTablerCodepoint && codepoint <= IconPlan.LastTablerCodepoint,
+                $"FontAwesomeIcon.{name} (U+{codepoint:X4}) sits in the Tabler block, so it would draw a Tabler glyph.");
         }
     }
 
     [Fact]
     public void AFreshInstallDrawingEveryDeclaredIconNeverDirtiesTheLedger()
     {
-        var service = (FontService)RuntimeHelpers.GetUninitializedObject(typeof(FontService));
         var learnedIcons = new HashSet<ushort>();
-        Field("iconCoverage").SetValue(service, new GlyphCoverage());
-        Field("learnedIcons").SetValue(service, learnedIcons);
-
-        typeof(FontService).GetMethod("ComposeIconRanges", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .Invoke(service, null);
+        var service = ComposedIconService(learnedIcons);
 
         var notice = typeof(FontService).GetMethod("NoticeIcon", BindingFlags.NonPublic | BindingFlags.Instance)!;
         var used = FontAwesomeIconsUsedInSource();
@@ -177,9 +190,34 @@ public sealed class IconFontCoverageTests
         throw new DirectoryNotFoundException("Could not locate src/Aetherphone from the test assembly.");
     }
 
+    private static FontService ComposedIconService(HashSet<ushort> learnedIcons)
+    {
+        var service = (FontService)RuntimeHelpers.GetUninitializedObject(typeof(FontService));
+        Field("iconCoverage").SetValue(service, new GlyphCoverage());
+        Field("learnedIcons").SetValue(service, learnedIcons);
+
+        typeof(FontService).GetMethod("ComposeIconRanges", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .Invoke(service, null);
+        return service;
+    }
+
+    private static GlyphCoverage Coverage(ushort[] ranges)
+    {
+        var coverage = new GlyphCoverage();
+        coverage.AddRanges(ranges);
+        return coverage;
+    }
+
     private static FieldInfo Field(string name)
     {
         var field = typeof(FontService).GetField(name, BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(field);
+        return field!;
+    }
+
+    private static FieldInfo StaticField(string name)
+    {
+        var field = typeof(FontService).GetField(name, BindingFlags.NonPublic | BindingFlags.Static);
         Assert.NotNull(field);
         return field!;
     }

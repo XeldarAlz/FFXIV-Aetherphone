@@ -127,7 +127,10 @@ internal sealed partial class ActivityApp
 
     private float DrawHero(ImDrawListPtr drawList, Vector2 origin, float width, float scale)
     {
-        var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + HeroHeight * scale));
+        var labelHeight = Typography.LineHeight(TextStyles.FootnoteEmphasized);
+        var valueHeight = Typography.LineHeight(TextStyles.Title2);
+        var height = ActivityArt.HeroCardHeight(HeroHeight, labelHeight + valueHeight, scale);
+        var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
         UiAnchors.Report("character.rings", rect);
         var hovered = UiInteract.Hover(rect.Min, rect.Max);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
@@ -160,8 +163,6 @@ internal sealed partial class ActivityApp
         var textLeft = center.X + ringRadius + HeroTextGap * scale;
         var textWidth = MathF.Max(1f, chevronCenter.X - HeroChevronSize * scale - textLeft);
         var blockHeight = (max.Y - min.Y - pad * 2f) / ActivityGoals.RingCount;
-        var labelHeight = Typography.LineHeight(TextStyles.FootnoteEmphasized);
-        var valueHeight = Typography.LineHeight(TextStyles.Title2);
         for (var ring = 0; ring < ActivityGoals.RingCount; ring++)
         {
             var top = min.Y + pad + blockHeight * ring + (blockHeight - labelHeight - valueHeight) * 0.5f;
@@ -212,13 +213,20 @@ internal sealed partial class ActivityApp
         var cursorY = SectionTop(drawList, left, top, width, Loc.T(L.Character.Streaks), scale);
         var gap = ActivityArt.TileGap * scale;
         var tileWidth = (width - gap) * 0.5f;
-        var height = StreakTileHeight * scale;
+        var textWidth = TileTextWidth(tileWidth, scale);
+        var currentLabel = Loc.T(L.Character.CurrentStreak);
+        var bestLabel = Loc.T(L.Character.BestStreak);
+        var labelLines = Math.Max(WrappedLabelLines(currentLabel, textWidth),
+            WrappedLabelLines(bestLabel, textWidth));
+        var labelHeight = Typography.LineHeight(TextStyles.Footnote) * labelLines;
+        var height = ActivityArt.TileHeight(StreakTileHeight, TileGlyph, labelHeight,
+            Typography.LineHeight(TextStyles.Title3), scale);
         var current = new Rect(new Vector2(left, cursorY), new Vector2(left + tileWidth, cursorY + height));
         var best = new Rect(new Vector2(current.Max.X + gap, cursorY), new Vector2(left + width, cursorY + height));
-        DrawStatTile(drawList, current, Accent.Amber, FontAwesomeIcon.Fire, Loc.T(L.Character.CurrentStreak),
-            digest.CurrentStreakText, digest.CurrentStreak > 0, scale);
-        DrawStatTile(drawList, best, Accent.Violet, FontAwesomeIcon.Trophy, Loc.T(L.Character.BestStreak),
-            digest.BestStreakText, false, scale);
+        DrawStatTile(drawList, current, Accent.Amber, FontAwesomeIcon.Fire, currentLabel, digest.CurrentStreakText,
+            digest.CurrentStreak > 0, textWidth, labelLines, scale);
+        DrawStatTile(drawList, best, Accent.Violet, FontAwesomeIcon.Trophy, bestLabel, digest.BestStreakText, false,
+            textWidth, labelLines, scale);
         cursorY += height + HintGap * scale;
         cursorY += Typography.DrawWrappedLeft(new Vector2(left, cursorY), Loc.T(L.Character.StreaksHint), ui.MutedInk,
             TextStyles.Footnote, width);
@@ -226,7 +234,7 @@ internal sealed partial class ActivityApp
     }
 
     private void DrawStatTile(ImDrawListPtr drawList, Rect rect, Vector4 tint, FontAwesomeIcon icon, string label,
-        string value, bool lit, float scale)
+        string value, bool lit, float textWidth, int labelLines, float scale)
     {
         var radius = Metrics.Radius.Grouped * scale;
         ui.Card(drawList, rect.Min, rect.Max, radius);
@@ -239,12 +247,8 @@ internal sealed partial class ActivityApp
         var glyph = TileGlyph * scale;
         ActivityArt.GlyphTile(drawList, new Vector2(rect.Min.X + pad + glyph * 0.5f, rect.Min.Y + pad + glyph * 0.5f),
             glyph, tint, icon);
-        var textWidth = MathF.Max(1f, rect.Width - pad * 2f);
-        var valueHeight = Typography.LineHeight(TextStyles.Title3);
-        var labelHeight = Typography.LineHeight(TextStyles.Footnote);
-        var valueTop = rect.Max.Y - pad - valueHeight;
-        Typography.Draw(drawList, new Vector2(rect.Min.X + pad, valueTop - labelHeight),
-            Typography.FitText(label, textWidth, TextStyles.Footnote), ui.MutedInk, TextStyles.Footnote);
+        var valueTop = rect.Max.Y - pad - Typography.LineHeight(TextStyles.Title3);
+        DrawTileLabel(drawList, rect.Min.X + pad, valueTop, label, textWidth, labelLines);
         Typography.Draw(drawList, new Vector2(rect.Min.X + pad, valueTop),
             Typography.FitText(value, textWidth, TextStyles.Title3), ui.TitleInk, TextStyles.Title3);
     }
@@ -261,13 +265,23 @@ internal sealed partial class ActivityApp
 
         var gap = ActivityArt.TileGap * scale;
         var tileWidth = (width - gap) * 0.5f;
-        var height = TrendTileHeight * scale;
+        var textWidth = TileTextWidth(tileWidth, scale);
+        var labelLines = 1;
+        for (var metric = 0; metric < ActivityStats.MetricCount; metric++)
+        {
+            labelLines = Math.Max(labelLines, WrappedLabelLines(Loc.T(TrendNames[metric]), textWidth));
+        }
+
+        var labelHeight = Typography.LineHeight(TextStyles.Footnote) * labelLines;
+        var height = ActivityArt.TileHeight(TrendTileHeight, TrendArrowSize, labelHeight,
+            Typography.LineHeight(TextStyles.Headline), scale);
         for (var metric = 0; metric < ActivityStats.MetricCount; metric++)
         {
             var column = metric % 2;
             var row = metric / 2;
             var min = new Vector2(left + column * (tileWidth + gap), cursorY + row * (height + gap));
-            DrawTrendTile(drawList, new Rect(min, min + new Vector2(tileWidth, height)), metric, scale);
+            DrawTrendTile(drawList, new Rect(min, min + new Vector2(tileWidth, height)), metric, textWidth, labelLines,
+                scale);
         }
 
         cursorY += height * 2f + gap + HintGap * scale;
@@ -276,7 +290,8 @@ internal sealed partial class ActivityApp
         return cursorY;
     }
 
-    private void DrawTrendTile(ImDrawListPtr drawList, Rect rect, int metric, float scale)
+    private void DrawTrendTile(ImDrawListPtr drawList, Rect rect, int metric, float textWidth, int labelLines,
+        float scale)
     {
         ui.Card(drawList, rect.Min, rect.Max, Metrics.Radius.Grouped * scale);
         var pad = ActivityArt.CardPad * scale;
@@ -288,16 +303,32 @@ internal sealed partial class ActivityApp
         drawList.AddCircleFilled(arrowCenter, arrow * 0.5f, ImGui.GetColorU32(Palette.WithAlpha(arrowInk, 0.22f)), 24);
         ProgressRing.CenterIcon(drawList, arrowCenter, rising ? FontAwesomeIcon.ArrowUp : FontAwesomeIcon.ArrowDown,
             rising ? tint : ui.MutedInk, TrendArrowGlyph * scale);
-        var textWidth = MathF.Max(1f, rect.Width - pad * 2f);
-        var valueHeight = Typography.LineHeight(TextStyles.Headline);
-        var labelHeight = Typography.LineHeight(TextStyles.Footnote);
-        var valueTop = rect.Max.Y - pad - valueHeight;
-        Typography.Draw(drawList, new Vector2(rect.Min.X + pad, valueTop - labelHeight),
-            Typography.FitText(Loc.T(TrendNames[metric]), textWidth, TextStyles.Footnote), ui.MutedInk,
-            TextStyles.Footnote);
+        var valueTop = rect.Max.Y - pad - Typography.LineHeight(TextStyles.Headline);
+        DrawTileLabel(drawList, rect.Min.X + pad, valueTop, Loc.T(TrendNames[metric]), textWidth, labelLines);
         Typography.Draw(drawList, new Vector2(rect.Min.X + pad, valueTop),
             Typography.FitText(digest.TrendValues[metric], textWidth, TextStyles.Headline),
             rising ? tint : ui.TitleInk, TextStyles.Headline);
+    }
+
+    private static float TileTextWidth(float tileWidth, float scale) =>
+        MathF.Max(1f, tileWidth - ActivityArt.CardPad * 2f * scale);
+
+    private static int WrappedLabelLines(string label, float textWidth) =>
+        ActivityArt.CapTileLabelLines(Typography.WrapText(label, TextStyles.Footnote, textWidth).Length);
+
+    private void DrawTileLabel(ImDrawListPtr drawList, float left, float bottom, string label, float textWidth,
+        int maxLines)
+    {
+        var wrapped = Typography.WrapText(label, TextStyles.Footnote, textWidth);
+        var lineHeight = Typography.LineHeight(TextStyles.Footnote);
+        var count = Math.Min(wrapped.Length, maxLines);
+        var top = bottom - lineHeight * count;
+        for (var lineIndex = 0; lineIndex < count; lineIndex++)
+        {
+            Typography.Draw(drawList, new Vector2(left, top + lineHeight * lineIndex),
+                Typography.FitText(wrapped[lineIndex], textWidth, TextStyles.Footnote), ui.MutedInk,
+                TextStyles.Footnote);
+        }
     }
 
     private float DrawSession(ImDrawListPtr drawList, float left, float top, float width, float scale)

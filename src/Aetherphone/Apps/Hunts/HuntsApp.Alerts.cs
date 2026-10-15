@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Hunts;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
@@ -442,9 +443,7 @@ internal sealed partial class HuntsApp
         var tourRect = new Rect(new Vector2(origin.X + half + gap, origin.Y), origin + new Vector2(width, height));
         if (signedIn && ui.DangerGhostButton(resetRect, Loc.T(L.Hunts.ResetToDefault)))
         {
-            hunts.NotificationSettings.ResetToDefault();
-            alertSettingsDirty = true;
-            UiFeedback.Play(UiSound.Refresh);
+            AskResetAlerts();
         }
 
         if (ui.GhostButton(signedIn ? tourRect : new Rect(origin, origin + new Vector2(width, height)),
@@ -458,6 +457,22 @@ internal sealed partial class HuntsApp
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height));
     }
+
+    private void AskResetAlerts() =>
+        confirm.Ask(new ConfirmRequest
+        {
+            Message = Loc.T(L.Hunts.ResetToDefaultConfirm),
+            ConfirmLabel = Loc.T(L.Hunts.ResetToDefault),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Sheet = true,
+            Danger = true,
+            Confirm = () =>
+            {
+                hunts.NotificationSettings.ResetToDefault();
+                alertSettingsDirty = true;
+                UiFeedback.Play(UiSound.Refresh);
+            },
+        });
 
     private void SaveAlertsIfDirty()
     {

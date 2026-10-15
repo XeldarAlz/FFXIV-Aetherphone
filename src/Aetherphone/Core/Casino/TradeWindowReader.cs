@@ -1,6 +1,4 @@
 using System.Text;
-using Dalamud.Game.Addon.Lifecycle;
-using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.UI.Arrays;
 using FFXIVClientStructs.FFXIV.Component.GUI;
@@ -8,215 +6,76 @@ using Lumina.Text.ReadOnly;
 
 namespace Aetherphone.Core.Casino;
 
-internal interface ITradeWindowReader : IDisposable
-{
-    TradeWindowSample Sample();
-}
-
-internal sealed unsafe class TradeWindowReader : ITradeWindowReader
+internal sealed unsafe class TradeWindowReader
 {
     public const string TradeAddonName = "Trade";
 
-    private const int MaxNameCandidates = 12;
-    private const int MaxNodeDepth = 4;
-    private const int MinNameLength = 3;
-    private const char MacroBreak = '\uE000';
-
-    private readonly List<string> names = new(MaxNameCandidates);
-    private string[] candidates = Array.Empty<string>();
-    private bool open;
-    private bool partnerRead;
-    private long leftOffer;
-    private long rightOffer;
-
-    public TradeWindowReader()
-    {
-        Plugin.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, TradeAddonName, OnOpened);
-        Plugin.AddonLifecycle.RegisterListener(AddonEvent.PostRefresh, TradeAddonName, OnChanged);
-        Plugin.AddonLifecycle.RegisterListener(AddonEvent.PostRequestedUpdate, TradeAddonName, OnChanged);
-        Plugin.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, TradeAddonName, OnClosed);
-    }
+    private byte[] partnerBytes = Array.Empty<byte>();
+    private string partnerName = string.Empty;
+    private string partnerWorld = string.Empty;
 
     public TradeWindowSample Sample()
     {
-        return new TradeWindowSample(open, candidates, leftOffer, rightOffer, WalletGil(), partnerRead);
+        var inventory = InventoryManager.Instance();
+        var walletRead = inventory != null && Plugin.ClientState.IsLoggedIn;
+        var walletGil = walletRead ? (long)inventory->GetGil() : 0L;
+        if (!WindowVisible())
+        {
+            return new TradeWindowSample(false, string.Empty, string.Empty, 0, 0, walletGil, walletRead);
+        }
+
+        ReadPartner();
+        var numbers = TradeNumberArray.Instance();
+        var mine = numbers == null ? 0L : numbers->SendGilCount;
+        var theirs = numbers == null ? 0L : numbers->ReceiveGilCount;
+        return new TradeWindowSample(true, partnerName, partnerWorld, mine, theirs, walletGil, walletRead);
     }
 
-    private void OnOpened(AddonEvent type, AddonArgs args)
-    {
-        open = true;
-        candidates = Array.Empty<string>();
-        partnerRead = false;
-        leftOffer = 0;
-        rightOffer = 0;
-        Read(args);
-    }
-
-    private void OnChanged(AddonEvent type, AddonArgs args)
-    {
-        open = true;
-        Read(args);
-    }
-
-    private void OnClosed(AddonEvent type, AddonArgs args)
-    {
-        Read(args);
-        open = false;
-    }
-
-    private void Read(AddonArgs args)
-    {
-        var addon = (AtkUnitBase*)args.Addon.Address;
-        if (addon == null)
-        {
-            return;
-        }
-
-        names.Clear();
-        var partner = PartnerName();
-        if (partner.Length > 0)
-        {
-            names.Add(partner);
-            partnerRead = true;
-        }
-
-        var left = 0L;
-        var right = 0L;
-        var middle = addon->X + addon->RootNode->Width * addon->Scale * 0.5f;
-        Walk(&addon->UldManager, middle, ref left, ref right, 0);
-        if (names.Count > 0)
-        {
-            candidates = names.ToArray();
-        }
-
-        if (TryOfferedGil(out var sent, out var received))
-        {
-            left = sent;
-            right = received;
-        }
-
-        leftOffer = left;
-        rightOffer = right;
-    }
-
-    private void Walk(AtkUldManager* manager, float middle, ref long left, ref long right, int depth)
-    {
-        if (manager == null || depth > MaxNodeDepth)
-        {
-            return;
-        }
-
-        for (var index = 0; index < manager->NodeListCount; index++)
-        {
-            var node = manager->NodeList[index];
-            if (node == null || !node->IsVisible())
-            {
-                continue;
-            }
-
-            if (node->Type == NodeType.Text)
-            {
-                Absorb(((AtkTextNode*)node)->NodeText.ToString(), node->ScreenX < middle, ref left, ref right);
-                continue;
-            }
-
-            if ((ushort)node->Type < 1000)
-            {
-                continue;
-            }
-
-            var component = ((AtkComponentNode*)node)->Component;
-            if (component != null)
-            {
-                Walk(&component->UldManager, middle, ref left, ref right, depth + 1);
-            }
-        }
-    }
-
-    private void Absorb(string text, bool leftSide, ref long left, ref long right)
-    {
-        if (text.Length == 0)
-        {
-            return;
-        }
-
-        if (TradeNames.TryAmount(text, out var amount))
-        {
-            if (leftSide)
-            {
-                left = Math.Max(left, amount);
-            }
-            else
-            {
-                right = Math.Max(right, amount);
-            }
-
-            return;
-        }
-
-        if (text.Length >= MinNameLength && names.Count < MaxNameCandidates && text.IndexOf(' ') > 0)
-        {
-            names.Add(text);
-        }
-    }
-
-    private static string PartnerName()
+    private void ReadPartner()
     {
         var strings = TradeStringArray.Instance();
-        if (strings == null || !strings->TradePartnerName.HasValue)
+        var raw = strings == null || !strings->TradePartnerName.HasValue
+            ? ReadOnlySpan<byte>.Empty
+            : strings->TradePartnerName.AsSpan();
+        if (raw.SequenceEqual(partnerBytes))
         {
-            return string.Empty;
+            return;
         }
 
-        return PlainText(new ReadOnlySeStringSpan(strings->TradePartnerName.AsSpan()));
+        partnerBytes = raw.ToArray();
+        if (raw.IsEmpty)
+        {
+            partnerName = string.Empty;
+            partnerWorld = string.Empty;
+            return;
+        }
+
+        Split(new ReadOnlySeStringSpan(raw), out partnerName, out partnerWorld);
     }
 
-    private static string PlainText(ReadOnlySeStringSpan text)
+    private static void Split(ReadOnlySeStringSpan text, out string name, out string world)
     {
-        var builder = new StringBuilder();
+        var nameText = new StringBuilder();
+        var worldText = new StringBuilder();
+        var pastName = false;
         foreach (var payload in text)
         {
-            if (payload.Type == ReadOnlySePayloadType.Text)
+            if (payload.Type != ReadOnlySePayloadType.Text)
             {
-                builder.Append(Encoding.UTF8.GetString(payload.Body));
+                pastName |= nameText.Length > 0;
                 continue;
             }
 
-            if (builder.Length > 0 && builder[^1] != MacroBreak)
-            {
-                builder.Append(MacroBreak);
-            }
+            (pastName ? worldText : nameText).Append(Encoding.UTF8.GetString(payload.Body));
         }
 
-        return builder.ToString();
+        name = nameText.ToString().Trim();
+        world = worldText.ToString().Trim();
     }
 
-    private static bool TryOfferedGil(out long sent, out long received)
+    private static bool WindowVisible()
     {
-        var numbers = TradeNumberArray.Instance();
-        if (numbers == null)
-        {
-            sent = 0;
-            received = 0;
-            return false;
-        }
-
-        sent = numbers->SendGilCount;
-        received = numbers->ReceiveGilCount;
-        return sent > 0 || received > 0;
-    }
-
-    private static long WalletGil()
-    {
-        var manager = InventoryManager.Instance();
-        return manager == null ? 0 : manager->GetGil();
-    }
-
-    public void Dispose()
-    {
-        Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, TradeAddonName, OnOpened);
-        Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PostRefresh, TradeAddonName, OnChanged);
-        Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PostRequestedUpdate, TradeAddonName, OnChanged);
-        Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PreFinalize, TradeAddonName, OnClosed);
+        var addon = (AtkUnitBase*)Plugin.GameGui.GetAddonByName(TradeAddonName).Address;
+        return addon != null && addon->IsVisible;
     }
 }

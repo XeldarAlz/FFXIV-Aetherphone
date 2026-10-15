@@ -236,7 +236,7 @@ internal sealed partial class ClockApp
         var right = row.Max.X - inset;
         var playRadius = RecentPlayRadius * scale;
         var playCenter = new Vector2(right - playRadius, row.Center.Y);
-        var playCorner = new Vector2(playRadius, playRadius);
+        var playCorner = new Vector2(MathF.Max(playRadius, Metrics.Size.TapTarget * 0.5f * scale));
         var overPlay = UiInteract.Hover(playCenter - playCorner, playCenter + playCorner);
         var grow = PressFx.Scale(ImGui.GetID($"clock.recent.play.{index}"),
             overPlay && ImGui.IsMouseDown(ImGuiMouseButton.Left), Motion.PressScaleControl);

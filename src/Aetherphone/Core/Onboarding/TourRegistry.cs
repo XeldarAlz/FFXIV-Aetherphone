@@ -1,3 +1,4 @@
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 
 namespace Aetherphone.Core.Onboarding;
@@ -5,8 +6,11 @@ namespace Aetherphone.Core.Onboarding;
 internal static partial class TourRegistry
 {
     public const string WelcomeId = "welcome";
+    public const string HalloweenGuideId = "halloween";
     public const string ControlCenterOpenIntent = "chrome.controlcenter.open";
     public const string ControlCenterCloseIntent = "chrome.controlcenter.close";
+    public const string SettingsRootIntent = "settings.root";
+    private const string SettingsAppId = "settings";
 
     private static readonly GuideSequence Welcome = new(WelcomeId, 9, null,
         new[]
@@ -35,8 +39,26 @@ internal static partial class TourRegistry
                 HeroMotif.Finale),
         });
 
+    private static readonly GuideSequence HalloweenGuide = new(HalloweenGuideId, 1, null,
+        new[]
+        {
+            GuideStep.Page(L.Onboarding.HalloweenTitle, L.Onboarding.HalloweenBody, L.Onboarding.ShowMe,
+                HeroMotif.Halloween, OpenSettings),
+            GuideStep.TryTap(L.Onboarding.HalloweenAppearanceTitle, L.Onboarding.HalloweenAppearanceBody,
+                "settings.row.appearance"),
+            GuideStep.TryTap(L.Onboarding.HalloweenPickTitle, L.Onboarding.HalloweenPickBody,
+                "settings.appearance.seasonal"),
+        }, leavesHome: true);
+
     private static readonly Dictionary<string, GuideSequence> Tours = BuildTours();
     public static GuideSequence GetWelcome() => Welcome;
+    public static GuideSequence GetHalloweenGuide() => HalloweenGuide;
+
+    private static void OpenSettings(INavigator navigator)
+    {
+        navigator.Open(SettingsAppId);
+        GuideIntents.Post(SettingsRootIntent);
+    }
 
     public static bool TryGetAppTour(string appId, out GuideSequence sequence) =>
         Tours.TryGetValue(appId, out sequence);

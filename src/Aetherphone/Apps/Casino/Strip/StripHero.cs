@@ -51,24 +51,37 @@ internal sealed class StripHero
     public const float RowGap = 8f;
     public const float BonusRing = 30f;
     public const float RingThickness = 3.5f;
-    public const float StreakDot = 26f;
-    public const float StreakGap = 6f;
+    public const float StreakDot = 23f;
+    public const float StreakMinGap = 2f;
+    public const float StreakColumnGap = 10f;
+    public const float StreakColumnShare = 0.4f;
+    public const float StreakSeparator = 11f;
+    public const float TodayScale = 1.12f;
+    public const float TodayRing = 2f;
+    public const float SpinGlyph = 18f;
     public const int StreakDays = CasinoFaucets.StreakDays;
     public const long TimedPeriodSeconds = 3 * 3600;
-    public const float StreakLabelGap = 6f;
     public const float LabelSlack = 4f;
+    public const float CoinsGap = 2f;
 
     private const float SurfaceLuminance = 0.07f;
     private const float GlassOpacity = 0.94f;
     private const float SubAlpha = 0.86f;
     private const float IdleAlpha = 0.6f;
+    private const float SeparatorAlpha = 0.12f;
+    private const float DoneAlpha = 0.5f;
+    private const float FutureRingAlpha = 0.28f;
+    private const float FutureInkAlpha = 0.78f;
+    private const float TodayHaloAlpha = 0.45f;
+    private const float TodayHaloGrowth = 0.7f;
     private const float FitSlack = 0.5f;
-    private const float TitleShare = 0.4f;
     private const string GetChipsId = "casino.hero.get";
     private const string SpinId = "casino.hero.spin";
     private const string TimedId = "casino.hero.timed";
 
     private static readonly TextStyle AmountStyle = TextStyles.LargeTitle;
+    private static readonly Vector4 SpinInk = new(0.651f, 0.961f, 1f, 1f);
+    private static readonly Vector4 SpinHole = new(0.055f, 0.227f, 0.267f, 1f);
 
     private readonly CasinoTextCache texts = new();
     private readonly string[] dayLabels = new string[StreakDays];
@@ -113,7 +126,8 @@ internal sealed class StripHero
 
     public static float BalanceRowHeight(float amountLine, float getHeight) => MathF.Max(amountLine, getHeight);
 
-    public static float DetailRowHeight(float footnoteLine, float titleHeight) => MathF.Max(footnoteLine, titleHeight);
+    public static float BalanceBlockHeight(float amountLine, float footnoteLine, float coinsGap) =>
+        amountLine + coinsGap + footnoteLine;
 
     public static float ClaimsHeight(StripHeroClaims claims, float buttonHeight) =>
         (claims & (StripHeroClaims.Timed | StripHeroClaims.Spin)) != 0 ? buttonHeight : 0f;
@@ -124,7 +138,17 @@ internal sealed class StripHero
         return MathF.Max(timedWidth, spinWidth) <= half ? half : MathF.Min(timedWidth, rowWidth - gap - spinWidth);
     }
 
-    public static float StreakHeight(float labelHeight, float dot, float labelGap) => labelHeight + labelGap + dot;
+    public static float StreakHeight(float labelBlock, float dot, float separator) =>
+        separator + MathF.Max(labelBlock, dot * TodayScale);
+
+    public static float StreakColumnWidth(float labelWidth, float dayWidth, float rowWidth) =>
+        MathF.Min(MathF.Max(labelWidth, dayWidth), rowWidth * StreakColumnShare);
+
+    public static float StreakDotSize(float region, float dot, float minGap, int days) =>
+        days <= 1 ? MathF.Min(dot, region) : MathF.Max(0f, MathF.Min(dot, (region - minGap * (days - 1)) / days));
+
+    public static float StreakPitch(float region, float dot, int days) =>
+        days <= 1 ? 0f : (region - dot) / (days - 1);
 
     public float Height(in StripHeroModel model, float width, float scale)
     {
@@ -132,9 +156,9 @@ internal sealed class StripHero
         var gap = RowGap * scale;
         var getHeight = Button.RegularHeight * scale;
         var inline = ChipsInline(model.Balance, width - pad * 2f, scale);
-        var height = pad * 2f + BalanceRowHeight(Typography.LineHeight(AmountStyle), inline ? getHeight : 0f)
-                     + DetailRowHeight(Typography.LineHeight(TextStyles.Footnote),
-                         StatusTitle.PillHeight(StatusTitle.For(model.Balance), scale));
+        var block = BalanceBlockHeight(Typography.LineHeight(AmountStyle), Typography.LineHeight(TextStyles.Footnote),
+            CoinsGap * scale);
+        var height = pad * 2f + BalanceRowHeight(block, inline ? getHeight : 0f);
         if (!inline)
         {
             height += gap + getHeight;
@@ -142,7 +166,7 @@ internal sealed class StripHero
 
         if (model.ShowsLevel)
         {
-            height += gap + LevelCapsule.Height * scale;
+            height += gap + LevelCardHeight(model.Level, scale);
         }
 
         var claims = ClaimsHeight(ClaimsOf(model), Button.LargeHeight * scale);
@@ -153,12 +177,17 @@ internal sealed class StripHero
 
         if (model.Streak is not null)
         {
-            height += gap + StreakHeight(Typography.LineHeight(TextStyles.FootnoteEmphasized), StreakDot * scale,
-                StreakLabelGap * scale);
+            height += gap + StreakHeight(StreakLabelBlock(), StreakDot * scale, StreakSeparator * scale);
         }
 
         return height;
     }
+
+    private static float LevelCardHeight(int level, float scale) =>
+        MathF.Max(LevelCapsule.Ring * scale, LevelCapsule.TextBlock(StatusTitle.ForLevel(level), scale));
+
+    private static float StreakLabelBlock() =>
+        Typography.LineHeight(TextStyles.FootnoteEmphasized) + Typography.LineHeight(TextStyles.Footnote);
 
     private static bool ChipsInline(long balance, float rowWidth, float scale) =>
         GetChipsInline(rowWidth, MinAmountWidth(balance), GetChipsWidth(scale), Metrics.Space.Sm * scale);
@@ -173,7 +202,9 @@ internal sealed class StripHero
 
     private static float SpinWidth(float scale) =>
         MathF.Max(CasinoStageLayout.TouchTarget * scale,
-            Button.WidthFor(Loc.T(L.Floor.FreeSpin), ButtonSize.Large) + LabelSlack * scale);
+            Button.LargeHeight * scale * 0.5f + SpinGlyph * 0.5f * scale + Metrics.Space.Xs * scale
+            + Typography.Measure(Loc.T(L.Floor.FreeSpin), TextStyles.SubheadlineEmphasized).X
+            + Metrics.Space.Sm * scale + LabelSlack * scale);
 
     private float TimedWidth(in StripHeroModel model, float scale)
     {
@@ -211,9 +242,11 @@ internal sealed class StripHero
         var getWidth = GetChipsWidth(scale);
         var getHeight = Button.RegularHeight * scale;
         var inline = ChipsInline(model.Balance, right - left, scale);
-        var balanceRow = BalanceRowHeight(Typography.LineHeight(AmountStyle), inline ? getHeight : 0f);
-        if (DrawBalance(drawList, model, left, inline ? right - getWidth - buttonGap : right, top, balanceRow,
-                deltaSeconds))
+        var block = BalanceBlockHeight(Typography.LineHeight(AmountStyle), Typography.LineHeight(TextStyles.Footnote),
+            CoinsGap * scale);
+        var balanceRow = BalanceRowHeight(block, inline ? getHeight : 0f);
+        if (DrawBalance(drawList, model, left, inline ? right - getWidth - buttonGap : right, top, balanceRow, block,
+                deltaSeconds, scale))
         {
             action = StripHeroAction.Cashier;
         }
@@ -229,7 +262,7 @@ internal sealed class StripHero
             }
         }
 
-        top = DrawDetailRow(drawList, model, left, right, top + balanceRow, scale);
+        top += balanceRow;
         if (!inline)
         {
             top += gap;
@@ -245,9 +278,9 @@ internal sealed class StripHero
         if (model.ShowsLevel)
         {
             top += gap;
-            var capsule = new Rect(new Vector2(left, top), new Vector2(right, top + LevelCapsule.Height * scale));
+            var capsule = new Rect(new Vector2(left, top), new Vector2(right, top + LevelCardHeight(model.Level, scale)));
             level.Draw(drawList, capsule, Math.Max(1, model.Level), model.LevelProgress, model.LevelCap,
-                CasinoColors.Money, scale);
+                StatusTitle.ForLevel(model.Level), CasinoColors.Money, scale);
             top = capsule.Max.Y;
         }
 
@@ -279,23 +312,35 @@ internal sealed class StripHero
     }
 
     private bool DrawBalance(ImDrawListPtr drawList, in StripHeroModel model, float left, float right, float top,
-        float rowHeight, float deltaSeconds)
+        float rowHeight, float block, float deltaSeconds, float scale)
     {
         balance.Update(model.Balance, deltaSeconds);
         var amount = NumberText.Compact(balance.Display);
-        var reserve = CurrencyGlyph.Reserve(Typography.LineHeight(AmountStyle));
+        var amountLine = Typography.LineHeight(AmountStyle);
+        var reserve = CurrencyGlyph.Reserve(amountLine);
         var amountScale = Typography.FitScale(amount, MathF.Max(1f, right - left - reserve),
             AmountStyle.Scale * balance.PopScale, TextStyles.Title2.Scale, AmountStyle.Weight);
         var size = Typography.Measure(amount, amountScale, AmountStyle.Weight);
-        var center = top + rowHeight * 0.5f;
+        var blockTop = top + (rowHeight - block) * 0.5f;
+        var amountCenter = blockTop + amountLine * 0.5f;
         var glyph = size.Y * CurrencyGlyph.GlyphFraction;
-        CurrencyGlyph.Draw(drawList, CurrencyKind.Chips, new Vector2(left + glyph * 0.5f, center), glyph);
+        CurrencyGlyph.Draw(drawList, CurrencyKind.Chips, new Vector2(left + glyph * 0.5f, amountCenter), glyph);
         var textLeft = left + CurrencyGlyph.Reserve(size.Y);
-        Typography.Draw(drawList, new Vector2(textLeft, center - size.Y * 0.5f), amount,
+        Typography.Draw(drawList, new Vector2(textLeft, amountCenter - size.Y * 0.5f), amount,
             model.Balance > 0 ? CasinoColors.Money : Palette.WithAlpha(CasinoArt.White, IdleAlpha), amountScale,
             AmountStyle.Weight);
-        var amountRect = new Rect(new Vector2(left, top),
-            new Vector2(MathF.Min(right, textLeft + size.X), top + rowHeight));
+        var coinsTop = blockTop + amountLine + CoinsGap * scale;
+        var coinsWidth = MathF.Max(1f, right - textLeft);
+        var coins = worth.Full(model.Balance, model.Rate);
+        var coinsText = Typography.Measure(coins, TextStyles.Footnote).X <= coinsWidth
+            ? coins
+            : worth.Compact(model.Balance, model.Rate);
+        Typography.Draw(drawList, new Vector2(textLeft, coinsTop),
+            Typography.FitText(coinsText, coinsWidth, TextStyles.Footnote), Palette.WithAlpha(CasinoArt.White, SubAlpha),
+            TextStyles.Footnote);
+        var amountRect = new Rect(new Vector2(left, blockTop),
+            new Vector2(MathF.Min(right, textLeft + MathF.Max(size.X, Typography.Measure(coinsText, TextStyles.Footnote).X)),
+                blockTop + block));
         var overAmount = UiInteract.Hover(amountRect.Min, amountRect.Max);
         if (overAmount)
         {
@@ -304,31 +349,6 @@ internal sealed class StripHero
         }
 
         return UiInteract.Click(amountRect.Min, amountRect.Max, overAmount);
-    }
-
-    private float DrawDetailRow(ImDrawListPtr drawList, in StripHeroModel model, float left, float right, float top,
-        float scale)
-    {
-        var title = StatusTitle.For(model.Balance);
-        var titleMax = (right - left) * TitleShare;
-        var titleWidth = StatusTitle.Width(title, titleMax, scale);
-        var footnote = Typography.LineHeight(TextStyles.Footnote);
-        var rowHeight = DetailRowHeight(footnote, StatusTitle.PillHeight(title, scale));
-        var center = top + rowHeight * 0.5f;
-        if (titleWidth > 0f)
-        {
-            StatusTitle.Draw(drawList, new Vector2(right - titleWidth * 0.5f, center), title, titleMax, scale);
-        }
-
-        var coinsWidth = MathF.Max(1f, right - (titleWidth > 0f ? titleWidth + Metrics.Space.Sm * scale : 0f) - left);
-        var coins = worth.Full(model.Balance, model.Rate);
-        var coinsText = Typography.Measure(coins, TextStyles.Footnote).X <= coinsWidth
-            ? coins
-            : worth.Compact(model.Balance, model.Rate);
-        Typography.Draw(drawList, new Vector2(left, center - footnote * 0.5f),
-            Typography.FitText(coinsText, coinsWidth, TextStyles.Footnote), Palette.WithAlpha(CasinoArt.White, SubAlpha),
-            TextStyles.Footnote);
-        return top + rowHeight;
     }
 
     private StripHeroAction DrawClaims(ImDrawListPtr drawList, AppSkin ui, in StripHeroModel model,
@@ -355,7 +375,7 @@ internal sealed class StripHero
             }
         }
 
-        if (hasSpin && DrawSpin(drawList, ui, spinRect))
+        if (hasSpin && DrawSpin(drawList, ui, spinRect, scale))
         {
             action = StripHeroAction.FreeSpin;
         }
@@ -372,14 +392,28 @@ internal sealed class StripHero
         return UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
-    private bool DrawSpin(ImDrawListPtr drawList, AppSkin ui, Rect rect)
+    private bool DrawSpin(ImDrawListPtr drawList, AppSkin ui, Rect rect, float scale)
     {
         spinSource = rect;
         var hovered = UiInteract.Hover(rect.Min, rect.Max);
-        var face = Button.Surface(drawList, rect, ui.Ink.WithAccent(CasinoColors.Money), ButtonStyle.Tinted,
+        var face = Button.Surface(drawList, rect, ui.Ink.WithAccent(CasinoColors.LightB), ButtonStyle.Tinted,
             ButtonRole.Normal, true, hovered, ImGui.GetID(SpinId));
-        Button.DrawLabel(drawList, face with { LabelInk = CasinoColors.MoneyHighlight with { W = face.LabelInk.W } },
-            Loc.T(L.Floor.FreeSpin), SpinId);
+        var shown = face.Face;
+        var ink = SpinInk with { W = face.LabelInk.W };
+        var style = TextStyles.SubheadlineEmphasized;
+        var label = Loc.T(L.Floor.FreeSpin);
+        var glyphRadius = SpinGlyph * 0.5f * scale;
+        var content = glyphRadius * 2f + Metrics.Space.Xs * scale + Typography.Measure(label, style).X;
+        var glyphCenter = new Vector2(
+            MathF.Max(shown.Min.X + shown.Height * 0.5f, shown.Center.X - content * 0.5f + glyphRadius),
+            shown.Center.Y);
+        var breath = Pulse.Wave(Pulse.Breath);
+        CasinoGlyphs.Draw(drawList, CasinoGames.DailySpin, glyphCenter, glyphRadius * (0.92f + 0.08f * breath),
+            ImGui.GetColorU32(ink), ImGui.GetColorU32(SpinHole));
+        var textLeft = glyphCenter.X + glyphRadius + Metrics.Space.Xs * scale;
+        Marquee.DrawLeftAuto(drawList, SpinId, label, textLeft,
+            shown.Center.Y - Typography.LineHeight(style) * 0.5f,
+            MathF.Max(1f, shown.Max.X - Metrics.Space.Sm * scale - textLeft), style, ink);
         return UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
@@ -430,53 +464,76 @@ internal sealed class StripHero
     private bool DrawStreak(ImDrawListPtr drawList, CasinoBonusDto streak, bool claiming, Vector2 origin, float width,
         float scale)
     {
-        var dot = StreakDot * scale;
-        var gap = StreakGap * scale;
+        var view = StreakView.Of(streak, StreakDays);
+        drawList.AddLine(origin, new Vector2(origin.X + width, origin.Y),
+            ImGui.GetColorU32(CasinoArt.White with { W = SeparatorAlpha }), MathF.Max(1f, scale));
+        var labelBlock = StreakLabelBlock();
+        var rowTop = origin.Y + StreakSeparator * scale;
+        var rowHeight = MathF.Max(labelBlock, StreakDot * scale * TodayScale);
+        var centerY = rowTop + rowHeight * 0.5f;
         var labelStyle = TextStyles.FootnoteEmphasized;
-        var dotsWidth = StreakDays * dot + (StreakDays - 1) * gap;
-        var label = Typography.FitText(Loc.T(L.Strip.BonusStreak), width, labelStyle);
-        Typography.Draw(drawList, origin, label, Palette.WithAlpha(CasinoArt.White, SubAlpha), labelStyle);
-        origin = new Vector2(origin.X, origin.Y + Typography.LineHeight(labelStyle) + StreakLabelGap * scale);
-        var ready = streak.Ready && streak.Eligible;
-        var paid = Math.Clamp(ready ? streak.StreakDay - 1 : streak.StreakDay, 0, StreakDays);
-        var stripLeft = origin.X;
-        var stripRect = new Rect(new Vector2(stripLeft, origin.Y),
-            new Vector2(stripLeft + MathF.Min(dotsWidth, width), origin.Y + dot));
-        streakCenter = new Vector2(stripLeft + paid * (dot + gap) + dot * 0.5f, origin.Y + dot * 0.5f);
-        for (var day = 0; day < StreakDays; day++)
+        var dayStyle = TextStyles.Footnote;
+        var label = Loc.T(L.Strip.BonusStreak);
+        var day = texts.Counts(L.FloorPage.StreakDay, view.DayNumber, StreakDays);
+        var column = StreakColumnWidth(Typography.Measure(label, labelStyle).X, Typography.Measure(day, dayStyle).X,
+            width);
+        var labelTop = centerY - labelBlock * 0.5f;
+        Typography.Draw(drawList, new Vector2(origin.X, labelTop), Typography.FitText(label, column, labelStyle),
+            Palette.WithAlpha(CasinoArt.White, SubAlpha), labelStyle);
+        Typography.Draw(drawList, new Vector2(origin.X, labelTop + Typography.LineHeight(labelStyle)),
+            Typography.FitText(day, column, dayStyle), CasinoColors.MoneyHighlight, dayStyle);
+        var regionLeft = origin.X + column + StreakColumnGap * scale;
+        var region = MathF.Max(0f, origin.X + width - regionLeft);
+        var dot = StreakDotSize(region, StreakDot * scale, StreakMinGap * scale, StreakDays);
+        var pitch = StreakPitch(region, dot, StreakDays);
+        var rowRect = new Rect(new Vector2(origin.X, rowTop), new Vector2(origin.X + width, rowTop + rowHeight));
+        streakCenter = new Vector2(regionLeft + Math.Max(0, view.TodayIndex) * pitch + dot * 0.5f, centerY);
+        for (var dayIndex = 0; dayIndex < StreakDays; dayIndex++)
         {
-            var center = new Vector2(stripLeft + day * (dot + gap) + dot * 0.5f, origin.Y + dot * 0.5f);
-            var radius = dot * 0.5f;
-            var dayLabel = DayLabel(day);
-            if (day < paid)
-            {
-                drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(CasinoColors.Money), 20);
-                Typography.DrawCentered(drawList, center, dayLabel, CasinoColors.InkOnLight, TextStyles.FootnoteEmphasized);
-                continue;
-            }
-
-            if (day == paid && ready)
-            {
-                var glow = 0.55f + 0.45f * Pulse.Wave(Pulse.Breath);
-                drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(CasinoColors.Money with { W = glow }), 20);
-                Typography.DrawCentered(drawList, center, dayLabel, CasinoColors.InkOnLight, TextStyles.FootnoteEmphasized);
-                continue;
-            }
-
-            drawList.AddCircle(center, radius - scale, ImGui.GetColorU32(Palette.WithAlpha(CasinoArt.White, 0.5f)),
-                20, 1.5f * scale);
-            Typography.DrawCentered(drawList, center, dayLabel, Palette.WithAlpha(CasinoArt.White, SubAlpha),
-                TextStyles.FootnoteEmphasized);
+            var center = new Vector2(regionLeft + dayIndex * pitch + dot * 0.5f, centerY);
+            DrawStreakDay(drawList, view.StateOf(dayIndex), view.Claimable, center, dot * 0.5f, DayLabel(dayIndex),
+                scale);
         }
 
-        var hovered = ready && !claiming && UiInteract.Hover(stripRect.Min, stripRect.Max);
+        var hovered = view.Claimable && !claiming && UiInteract.Hover(rowRect.Min, rowRect.Max);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            HoverTooltip.Show(stripRect, texts.Compact(L.Strip.BonusClaim, streak.Amount), HoverLabelSide.Below);
+            HoverTooltip.Show(rowRect, texts.Compact(L.Strip.BonusClaim, streak.Amount), HoverLabelSide.Below);
         }
 
-        return hovered && UiInteract.Click(stripRect.Min, stripRect.Max, hovered);
+        return hovered && UiInteract.Click(rowRect.Min, rowRect.Max, hovered);
+    }
+
+    private static void DrawStreakDay(ImDrawListPtr drawList, StreakDayState state, bool claimable, Vector2 center,
+        float radius, string label, float scale)
+    {
+        var style = TextStyles.FootnoteEmphasized;
+        var size = Typography.Measure(label, style);
+        var labelAt = center - size * 0.5f;
+        switch (state)
+        {
+            case StreakDayState.Done:
+                drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(CasinoColors.Money with { W = DoneAlpha }),
+                    20);
+                Typography.Draw(drawList, labelAt, label, CasinoColors.InkOnLight, style);
+                break;
+            case StreakDayState.Today:
+                var today = radius * TodayScale;
+                var breath = claimable ? Pulse.Wave(Pulse.Breath) : 0f;
+                var halo = TodayHaloAlpha * (claimable ? 1f - breath * 0.6f : 0.5f);
+                drawList.AddCircleFilled(center, today * (1.3f + TodayHaloGrowth * breath),
+                    ImGui.GetColorU32(CasinoColors.Money with { W = halo }), 24);
+                drawList.AddCircleFilled(center, today + TodayRing * scale, ImGui.GetColorU32(CasinoArt.White), 24);
+                drawList.AddCircleFilled(center, today, ImGui.GetColorU32(CasinoColors.Money), 24);
+                Typography.Draw(drawList, labelAt, label, CasinoColors.InkOnLight, style);
+                break;
+            default:
+                drawList.AddCircle(center, radius - 0.75f * scale,
+                    ImGui.GetColorU32(CasinoArt.White with { W = FutureRingAlpha }), 20, 1.5f * scale);
+                Typography.Draw(drawList, labelAt, label, Palette.WithAlpha(CasinoArt.White, FutureInkAlpha), style);
+                break;
+        }
     }
 
     private string DayLabel(int day)

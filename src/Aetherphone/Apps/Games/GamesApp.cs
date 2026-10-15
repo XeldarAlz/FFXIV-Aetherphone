@@ -63,6 +63,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Changelog;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Honorific;
@@ -170,7 +171,8 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     public GamesApp(GameStatsStore stats, GameData gameData, ITextureProvider textures,
         Core.Coins.CoinStore coins, Core.Coins.CoinGameSessionTracker coinSessions,
         GameRoomsStore gameRooms, Configuration configuration, LeaderboardStore leaderboard, RemoteImageCache images,
-        LodestoneService lodestone, MoogleClickerService moogleClicker, SettingsLauncher settingsLauncher)
+        LodestoneService lodestone, MoogleClickerService moogleClicker, SettingsLauncher settingsLauncher,
+        ConfirmService confirm)
     {
         this.stats = stats;
         this.configuration = configuration;
@@ -185,7 +187,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         session = new GameSession(stats, leaderboard, leaderboard);
         fx = new ScreenFx(backdrop);
         onlineHub = new OnlineHub(gameRooms, OpenOnlineRoom);
-        onlineRoom = new OnlineRoomView(gameRooms, textures);
+        onlineRoom = new OnlineRoomView(gameRooms, textures, confirm);
         games = new IMiniGame[]
         {
             new SweeperApp(),
@@ -308,18 +310,14 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
 
     private int FeaturedIndex()
     {
-        if (featuredSource.Length > 0)
+        var index = IndexOfGame(featuredSource);
+        if (index >= 0)
         {
-            for (var index = 0; index < games.Length; index++)
-            {
-                if (string.Equals(games[index].Id, featuredSource, StringComparison.Ordinal))
-                {
-                    return index;
-                }
-            }
+            return index;
         }
 
-        return featuredDay % games.Length;
+        index = IndexOfGame(Core.Coins.CoinGames.FeaturedFor(featuredDay));
+        return index >= 0 ? index : featuredDay % games.Length;
     }
 
     private void SyncFeatured()
@@ -514,15 +512,21 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
 
     private IMiniGame? FindGame(ReadOnlySpan<char> id)
     {
+        var index = IndexOfGame(id);
+        return index < 0 ? null : games[index];
+    }
+
+    private int IndexOfGame(ReadOnlySpan<char> id)
+    {
         for (var index = 0; index < games.Length; index++)
         {
             if (id.SequenceEqual(games[index].Id))
             {
-                return games[index];
+                return index;
             }
         }
 
-        return null;
+        return -1;
     }
 
     private void DrawView(GamesRoute route, Rect area, int depth)
@@ -954,7 +958,9 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     private CoinSessionChip BuildCoinSessionChip()
     {
         var wallet = coins.Wallet;
-        if (wallet is not null && RuleExhausted(wallet, "game.session") && RuleExhausted(wallet, "game.deep"))
+        var sessionSpent = wallet is not null && RuleExhausted(wallet, "game.session");
+        var deepSpent = wallet is not null && RuleExhausted(wallet, "game.deep");
+        if (sessionSpent && deepSpent)
         {
             return default;
         }
@@ -968,14 +974,14 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
                 : default;
         }
 
-        var minSeconds = coinSessions.OpenMinSeconds;
+        var minSeconds = sessionSpent ? 0 : coinSessions.OpenMinSeconds;
         if (seconds < minSeconds)
         {
             return new CoinSessionChip(TimeText.Duration(minSeconds - seconds), seconds / (float)minSeconds, false);
         }
 
         var deepSeconds = coinSessions.OpenDeepSeconds;
-        if (seconds < deepSeconds)
+        if (!deepSpent && seconds < deepSeconds)
         {
             return new CoinSessionChip(TimeText.Duration(deepSeconds - seconds),
                 (seconds - minSeconds) / (float)(deepSeconds - minSeconds), true);

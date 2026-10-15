@@ -42,6 +42,31 @@ public sealed class CasinoHostedBlackjackTests
     }
 
     [Fact]
+    public void AnAutoDealtTableOffersDealNowAndSaysTheClockDeals()
+    {
+        var hostDealt = new CasinoBlackjackRoomStateDto(Currency: CasinoCurrencies.Practice, Practice: true,
+            DealerMode: CasinoDealerModes.Host, Phase: BlackjackPhases.Betting, AutoDeal: false,
+            Seats: new[] { new CasinoBlackjackSeatDto(SeatIndex: 0, UserId: "player", Committed: 500) });
+        var autoDealt = hostDealt with { AutoDeal = true };
+
+        Assert.Equal(L.Tables.Deal.Key, BlackjackHosting.DealLabel(hostDealt).Key);
+        Assert.Equal(L.Tables.DealNow.Key, BlackjackHosting.DealLabel(autoDealt).Key);
+
+        Assert.True(BlackjackHosting.TryDealerStatus(autoDealt, DealerDeck.Deal, out var clock));
+        Assert.Equal(L.Tables.DealerClockDeals.Key, clock.Key);
+        Assert.False(BlackjackHosting.TryDealerStatus(hostDealt, DealerDeck.Deal, out _));
+
+        Assert.True(BlackjackHosting.TryDealerStatus(autoDealt, DealerDeck.WaitingBets, out var waiting));
+        Assert.Equal(L.Tables.DealerWaitingBets.Key, waiting.Key);
+        Assert.True(BlackjackHosting.TryDealerStatus(hostDealt, DealerDeck.WaitingBets, out var stillWaiting));
+        Assert.Equal(L.Tables.DealerWaitingBets.Key, stillWaiting.Key);
+
+        Assert.False(BlackjackHosting.TryDealerStatus(autoDealt, DealerDeck.HandLive, out _));
+        Assert.False(BlackjackHosting.TryDealerStatus(autoDealt, DealerDeck.HandOver, out _));
+        Assert.False(BlackjackHosting.TryDealerStatus(autoDealt, DealerDeck.Paused, out _));
+    }
+
+    [Fact]
     public void PracticeRebuysOpenOnlyWhenTheStackCannotCoverTheMinimum()
     {
         var board = new CasinoBlackjackRoomStateDto(Practice: true, Currency: CasinoCurrencies.Practice,

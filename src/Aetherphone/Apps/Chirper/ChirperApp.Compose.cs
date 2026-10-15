@@ -136,6 +136,7 @@ internal sealed partial class ChirperApp
             if (composeFocus)
             {
                 ImGui.SetKeyboardFocusHere();
+                SoftWrapField.CaretToEnd("##chirpBody");
                 composeFocus = false;
             }
 
@@ -193,6 +194,14 @@ internal sealed partial class ChirperApp
                 var panel = new Rect(new Vector2(area.Min.X, panelTop),
                     new Vector2(area.Max.X, area.Max.Y - toolbarHeight));
                 composeEmoji.DrawPanel(panel, ui, ref draft, MaxPostLength);
+            }
+
+            var typed = new Rect(new Vector2(inputX, inputTop),
+                new Vector2(inputX + inputWidth, inputTop + measuredText + ImGui.GetStyle().FramePadding.Y * 2f));
+            var room = new Rect(area.Min, new Vector2(area.Max.X, area.Max.Y - toolbarHeight));
+            if (composeEmoji.DrawSuggestions(typed, room, ui, ref draft, MaxPostLength, composeFieldActive, true))
+            {
+                composeFocus = true;
             }
 
             DrawComposeToolbar(area, toolbarHeight);

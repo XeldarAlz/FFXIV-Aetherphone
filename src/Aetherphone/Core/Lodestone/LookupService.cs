@@ -109,17 +109,18 @@ internal sealed class LookupService : IDisposable
 
     public CharacterDetailResult CharacterDetail(string id, string fallbackName, string fallbackWorld, bool force)
     {
+        var key = LookupKeys.CharacterDetail(id, fallbackName, fallbackWorld);
         lock (sync)
         {
-            if (!force && characterDetails.TryGetValue(id, out var cached) && !cached.IsStale(DetailTtl))
+            if (!force && characterDetails.TryGetValue(key, out var cached) && !cached.IsStale(DetailTtl))
             {
                 return cached.Value;
             }
 
             var entry = new CacheEntry<CharacterDetailResult>(new CharacterDetailResult());
             entry.Value.State = LookupState.Loading;
-            characterDetails[id] = entry;
-            _ = RunCharacterDetailAsync(entry.Value, id, fallbackName, fallbackWorld);
+            characterDetails[key] = entry;
+            _ = RunCharacterDetailAsync(entry.Value, id.Trim(), fallbackName.Trim(), fallbackWorld.Trim());
             return entry.Value;
         }
     }
@@ -342,8 +343,17 @@ internal sealed class LookupService : IDisposable
                     return;
                 }
 
-                var character = await client.GetCharacter(id).WaitAsync(LodestoneService.NetStoneTimeout, token)
-                    .ConfigureAwait(false);
+                var characterId = id.Length > 0
+                    ? id
+                    : await lodestone.ResolveIdAsync(fallbackName, fallbackWorld, token).ConfigureAwait(false);
+                if (characterId is null)
+                {
+                    target.State = LookupState.Empty;
+                    return;
+                }
+
+                var character = await client.GetCharacter(characterId)
+                    .WaitAsync(LodestoneService.NetStoneTimeout, token).ConfigureAwait(false);
                 if (character is null)
                 {
                     target.State = LookupState.Empty;
@@ -351,7 +361,7 @@ internal sealed class LookupService : IDisposable
                 }
 
                 var jobs = await BuildJobsAsync(character, token).ConfigureAwait(false);
-                target.Detail = BuildCharacterDetail(id, character, fallbackName, fallbackWorld, jobs);
+                target.Detail = BuildCharacterDetail(characterId, character, fallbackName, fallbackWorld, jobs);
                 target.State = LookupState.Ready;
             }
         }

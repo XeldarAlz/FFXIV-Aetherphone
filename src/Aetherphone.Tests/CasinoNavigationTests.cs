@@ -79,7 +79,7 @@ public sealed class CasinoNavigationTests
     public void ClosingATableFromTheDoorLeavesEveryPageOfThatTable()
     {
         var routes = Fresh();
-        routes.Select(CasinoTab.Tables);
+        routes.Select(CasinoTab.Host);
         routes.Push(new CasinoRoute(CasinoScreen.TableDoor, CasinoGames.Blackjack, string.Empty, "mine"));
         routes.Push(new CasinoRoute(CasinoScreen.TableLedger, CasinoGames.Blackjack, string.Empty, "mine"));
         while (routes.Holds("mine"))
@@ -88,7 +88,7 @@ public sealed class CasinoNavigationTests
         }
 
         Assert.True(routes.OnRoot);
-        Assert.Equal(CasinoTab.Tables, routes.Tab);
+        Assert.Equal(CasinoTab.Host, routes.Tab);
     }
 
     [Fact]

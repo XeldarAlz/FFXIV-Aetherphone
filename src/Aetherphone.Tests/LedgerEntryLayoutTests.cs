@@ -14,54 +14,41 @@ public sealed class LedgerEntryLayoutTests
 
     [Theory]
     [MemberData(nameof(Scales))]
-    public void ShortButtonsShareOneRowUnderTheStateLine(float scale)
+    public void ARowHoldsItsTallestColumnInsideThePadding(float scale)
     {
-        var width = PageWidth * scale;
-        var title = 17f * scale;
-        var parties = 15f * scale;
-        var state = 15f * scale;
-        var confirm = 110f * scale;
-        var dispute = 120f * scale;
-        var rows = LedgerEntryLayout.ButtonRows(width - LedgerEntryLayout.Pad * 2f * scale, confirm, dispute, scale);
-        Assert.Equal(1, rows);
+        var name = 17f * scale;
+        var meta = 15f * scale;
+        var pill = LedgerEntryLayout.PillHeight(15f * scale, scale);
+        var height = LedgerEntryLayout.Height(name, meta, name, pill, scale);
+        var pad = LedgerEntryLayout.PadY * scale * 2f;
 
-        var card = new Rect(Vector2.Zero,
-            new Vector2(width, LedgerEntryLayout.Height(title, parties, state, rows, scale)));
-        var disputeRect = LedgerEntryLayout.RowButton(card, card.Max.X - LedgerEntryLayout.Pad * scale, dispute, scale);
-        var confirmRect = LedgerEntryLayout.RowButton(card,
-            disputeRect.Min.X - LedgerEntryLayout.ButtonGap * scale, confirm, scale);
-        var stateBottom = LedgerEntryLayout.StateTop(card.Min.Y, title, parties, scale) + state;
-
-        Assert.True(confirmRect.Min.X >= card.Min.X + LedgerEntryLayout.Pad * scale - Epsilon);
-        Assert.True(confirmRect.Max.X <= disputeRect.Min.X + Epsilon);
-        Assert.True(confirmRect.Min.Y >= stateBottom - Epsilon);
-        Assert.True(disputeRect.Max.Y <= card.Max.Y - LedgerEntryLayout.Pad * scale + Epsilon);
-        Assert.True(disputeRect.Height >= LedgerEntryLayout.Touch * scale - Epsilon);
+        Assert.True(height - pad >= LedgerEntryLayout.Icon * scale - Epsilon);
+        Assert.True(height - pad >= name + LedgerEntryLayout.LineGap * scale + meta - Epsilon);
+        Assert.True(height - pad >= name + LedgerEntryLayout.PillGap * scale + pill - Epsilon);
     }
 
     [Theory]
     [MemberData(nameof(Scales))]
-    public void LongButtonsStackFullWidthAndStayInsideTheCard(float scale)
+    public void TheNameColumnStopsShortOfTheAmountColumn(float scale)
     {
-        var width = PageWidth * scale;
-        var title = 17f * scale;
-        var parties = 15f * scale;
-        var state = 15f * scale;
-        var rows = LedgerEntryLayout.ButtonRows(width - LedgerEntryLayout.Pad * 2f * scale, 120f * scale,
-            260f * scale, scale);
-        Assert.Equal(2, rows);
+        var row = new Rect(Vector2.Zero, new Vector2(PageWidth * scale, 60f * scale));
+        var valueWidth = 96f * scale;
+        var icon = LedgerEntryLayout.IconCenter(row, scale);
+        var left = LedgerEntryLayout.TextLeft(row, scale);
+        var right = left + LedgerEntryLayout.TextWidth(row, valueWidth, scale);
 
-        var card = new Rect(Vector2.Zero,
-            new Vector2(width, LedgerEntryLayout.Height(title, parties, state, rows, scale)));
-        var first = LedgerEntryLayout.StackedButton(card, 0, rows, scale);
-        var second = LedgerEntryLayout.StackedButton(card, 1, rows, scale);
-        var stateBottom = LedgerEntryLayout.StateTop(card.Min.Y, title, parties, scale) + state;
+        Assert.True(icon.X + LedgerEntryLayout.Icon * 0.5f * scale < left);
+        Assert.True(right + LedgerEntryLayout.Gap * scale <= LedgerEntryLayout.ValueRight(row, scale) - valueWidth
+            + Epsilon);
+        Assert.Equal(row.Max.X - LedgerEntryLayout.PadX * scale, LedgerEntryLayout.ValueRight(row, scale), 3);
+    }
 
-        Assert.True(first.Min.Y >= stateBottom - Epsilon);
-        Assert.True(first.Max.Y <= second.Min.Y + Epsilon);
-        Assert.True(second.Max.Y <= card.Max.Y + Epsilon);
-        Assert.True(first.Width >= 260f * scale);
-        Assert.Equal(0, LedgerEntryLayout.ButtonRows(width, 0f, 0f, scale));
-        Assert.Equal(1, LedgerEntryLayout.ButtonRows(width, 0f, 300f * scale, scale));
+    [Theory]
+    [MemberData(nameof(Scales))]
+    public void AnOverlongAmountNeverLeavesANegativeNameColumn(float scale)
+    {
+        var row = new Rect(Vector2.Zero, new Vector2(PageWidth * scale, 60f * scale));
+
+        Assert.True(LedgerEntryLayout.TextWidth(row, PageWidth * 2f * scale, scale) >= 1f);
     }
 }

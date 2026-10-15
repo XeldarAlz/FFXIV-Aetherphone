@@ -242,7 +242,7 @@ internal sealed partial class LinkpearlApp
         if (chrome.DrawCardRow(drawList, card.NextRow(), PhoneIcons.World, ChatListChrome.TintAzure,
                 Loc.T(L.Linkpearl.LodestoneProfile)))
         {
-            router.Push(LinkpearlRoute.Character(string.Empty, friend.Name, friend.WorldName));
+            OpenLodestoneProfile(friend.Name, friend.WorldName);
         }
 
         if (hasFreeCompany)

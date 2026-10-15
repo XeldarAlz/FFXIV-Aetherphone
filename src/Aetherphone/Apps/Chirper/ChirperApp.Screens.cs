@@ -63,9 +63,9 @@ internal sealed partial class ChirperApp
     private volatile int editOutcome;
 
     private float DrawScreenHeader(Rect area, string title, float trailingReserve = 0f, string subtitle = "",
-        bool showBack = true, TextStyle? titleStyle = null, bool centered = false) =>
+        bool showBack = true, TextStyle? titleStyle = null, bool centered = false, bool overlay = false) =>
         SocialChrome.DrawScreenHeader(area, title, ChirperInk.Shared, back, titleStyle ?? ScreenTitleStyle,
-            trailingReserve / UiScale.Current, subtitle, showBack, centered);
+            trailingReserve / UiScale.Current, subtitle, showBack, centered, overlay);
 
     private void DrawDiscover(Rect area, bool root = false)
     {
@@ -530,8 +530,7 @@ internal sealed partial class ChirperApp
         DrawActivityBadge(drawList, avatarCenter + new Vector2(badgeOffset, badgeOffset), item.Type, scale);
         var textTop = origin.Y + padY;
         var actorWidth = UserName.DrawAuto(drawList, "chirper.activity.actor." + item.Id, actor, item.ActorBadges,
-            item.ActorBadgeIds, textLeft, textTop, textWidth, ActivityActorStyle, ChirperInk.TitleInk, theme,
-            self: RewardedSelf(item.ActorId));
+            item.ActorBadgeIds, textLeft, textTop, textWidth, ActivityActorStyle, ChirperInk.TitleInk, theme);
         var actorMin = new Vector2(textLeft, textTop);
         var actorMax = new Vector2(textLeft + actorWidth, textTop + actorHeight);
         if (UiInteract.Hover(actorMin, actorMax))

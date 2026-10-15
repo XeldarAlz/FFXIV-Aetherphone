@@ -10,7 +10,7 @@ internal readonly record struct NavBarStyle(Vector4 Ink, Vector4 Accent, Vector4
 {
     public static NavBarStyle From(PhoneTheme theme) => new(theme.TextStrong, theme.Accent, theme.AppBackground);
 
-    public static NavBarStyle From(AppSkin ui) => new(ui.TitleInk, ui.Theme.Accent, ui.Palette.BackdropTop);
+    public static NavBarStyle From(AppSkin ui) => new(ui.TitleInk, ui.Ink.AccentInk, ui.Palette.BackdropTop);
 }
 
 internal readonly struct NavBarFrame

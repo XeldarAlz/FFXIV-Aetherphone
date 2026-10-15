@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Aetherphone.Core.Hunts;
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
@@ -10,8 +11,6 @@ namespace Aetherphone.Core.Maps;
 
 internal sealed class HuntsMapMarkers : IDisposable
 {
-    private const int MarkerScale = 35;
-    private const int FateMarkerScale = 35;
     private const string AreaMapAddonName = "AreaMap";
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(2);
 
@@ -129,6 +128,7 @@ internal sealed class HuntsMapMarkers : IDisposable
         agentMap->ResetMiniMapMarkers();
         hasPlacedMarkers = true;
         lastPlacedPoints.Clear();
+        var candidateScale = HuntsMapMarkerRadius.CandidateFor(CollectionsMarshal.AsSpan(points), map.SizeFactor);
 
         for (var index = 0; index < points.Count; index++)
         {
@@ -138,7 +138,7 @@ internal sealed class HuntsMapMarkers : IDisposable
             var worldZ = MapPixelMath.ToWorldCoordinate(point.RawY, map.SizeFactor, map.OffsetY);
             var worldPosition = new Vector3(worldX, 0f, worldZ);
             var iconId = HuntsMapMarkerIcons.IconFor(point.State);
-            var scale = ScaleFor(point.State);
+            var scale = HuntsMapMarkerRadius.ScaleFor(point.State, candidateScale);
             agentMap->AddMapMarker(worldPosition, iconId, scale);
             agentMap->AddMiniMapMarker(worldPosition, iconId, scale);
         }
@@ -203,11 +203,4 @@ internal sealed class HuntsMapMarkers : IDisposable
         var instanceId = (int)uiState->PublicInstance.InstanceId;
         return instanceId == 0 ? null : instanceId;
     }
-
-    private static int ScaleFor(HuntsMapMarkerState state) => state switch
-    {
-        HuntsMapMarkerState.FateInactive => FateMarkerScale,
-        HuntsMapMarkerState.FateActive => FateMarkerScale,
-        _ => MarkerScale,
-    };
 }

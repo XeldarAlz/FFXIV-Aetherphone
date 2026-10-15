@@ -294,16 +294,18 @@ internal sealed class HomeLayoutService
         Commit();
     }
 
-    public void RemoveFromFolder(HomeTile folder, HomeTile member, int targetPage)
+    public HomeTile? RemoveFromFolder(HomeTile folder, HomeTile member, int targetPage)
     {
         if (!folder.IsFolder || !folder.Members.Remove(member))
         {
-            return;
+            return null;
         }
 
         targetPage = Math.Clamp(targetPage, 0, Math.Max(0, pages.Count - 1));
-        pages[targetPage].Add(HomeTile.AsLeaf(member));
+        var leaf = HomeTile.AsLeaf(member);
+        pages[targetPage].Add(leaf);
         Commit();
+        return leaf;
     }
 
     public void MoveFolderMember(HomeTile folder, int fromIndex, int toIndex)

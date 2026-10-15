@@ -1,4 +1,5 @@
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Core.Coins;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Widgets;
 
@@ -6,7 +7,6 @@ namespace Aetherphone.Apps.Games.Hub;
 
 internal struct DailyCountdown
 {
-    private const int SecondsPerMinute = 60;
     private const int MinutesPerHour = 60;
     private const int MinutesPerDay = 24 * MinutesPerHour;
 
@@ -14,8 +14,8 @@ internal struct DailyCountdown
 
     public static int MinutesUntilReset(long utcTicks)
     {
-        var secondsIntoDay = utcTicks % TimeSpan.TicksPerDay / TimeSpan.TicksPerSecond;
-        var minutesIntoDay = (int)(secondsIntoDay / SecondsPerMinute);
+        var ticksIntoDay = (utcTicks - (TimeSpan.TicksPerHour * CoinDay.ResetHourUtc)) % TimeSpan.TicksPerDay;
+        var minutesIntoDay = (int)(ticksIntoDay / TimeSpan.TicksPerMinute);
         return MinutesPerDay - minutesIntoDay;
     }
 

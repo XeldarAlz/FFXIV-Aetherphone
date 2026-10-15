@@ -16,6 +16,7 @@ internal static class ActivityArt
     public const float TileGap = 12f;
     public const float RingTrackAlpha = 0.22f;
     public const float MaxLaps = 2f;
+    public const int MaxTileLabelLines = 2;
 
     private const float MinSegmentAngle = MathF.PI / 96f;
     private const float ChordSag = 0.3f;
@@ -201,6 +202,16 @@ internal static class ActivityArt
 
     private static float StateTextWidth(float width, float scale) =>
         MathF.Max(1f, width - (CardPad * 2f + StateTileSize + StateGap) * scale);
+
+    public static float TileHeight(float designHeight, float glyph, float labelHeight, float valueHeight,
+        float scale) =>
+        MathF.Max(designHeight * scale,
+            (CardPad * 2f + glyph + Metrics.Space.Sm) * scale + labelHeight + valueHeight);
+
+    public static float HeroCardHeight(float designHeight, float rowHeight, float scale) =>
+        MathF.Max(designHeight * scale, CardPad * 2f * scale + rowHeight * ActivityGoals.RingCount);
+
+    public static int CapTileLabelLines(int wrappedLines) => Math.Clamp(wrappedLines, 1, MaxTileLabelLines);
 
     public static void Medallion(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 tint,
         FontAwesomeIcon icon, bool earned)

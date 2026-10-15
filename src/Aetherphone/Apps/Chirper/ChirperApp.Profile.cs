@@ -10,6 +10,7 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Core.Translation;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Chirper;
 
@@ -30,6 +31,7 @@ internal sealed partial class ChirperApp
     private const float ProfileActionHeight = 36f;
     private const int MediaGridColumns = 3;
     private const float MediaGridCellGap = 2f;
+    private const float ProfileHeaderVisibleFloor = 0.01f;
 
     private static readonly TextStyle ProfileNameStyle = TextStyles.Title2;
     private static readonly TextStyle ProfileHandleStyle = TextStyles.Subheadline;
@@ -45,6 +47,7 @@ internal sealed partial class ChirperApp
 
     private ProfileTab profileTab;
     private Spring profileTabSlide;
+    private Spring profileHeaderReveal;
 
     private void DrawProfile(Rect area, string userId, bool root = false)
     {
@@ -52,6 +55,7 @@ internal sealed partial class ChirperApp
         {
             store.OpenProfile(userId);
             profileTab = ProfileTab.Chirps;
+            profileHeaderReveal.SnapTo(0f);
         }
 
         var user = store.ProfileUser;
@@ -72,7 +76,11 @@ internal sealed partial class ChirperApp
 
         using (AppSurface.BeginEdgeToEdge(area))
         {
-            DrawProfileBanner(user, root);
+            var scrollY = ImGui.GetScrollY();
+            var bannerOrigin = ImGui.GetCursorScreenPos() + new Vector2(0f, scrollY);
+            var headerBottom = area.Min.Y + AppHeader.Height * scale;
+            var pastBanner = bannerOrigin.Y + ProfileBannerHeight * scale - scrollY <= headerBottom;
+            DrawProfileBanner(user);
             DrawProfileIdentity(user);
             DrawProfileTabs(user.IsMe);
             switch (profileTab)
@@ -99,10 +107,70 @@ internal sealed partial class ChirperApp
             {
                 store.LoadMoreProfilePosts();
             }
+
+            if (!root)
+            {
+                var title = SocialIdentity.Name(user.DisplayName, user.Handle);
+                DrawProfileChrome(area, bannerOrigin, headerBottom, pastBanner, title);
+            }
         }
     }
 
-    private void DrawProfileBanner(UserDto user, bool root)
+    private void DrawProfileChrome(Rect area, Vector2 bannerOrigin, float headerBottom, bool pastBanner,
+        string title)
+    {
+        var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+        var reveal = profileHeaderReveal.Step(pastBanner ? 1f : 0f, Motion.Appear, delta);
+        var headerVisible = reveal > ProfileHeaderVisibleFloor;
+        if (reveal < 1f - ProfileHeaderVisibleFloor)
+        {
+            using (ImRaii.PushStyle(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * (1f - reveal)))
+            {
+                DrawProfileBackChip(bannerOrigin, !headerVisible);
+            }
+        }
+
+        if (!headerVisible)
+        {
+            return;
+        }
+
+        var bar = new Rect(area.Min, new Vector2(area.Max.X, headerBottom));
+        var backdrop = new Rect(new Vector2(area.Min.X, MathF.Min(area.Min.Y, ImGui.GetWindowPos().Y)), bar.Max);
+        UiInteract.HoverOverlay(backdrop);
+        using (ImRaii.PushStyle(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * reveal))
+        {
+            ui.PaintGradient(ImGui.GetWindowDrawList(), backdrop, screenRect, 0f);
+            DrawScreenHeader(bar, title, centered: true, overlay: true);
+        }
+    }
+
+    private void DrawProfileBackChip(Vector2 bannerOrigin, bool interactive)
+    {
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        var chipRadius = BackChipRadius * scale;
+        var chipCenter = new Vector2(bannerOrigin.X + 12f * scale + chipRadius,
+            bannerOrigin.Y + 10f * scale + chipRadius);
+        var hitHalf = 22f * scale;
+        var hitMin = chipCenter - new Vector2(hitHalf, hitHalf);
+        var hitMax = chipCenter + new Vector2(hitHalf, hitHalf);
+        var hovered = interactive && UiInteract.HoverOverlay(new Rect(hitMin, hitMax));
+        drawList.AddCircleFilled(chipCenter, chipRadius,
+            ImGui.GetColorU32(hovered ? new Vector4(0f, 0f, 0f, 0.6f) : new Vector4(0f, 0f, 0f, 0.4f)), 32);
+        PhoneIcon.Draw(drawList, chipCenter, PhoneIcons.ChevronLeft, ChirperInk.White, 17f * scale);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        if (UiInteract.Click(hitMin, hitMax, hovered))
+        {
+            back();
+        }
+    }
+
+    private void DrawProfileBanner(UserDto user)
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
@@ -159,29 +227,6 @@ internal sealed partial class ChirperApp
             }
         }
 
-        if (!root)
-        {
-            var chipRadius = BackChipRadius * scale;
-            var chipCenter = new Vector2(min.X + 12f * scale + chipRadius, min.Y + 10f * scale + chipRadius);
-            var hitHalf = 22f * scale;
-            var hitMin = chipCenter - new Vector2(hitHalf, hitHalf);
-            var hitMax = chipCenter + new Vector2(hitHalf, hitHalf);
-            var hovered = UiInteract.Hover(hitMin, hitMax);
-            drawList.AddCircleFilled(chipCenter, chipRadius,
-                ImGui.GetColorU32(hovered ? new Vector4(0f, 0f, 0f, 0.6f) : new Vector4(0f, 0f, 0f, 0.4f)), 32);
-            PhoneIcon.Draw(drawList, chipCenter, PhoneIcons.ChevronLeft,
-                ChirperInk.White, 17f * scale);
-            if (hovered)
-            {
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            }
-
-            if (UiInteract.Click(hitMin, hitMax, hovered))
-            {
-                back();
-            }
-        }
-
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height));
     }
@@ -219,7 +264,7 @@ internal sealed partial class ChirperApp
         var cursorY = MathF.Max(avatarCenter.Y + avatarRadius, actionTop + ProfileActionHeight * scale) + 10f * scale;
         var nameHeight = Typography.LineHeight(ProfileNameStyle);
         UserName.DrawAuto(drawList, "chirper.profile.name." + user.Id, displayName, user.Badges, user.ProfileBadges,
-            innerLeft, cursorY, innerWidth, ProfileNameStyle, ChirperInk.TitleInk, theme, self: RewardedSelf(user.Id));
+            innerLeft, cursorY, innerWidth, ProfileNameStyle, ChirperInk.TitleInk, theme);
         cursorY += nameHeight + 2f * scale;
         if (user.Handle.Length > 0)
         {

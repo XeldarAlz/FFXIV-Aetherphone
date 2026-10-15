@@ -188,7 +188,6 @@ internal sealed partial class VenuesApp
         var inset = HeroInset * scale;
         VenueCard.DrawStatusPill(drawList, new Vector2(hero.Min.X + inset, hero.Min.Y + inset),
             detailText.Status.Kind, venue, hero.Max.X - inset, scale);
-        casinoPill.Draw(drawList, hero, height, venue.Address, navigation, scale, true);
         if (venue.LogoUrl is null || venue.BannerUrl is null)
         {
             return hero.Max.Y;

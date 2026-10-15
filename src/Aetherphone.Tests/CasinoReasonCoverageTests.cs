@@ -72,8 +72,7 @@ public sealed class CasinoReasonCoverageTests
             "bonus_not_ready", "club_insufficient", "config_invalid", "practice_only", "not_dealer", "rebuy_off",
             "tournament_live", "no_tournament", "tournament_players", "tournament_stack", "nothing_to_deal",
             "no_spectators", "duel_live", "no_duel", "raffle_live", "no_raffle", "ticket_limit", "round_live",
-            "already_rolled", "bank_limit", "host_frozen", "not_party", "already_confirmed", "settled", "gil_only",
-            "not_owner", "guest_entry",
+            "already_rolled", "bank_limit", "not_party", "settled", "gil_only", "not_owner", "ticket_count",
         };
         for (var index = 0; index < reasons.Length; index++)
         {
@@ -83,6 +82,16 @@ public sealed class CasinoReasonCoverageTests
 
         Assert.Equal(L.Tables.ReasonBankLimit.Key, CasinoReasons.MessageFor("bank_limit").Key);
         Assert.Equal(L.Strip.ReasonBonusNotReady.Key, CasinoReasons.MessageFor("bonus_not_ready").Key);
+    }
+
+    [Fact]
+    public void TheTicketCountRefusalIsCovered()
+    {
+        Assert.Equal("ticket_count", CasinoReasons.TicketCount);
+        Assert.Contains(CasinoReasons.TicketCount, CasinoReasons.All);
+        Assert.Equal(L.Venue.ReasonTicketCount.Key, CasinoReasons.MessageFor(CasinoReasons.TicketCount).Key);
+        Assert.NotEqual(CasinoReasons.MessageFor(CasinoReasons.TicketLimit).Key,
+            CasinoReasons.MessageFor(CasinoReasons.TicketCount).Key);
     }
 
     [Fact]
@@ -100,9 +109,9 @@ public sealed class CasinoReasonCoverageTests
             "config_invalid", "practice_only", "not_dealer", "rebuy_off", "tournament_live", "no_tournament",
             "tournament_players", "tournament_stack", "nothing_to_deal", "no_spectators", "duel_live", "no_duel",
             "raffle_live", "no_raffle", "ticket_limit", "host_ticket", "round_live", "already_rolled", "bank_limit",
-            "host_frozen", "not_party", "already_confirmed", "settled", "gil_only",
+            "not_party", "settled", "gil_only",
             "ended", "restarting", "full", "private", "denied", "knock_pending", "banned_from_table", "blocked",
-            "not_member", "already_hosting", "not_owner", "kicked", "guest_entry",
+            "not_member", "already_hosting", "not_owner", "kicked", "ticket_count",
         };
         for (var index = 0; index < serverReasons.Length; index++)
         {

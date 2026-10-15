@@ -112,8 +112,7 @@ internal sealed class RoomCodeCard
         }
 
         hintLanguage = Loc.Current;
-        hint = Loc.T(L.Tables.CodeHint, Loc.T(L.Apps.Casino), Loc.T(L.VenueHub.Tab),
-            Loc.T(L.Tables.JoinAction));
+        hint = Loc.T(L.Tables.CodeHint, Loc.T(L.Apps.Casino));
         return hint;
     }
 }

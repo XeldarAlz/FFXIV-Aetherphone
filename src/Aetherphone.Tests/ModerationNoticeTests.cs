@@ -229,4 +229,83 @@ public sealed class ModerationNoticeTests
 
         Assert.Equal(new[] { "first", "second" }, dismissed);
     }
+
+    [Fact]
+    public void EveryRemovalWarnsAboutTheSecondAndThirdOne()
+    {
+        const string ladder = "A second removal within 30 days brings a 3-day suspension";
+        Assert.Contains(ladder, ModerationNoticeText.Body(Notice()));
+        Assert.Contains(ladder, ModerationNoticeText.Body(Notice(kind: ModerationNoticeKinds.Warning)));
+        Assert.Contains(ladder, ModerationNoticeText.Body(Notice(kind: ModerationNoticeKinds.ProfileMediaRemoved, contentType: "avatar", mediaCount: 1)));
+        Assert.Contains(ladder, ModerationNoticeText.Body(Notice(kind: ModerationNoticeKinds.ProfileTextCleared, contentType: "profile_text", detail: "bio")));
+        Assert.DoesNotContain(ladder, ModerationNoticeText.Body(Notice(kind: ModerationNoticeKinds.Suspended)));
+        Assert.DoesNotContain(ladder, ModerationNoticeText.Body(Notice(kind: ModerationNoticeKinds.MarkedSensitive)));
+    }
+
+    [Fact]
+    public void TheRemovalLadderSitsBetweenTheNoteAndTheAppealFooter()
+    {
+        const string ladder = "A second removal within 30 days";
+        var body = ModerationNoticeText.Body(Notice(excerpt: "buy my gil now", note: "be kinder"));
+        var noteAt = body.IndexOf("be kinder", StringComparison.Ordinal);
+        var ladderAt = body.IndexOf(ladder, StringComparison.Ordinal);
+        var footerAt = body.IndexOf("appeal", StringComparison.Ordinal);
+        Assert.True(noteAt >= 0 && noteAt < ladderAt && ladderAt < footerAt);
+
+        var sections = ModerationNoticeText.Sections(Notice(excerpt: "buy my gil now", note: "be kinder"));
+        Assert.Equal(ConfirmSectionKind.Paragraph, sections[^1].Kind);
+        Assert.Contains("appeal", sections[^1].Text);
+        Assert.Equal(ConfirmSectionKind.Divider, sections[^2].Kind);
+        Assert.Equal(ConfirmSectionKind.Paragraph, sections[^3].Kind);
+        Assert.Contains(ladder, sections[^3].Text);
+        Assert.Equal(ConfirmSectionKind.Divider, sections[^4].Kind);
+        Assert.Equal(ConfirmSectionKind.Labeled, sections[^5].Kind);
+        Assert.Equal("be kinder", sections[^5].Text);
+    }
+
+    [Fact]
+    public void AWalletFreezeBlocksThePhoneAndPointsAtATicket()
+    {
+        var until = DateTimeOffset.UtcNow.AddDays(5).ToUnixTimeSeconds();
+        var notice = Notice(kind: ModerationNoticeKinds.WalletFrozen, note: "Exploit under review",
+            detail: "Your Aether Coin wallet is frozen for 5 days.", banUntilUnix: until);
+
+        Assert.True(ModerationNoticeText.IsBlocking(notice));
+        Assert.True(ModerationNoticeText.RefreshesWallet(notice));
+        Assert.Equal("Your wallet is frozen", ModerationNoticeText.Title(notice));
+
+        var body = ModerationNoticeText.Body(notice);
+        Assert.Contains("Open a ticket on the Discord", body);
+        Assert.Contains(ModerationNoticeText.LiftMoment(until), body);
+        Assert.Contains("Exploit under review", body);
+        Assert.Contains("appeal", body);
+        Assert.DoesNotContain("Spam or self-promotion", body);
+
+        var sections = ModerationNoticeText.Sections(notice);
+        Assert.Contains("Open a ticket on the Discord", sections[0].Text);
+        Assert.Equal(ConfirmSectionKind.Labeled, sections[4].Kind);
+        Assert.Equal("Exploit under review", sections[4].Text);
+        Assert.Contains("appeal", sections[^1].Text);
+    }
+
+    [Fact]
+    public void AWalletFreezeWithoutALiftMomentStillReadsCleanly()
+    {
+        var notice = Notice(kind: ModerationNoticeKinds.WalletFrozen);
+        var body = ModerationNoticeText.Body(notice);
+        Assert.Contains("Open a ticket on the Discord", body);
+        Assert.DoesNotContain("on hold until", body);
+        Assert.Equal(3, ModerationNoticeText.Sections(notice).Length);
+    }
+
+    [Fact]
+    public void AWalletLiftArrivesWithoutBlockingThePhone()
+    {
+        var notice = Notice(kind: ModerationNoticeKinds.WalletUnfrozen);
+        Assert.False(ModerationNoticeText.IsBlocking(notice));
+        Assert.True(ModerationNoticeText.RefreshesWallet(notice));
+        Assert.Equal("Your wallet is no longer frozen", ModerationNoticeText.Title(notice));
+        Assert.Equal("Earning and spending work again.", ModerationNoticeText.Body(notice));
+        Assert.False(ModerationNoticeText.RefreshesWallet(Notice(kind: ModerationNoticeKinds.Warning)));
+    }
 }

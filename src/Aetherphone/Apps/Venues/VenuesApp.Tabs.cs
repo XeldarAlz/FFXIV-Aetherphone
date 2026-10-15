@@ -133,11 +133,7 @@ internal sealed partial class VenuesApp
             {
                 var action = VenueCard.DrawFeed(drawList, ui, card, venue, text[index], IsFavorite(venue.Id), art,
                     actions, scale);
-                if (!casinoPill.Draw(drawList, card, VenueCard.HeroHeight(width, scale), venue.Address, navigation,
-                        scale))
-                {
-                    HandleCardAction(action, venue, backTitle);
-                }
+                HandleCardAction(action, venue, backTitle);
             }
 
             cursorY = card.Max.Y + VenuesArt.CardGap * scale;

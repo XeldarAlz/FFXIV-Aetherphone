@@ -133,6 +133,7 @@ internal static partial class Typography
         ReadOnlySpan<WitchfireGlyph> lit = glyphs[..count];
         DrawWitchfireGlow(frame, palette, lit);
         DrawWitchfireSmoke(frame, palette, lit, seconds, gust);
+        DrawWitchfireLetters(frame, palette, seconds, gust, front, glyphs);
         DrawWitchfireFlames(frame, palette, lit, seconds);
         DrawWitchfireEmbers(frame, palette, lit, seconds, gust);
     }

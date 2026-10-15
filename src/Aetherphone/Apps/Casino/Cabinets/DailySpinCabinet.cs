@@ -263,7 +263,7 @@ internal sealed class DailySpinCabinet : ICabinetIdle
         {
             var button = new Rect(new Vector2(footer.Min.X, y),
                 new Vector2(footer.Max.X, y + DeckActions.PrimaryHeight * scale));
-            var enabled = DailySpinStatus.CanClaim(answer, spin.Busy) && !frame.Blocked;
+            var enabled = DailySpinStatus.CanClaim(answer, spin.Busy);
             var pressed = DeckActions.DrawPrimary(button, button.Min.X, Loc.T(L.Casino.SpinAction), enabled, ui.Ink);
             if (!pressed && !(enabled && stage.RepeatPressed()))
             {

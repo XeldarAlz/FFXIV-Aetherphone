@@ -23,6 +23,8 @@ internal static class HostLadders
         10_000_000, 25_000_000, 50_000_000, 100_000_000, 250_000_000, 500_000_000, 1_000_000_000,
     };
 
+    public static readonly long[] DiceStakes = WithNoStake(Gil);
+
     public static readonly long[] DiceSides = { 2, 6, 10, 20, 100, 1_000, 10_000, 100_000, 1_000_000 };
 
     public static readonly long[] StartNumbers = { 10, 100, 1_000, 10_000, 100_000, 1_000_000 };
@@ -78,4 +80,11 @@ internal static class HostLadders
     public static LadderSpan BigBlinds => Span(Bets, CasinoHostingRules.MinHoldemBigBlind, BlackjackRules.MaxBet);
 
     public static LadderSpan All(long[] rungs) => new(0, rungs.Length - 1);
+
+    private static long[] WithNoStake(long[] rungs)
+    {
+        var stakes = new long[rungs.Length + 1];
+        Array.Copy(rungs, 0, stakes, 1, rungs.Length);
+        return stakes;
+    }
 }

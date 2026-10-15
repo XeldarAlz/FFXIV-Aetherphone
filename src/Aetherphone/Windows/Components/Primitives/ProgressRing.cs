@@ -9,27 +9,27 @@ namespace Aetherphone.Windows.Components;
 internal static class ProgressRing
 {
     private const float Top = -MathF.PI / 2f;
+    private const float FullTurnSlack = 0.001f;
     private static Vector2 Dir(float a) => new(MathF.Cos(a), MathF.Sin(a));
 
     private static void Arc(Vector2 c, float r, float thickness, float a0, float a1, uint col) =>
         Arc(ImGui.GetWindowDrawList(), c, r, thickness, a0, a1, col);
 
-    private static void Arc(ImDrawListPtr dl, Vector2 c, float r, float thickness, float a0, float a1, uint col)
+    private static void Arc(ImDrawListPtr drawList, Vector2 center, float radius, float thickness, float from,
+        float to, uint color)
     {
-        var span = MathF.Abs(a1 - a0);
-        var seg = Math.Max(2, (int)MathF.Ceiling(span / (MathF.PI / 48f)));
-        var prev = c + Dir(a0) * r;
-        for (var i = 1; i <= seg; i++)
+        if (MathF.Abs(to - from) >= MathF.Tau - FullTurnSlack)
         {
-            var a = a0 + (a1 - a0) * (i / (float)seg);
-            var cur = c + Dir(a) * r;
-            dl.AddLine(prev, cur, col, thickness);
-            prev = cur;
+            drawList.AddCircle(center, radius, color, 0, thickness);
+            return;
         }
 
+        drawList.PathClear();
+        drawList.PathArcTo(center, radius, from, to);
+        drawList.PathStroke(color, ImDrawFlags.None, thickness);
         var cap = thickness * 0.5f;
-        dl.AddCircleFilled(c + Dir(a0) * r, cap, col);
-        dl.AddCircleFilled(c + Dir(a1) * r, cap, col);
+        drawList.AddCircleFilled(center + Dir(from) * radius, cap, color);
+        drawList.AddCircleFilled(center + Dir(to) * radius, cap, color);
     }
 
     public static void Glow(Vector2 c, float radius, Vector4 color, float intensity)

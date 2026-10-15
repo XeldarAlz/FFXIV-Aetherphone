@@ -1,3 +1,5 @@
+using Aetherphone.Core.Coins;
+
 namespace Aetherphone.Core.Games;
 
 internal sealed class GameStatsStore
@@ -17,7 +19,7 @@ internal sealed class GameStatsStore
         SeedDailyHistory();
     }
 
-    public static int TodayIndex => (int)(DateTime.UtcNow.Ticks / TimeSpan.TicksPerDay);
+    public static int TodayIndex => CoinDay.Index(DateTime.UtcNow);
 
     public bool TetrisModern
     {
@@ -81,7 +83,7 @@ internal sealed class GameStatsStore
         }
     }
     public string DailyGameId { get; set; } = string.Empty;
-    public bool DailyDone => configuration.DailyChallengeLastDay == TodayIndex;
+    public bool DailyDone => configuration.DailyChallengeLastDay >= TodayIndex;
     public int DailyStreak =>
         configuration.DailyChallengeLastDay >= TodayIndex - 1 ? configuration.DailyChallengeStreak : 0;
     public int DailyBestStreak => Math.Max(configuration.DailyChallengeBestStreak, configuration.DailyChallengeStreak);
@@ -326,7 +328,7 @@ internal sealed class GameStatsStore
         }
 
         var lastDay = configuration.DailyChallengeLastDay;
-        if (lastDay == today)
+        if (lastDay >= today)
         {
             return;
         }

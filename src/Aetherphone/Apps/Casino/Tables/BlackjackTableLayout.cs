@@ -8,7 +8,9 @@ internal sealed class BlackjackTableLayout
 {
     public const float SideInset = 10f;
     public const float FitFloor = 0.6f;
+    public const float RegularFitFloor = 0.7f;
     public const float MinimumFit = 0.45f;
+    public const float LastResortFit = 0.3f;
     public const float GapFloor = 0.3f;
 
     public const float DealerPuckDrop = 18f;
@@ -27,12 +29,19 @@ internal sealed class BlackjackTableLayout
     public const float RailSplitCardWidth = 14f;
     public const float RailInnerGap = 2f;
     public const float RailPuckRadius = 22f;
+    public const float RailRingGap = 4f;
     public const float RailPlateGap = 7f;
     public const float RailPlateHeight = 32f;
     public const float RailArcLift = 12f;
     public const float SpotRadiusMax = 28f;
-    public const float SpotRadiusMin = 22f;
+    public const float SpotRadiusMin = 18f;
     public const float SpotGap = 6f;
+    public const float SideStakeHeight = 14f;
+    public const float SideStakeGap = 3f;
+    public const float SideStakeOverlap = 1f;
+    public const float SideStakeSlide = 4f;
+    public const float TimeBankPipLift = 4f;
+    public const float RailTitleDrop = 6f;
 
     public const float RaiseReserve = 8f;
     public const float CardsTotalGap = 4f;
@@ -44,21 +53,88 @@ internal sealed class BlackjackTableLayout
     public const float BetCapsuleGap = 6f;
     public const float CapsuleHeight = 40f;
     public const float CapsulePuckRadius = 16f;
+    public const float CapsuleRingGap = 3.5f;
     public const float CapsuleBottomInset = 4f;
     public const float SideSpotOffset = 70f;
-    public const float SideCaptionHalf = 32f;
+    public const float SpotCaptionShare = 1.8f;
     public const float GhostBottomInset = 12f;
     public const float HeroSlotWidthCap = 150f;
     public const float HeroSlotPad = 8f;
 
     public const float ShoeInsetX = 30f;
     public const float ShoeInsetY = 26f;
+    public const float ShoeCardWidth = 22f;
+    public const float ShoeLift = 2.5f;
+
+    public const float DealerTopInset = 4f;
+    public const float DealerTotalBesideGap = 6f;
+    public const float CompactDealerPuckRadius = 12f;
+    public const float CompactStateBandHeight = 24f;
+    public const float CompactRailPuckRadius = 16f;
+    public const float CompactSpotRadiusMin = 16f;
+    public const float CompactSpotRadiusMax = 22f;
+    public const float CompactRailCardWidth = 16f;
+    public const float CompactRailSplitCardWidth = 12f;
+    public const float CompactPlateRise = 0.5f;
+    public const float CompactBetSpotRadius = 19f;
+    public const float CompactBetSpotRadiusMax = 22f;
+    public const float CompactCapsuleHeight = 36f;
+    public const float CompactTotalOverlap = 8f;
+
+    private const float FitTolerance = 0.0001f;
+
+    private readonly struct Tier
+    {
+        public readonly bool Compact;
+        public readonly float DealerPuckRadius;
+        public readonly float StateBandHeight;
+        public readonly float RailPuckRadius;
+        public readonly float SpotRadiusMin;
+        public readonly float SpotRadiusMax;
+        public readonly float RailCardWidth;
+        public readonly float RailSplitCardWidth;
+        public readonly float BetSpotRadius;
+        public readonly float BetSpotRadiusMax;
+        public readonly float CapsuleHeight;
+
+        public Tier(bool compact, float dealerPuckRadius, float stateBandHeight, float railPuckRadius,
+            float spotRadiusMin, float spotRadiusMax, float railCardWidth, float railSplitCardWidth,
+            float betSpotRadius, float betSpotRadiusMax, float capsuleHeight)
+        {
+            Compact = compact;
+            DealerPuckRadius = dealerPuckRadius;
+            StateBandHeight = stateBandHeight;
+            RailPuckRadius = railPuckRadius;
+            SpotRadiusMin = spotRadiusMin;
+            SpotRadiusMax = spotRadiusMax;
+            RailCardWidth = railCardWidth;
+            RailSplitCardWidth = railSplitCardWidth;
+            BetSpotRadius = betSpotRadius;
+            BetSpotRadiusMax = betSpotRadiusMax;
+            CapsuleHeight = capsuleHeight;
+        }
+
+        public float PlateTop(float puckRadius, float scale) =>
+            Compact ? puckRadius * CompactPlateRise : puckRadius + RailPlateGap * scale;
+    }
+
+    private static readonly Tier RegularTier = new(false, DealerPuckRadius, StateBandHeight, RailPuckRadius,
+        SpotRadiusMin, SpotRadiusMax, RailCardWidth, RailSplitCardWidth, BetSpotRadius, BetSpotRadiusMax,
+        CapsuleHeight);
+
+    private static readonly Tier CompactTier = new(true, CompactDealerPuckRadius, CompactStateBandHeight,
+        CompactRailPuckRadius, CompactSpotRadiusMin, CompactSpotRadiusMax, CompactRailCardWidth,
+        CompactRailSplitCardWidth, CompactBetSpotRadius, CompactBetSpotRadiusMax, CompactCapsuleHeight);
 
     private readonly Vector2[] railPucks = new Vector2[BlackjackRules.SeatCount];
+
+    private Tier tier = RegularTier;
 
     public Rect Felt { get; private set; }
 
     public float Scale { get; private set; }
+
+    public bool Compact { get; private set; }
 
     public float Fit { get; private set; } = 1f;
 
@@ -79,6 +155,8 @@ internal sealed class BlackjackTableLayout
     public float Stagger { get; private set; }
 
     public Vector2 ShoeAnchor { get; private set; }
+
+    public float ShoePixels { get; private set; }
 
     public Vector2 DealerPuck { get; private set; }
 
@@ -131,11 +209,15 @@ internal sealed class BlackjackTableLayout
         Seated = seated;
         RailCount = Math.Clamp(railCount, 0, BlackjackRules.SeatCount);
         ColumnWidth = RailColumnWidth(felt, RailCount, scale);
-        SpotRadius = SpotRadiusFor(ColumnWidth, scale);
-        SpotScale = SpotRadius / Stage.SeatSpot.MinimumRadius;
-        PuckRadius = RailPuckRadius * scale;
-        Stagger = RailStagger(ColumnWidth, SpotRadius, RailCount, scale);
-        Solve(felt.Height / MathF.Max(0.0001f, scale));
+        var available = felt.Height / MathF.Max(0.0001f, scale);
+        Adopt(RegularTier);
+        if (!Roomy(available))
+        {
+            Adopt(CompactTier);
+        }
+
+        Solve(available);
+
         ComputeDealer(felt, scale);
         ComputeHero(felt, scale);
         ComputeRail(felt, scale);
@@ -145,9 +227,18 @@ internal sealed class BlackjackTableLayout
 
     public float RaisePixels => RaiseReserve * GapFit * Scale;
 
+    public float PillPixels => PillHeight * Scale;
+
+    public float TotalCapsulePixels => TotalCapsuleHeight * Scale;
+
+    public bool ShowsRailTitles => !Compact;
+
     public float MainPlateMaxWidth => (SideSpotOffset * Scale - BetSpotPixels - SpotGap * Scale) * 2f;
 
-    public float SideCaptionWidth => SideCaptionHalf * 2f * Scale;
+    public float SpotCaptionWidth => BetSpotPixels * SpotCaptionShare;
+
+    public float RailCardPixels(int handCount) =>
+        (handCount > 1 ? tier.RailSplitCardWidth : tier.RailCardWidth) * Scale;
 
     public float HeroCardPixels(int handCount) => HeroCardWidth(handCount) * Fit * Scale;
 
@@ -167,6 +258,13 @@ internal sealed class BlackjackTableLayout
         return new Vector2(x, HeroFanY);
     }
 
+    public float DealerTotalBesideX(float fanRight, float pillHalfWidth)
+    {
+        var gap = DealerTotalBesideGap * Scale;
+        var shoeLeft = ShoeAnchor.X - ShoePixels * 0.5f;
+        return MathF.Min(fanRight + gap + pillHalfWidth, shoeLeft - gap - pillHalfWidth);
+    }
+
     public Vector2 SideSpot(BlackjackSideBet bet)
     {
         var offset = SideSpotOffset * Scale;
@@ -184,10 +282,33 @@ internal sealed class BlackjackTableLayout
     public Rect RailPlateRect(int slot)
     {
         var puck = RailPuckCenter(slot);
-        var half = (ColumnWidth - 2f * Scale) * 0.5f;
+        var half = RailPlateWidth * 0.5f;
         var top = puck.Y + RailPlateTop;
         return new Rect(new Vector2(puck.X - half, top), new Vector2(puck.X + half, top + RailPlateHeight * Scale));
     }
+
+    public float RailPlateWidth => MathF.Min(ColumnWidth - 2f * Scale, (ColumnWidth - PuckRadius - Scale) * 2f);
+
+    public float SideStakeFloor => Seated ? HeroTop + RaisePixels : HeroTop;
+
+    public Rect RailSideStakeRect(int slot, BlackjackSideBet bet, bool both) =>
+        SideStakeRect(RailPlateRect(slot), SideStakeFloor, bet, both, Scale);
+
+    public static Rect SideStakeRect(in Rect plate, float floor, BlackjackSideBet bet, bool both, float scale)
+    {
+        var height = SideStakeHeight * scale;
+        var attached = plate.Max.Y - SideStakeOverlap * scale;
+        var top = MathF.Min(attached, MathF.Max(floor - height, attached - SideStakeSlide * scale));
+        var width = both ? MathF.Max(1f, (plate.Width - SideStakeGap * scale) * 0.5f) : plate.Width;
+        var left = !both || bet == BlackjackSideBet.PerfectPairs ? plate.Min.X : plate.Max.X - width;
+        return new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
+    }
+
+    public static Vector2 TimeBankPips(Vector2 puck, float puckRadius, float scale) =>
+        new(puck.X, puck.Y - puckRadius + TimeBankPipLift * scale);
+
+    public static Vector2 RailTitleCenter(Vector2 puck, float puckRadius, float scale) =>
+        new(puck.X, puck.Y + puckRadius - RailTitleDrop * scale);
 
     public Rect DealerZone()
     {
@@ -231,18 +352,14 @@ internal sealed class BlackjackTableLayout
         return (feltWidth - SideInset * 2f * scale) / railCount;
     }
 
-    public static float SpotRadiusFor(float columnWidth, float scale) =>
-        Math.Clamp((columnWidth - SpotGap * scale) * 0.5f, SpotRadiusMin * scale, SpotRadiusMax * scale);
+    public static float MinimumHeight(float feltWidth, int railCount, bool seated, float scale) =>
+        RequiredHeight(RegularTier, feltWidth, railCount, seated, scale, MinimumFit, GapFloor);
 
-    public static float MinimumHeight(float feltWidth, int railCount, bool seated, float scale)
-    {
-        var count = Math.Clamp(railCount, 0, BlackjackRules.SeatCount);
-        var column = RailColumnWidth(feltWidth, count, scale);
-        var stagger = RailStagger(column, SpotRadiusFor(column, scale), count, scale);
-        var units = FixedUnits(count, seated, stagger / scale) + GapUnits(count, seated) * GapFloor
-                    + VariableUnits() * MinimumFit;
-        return units * scale;
-    }
+    public static float CompactMinimumHeight(float feltWidth, int railCount, bool seated, float scale) =>
+        RequiredHeight(CompactTier, feltWidth, railCount, seated, scale, MinimumFit, GapFloor);
+
+    public static float LastResortHeight(float feltWidth, int railCount, bool seated, float scale) =>
+        RequiredHeight(CompactTier, feltWidth, railCount, seated, scale, LastResortFit, 0f);
 
     public static float FeltTop(float rowBottom, float knockReserve, float safeBottom, float minimumHeight) =>
         MathF.Max(rowBottom, MathF.Min(rowBottom + knockReserve, safeBottom - minimumHeight));
@@ -295,88 +412,178 @@ internal sealed class BlackjackTableLayout
         return squeezed > 0f ? squeezed : 0f;
     }
 
-    private float RailHandHalf() => PlayingCards.HeightFor(RailCardWidth * Scale) * 0.5f;
+    private static float SpotRadiusFor(float columnWidth, float scale, in Tier tier) =>
+        Math.Clamp((columnWidth - SpotGap * scale) * 0.5f, tier.SpotRadiusMin * scale, tier.SpotRadiusMax * scale);
+
+    private static float RequiredHeight(in Tier tier, float feltWidth, int railCount, bool seated, float scale,
+        float fit, float gapFit)
+    {
+        var count = Math.Clamp(railCount, 0, BlackjackRules.SeatCount);
+        var column = RailColumnWidth(feltWidth, count, scale);
+        var stagger = RailStagger(column, SpotRadiusFor(column, scale, tier), count, scale);
+        var units = FixedUnits(tier, count, seated, stagger / scale) + GapUnits(tier, count, seated) * gapFit
+                    + VariableUnits(tier, fit);
+        return units * scale;
+    }
+
+    private void Adopt(in Tier next)
+    {
+        tier = next;
+        Compact = next.Compact;
+        SpotRadius = SpotRadiusFor(ColumnWidth, Scale, next);
+        SpotScale = SpotRadius / Stage.SeatSpot.MinimumRadius;
+        PuckRadius = MathF.Min(next.RailPuckRadius * Scale, SpotRadius);
+        Stagger = RailStagger(ColumnWidth, SpotRadius, RailCount, Scale);
+    }
+
+    private float RailHandHalf() => PlayingCards.HeightFor(tier.RailCardWidth * Scale) * 0.5f;
+
+    private bool Roomy(float available)
+    {
+        var fixedHeight = FixedUnits(tier, RailCount, Seated, Stagger / Scale);
+        var gapHeight = GapUnits(tier, RailCount, Seated);
+        return fixedHeight + gapHeight + VariableUnits(tier, RegularFitFloor) <= available + FitTolerance;
+    }
 
     private void Solve(float available)
     {
-        var fixedHeight = FixedUnits(RailCount, Seated, Stagger / Scale);
-        var gapHeight = GapUnits(RailCount, Seated);
-        var variableHeight = VariableUnits();
+        var fixedHeight = FixedUnits(tier, RailCount, Seated, Stagger / Scale);
+        var gapHeight = GapUnits(tier, RailCount, Seated);
         Fit = 1f;
         GapFit = 1f;
-        if (fixedHeight + gapHeight + variableHeight <= available)
+        var full = fixedHeight + gapHeight + VariableUnits(tier, 1f);
+        if (full <= available)
         {
-            BetSpotPixels = MathF.Min(BetSpotRadiusMax,
-                BetSpotRadius + (available - fixedHeight - gapHeight - variableHeight) * 0.25f) * Scale;
+            BetSpotPixels = MathF.Min(tier.BetSpotRadiusMax, tier.BetSpotRadius + (available - full) * 0.25f) * Scale;
             return;
         }
 
-        BetSpotPixels = BetSpotRadius * Scale;
-        Fit = Math.Clamp((available - fixedHeight - gapHeight) / variableHeight, FitFloor, 1f);
-        if (fixedHeight + gapHeight + variableHeight * Fit <= available)
-        {
-            return;
-        }
-
-        GapFit = Math.Clamp((available - fixedHeight - variableHeight * Fit) / gapHeight, GapFloor, 1f);
-        if (fixedHeight + gapHeight * GapFit + variableHeight * Fit <= available)
+        BetSpotPixels = tier.BetSpotRadius * Scale;
+        Fit = Math.Clamp(FitFor(tier, available - fixedHeight - gapHeight), FitFloor, 1f);
+        if (Fits(fixedHeight, gapHeight, available))
         {
             return;
         }
 
-        Fit = MathF.Max(MinimumFit, (available - fixedHeight - gapHeight * GapFit) / variableHeight);
+        GapFit = Math.Clamp((available - fixedHeight - VariableUnits(tier, Fit)) / gapHeight, GapFloor, 1f);
+        if (Fits(fixedHeight, gapHeight, available))
+        {
+            return;
+        }
+
+        Fit = MathF.Max(MinimumFit, FitFor(tier, available - fixedHeight - gapHeight * GapFit));
+        if (Fits(fixedHeight, gapHeight, available))
+        {
+            return;
+        }
+
+        GapFit = Math.Clamp((available - fixedHeight - VariableUnits(tier, Fit)) / gapHeight, 0f, GapFit);
+        if (Fits(fixedHeight, gapHeight, available))
+        {
+            return;
+        }
+
+        Fit = MathF.Max(LastResortFit, FitFor(tier, available - fixedHeight - gapHeight * GapFit));
     }
 
-    private static float FixedUnits(int railCount, bool seated, float staggerUnits)
+    private bool Fits(float fixedHeight, float gapHeight, float available) =>
+        fixedHeight + gapHeight * GapFit + VariableUnits(tier, Fit) <= available + FitTolerance;
+
+    private static float FixedUnits(in Tier tier, int railCount, bool seated, float staggerUnits)
     {
-        var top = DealerPuckDrop + DealerPuckRadius + PillHeight + StateBandHeight;
+        var top = tier.Compact
+            ? DealerTopInset + tier.StateBandHeight
+            : DealerPuckDrop + tier.DealerPuckRadius + PillHeight + tier.StateBandHeight;
         var rail = railCount > 0
-            ? PlayingCards.HeightFor(RailCardWidth) + BetPlateHeight + RailPuckRadius * 2f + RailPlateGap
-              + RailPlateHeight + staggerUnits
+            ? PlayingCards.HeightFor(tier.RailCardWidth) + BetPlateHeight + tier.RailPuckRadius
+              + tier.PlateTop(tier.RailPuckRadius, 1f) + RailPlateHeight + staggerUnits
             : 0f;
+        var totalReach = tier.Compact ? TotalCapsuleHeight - CompactTotalOverlap : TotalCapsuleHeight;
         var hero = seated
-            ? TotalCapsuleHeight + BetSpotRadius * 2f + BetPlateHeight * 0.5f + CapsuleHeight
+            ? totalReach + tier.BetSpotRadius * 2f + BetPlateHeight * 0.5f + tier.CapsuleHeight
             : 0f;
         return top + rail + hero;
     }
 
-    private static float GapUnits(int railCount, bool seated)
+    private static float GapUnits(in Tier tier, int railCount, bool seated)
     {
-        var top = DealerFanGap + DealerTotalGap + StateGap;
+        var top = tier.Compact ? StateGap : DealerFanGap + DealerTotalGap + StateGap;
         var rail = railCount > 0 ? ZoneGap + RailInnerGap * 2f + (railCount > 1 ? RailArcLift : 0f) : 0f;
+        var cardsGap = tier.Compact ? 0f : CardsTotalGap;
         var hero = seated
-            ? ZoneGap + RaiseReserve + CardsTotalGap + TotalBetGap + BetCapsuleGap + CapsuleBottomInset
+            ? ZoneGap + RaiseReserve + cardsGap + TotalBetGap + BetCapsuleGap + CapsuleBottomInset
             : ZoneGap + GhostBottomInset;
         return top + rail + hero;
     }
 
-    private static float VariableUnits() =>
-        PlayingCards.HeightFor(DealerCardWidth) + PlayingCards.HeightFor(HeroCardWidth(1));
+    private static float VariableUnits(in Tier tier, float fit)
+    {
+        var dealer = PlayingCards.HeightFor(DealerCardWidth) * fit;
+        if (tier.Compact)
+        {
+            dealer = MathF.Max(dealer, tier.DealerPuckRadius * 2f);
+        }
+
+        return dealer + PlayingCards.HeightFor(HeroCardWidth(1)) * fit;
+    }
+
+    private static float FitFor(in Tier tier, float budget)
+    {
+        var dealerHeight = PlayingCards.HeightFor(DealerCardWidth);
+        var heroHeight = PlayingCards.HeightFor(HeroCardWidth(1));
+        var fit = budget / (dealerHeight + heroHeight);
+        var puckRow = tier.DealerPuckRadius * 2f;
+        if (tier.Compact && dealerHeight * fit < puckRow)
+        {
+            fit = (budget - puckRow) / heroHeight;
+        }
+
+        return fit;
+    }
 
     private void ComputeDealer(in Rect felt, float scale)
     {
         ShoeAnchor = new Vector2(felt.Max.X - ShoeInsetX * scale, felt.Min.Y + ShoeInsetY * scale);
-        DealerPuckPixels = DealerPuckRadius * scale;
-        DealerPuck = new Vector2(felt.Center.X, felt.Min.Y + DealerPuckDrop * scale);
-        var right = DealerPuck.X - DealerPuckPixels - SpeechGap * scale;
-        var left = felt.Min.X + SideInset * 2f * scale;
-        SpeechArea = new Rect(new Vector2(left, DealerPuck.Y - DealerPuckPixels),
-            new Vector2(MathF.Max(left, right), DealerPuck.Y + DealerPuckPixels));
+        ShoePixels = ShoeCardWidth * scale;
+        DealerPuckPixels = tier.DealerPuckRadius * scale;
         DealerCardPixels = DealerCardWidth * Fit * scale;
         var cardHalf = PlayingCards.HeightFor(DealerCardPixels) * 0.5f;
-        var fanTop = DealerPuck.Y + DealerPuckPixels + DealerFanGap * GapFit * scale;
-        DealerFanCenter = new Vector2(felt.Center.X, fanTop + cardHalf);
-        var pillHalf = PillHeight * 0.5f * scale;
-        DealerTotalY = DealerFanCenter.Y + cardHalf + DealerTotalGap * GapFit * scale + pillHalf;
-        var stateTop = DealerTotalY + pillHalf + StateGap * GapFit * scale;
+        var stateGap = StateGap * GapFit * scale;
+        float stateTop;
+        if (Compact)
+        {
+            var rowHalf = MathF.Max(cardHalf, DealerPuckPixels);
+            DealerFanCenter = new Vector2(felt.Center.X, felt.Min.Y + DealerTopInset * scale + rowHalf);
+            DealerPuck = new Vector2(felt.Min.X + SideInset * scale + DealerPuckPixels, DealerFanCenter.Y);
+            SpeechArea = new Rect(DealerPuck, DealerPuck);
+            DealerTotalY = DealerFanCenter.Y;
+            stateTop = DealerFanCenter.Y + rowHalf + stateGap;
+            var lift = ShoeLift * scale;
+            ShoePixels = MathF.Min(ShoePixels, PlayingCards.WidthFor(rowHalf * 2f - lift));
+            ShoeAnchor = new Vector2(ShoeAnchor.X, DealerFanCenter.Y - lift * 0.5f);
+        }
+        else
+        {
+            DealerPuck = new Vector2(felt.Center.X, felt.Min.Y + DealerPuckDrop * scale);
+            var right = DealerPuck.X - DealerPuckPixels - SpeechGap * scale;
+            var left = felt.Min.X + SideInset * 2f * scale;
+            SpeechArea = new Rect(new Vector2(left, DealerPuck.Y - DealerPuckPixels),
+                new Vector2(MathF.Max(left, right), DealerPuck.Y + DealerPuckPixels));
+            var fanTop = DealerPuck.Y + DealerPuckPixels + DealerFanGap * GapFit * scale;
+            DealerFanCenter = new Vector2(felt.Center.X, fanTop + cardHalf);
+            var pillHalf = PillHeight * 0.5f * scale;
+            DealerTotalY = DealerFanCenter.Y + cardHalf + DealerTotalGap * GapFit * scale + pillHalf;
+            stateTop = DealerTotalY + pillHalf + stateGap;
+        }
+
         StateBand = new Rect(new Vector2(felt.Min.X, stateTop),
-            new Vector2(felt.Max.X, stateTop + StateBandHeight * scale));
+            new Vector2(felt.Max.X, stateTop + tier.StateBandHeight * scale));
     }
 
     private void ComputeHero(in Rect felt, float scale)
     {
         var cardHalf = PlayingCards.HeightFor(HeroCardPixels(1)) * 0.5f;
-        CapsulePixels = CapsuleHeight * scale;
+        CapsulePixels = tier.CapsuleHeight * scale;
         CapsulePuckPixels = CapsulePuckRadius * scale;
         CapsuleMaxWidth = felt.Width - SideInset * 2f * scale;
         if (!Seated)
@@ -399,7 +606,10 @@ internal sealed class BlackjackTableLayout
         var rowTop = BetSpot.Y - BetSpotPixels;
         var totalHalf = TotalCapsuleHeight * 0.5f * scale;
         HeroTotalY = rowTop - TotalBetGap * GapFit * scale - totalHalf;
-        HeroFanY = HeroTotalY - totalHalf - CardsTotalGap * GapFit * scale - cardHalf;
+        var cardsBottom = Compact
+            ? HeroTotalY - totalHalf + CompactTotalOverlap * scale
+            : HeroTotalY - totalHalf - CardsTotalGap * GapFit * scale;
+        HeroFanY = cardsBottom - cardHalf;
         HeroTop = HeroFanY - cardHalf - RaiseReserve * GapFit * scale;
     }
 
@@ -407,7 +617,7 @@ internal sealed class BlackjackTableLayout
     {
         RailBetLift = PuckRadius + RailInnerGap * GapFit * scale + BetPlateHeight * 0.5f * scale;
         RailCardsLift = RailBetLift + BetPlateHeight * 0.5f * scale + RailInnerGap * GapFit * scale + RailHandHalf();
-        RailPlateTop = PuckRadius + RailPlateGap * scale;
+        RailPlateTop = tier.PlateTop(PuckRadius, scale);
         var above = RailCardsLift + RailHandHalf();
         var below = RailPlateTop + RailPlateHeight * scale;
         var lift = RailCount > 1 ? RailArcLift * GapFit * scale : 0f;

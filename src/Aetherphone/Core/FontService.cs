@@ -59,6 +59,12 @@ internal sealed class FontService : IDisposable
     private const int LearnedGlyphCap = 2000;
     private const int LearnedIconCap = 512;
     private const string TablerIconFile = "TablerIcons.ttf";
+
+    private static readonly ushort[] TablerRanges =
+    {
+        IconPlan.FirstTablerCodepoint, IconPlan.LastTablerCodepoint, 0x0000,
+    };
+
     private const string DisplayFontFile = "PirataOne-Regular.ttf";
     private const float DisplayMultiplier = 1.90f;
     private static readonly ushort[] DisplayRanges = { 0x0020, 0x017E, 0x0000 };
@@ -79,7 +85,7 @@ internal sealed class FontService : IDisposable
     private IFontHandle? displayHandle;
     private ushort[] nativeRanges;
     private ushort[] sharedRanges;
-    private ushort[] iconRanges;
+    private ushort[] fontAwesomeRanges;
     private IFontHandle[,] textHandles;
     private IFontHandle[] sharedHandles;
     private IFontHandle[] iconHandles;
@@ -108,7 +114,7 @@ internal sealed class FontService : IDisposable
         renderScale = zoom * phoneZoom / MaxZoom;
         nativeRanges = PlaceholderRanges;
         sharedRanges = PlaceholderRanges;
-        iconRanges = PlaceholderRanges;
+        fontAwesomeRanges = PlaceholderRanges;
         textHandles = null!;
         sharedHandles = null!;
         iconHandles = null!;
@@ -449,7 +455,7 @@ internal sealed class FontService : IDisposable
         return atlas.NewDelegateFontHandle(e => e.OnPreBuild(tk =>
         {
             var primary = tk.AddDalamudAssetFont(Dalamud.DalamudAsset.FontAwesomeFreeSolid,
-                new SafeFontConfig { SizePx = pixels, GlyphRanges = iconRanges, });
+                new SafeFontConfig { SizePx = pixels, GlyphRanges = fontAwesomeRanges, });
             if (!File.Exists(tablerPath))
             {
                 return;
@@ -458,7 +464,7 @@ internal sealed class FontService : IDisposable
             try
             {
                 tk.AddFontFromFile(tablerPath,
-                    new SafeFontConfig { SizePx = pixels, GlyphRanges = iconRanges, MergeFont = primary, });
+                    new SafeFontConfig { SizePx = pixels, GlyphRanges = TablerRanges, MergeFont = primary, });
             }
             catch (Exception exception)
             {
@@ -663,11 +669,6 @@ internal sealed class FontService : IDisposable
     private void ComposeIconRanges()
     {
         iconCoverage.Clear();
-        for (var codepoint = IconPlan.FirstTablerCodepoint; codepoint <= IconPlan.LastTablerCodepoint; codepoint++)
-        {
-            iconCoverage.Add(codepoint);
-        }
-
         var fontAwesome = IconPlan.FontAwesome;
         for (var index = 0; index < fontAwesome.Length; index++)
         {
@@ -679,7 +680,13 @@ internal sealed class FontService : IDisposable
             iconCoverage.Add(codepoint);
         }
 
-        iconRanges = iconCoverage.ToRanges(IconPlan.FirstIconCodepoint);
+        // FontAwesome 7 draws its own glyphs inside the Tabler block (U+E678 is a table lock), and the first font
+        // in a merge wins, so FontAwesome is never asked for the block and Tabler's glyphs always land.
+        fontAwesomeRanges = iconCoverage.ToRanges(IconPlan.FirstIconCodepoint);
+        for (var codepoint = IconPlan.FirstTablerCodepoint; codepoint <= IconPlan.LastTablerCodepoint; codepoint++)
+        {
+            iconCoverage.Add(codepoint);
+        }
     }
 
     private void SeedLearned()

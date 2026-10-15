@@ -85,6 +85,7 @@ internal sealed class ChatComposer : IDisposable
 
     private readonly VoiceNoteRecorder recorder = new();
     private readonly EmojiPicker emojiPicker = new();
+    private readonly EmojiSuggestions suggestions = new();
     private readonly DropdownMenu attachMenu = new();
     private readonly DropdownMenu.Item[] attachItems = new DropdownMenu.Item[2];
     private readonly SoftWrapEditor editor = new();
@@ -92,6 +93,7 @@ internal sealed class ChatComposer : IDisposable
     private string? pendingImage;
     private float fieldGrowth;
     private bool focus;
+    private bool typing;
     private bool emojiOpen;
     private int emojiOpenedFrame = -1;
     private int emojiClosedFrame = -1;
@@ -281,16 +283,17 @@ internal sealed class ChatComposer : IDisposable
         if (model.Style == ChatComposerStyle.Pill)
         {
             DrawPillComposer(composerRect, surface, model);
-            return;
         }
-
-        if (model.Style == ChatComposerStyle.Plus)
+        else if (model.Style == ChatComposerStyle.Plus)
         {
             DrawPlusComposer(composerRect, model);
-            return;
+        }
+        else
+        {
+            DrawInputComposer(composerRect, model);
         }
 
-        DrawInputComposer(composerRect, model);
+        DrawSuggestions(composerRect, model);
     }
 
     private bool DrawField(Rect pill, float textLeft, float textRight, in ChatComposerModel model)
@@ -317,8 +320,11 @@ internal sealed class ChatComposer : IDisposable
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, model.Ui.Theme.TextStrong))
         {
-            submitted = editor.Draw("##chatComposerInput", new Vector2(fieldWidth, fieldHeight), model.MaxLength, 0);
+            submitted = editor.Draw("##chatComposerInput", new Vector2(fieldWidth, fieldHeight), model.MaxLength, 0)
+                        && !suggestions.Showing;
         }
+
+        typing = EmojiSuggestions.FieldTyping();
 
         if (model.CanImage && editTargetId is null && model.Library is { } library)
         {
@@ -869,6 +875,27 @@ internal sealed class ChatComposer : IDisposable
             editor.Append(picked);
             Plugin.Fonts.NoticeText(editor.Text);
         }
+    }
+
+    private void DrawSuggestions(Rect composerArea, in ChatComposerModel model)
+    {
+        var typed = typing;
+        typing = false;
+        if (emojiOpen)
+        {
+            return;
+        }
+
+        var bar = new Rect(new Vector2(composerArea.Min.X, composerArea.Min.Y - AccessoryHeight), composerArea.Max);
+        var draft = editor.Text;
+        if (!suggestions.Draw(bar, model.Screen, model.Ui, ref draft, typed) || draft.Length > model.MaxLength)
+        {
+            return;
+        }
+
+        editor.Adopt(draft);
+        editor.MoveCursor(editor.Text.Length);
+        focus = true;
     }
 
     private void DismissEmojiOnOutsideClick(Rect panel)

@@ -31,10 +31,10 @@ public sealed class CasinoBroadcastLayoutTests
     }
 
     [Fact]
-    public void TheTradePromptStacksItsButtonsWhenBothLabelsCannotSitWhole()
+    public void TheRecordedTradeCardStacksItsButtonsWhenBothLabelsCannotSitWhole()
     {
-        Assert.False(TradeSyncPrompt.ButtonsStack(300f, 160f, 110f, 8f));
-        Assert.True(TradeSyncPrompt.ButtonsStack(300f, 200f, 110f, 8f));
+        Assert.False(TradeRecordedCard.ButtonsStack(300f, 160f, 110f, 8f));
+        Assert.True(TradeRecordedCard.ButtonsStack(300f, 200f, 110f, 8f));
     }
 
     [Theory]

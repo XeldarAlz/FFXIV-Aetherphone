@@ -138,7 +138,7 @@ internal sealed partial class DealerHoldemCabinet : ICabinetIdle
         RetryFinishing(frame.DeltaSeconds);
         DrawFelt(drawList, frame, scale);
         DrawStateLine(drawList, scale);
-        var blocked = state.StakesPaused || state.Draining || frame.Blocked;
+        var blocked = state.StakesPaused || state.Draining;
         var sitting = state.Sitting ?? CasinoWire.NoBankroll;
         if (playback.Open || dealing)
         {

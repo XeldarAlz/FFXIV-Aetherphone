@@ -39,7 +39,7 @@ internal sealed partial class JobsApp
     private const float ReorderRadius = 11f;
 
     private readonly NavBarButton[] rootButtons = new NavBarButton[2];
-    private Spring heroFill;
+    private LevelFill heroFill;
 
     private void DrawRoot(Rect area)
     {
@@ -143,7 +143,7 @@ internal sealed partial class JobsApp
         }
 
         var center = new Vector2(min.X + pad + ringRadius, (min.Y + max.Y) * 0.5f);
-        var fill = heroFill.Step(job.Fraction, Motion.Sheet, JobsArt.FrameDelta());
+        var fill = heroFill.Step(job, JobsArt.FrameDelta());
         JobsArt.JobRing(drawList, textures, center, ringRadius * press, HeroRingThickness * scale, fill, job,
             ui.TitleInk, IsPending(job), scale);
         JobsArt.Chevron(drawList, new Vector2(max.X - pad, (min.Y + max.Y) * 0.5f), HeroChevronSize * scale,
@@ -219,8 +219,14 @@ internal sealed partial class JobsApp
         var valueTop = rect.Max.Y - pad - valueHeight;
         Typography.Draw(drawList, new Vector2(rect.Min.X + pad, valueTop - labelHeight),
             Typography.FitText(label, textWidth, TextStyles.Footnote), ui.MutedInk, TextStyles.Footnote);
-        Typography.Draw(drawList, new Vector2(rect.Min.X + pad, valueTop),
-            Typography.FitText(value, textWidth, TextStyles.Title3), ui.TitleInk, TextStyles.Title3);
+        var valueStyle = TextStyles.Title3 with
+        {
+            Scale = Typography.FitScale(value, textWidth, TextStyles.Title3.Scale, TextStyles.Headline.Scale,
+                TextStyles.Title3.Weight),
+        };
+        Typography.Draw(drawList,
+            new Vector2(rect.Min.X + pad, valueTop + valueHeight - Typography.LineHeight(valueStyle)),
+            Typography.FitText(value, textWidth, valueStyle), ui.TitleInk, valueStyle);
     }
 
     private float SectionTop(ImDrawListPtr drawList, float left, float top, float width, string title, float scale)
@@ -359,7 +365,7 @@ internal sealed partial class JobsApp
             }
 
             var job = snapshot.Jobs[jobIndex];
-            var fill = tileFills[jobIndex].Step(job.Fraction, Motion.Sheet, JobsArt.FrameDelta());
+            var fill = tileFills[jobIndex].Step(job, JobsArt.FrameDelta());
             if (DrawJobCell(drawList, cell, job, fill, job.LevelText, job.IsCapped, IsPending(job), job.TooltipId,
                     scale))
             {

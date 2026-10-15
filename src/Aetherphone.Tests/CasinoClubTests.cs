@@ -8,17 +8,20 @@ namespace Aetherphone.Tests;
 public sealed class CasinoClubTests
 {
     [Theory]
-    [InlineData("rounds", "casino.slots", 25, 0, "Spin 25 times")]
+    [InlineData("rounds", "casino.slots", 25, 0, "Spin the slots 25 times")]
     [InlineData("rounds", "casino.blackjack", 10, 0, "Play 10 hands of blackjack")]
+    [InlineData("rounds", "casino.wheel", 10, 0, "Play 10 rounds of Wheel")]
     [InlineData("rounds", "casino.plinko", 10, 0, "Drop 10 Plinko balls")]
-    [InlineData("rounds", "casino.race", 2, 0, "Bet on 2 races")]
+    [InlineData("rounds", "casino.race", 2, 0, "Bet on 2 different races")]
     [InlineData("rounds", "", 5, 0, "Play 5 rounds of anything")]
     [InlineData("games", "", 3, 0, "Play 3 different games")]
-    [InlineData("wins", "", 5, 0, "Win 5 rounds")]
-    [InlineData("hits", "", 1, 100, "Hit 10x on any game")]
-    [InlineData("hits", "", 3, 50, "Hit 5x or more, 3 times")]
+    [InlineData("wins", "", 5, 0, "Win more than you bet, 5 times")]
+    [InlineData("wins", "casino.slots", 5, 0, "Win more than you bet on Slots, 5 times")]
+    [InlineData("hits", "", 1, 100, "Win 10x your bet or more on any game")]
+    [InlineData("hits", "casino.slots", 1, 100, "Win 10x your bet or more on Slots")]
+    [InlineData("hits", "", 3, 50, "Win 5x your bet or more, 3 times")]
     [InlineData("maxbet", "", 1, 0, "Bet your max once")]
-    [InlineData("hosted", "", 1, 0, "Play a hand at a hosted table")]
+    [InlineData("hosted", "", 1, 0, "Play a hand at a hosted chips table")]
     [InlineData("mystery", "", 1, 0, "Finish today's mission")]
     public void MissionsReadAsOneSentence(string metric, string gameKind, long target, long threshold, string expected)
     {

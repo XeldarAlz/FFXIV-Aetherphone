@@ -324,10 +324,15 @@ internal sealed partial class FishingApp
         for (var index = 0; index < count; index++)
         {
             var row = card.NextRow();
+            var bounds = new Rect(new Vector2(card.Bounds.Min.X, row.Min.Y), new Vector2(card.Bounds.Max.X, row.Max.Y));
             if (anchorFirst && index == 0)
             {
-                UiAnchors.Report("fishing.fish.first", new Rect(new Vector2(card.Bounds.Min.X, row.Min.Y),
-                    new Vector2(card.Bounds.Max.X, row.Max.Y)));
+                UiAnchors.Report("fishing.fish.first", bounds);
+            }
+
+            if (!ImGui.IsRectVisible(bounds.Min, bounds.Max))
+            {
+                continue;
             }
 
             DrawFishRow(row, card.Bounds, rows[index], nowUnix, scale);

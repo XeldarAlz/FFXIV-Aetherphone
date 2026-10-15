@@ -495,7 +495,12 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         {
             DrawHomeTopBar(area);
             var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-            Typography.DrawCentered(body.Center, Loc.T(L.Chirper.SetUpAccount), ChirperInk.MutedInk);
+            if (EmptyState.Draw(body, ui, PhoneIcons.User, DisplayName, Loc.T(L.Chirper.SetUpAccount),
+                    Loc.T(L.Chirper.OpenSettings)))
+            {
+                navigation.Open("settings");
+            }
+
             return;
         }
 
@@ -1232,7 +1237,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         var rawDisplayName = SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle);
         var drawnNameWidth = UserName.DrawAuto(drawList, "chirper.post.author." + post.Id, rawDisplayName,
             post.AuthorBadges, post.AuthorBadgeIds, contentLeft, headerTop, headerWidth * 0.45f, NameStyle,
-            ChirperInk.TitleInk, theme, self: RewardedSelf(post.AuthorId));
+            ChirperInk.TitleInk, theme);
         var nameMin = new Vector2(contentLeft, headerTop);
         var nameMax = new Vector2(contentLeft + drawnNameWidth, headerTop + nameHeight);
         if (UiInteract.Hover(nameMin, nameMax))
@@ -2155,7 +2160,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         var nameMaxWidth = MathF.Max(1f, (min.X + padX + innerWidth - nameLeft) * 0.6f);
         var drawnNameWidth = UserName.DrawAuto(drawList, "chirper.quote.author." + hostId, rawName,
             quoted.AuthorBadges, quoted.AuthorBadgeIds, nameLeft, nameTop, nameMaxWidth, QuoteNameStyle,
-            ChirperInk.TitleInk, theme, self: RewardedSelf(quoted.AuthorId));
+            ChirperInk.TitleInk, theme);
         var meta = SocialIdentity.FeedMeta(quoted.AuthorHandle, TimeText.Short(quoted.CreatedAtUnix));
         var metaLeft = nameLeft + drawnNameWidth + 6f * scale;
         var clippedMeta = Typography.FitText(meta, MathF.Max(1f, min.X + padX + innerWidth - metaLeft),

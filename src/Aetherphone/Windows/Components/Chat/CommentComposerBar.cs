@@ -32,6 +32,8 @@ internal static class CommentComposerBar
     private const float LeadingButtonGap = 0f;
     private const float TextGap = 4f;
 
+    private static readonly HashSet<string> RefocusRequests = new(StringComparer.Ordinal);
+
     public static bool Draw(Rect bar, Rect screen, AppSkin ui, PhoneTheme theme, in CommentComposerStyle style,
         string inputId, string hint, ref string draft, int maxLength, MentionAutocomplete mentions,
         MentionPopup mentionPopup, RemoteImageCache images, LodestoneService lodestone, bool busy,
@@ -83,19 +85,24 @@ internal static class CommentComposerBar
         ImGui.SetCursorScreenPos(new Vector2(textLeft,
             (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(pillMax.X - textLeft - 10f * scale);
-        if (focusPending && !InputShield.Active)
+        if ((focusPending || RefocusRequests.Contains(inputId)) && !InputShield.Active)
         {
             ImGui.SetKeyboardFocusHere();
             MentionField.CaretToEnd(inputId);
             focusPending = false;
+            RefocusRequests.Remove(inputId);
         }
 
         var submitted = false;
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, style.TextInk))
         {
-            submitted = MentionField.SingleLineWithHint(inputId, hint, ref draft, maxLength, mentions);
+            submitted = MentionField.SingleLineWithHint(inputId, hint, ref draft, maxLength, mentions)
+                        && !emoji.Suggesting;
         }
+
+        var fieldActive = ImGui.IsItemActive();
+        var typing = EmojiSuggestions.FieldTyping();
 
         if (attachmentActive)
         {
@@ -152,6 +159,17 @@ internal static class CommentComposerBar
                 attachment.DrawPanel(new Rect(new Vector2(bar.Min.X, overlayTop - photoPanelHeight),
                     new Vector2(bar.Max.X, overlayTop)), ui, theme, wallpaperImages!, library!);
             }
+        }
+
+        if ((!attachmentActive || attachment!.PanelHeight(scale) <= 0f) && emoji.DrawSuggestions(
+                new Rect(new Vector2(bar.Min.X, overlayTop), bar.Max), screen, ui, ref draft, maxLength, typing))
+        {
+            if (fieldActive)
+            {
+                MentionField.Replace(inputId, draft);
+            }
+
+            RefocusRequests.Add(inputId);
         }
 
         return submitted && canSend;

@@ -2,7 +2,6 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Report;
-using Aetherphone.Core.Venues;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Core.Casino;
@@ -17,7 +16,8 @@ internal readonly record struct VenueActDraft(
     int DurationSeconds = 0,
     string OpponentUserId = "",
     long TicketPrice = 0,
-    long Prize = 0);
+    long Prize = 0,
+    string TargetUserId = "");
 
 internal sealed class CasinoVenueStore : IDisposable
 {
@@ -32,7 +32,6 @@ internal sealed class CasinoVenueStore : IDisposable
     private readonly CasinoRoomsStore rooms;
     private readonly CasinoTablesStore tables;
     private readonly IHousingPositionSource housing;
-    private readonly Func<uint, string> worldName;
     private readonly StoreWork work = new("CasinoVenue");
     private readonly object intentGate = new();
 
@@ -40,7 +39,6 @@ internal sealed class CasinoVenueStore : IDisposable
     private volatile CasinoVenueActDto? actAnswer;
     private volatile CasinoTableRowDto[] nearby = Array.Empty<CasinoTableRowDto>();
     private volatile CasinoStakeOutcome? hostOutcome;
-    private volatile CasinoStakeOutcome? tradeOutcome;
     private volatile bool actInFlight;
     private volatile bool hostInFlight;
     private CasinoRoomState? absorbedState;
@@ -50,16 +48,15 @@ internal sealed class CasinoVenueStore : IDisposable
     private string heldActionId = string.Empty;
     private volatile CasinoTableLocationDto? nearbyFor;
     private CasinoHousingPosition position;
-    private CasinoTableRowDto[] indexedSource = Array.Empty<CasinoTableRowDto>();
-    private Dictionary<VenueAddress, CasinoTableRowDto> venueIndex = new();
     private int actFailed;
     private int fetchingNearby;
     private int verifying;
     private long nearbyAtTick;
+    private volatile string listingAskedFor = string.Empty;
     private string? lastAccountId;
 
     public CasinoVenueStore(AethernetSession session, CasinoClient casino, SafetyClient safety, CasinoRoomsStore rooms,
-        CasinoTablesStore tables, IHousingPositionSource housing, Func<uint, string> worldName)
+        CasinoTablesStore tables, IHousingPositionSource housing)
     {
         this.session = session;
         this.casino = casino;
@@ -67,7 +64,6 @@ internal sealed class CasinoVenueStore : IDisposable
         this.rooms = rooms;
         this.tables = tables;
         this.housing = housing;
-        this.worldName = worldName;
         session.Changed += OnSessionChanged;
         Plugin.Framework.Update += OnFrameworkUpdate;
     }
@@ -105,11 +101,6 @@ internal sealed class CasinoVenueStore : IDisposable
         return Interlocked.Exchange(ref hostOutcome, null);
     }
 
-    public CasinoStakeOutcome? TakeTradeOutcome()
-    {
-        return Interlocked.Exchange(ref tradeOutcome, null);
-    }
-
     public VenueRoomView? ViewFor(string roomId)
     {
         var held = view;
@@ -139,7 +130,7 @@ internal sealed class CasinoVenueStore : IDisposable
         }
 
         var request = new CasinoVenueActRequest(actionId, draft.Action, draft.Count, draft.Title, draft.Winners,
-            draft.DurationSeconds, draft.OpponentUserId, draft.TicketPrice, draft.Prize);
+            draft.DurationSeconds, draft.OpponentUserId, draft.TicketPrice, draft.Prize, draft.TargetUserId);
         work.Run("venue act", async token =>
         {
             var answer = await casino.VenueActAsync(roomId, request, token).ConfigureAwait(false);
@@ -207,36 +198,6 @@ internal sealed class CasinoVenueStore : IDisposable
         RunHost("tournament stop", roomId, token => casino.StopTournamentAsync(roomId, token));
     }
 
-    public void ProposeTrade(in TradeProposal proposal)
-    {
-        if (proposal.Kind == TradeProposalKind.None || proposal.TableId.Length == 0 || hostInFlight
-            || !session.IsSignedIn)
-        {
-            return;
-        }
-
-        hostInFlight = true;
-        var tableId = proposal.TableId;
-        if (proposal.Kind == TradeProposalKind.Confirm)
-        {
-            var entryId = proposal.EntryId;
-            work.Run("trade confirm", async token =>
-            {
-                var answer = await casino.ConfirmLedgerEntryAsync(entryId, token).ConfigureAwait(false);
-                FinishTrade(tableId, answer);
-            }, () => hostInFlight = false);
-            return;
-        }
-
-        var request = new CasinoLedgerProposeRequest(Guid.NewGuid().ToString("N"), proposal.LedgerKind,
-            proposal.CounterpartyUserId, proposal.Amount, CasinoLedgerKinds.Trade);
-        work.Run("trade propose", async token =>
-        {
-            var answer = await casino.ProposeLedgerEntryAsync(tableId, request, token).ConfigureAwait(false);
-            FinishTrade(tableId, answer);
-        }, () => hostInFlight = false);
-    }
-
     public void Report(string tableId, ReportReason reason, Action<bool> done)
     {
         if (tableId.Length == 0)
@@ -302,55 +263,51 @@ internal sealed class CasinoVenueStore : IDisposable
         {
             var answer = await casino.NearbyTablesAsync(location.World, location.Territory, location.Ward, token)
                 .ConfigureAwait(false);
-            if (answer is not null && ReferenceEquals(nearbyFor, location))
+            if (answer is null || !ReferenceEquals(nearbyFor, location))
             {
-                nearby = answer.Tables ?? Array.Empty<CasinoTableRowDto>();
+                return;
             }
+
+            var fresh = answer.Tables ?? Array.Empty<CasinoTableRowDto>();
+            nearby = fresh;
+            var unlisted = UnlistedNearby(fresh, tables.Listed, listingAskedFor);
+            if (unlisted.Length == 0)
+            {
+                return;
+            }
+
+            listingAskedFor = unlisted;
+            tables.RefreshNow();
         }, () => Interlocked.Exchange(ref fetchingNearby, 0));
     }
 
-    public CasinoTableRowDto? LiveTableAt(VenueAddress address)
+    internal static string UnlistedNearby(CasinoTableRowDto[] nearby, CasinoTableRowDto[] listed, string askedFor)
     {
-        if (!address.IsKnown)
+        for (var nearbyIndex = 0; nearbyIndex < nearby.Length; nearbyIndex++)
         {
-            return null;
-        }
-
-        var source = tables.Listed;
-        if (!ReferenceEquals(source, indexedSource))
-        {
-            venueIndex = IndexByAddress(source, worldName);
-            indexedSource = source;
-        }
-
-        return venueIndex.TryGetValue(address, out var row) ? row : null;
-    }
-
-    public void EnsureListed()
-    {
-        tables.EnsureFresh();
-    }
-
-    internal static Dictionary<VenueAddress, CasinoTableRowDto> IndexByAddress(CasinoTableRowDto[] rows,
-        Func<uint, string> worldName)
-    {
-        var index = new Dictionary<VenueAddress, CasinoTableRowDto>();
-        for (var rowIndex = 0; rowIndex < rows.Length; rowIndex++)
-        {
-            var row = rows[rowIndex];
-            if (row.Listing == CasinoListings.Private || row.Paused)
+            var tableId = nearby[nearbyIndex].TableId;
+            if (tableId.Length == 0 || Holds(listed, tableId))
             {
                 continue;
             }
 
-            var address = CasinoHousingPosition.AddressOf(row.Config?.Location, worldName);
-            if (address.IsKnown && !index.ContainsKey(address))
+            return string.Equals(tableId, askedFor, StringComparison.Ordinal) ? string.Empty : tableId;
+        }
+
+        return string.Empty;
+    }
+
+    private static bool Holds(CasinoTableRowDto[] rows, string tableId)
+    {
+        for (var index = 0; index < rows.Length; index++)
+        {
+            if (string.Equals(rows[index].TableId, tableId, StringComparison.Ordinal))
             {
-                index[address] = row;
+                return true;
             }
         }
 
-        return index;
+        return false;
     }
 
     private bool BeginVerify(string roomId, long seq)
@@ -380,14 +337,6 @@ internal sealed class CasinoVenueStore : IDisposable
                 ? new CasinoStakeOutcome(false, CasinoReasons.Unreachable)
                 : new CasinoStakeOutcome(answer.Granted, CasinoTablesStore.Named(answer.Reason)));
         }, () => hostInFlight = false);
-    }
-
-    private void FinishTrade(string tableId, CasinoLedgerResultDto? answer)
-    {
-        Interlocked.Exchange(ref tradeOutcome, answer is null
-            ? new CasinoStakeOutcome(false, CasinoReasons.Unreachable)
-            : new CasinoStakeOutcome(answer.Granted, CasinoTablesStore.Named(answer.Reason)));
-        tables.RefreshLedgerNow(tableId);
     }
 
     private void OnFrameworkUpdate(IFramework framework)
@@ -424,9 +373,9 @@ internal sealed class CasinoVenueStore : IDisposable
         view = null;
         nearby = Array.Empty<CasinoTableRowDto>();
         nearbyFor = null;
+        listingAskedFor = string.Empty;
         Interlocked.Exchange(ref actAnswer, null);
         Interlocked.Exchange(ref hostOutcome, null);
-        Interlocked.Exchange(ref tradeOutcome, null);
         Interlocked.Exchange(ref nearbyAtTick, 0);
         lock (intentGate)
         {

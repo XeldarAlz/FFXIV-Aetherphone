@@ -14,7 +14,6 @@ internal enum VenueSheetRequest : byte
     None,
     Broadcast,
     GilLedger,
-    HostControls,
 }
 
 internal readonly record struct VenueSheetTarget(string TableId, bool Gil, bool CanBroadcast, bool Hosting = false);
@@ -142,19 +141,8 @@ internal sealed class VenueTableSheet
         var joinCode = codeOf(target.TableId);
         if (joinCode.Length > 0)
         {
-            code.Draw(ui, joinCode, string.Empty, ScrollLayout.StableContentWidth(), scale, overlay: true);
+            code.Draw(ui, joinCode, string.Empty, ScrollLayout.NativeScrollContentWidth(), scale, overlay: true);
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
-        }
-
-        if (target.Hosting)
-        {
-            ActionRow(ui, Loc.T(L.Tables.HostPanelHeading), Loc.T(L.Venue.HostControlsHint), ButtonStyle.Tinted,
-                ButtonRole.Normal, "venue.sheet.host", out var hostPressed, scale);
-            if (hostPressed)
-            {
-                request = VenueSheetRequest.HostControls;
-                sheet.Close();
-            }
         }
 
         var view = venue.ViewFor(target.TableId);
@@ -165,9 +153,11 @@ internal sealed class VenueTableSheet
 
         if (target.Gil)
         {
-            var host = string.Equals(venue.Tables.CardFor(target.TableId)?.OwnerUserId, venue.AccountId,
-                StringComparison.Ordinal);
-            Tables.TradeSyncCard.Draw(ui, trade, scale, true, host);
+            if (target.Hosting)
+            {
+                Tables.TradeSyncCard.Draw(ui, trade, scale, true);
+            }
+
             ActionRow(ui, Loc.T(L.Tables.MyLedgerTitle), Loc.T(L.Tables.MyLedgerLine), ButtonStyle.Tinted,
                 ButtonRole.Normal, "venue.sheet.gilLedger", out var ledgerPressed, scale);
             if (ledgerPressed)

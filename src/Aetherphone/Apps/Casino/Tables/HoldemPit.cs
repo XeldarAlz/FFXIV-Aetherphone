@@ -134,7 +134,7 @@ internal sealed class HoldemPit
             }
 
             hosted[next] = source[index];
-            hostedViews[next] = TableBrowser.ViewOf(source[index], store.AccountId);
+            hostedViews[next] = TableRowViews.ViewOf(source[index], store.AccountId);
             next++;
         }
     }

@@ -121,6 +121,7 @@ internal sealed class OnlinePoolTable
     private const float CuePullUnits = 0.3f;
 
     private readonly GameRoomsStore store;
+    private readonly Action askResign;
 
     private int replayActionCount = -1;
     private long replayStartedTick;
@@ -131,9 +132,10 @@ internal sealed class OnlinePoolTable
     private int cachedSeconds = -1;
     private string cachedSecondsLabel = string.Empty;
 
-    public OnlinePoolTable(GameRoomsStore store)
+    public OnlinePoolTable(GameRoomsStore store, Action askResign)
     {
         this.store = store;
+        this.askResign = askResign;
     }
 
     public void Reset()
@@ -215,7 +217,7 @@ internal sealed class OnlinePoolTable
             && GameHud.Button(layout.ResignCenter, layout.ResignSize, Loc.T(L.Games.OnlineResign), ResignTint, theme)
             && !store.ActInFlight)
         {
-            store.SendResign();
+            askResign();
         }
     }
 

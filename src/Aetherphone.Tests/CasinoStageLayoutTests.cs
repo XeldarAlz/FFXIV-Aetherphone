@@ -250,6 +250,20 @@ public sealed class CasinoStageLayoutTests
     }
 
     [Fact]
+    public void FloorTiersFollowLevelBracketsNotTheWallet()
+    {
+        Assert.Equal(BalanceTitle.None, StatusTitle.ForLevel(1));
+        Assert.Equal(BalanceTitle.None, StatusTitle.ForLevel(19));
+        Assert.Equal(BalanceTitle.Shark, StatusTitle.ForLevel(20));
+        Assert.Equal(BalanceTitle.HighRoller, StatusTitle.ForLevel(43));
+        Assert.Equal(BalanceTitle.Vip, StatusTitle.ForLevel(60));
+        Assert.Equal(BalanceTitle.Vip, StatusTitle.ForLevel(79));
+        Assert.Equal(BalanceTitle.Whale, StatusTitle.ForLevel(80));
+        Assert.Equal(BalanceTitle.Legend, StatusTitle.ForLevel(100));
+        Assert.Equal(BalanceTitle.Legend, StatusTitle.ForLevel(200));
+    }
+
+    [Fact]
     public void ChipStacksUseTheTenDenominationsAndFiveDiscColumns()
     {
         Span<int> counts = stackalloc int[ChipStack.DenominationCount];

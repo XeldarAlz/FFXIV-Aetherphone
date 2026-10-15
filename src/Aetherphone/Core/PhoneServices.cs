@@ -117,6 +117,7 @@ internal sealed class PhoneServices : IDisposable
     public required Coins.CoinGameSessionTracker CoinSessions { get; init; }
 
     public required Coins.CoinQuestStore CoinQuests { get; init; }
+    public required Coins.HalloweenBadgeStore HalloweenBadge { get; init; }
 
     public required Coins.CoinRadioListenTracker CoinRadio { get; init; }
 
@@ -234,6 +235,7 @@ internal sealed class PhoneServices : IDisposable
     public required Feedback.FeedbackLauncher FeedbackLauncher { get; init; }
     public required Maps.HuntsMapMarkers HuntsMapMarkers { get; init; }
     public required Shell.MinimizedLayoutService MinimizedLayout { get; init; }
+    public required Shell.MinimizedPreview MinimizedPreview { get; init; }
     public required NameplateTitleService NameplateTitles { get; init; }
 
     public static PhoneServices Build(Configuration configuration, IChatGui chatGui, IDataManager dataManager,
@@ -316,13 +318,14 @@ internal sealed class PhoneServices : IDisposable
         Social.Frames.Use(frameCatalog);
         Windows.Components.UserName.Configure(badgeCatalog, remoteImages);
         Windows.Components.NowPlayingArt.Configure(remoteImages);
-        Windows.Components.Treats.Configure(installer, aethernetSession);
         Moderation.ModerationNoticeText.Configure(badgeCatalog, frameCatalog);
         var coinApi = new AethernetApi(http, aethernetSession, "coin");
         var coins = new Coins.CoinStore(aethernetSession, coinApi.Coins);
         var coinCatalog = new Coins.CoinCatalogStore(aethernetSession, coinApi.Coins);
         var coinSessions = new Coins.CoinGameSessionTracker(configuration, aethernetSession, coinApi.Coins);
         var coinQuests = new Coins.CoinQuestStore(aethernetSession, coinApi.Coins, coins);
+        var halloweenBadge = new Coins.HalloweenBadgeStore(aethernetSession, coinApi.Coins, coinCatalog, loadoutStore);
+        Windows.Components.Treats.Configure(installer, aethernetSession, halloweenBadge);
         var coinEarnNotifier = new Coins.CoinEarnNotifier(coins, notifications);
         var casinoApi = new AethernetApi(http, aethernetSession, "casino");
         var casino = new Casino.CasinoStore(configuration, aethernetSession, casinoApi.Casino, coins);
@@ -416,7 +419,7 @@ internal sealed class PhoneServices : IDisposable
         var accountState = new AccountStateService(aethernetSession, aethernet.Account, framework, visibility,
             realtimeSignals);
         var moderationPresenter = new ModerationNoticePresenter(moderationNotices, confirm, notifications,
-            accountState, framework);
+            accountState, coins, framework);
         var moderationArchive = new ModerationNoticeArchive(aethernetSession, aethernet.Account);
         var safetyLauncher = new SafetyLauncher();
         var casinoRooms = new Casino.CasinoRoomsStore(aethernetSession, casinoApi.Casino, casino, visibility,
@@ -428,10 +431,9 @@ internal sealed class PhoneServices : IDisposable
         var casinoKnocks = new Casino.CasinoKnockNotifier(aethernetSession, casinoApi.Casino, casinoTables,
             notifications, Apps.AppAccents.For("casino"));
         var casinoVenue = new Casino.CasinoVenueStore(aethernetSession, casinoApi.Casino, casinoApi.Safety, casinoRooms,
-            casinoTables, new Casino.HousingPositionReader(), Aetherphone.Core.Maps.LocationShare.WorldName);
-        var casinoTrade = new Casino.CasinoTradeSync(configuration, aethernetSession, new Casino.TradeWindowReader(),
-            casinoApi.Casino, casinoRooms, casinoTables, casinoVenue, casino, notifications,
-            Apps.AppAccents.For("casino"));
+            casinoTables, new Casino.HousingPositionReader());
+        var casinoTrade = new Casino.CasinoTradeSync(configuration, aethernetSession, casinoApi.Casino, casinoTables,
+            casinoVenue, notifications, Apps.AppAccents.For("casino"));
         var casinoFloor = new Casino.CasinoFloorStore(aethernetSession, casinoApi.Casino, casino, realtimeSignals);
         var gameRooms = new Games.GameRoomsStore(aethernetSession, aethernet.Games, visibility,
             realtimeSignals);
@@ -484,6 +486,7 @@ internal sealed class PhoneServices : IDisposable
             Installer = installer,
             Configuration = configuration,
             MinimizedLayout = new Shell.MinimizedLayoutService(configuration),
+            MinimizedPreview = new Shell.MinimizedPreview(),
             Themes = themes,
             Looks = looks,
             GameData = gameData,
@@ -535,6 +538,7 @@ internal sealed class PhoneServices : IDisposable
             CoinCatalog = coinCatalog,
             CoinSessions = coinSessions,
             CoinQuests = coinQuests,
+            HalloweenBadge = halloweenBadge,
             CoinRadio = coinRadio,
             CoinEarnNotifier = coinEarnNotifier,
             Casino = casino,
@@ -743,6 +747,7 @@ internal sealed class PhoneServices : IDisposable
         CoinEarnNotifier.Dispose();
         CoinRadio.Dispose();
         CoinQuests.Dispose();
+        HalloweenBadge.Dispose();
         CoinSessions.Dispose();
         CoinCatalog.Dispose();
         Coins.Dispose();

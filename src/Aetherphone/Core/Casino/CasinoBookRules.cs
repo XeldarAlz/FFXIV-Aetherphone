@@ -5,6 +5,9 @@ namespace Aetherphone.Core.Casino;
 
 internal static class CasinoBookRules
 {
+    private const char PrivateUseFirst = (char)0xE000;
+    private const char PrivateUseLast = (char)0xF8FF;
+
     public static bool IsBook(string? gameKind)
     {
         return string.Equals(gameKind, CasinoWire.BookKind, StringComparison.Ordinal);
@@ -45,6 +48,11 @@ internal static class CasinoBookRules
         for (var index = 0; index < raw.Length; index++)
         {
             var character = raw[index];
+            if (character is >= PrivateUseFirst and <= PrivateUseLast)
+            {
+                break;
+            }
+
             if (char.IsControl(character))
             {
                 continue;

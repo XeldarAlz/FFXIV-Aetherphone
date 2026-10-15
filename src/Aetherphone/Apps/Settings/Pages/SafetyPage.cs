@@ -128,6 +128,8 @@ internal sealed class SafetyPage : ISettingsPage
             ModerationNoticeKinds.Suspended => FontAwesomeIcon.Ban,
             ModerationNoticeKinds.SignedOut => FontAwesomeIcon.SignOutAlt,
             ModerationNoticeKinds.EconomyAction => FontAwesomeIcon.Coins,
+            ModerationNoticeKinds.WalletFrozen => FontAwesomeIcon.Snowflake,
+            ModerationNoticeKinds.WalletUnfrozen => FontAwesomeIcon.Snowflake,
             _ => FontAwesomeIcon.Heart,
         };
     }
