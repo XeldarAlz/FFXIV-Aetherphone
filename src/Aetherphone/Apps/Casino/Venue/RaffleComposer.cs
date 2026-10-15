@@ -84,7 +84,7 @@ internal sealed class RaffleComposer
         VenueFields.TextRow(ui, card.NextRow(VenueFields.RowUnits), "##raffleTitle", Loc.T(L.Venue.RaffleTitle),
             Loc.T(L.Venue.RaffleTitleHint), ref title, VenueRules.TitleMaxLength, false, scale);
         VenueFields.TextRow(ui, card.NextRow(VenueFields.RowUnits), "##raffleTickets", Loc.T(L.Venue.TicketsEach),
-            "1", ref tickets, CountDigits, true, scale);
+            "1", ref tickets, VenueRules.TicketDigits, true, scale);
         VenueFields.TextRow(ui, card.NextRow(VenueFields.RowUnits), "##raffleWinners", Loc.T(L.Venue.WinnerCount),
             "1", ref winners, CountDigits, true, scale);
         VenueFields.TextRow(ui, card.NextRow(VenueFields.RowUnits), "##raffleMinutes", Loc.T(L.Venue.RunsMinutes),

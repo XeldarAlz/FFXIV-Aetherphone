@@ -21,6 +21,7 @@ using Aetherphone.Core.Jobs;
 using Aetherphone.Core.Market;
 using Aetherphone.Core.MoogleClicker;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Platform;
 using Aetherphone.Core.Radio;
 using Aetherphone.Core.Shell;
 using Aetherphone.Core.Shortcuts;
@@ -122,6 +123,8 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public int Version { get; set; } = 1;
     public bool OpenOnStartup { get; set; } = true;
     public bool OpenMinimizedOnStartup { get; set; } = true;
+    public ServerBarStyle ServerBarStyle { get; set; } = ServerBarStyle.IconAndText;
+    public string ServerBarText { get; set; } = string.Empty;
     public bool WelcomeShown { get; set; }
     public bool SetupCompleted { get; set; }
     public bool TutorialsEnabled { get; set; } = true;
@@ -190,7 +193,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool ScrollWhileIdle { get; set; } = true;
     public bool ShowLodestonePortraits { get; set; } = true;
     public int LodestoneIdIndexVersion { get; set; }
-    public float TextZoom { get; set; } = 1.0f;
+    public float TextZoom { get; set; } = TextZoomCatalog.DefaultZoom;
     public string FontGlyphCache { get; set; } = string.Empty;
     public string IconGlyphCache { get; set; } = string.Empty;
     public float ScreenBrightness { get; set; } = 1f;
@@ -217,7 +220,8 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool AutoTranslatePosts { get; set; }
     public List<string> TranslatedConversations { get; set; } = new();
     public ThemeMode ThemeMode { get; set; } = ThemeMode.Dark;
-    public SeasonalThemeMode SeasonalThemeMode { get; set; } = SeasonalThemeMode.Automatic;
+    public SeasonalThemeMode SeasonalThemeMode { get; set; } = SeasonalThemeMode.Off;
+    public bool SeasonalThemeOptInApplied { get; set; }
     public bool SeasonalSounds { get; set; } = true;
     public bool SeasonalNameFont { get; set; } = true;
     public bool SeasonalParallax { get; set; } = true;
@@ -379,8 +383,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public Dictionary<ulong, string> PendingCasinoSittings { get; set; } = new();
     public Dictionary<ulong, long> CasinoSittingSeenAtUnix { get; set; } = new();
     public Dictionary<ulong, PendingCasinoRound> PendingCasinoRounds { get; set; } = new();
-    public bool CasinoTradeSync { get; set; }
-    public bool CasinoTradeAutoConfirm { get; set; }
+    public bool CasinoHostTradeSync { get; set; }
     public Dictionary<string, long> CasinoMachineBets { get; set; } = new();
     public int CasinoPlinkoRows { get; set; } = PlinkoRules.DefaultRows;
     public int CasinoPlinkoRisk { get; set; } = PlinkoRules.DefaultRisk;
@@ -1167,6 +1170,32 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
 
         ShowWindowsMedia = false;
         WindowsMediaOptInApplied = true;
+        return true;
+    }
+
+    public void MigrateSeasonalThemeOptIn()
+    {
+        if (!ApplySeasonalThemeOptIn())
+        {
+            return;
+        }
+
+        Save();
+    }
+
+    internal bool ApplySeasonalThemeOptIn()
+    {
+        if (SeasonalThemeOptInApplied)
+        {
+            return false;
+        }
+
+        if (SeasonalThemeMode == SeasonalThemeMode.Automatic)
+        {
+            SeasonalThemeMode = SeasonalThemeMode.Off;
+        }
+
+        SeasonalThemeOptInApplied = true;
         return true;
     }
 

@@ -89,6 +89,15 @@ public sealed class CasinoLightsTests
         Assert.Equal(40f, CasinoSigns.HeightToFit(CasinoSign.Bar, 1000f, 40f));
     }
 
+    [Fact]
+    public void LettersSitOneGapApartMeasuredFromTheirInk()
+    {
+        var withI = CasinoSigns.Measure("HIH", CasinoSigns.GridHeight);
+        var without = CasinoSigns.Measure("HH", CasinoSigns.GridHeight);
+        Assert.Equal(CasinoSigns.LetterGap, withI - without, 3);
+        Assert.True(CasinoSigns.Measure("I", 10f) < CasinoSigns.Measure("M", 10f));
+    }
+
     private static void AssertNear(Vector2 expected, Vector2 actual)
     {
         Assert.Equal(expected.X, actual.X, 2);

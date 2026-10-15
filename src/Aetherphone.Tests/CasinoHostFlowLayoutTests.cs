@@ -1,13 +1,15 @@
 using System.Numerics;
 using Aetherphone.Apps.Casino.Tables;
 using Aetherphone.Core;
+using Aetherphone.Core.Casino;
+using Aetherphone.Windows.Components;
 using Xunit;
 
 namespace Aetherphone.Tests;
 
 public sealed class CasinoHostFlowLayoutTests
 {
-    private const float PhoneWidth = 330f;
+    private const float PhoneWidth = 328f;
     private const float HeadlineUnits = 22f;
     private const float FootnoteUnits = 18f;
     private const float TitleUnits = 30f;
@@ -16,69 +18,57 @@ public sealed class CasinoHostFlowLayoutTests
 
     [Theory]
     [MemberData(nameof(Scales))]
-    public void GameTilesAreLargeTouchTargetsThatNeverTouch(float scale)
+    public void GridCellsSplitTheRowWithoutOverlap(float scale)
     {
         var width = PhoneWidth * scale;
-        var tileWidth = HostFlowLayout.TileWidth(width, scale);
-        var tileHeight = HostFlowLayout.TileHeight(scale, HeadlineUnits * scale, FootnoteUnits * scale * 3f);
-        Assert.True(tileWidth >= HostFlowLayout.Touch * scale);
-        Assert.True(tileHeight >= HostFlowLayout.TileArt * scale + HeadlineUnits * scale);
-        for (var index = 1; index < HostGames.All.Length; index++)
+        var gap = HostFlowLayout.SwitcherGap * scale;
+        var height = HostFlowLayout.SwitcherHeight * scale;
+        var count = HostGames.All.Length;
+        for (var index = 1; index < count; index++)
         {
-            var previous = HostFlowLayout.Tile(0f, 0f, index - 1, tileWidth, tileHeight, scale);
-            var tile = HostFlowLayout.Tile(0f, 0f, index, tileWidth, tileHeight, scale);
-            Assert.True(tile.Min.X >= previous.Max.X);
+            var previous = HostFlowLayout.GridCell(0f, 0f, width, index - 1, HostFlowLayout.Columns, height, gap);
+            var cell = HostFlowLayout.GridCell(0f, 0f, width, index, HostFlowLayout.Columns, height, gap);
+            var apart = cell.Min.X >= previous.Max.X + gap - 0.01f || cell.Min.Y >= previous.Max.Y + gap - 0.01f;
+            Assert.True(apart, $"cell {index} touches cell {index - 1} at {scale}");
+            Assert.True(cell.Max.X <= width + 0.01f);
         }
 
-        var visible = (width + HostFlowLayout.TileGap * scale) / (tileWidth + HostFlowLayout.TileGap * scale);
-        Assert.InRange(visible, 1.8f, 2.6f);
+        var last = HostFlowLayout.GridCell(0f, 0f, width, count - 1, HostFlowLayout.Columns, height, gap);
+        Assert.Equal(width, last.Max.X, 2);
+        Assert.Equal(last.Max.Y, HostFlowLayout.GridHeight(count, HostFlowLayout.Columns, height, gap), 2);
+        Assert.Equal(height, HostFlowLayout.GridHeight(2, HostFlowLayout.Columns, height, gap), 2);
+        Assert.Equal(0f, HostFlowLayout.GridHeight(0, HostFlowLayout.Columns, height, gap));
     }
 
     [Theory]
     [MemberData(nameof(Scales))]
-    public void ChoiceCardsFitTheirTextBesideTheIconAndCheck(float scale)
+    public void ChoiceAndJoinTilesHoldTheirIconAboveAWrappedLabel(float scale)
     {
-        var width = PhoneWidth * scale;
-        var lineBlock = FootnoteUnits * scale * 2f;
-        var height = HostFlowLayout.ChoiceHeight(scale, HeadlineUnits * scale, lineBlock);
-        var card = new Rect(Vector2.Zero, new Vector2(width, height));
-        var icon = HostFlowLayout.ChoiceIconRect(card, scale);
-        var textLeft = HostFlowLayout.ChoiceTextLeft(card.Min.X, scale);
-        var textRight = textLeft + HostFlowLayout.ChoiceTextWidth(width, scale);
-        var check = HostFlowLayout.ChoiceCheck(card, scale);
+        var twoLines = FootnoteUnits * scale * 2f;
+        var choice = HostFlowLayout.ChoiceTileHeight(scale, twoLines);
+        var join = HostFlowLayout.JoinTileHeight(scale, twoLines);
+        Assert.True(choice >= HostFlowLayout.ChoiceHeight * scale);
+        Assert.True(choice >= (HostFlowLayout.ChoiceIcon + HostFlowLayout.ChoiceInnerGap) * scale + twoLines);
+        Assert.True(join >= HostFlowLayout.Touch * scale);
+        Assert.True(join >= (HostFlowLayout.JoinIcon + HostFlowLayout.JoinInnerGap) * scale + twoLines);
 
-        Assert.True(height >= HostFlowLayout.Touch * scale);
-        Assert.True(height >= HeadlineUnits * scale + lineBlock);
-        Assert.True(icon.Min.Y >= card.Min.Y && icon.Max.Y <= card.Max.Y);
-        Assert.True(textLeft > icon.Max.X);
-        Assert.True(textRight < check.X - HostFlowLayout.CheckSize * scale * 0.5f);
+        var width = HostFlowLayout.ColumnWidth(PhoneWidth * scale, HostFlowLayout.Columns,
+            HostFlowLayout.ChoiceGap * scale);
+        var tile = new Rect(Vector2.Zero, new Vector2(width, choice));
+        var check = HostFlowLayout.CheckCenter(tile, scale);
+        var half = HostFlowLayout.CheckSize * 0.5f * scale;
+        Assert.True(check.X + half <= tile.Max.X && check.Y - half >= tile.Min.Y);
+        Assert.True(width >= HostFlowLayout.Touch * scale);
     }
 
     [Theory]
     [MemberData(nameof(Scales))]
-    public void SeatTargetsAreTouchSizedAndNeverOverlap(float scale)
+    public void SeatDiscsFitOneRowAndTheirTargetsNeverOverlap(float scale)
     {
-        CheckSeats(PhoneWidth * scale - 28f * scale, 6, scale);
-        CheckSeats(PhoneWidth * scale - 28f * scale, 9, scale);
-        CheckSeats(260f, 9, scale);
-    }
-
-    [Theory]
-    [MemberData(nameof(Scales))]
-    public void JoinCardsSplitTheRowWithoutOverlap(float scale)
-    {
-        var width = PhoneWidth * scale;
-        var height = HostFlowLayout.JoinHeight(scale, FootnoteUnits * scale * 2f);
-        Assert.True(height >= HostFlowLayout.Touch * scale);
-        for (var index = 1; index < 3; index++)
-        {
-            var previous = HostFlowLayout.JoinColumn(0f, 0f, width, index - 1, 3, height, scale);
-            var column = HostFlowLayout.JoinColumn(0f, 0f, width, index, 3, height, scale);
-            Assert.True(column.Min.X > previous.Max.X);
-            Assert.True(column.Width >= HostFlowLayout.Touch * scale);
-        }
-
-        Assert.Equal(width, HostFlowLayout.JoinColumn(0f, 0f, width, 2, 3, height, scale).Max.X, 2);
+        var inner = (PhoneWidth - HostFlowLayout.CardPad * 2f) * scale;
+        CheckSeats(inner, CasinoHostingRules.MaxSeats, scale);
+        CheckSeats(inner, 9, scale);
+        CheckSeats(240f * scale, 9, scale);
     }
 
     [Theory]
@@ -92,6 +82,38 @@ public sealed class CasinoHostFlowLayoutTests
         Assert.True(row.Height >= HostFlowLayout.Touch * scale);
         Assert.True(row.Height >= LadderSlider.ThumbRadius * 2f * scale);
         Assert.Equal(HostFlowLayout.LadderHeight(scale, label, value), row.Max.Y, 2);
+        var hint = FootnoteUnits * scale;
+        Assert.True(HostFlowLayout.LadderBlockHeight(scale, label, value, hint) >= row.Max.Y + hint);
+        Assert.Equal(row.Max.Y, HostFlowLayout.LadderBlockHeight(scale, label, value, 0f), 2);
+    }
+
+    [Theory]
+    [MemberData(nameof(Scales))]
+    public void TheRulesRowKeepsItsTextBetweenTheIconAndTheChevron(float scale)
+    {
+        var width = PhoneWidth * scale;
+        var text = HostFlowLayout.RulesTextWidth(width, scale);
+        var used = (HostFlowLayout.CardPad * 2f + HostFlowLayout.RulesIcon + HostFlowLayout.HeaderGap
+            + HostFlowLayout.Chevron) * scale + text;
+        Assert.True(used <= width + 0.01f);
+        Assert.True(HostFlowLayout.RulesRowHeight(scale, HeadlineUnits * scale, 0f)
+                    >= (HostFlowLayout.RulesIcon + HostFlowLayout.RulesPad * 2f) * scale - 0.01f);
+        Assert.True(HostFlowLayout.HeaderHeight(scale, TitleUnits * scale, FootnoteUnits * scale)
+                    >= (HostFlowLayout.HeaderTile + HostFlowLayout.HeaderPad * 2f) * scale - 0.01f);
+    }
+
+    [Theory]
+    [MemberData(nameof(Scales))]
+    public void RuleRowsLeaveRoomForTheirControls(float scale)
+    {
+        var inner = (PhoneWidth - HostFlowLayout.CardPad * 2f) * scale;
+        var text = HostFlowLayout.ToggleTextWidth(inner, scale);
+        Assert.True(text + Metrics.Size.ToggleWidth * scale <= inner);
+        Assert.True(HostFlowLayout.ToggleRowHeight(scale, FootnoteUnits * scale) >= HostFlowLayout.Touch * scale);
+        var plain = HostFlowLayout.SegmentRowHeight(scale, HeadlineUnits * scale, 0f);
+        var hinted = HostFlowLayout.SegmentRowHeight(scale, HeadlineUnits * scale, FootnoteUnits * scale);
+        Assert.True(plain >= (HostFlowLayout.SegmentTrack + HostFlowLayout.RowPad * 2f) * scale + HeadlineUnits * scale);
+        Assert.True(hinted > plain + FootnoteUnits * scale);
     }
 
     [Theory]
@@ -123,20 +145,23 @@ public sealed class CasinoHostFlowLayoutTests
 
     private static void CheckSeats(float width, int seats, float scale)
     {
-        var touch = HostFlowLayout.Touch * scale;
-        var block = HostFlowLayout.SeatBlockHeight(width, seats, scale);
+        var disc = HostFlowLayout.SeatDiscSize(width, seats, scale);
+        Assert.True(disc <= HostFlowLayout.SeatDisc * scale + 0.01f);
         for (var index = 0; index < seats; index++)
         {
-            var target = HostFlowLayout.SeatTarget(0f, 0f, width, index, seats, scale);
-            Assert.True(target.Width >= touch - 0.01f);
-            Assert.True(target.Max.X <= width + 0.01f);
-            Assert.True(target.Max.Y <= block + 0.01f);
-            for (var other = 0; other < index; other++)
+            var slot = HostFlowLayout.SeatSlot(0f, 0f, width, index, seats, scale);
+            var center = HostFlowLayout.SeatCenter(0f, 0f, width, index, seats, scale);
+            Assert.True(slot.Min.X >= -0.01f && slot.Max.X <= width + 0.01f, $"seat {index} leaves the row");
+            Assert.True(slot.Height >= HostFlowLayout.Touch * scale - 0.01f);
+            Assert.True(center.X - disc * 0.5f >= -0.01f && center.X + disc * 0.5f <= width + 0.01f);
+            Assert.True(center.X >= slot.Min.X && center.X <= slot.Max.X);
+            if (index == 0)
             {
-                var earlier = HostFlowLayout.SeatTarget(0f, 0f, width, other, seats, scale);
-                var apart = target.Min.X >= earlier.Max.X - 0.01f || target.Min.Y >= earlier.Max.Y - 0.01f;
-                Assert.True(apart, $"seat {index} overlaps seat {other} at {scale}");
+                continue;
             }
+
+            var previous = HostFlowLayout.SeatSlot(0f, 0f, width, index - 1, seats, scale);
+            Assert.True(slot.Min.X >= previous.Max.X - 0.01f, $"seat {index} overlaps seat {index - 1} at {scale}");
         }
     }
 }

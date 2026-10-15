@@ -21,6 +21,7 @@ internal sealed class BarkeepVerbStage
     private const float JoltDecay = 5f;
     private const float BottlePourTilt = 0.55f;
     private const float BottleRestTilt = -0.35f;
+    private const float PourBottleHeadroom = 52f;
     private const int LiquidSlices = 12;
 
     private static readonly Vector4 Gold = BarkeepArt.PerfectGold;
@@ -45,6 +46,7 @@ internal sealed class BarkeepVerbStage
     private int kind = -1;
     private float seconds;
     private bool active;
+    private bool resolved;
     private int pendingGrade = -1;
     private int pendingTapGrade = -1;
 
@@ -75,6 +77,7 @@ internal sealed class BarkeepVerbStage
         kind = stepKind;
         seconds = 0f;
         active = true;
+        resolved = false;
         pendingGrade = -1;
         pendingTapGrade = -1;
         for (var tapIndex = 0; tapIndex < tapGrades.Length; tapIndex++)
@@ -99,6 +102,7 @@ internal sealed class BarkeepVerbStage
     public void Cancel()
     {
         active = false;
+        resolved = false;
         pendingGrade = -1;
         pendingTapGrade = -1;
     }
@@ -139,6 +143,8 @@ internal sealed class BarkeepVerbStage
         grade = pendingGrade;
         pendingGrade = -1;
         active = false;
+        resolved = true;
+        pouring = false;
         return true;
     }
 
@@ -287,7 +293,7 @@ internal sealed class BarkeepVerbStage
 
     public void Draw(ImDrawListPtr drawList, AppSkin ui, Rect canvas, float deltaSeconds, float scale)
     {
-        if (!active)
+        if (!active && !resolved)
         {
             return;
         }
@@ -318,6 +324,12 @@ internal sealed class BarkeepVerbStage
     private void DrawPour(ImDrawListPtr drawList, AppSkin ui, Rect canvas, float scale)
     {
         var glass = GlassRect(canvas, 0.3f, 84f, 0.22f, 0.06f, scale);
+        var bottleClearTop = canvas.Min.Y + PourBottleHeadroom * scale;
+        if (glass.Min.Y < bottleClearTop)
+        {
+            glass = new Rect(new Vector2(glass.Min.X, bottleClearTop), glass.Max);
+        }
+
         var glassHeight = glass.Height;
         var goodHalf = BarkeepGrading.GoodWithin * BarkeepGrading.PourFullScale;
         var perfectHalf = BarkeepGrading.PerfectWithin * BarkeepGrading.PourFullScale;
@@ -464,6 +476,12 @@ internal sealed class BarkeepVerbStage
                 ImGui.GetColorU32(BarkeepArt.GradeTint(tapGrades[layerIndex], ui.Accent)), 10);
         }
 
+        if (resolved)
+        {
+            DrawGlassFront(drawList, glass, Palette.WithAlpha(ui.TitleInk, 0.4f), 1.4f, scale);
+            return;
+        }
+
         var settleY = glass.Max.Y - (layerTaps + 1) * layerHeight;
         DrawDashed(drawList, new Vector2(glass.Min.X - 10f * scale, settleY), glass.Width + 20f * scale,
             ImGui.GetColorU32(Gold with { W = 0.55f }), scale);
@@ -505,6 +523,13 @@ internal sealed class BarkeepVerbStage
         var markerX = barLeft + GarnishMarker * barWidth;
         var markerPerfect = MathF.Abs(GarnishMarker - garnishTarget) <= perfectHalf;
         var marker = new Vector2(markerX, barY);
+        garnishFrom = marker;
+        garnishTo = new Vector2(glassCenterX + bowlHalf * 0.45f, bowlTop - 2f * scale);
+        if (resolved)
+        {
+            return;
+        }
+
         if (markerPerfect)
         {
             drawList.AddCircle(marker, 13f * scale, ImGui.GetColorU32(Gold with { W = 0.6f }), 24,
@@ -512,8 +537,6 @@ internal sealed class BarkeepVerbStage
         }
 
         DrawCherry(drawList, marker, 9f * scale, scale);
-        garnishFrom = marker;
-        garnishTo = new Vector2(glassCenterX + bowlHalf * 0.45f, bowlTop - 2f * scale);
     }
 
     public static void DrawCherry(ImDrawListPtr drawList, Vector2 center, float radius, float scale)

@@ -98,6 +98,14 @@ internal sealed class CoinsClient
             AethernetJsonContext.Default.CoinAwardDto, token, null, onFailure);
     }
 
+    public Task<HalloweenTreatsDto?> ReportHalloweenTreatsAsync(int found, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.PostAsync("/coins/events/halloween", new HalloweenTreatsReport(found),
+            AethernetJsonContext.Default.HalloweenTreatsReport, AethernetJsonContext.Default.HalloweenTreatsDto, token,
+            null, onFailure);
+    }
+
     public Task<CoinListenStartDto?> StartRadioListenAsync(string stationId, CancellationToken token,
         Action<AepFailure>? onFailure = null)
     {

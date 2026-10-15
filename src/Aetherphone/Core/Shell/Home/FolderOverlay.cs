@@ -29,6 +29,8 @@ internal sealed class FolderOverlay
     private const float CloseSnap = 0.01f;
     private const float WheelStepUnits = 40f;
     private const float DragLiftScale = 1.08f;
+    private const float SettleFloatUnits = 0.5f;
+    private const float DragOutSeconds = 0.5f;
     private const int NameMaxLength = 64;
     private const int Columns = HomeTileView.FolderMiniColumns;
     private static readonly Vector4 NoTintSwatch = new(0.55f, 0.56f, 0.60f, 1f);
@@ -46,10 +48,16 @@ internal sealed class FolderOverlay
     private int openedFrame;
     private int pressIndex = -1;
     private Vector2 pressMouse;
+    private Rect pressRect;
+    private float pressTime;
+    private bool editRequested;
     private int dragIndex = -1;
     private int dragTarget = -1;
     private Vector2 dragGrab;
     private Vector2 dragCenter;
+    private float outsideDwell;
+    private HomeTile? draggedOut;
+    private Vector2 draggedOutCenter;
     private Spring lift = new(1f);
     private int settleIndex = -1;
     private Spring[] slideX = Array.Empty<Spring>();
@@ -67,6 +75,27 @@ internal sealed class FolderOverlay
     public bool Active => folder is not null;
     public HomeTile? Folder => folder;
     public float Presence => folder is null ? 0f : Math.Clamp(anim.Value, 0f, 1f);
+
+    public bool ConsumeEditRequest()
+    {
+        var requested = editRequested;
+        editRequested = false;
+        return requested;
+    }
+
+    public bool TryTakeDraggedOut(out HomeTile tile, out Vector2 center)
+    {
+        center = draggedOutCenter;
+        if (draggedOut is not { } taken)
+        {
+            tile = null!;
+            return false;
+        }
+
+        tile = taken;
+        draggedOut = null;
+        return true;
+    }
 
     public void Open(HomeTile tile, Rect originRect)
     {
@@ -204,7 +233,21 @@ internal sealed class FolderOverlay
         var drawFactor = iconFraction * panel.Width / iconSize;
         var labelAlpha = Easing.Segment(progress, LabelFadeStart, 1f);
         var extent = cell * drawFactor;
-        var released = TrackDrag(current.Members.Count, editing && interactive, scale);
+        var released = false;
+        if (!editing && interactive)
+        {
+            TrackPress(current, navigation, scale, delta);
+        }
+        else
+        {
+            released = TrackDrag(current.Members.Count, editing && interactive, scale);
+        }
+
+        if (!released && TrackDragOut(current, target, currentPage, delta))
+        {
+            return;
+        }
+
         EnsureSlideSprings(current.Members.Count);
         if (dragIndex >= 0)
         {
@@ -227,6 +270,9 @@ internal sealed class FolderOverlay
             lift.Step(1f, Motion.PageSettle, delta);
         }
 
+        var settleFloating = false;
+        var settleCenter = Vector2.Zero;
+        var settleFloat = SettleFloatUnits * scale;
         drawList.PushClipRect(panel.Min, panel.Max, true);
         for (var index = 0; index < current.Members.Count; index++)
         {
@@ -234,9 +280,17 @@ internal sealed class FolderOverlay
                 pad + index / Columns * cell + iconTop + iconSize * 0.5f - scroll) / target.Width;
             var center = panel.Min +
                          Vector2.Lerp(HomeTileView.FolderMiniCenter(index), openCenter, progress) * panel.Width;
-            center += SlideOffset(index, cell, delta);
+            var slide = SlideOffset(index, cell, delta);
+            center += slide;
             if (index == dragIndex)
             {
+                continue;
+            }
+
+            if (index == settleIndex && slide.LengthSquared() > settleFloat * settleFloat)
+            {
+                settleFloating = true;
+                settleCenter = center;
                 continue;
             }
 
@@ -281,28 +335,72 @@ internal sealed class FolderOverlay
             else if (UiInteract.Hover(iconRect.Min, iconRect.Max))
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                if (pressIndex < 0 && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
                 {
-                    RequestClose();
-                    if (member.IsShortcut)
-                    {
-                        runner.Run(member.Shortcut!);
-                    }
-                    else
-                    {
-                        navigation.OpenAppFrom(member.App!, iconRect, LaunchOrigin.Icon);
-                    }
-
-                    break;
+                    pressIndex = index;
+                    pressMouse = ImGui.GetMousePos();
+                    pressRect = iconRect;
+                    pressTime = 0f;
+                    dragGrab = pressMouse - center;
                 }
             }
         }
 
         drawList.PopClipRect();
+        if (settleFloating)
+        {
+            DrawMember(drawList, current.Members[settleIndex], settleCenter, iconSize, theme, labelAlpha, cell,
+                drawFactor * lift.Value);
+        }
+
         if (dragIndex >= 0)
         {
             DrawMember(drawList, current.Members[dragIndex], dragCenter, iconSize, theme, labelAlpha, cell,
                 drawFactor * lift.Value);
+        }
+    }
+
+    private void TrackPress(HomeTile current, INavigator navigation, float scale, float delta)
+    {
+        dragIndex = -1;
+        if (pressIndex < 0)
+        {
+            return;
+        }
+
+        if (pressIndex >= current.Members.Count ||
+            Vector2.Distance(ImGui.GetMousePos(), pressMouse) > HomeInteractionController.TapSlop * scale)
+        {
+            pressIndex = -1;
+            return;
+        }
+
+        if (ImGui.IsMouseDown(ImGuiMouseButton.Left))
+        {
+            pressTime += delta;
+            if (pressTime > HomeInteractionController.LongPressSeconds)
+            {
+                editRequested = true;
+            }
+
+            return;
+        }
+
+        var member = current.Members[pressIndex];
+        pressIndex = -1;
+        if (pressTime > HomeInteractionController.LongPressSeconds)
+        {
+            return;
+        }
+
+        RequestClose();
+        if (member.IsShortcut)
+        {
+            runner.Run(member.Shortcut!);
+        }
+        else
+        {
+            navigation.OpenAppFrom(member.App!, pressRect, LaunchOrigin.Icon);
         }
     }
 
@@ -340,6 +438,29 @@ internal sealed class FolderOverlay
 
         dragCenter = mouse - dragGrab;
         return !ImGui.IsMouseDown(ImGuiMouseButton.Left);
+    }
+
+    private bool TrackDragOut(HomeTile current, Rect target, int currentPage, float delta)
+    {
+        if (dragIndex < 0 || target.Contains(ImGui.GetMousePos()))
+        {
+            outsideDwell = 0f;
+            return false;
+        }
+
+        outsideDwell += delta;
+        if (outsideDwell < DragOutSeconds)
+        {
+            return false;
+        }
+
+        var member = current.Members[dragIndex];
+        var center = dragCenter;
+        outsideDwell = 0f;
+        RequestClose();
+        draggedOut = layout.RemoveFromFolder(current, member, currentPage);
+        draggedOutCenter = center;
+        return true;
     }
 
     private void Drop(HomeTile current, Vector2 firstSlotCenter, float cell)

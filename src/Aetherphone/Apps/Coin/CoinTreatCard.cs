@@ -23,21 +23,26 @@ internal sealed class CoinTreatCard
     private const int StatusHiding = 100;
     private const int StatusLater = 200;
     private const int StatusTomorrow = 300;
-    private const int StatusAllFound = 1000;
+    private const int StatusBadgeUnlocked = 1000;
+    private const int StatusBadgeUnlocking = 1100;
+    private const int StatusBadgeSignIn = 1200;
+    private const int StatusBadgeLater = 1300;
     private const int StatusOffSeason = 2000;
 
     private CachedText count;
     private CachedText status;
 
-    public float Draw(AppSkin ui, Vector2 origin, float width, string ownName)
+    public float Draw(AppSkin ui, Vector2 origin, float width, out bool openItems)
     {
+        openItems = false;
+        Treats.SyncBadge();
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var padding = Metrics.Space.Lg * scale;
         var tile = TileSize * scale;
         var found = Treats.Found;
         var complete = found >= Treats.Total;
-        var rewarded = complete && Treats.Rewarded && ownName.Length > 0;
+        var granted = Treats.BadgeGranted;
         var textWidth = width - padding * 2f;
         var statusText = Status(found);
         var statusHeight = Typography.MeasureWrappedBlock(statusText, TextStyles.Footnote, textWidth).Y;
@@ -45,10 +50,11 @@ internal sealed class CoinTreatCard
         var hintHeight = hint.Length > 0
             ? Metrics.Space.Xxs * scale + Typography.MeasureWrappedBlock(hint, TextStyles.Footnote, textWidth).Y
             : 0f;
-        var nameHeight = rewarded ? Metrics.Space.Sm * scale + Typography.LineHeight(TextStyles.Title3) : 0f;
+        var capsuleHeight = CoinArt.CapsuleHeight * scale;
+        var itemsHeight = granted ? Metrics.Space.Md * scale + capsuleHeight : 0f;
         var pipsHeight = PipHeight * scale;
-        var height = padding + tile + Metrics.Space.Lg * scale + pipsHeight + nameHeight +
-                     Metrics.Space.Md * scale + statusHeight + hintHeight + padding;
+        var height = padding + tile + Metrics.Space.Lg * scale + pipsHeight + Metrics.Space.Md * scale +
+                     statusHeight + hintHeight + itemsHeight + padding;
         var min = origin;
         var max = new Vector2(origin.X + width, origin.Y + height);
         CoinArt.Card(drawList, ui, min, max, scale);
@@ -64,18 +70,7 @@ internal sealed class CoinTreatCard
 
         var pipsCenterY = tileMax.Y + Metrics.Space.Lg * scale + pipsHeight * 0.5f;
         DrawPips(drawList, ui, min.X + padding, max.X - padding, pipsCenterY, found, scale);
-        var cursorY = pipsCenterY + pipsHeight * 0.5f;
-        if (rewarded)
-        {
-            cursorY += Metrics.Space.Sm * scale;
-            var light = Palette.Luminance(ui.TitleInk) < 0.5f;
-            var name = Typography.FitText(ownName, textWidth, TextStyles.Title3);
-            Typography.Draw(drawList, new Vector2(min.X + padding, cursorY), name, NameEffects.HallowedInk(light),
-                TextStyles.Title3, NameEffects.Hallowed(light));
-            cursorY += Typography.LineHeight(TextStyles.Title3);
-        }
-
-        cursorY += Metrics.Space.Md * scale;
+        var cursorY = pipsCenterY + pipsHeight * 0.5f + Metrics.Space.Md * scale;
         Typography.DrawWrappedLeft(new Vector2(min.X + padding, cursorY), statusText, ui.MutedInk, TextStyles.Footnote,
             textWidth);
         if (hint.Length > 0)
@@ -83,6 +78,16 @@ internal sealed class CoinTreatCard
             var hintTop = cursorY + statusHeight + Metrics.Space.Xxs * scale;
             Typography.DrawWrappedLeft(new Vector2(min.X + padding, hintTop), hint, ui.MutedInk, TextStyles.Footnote,
                 textWidth);
+        }
+
+        if (granted)
+        {
+            var label = Loc.T(L.Coin.TabInventory);
+            var itemsTop = max.Y - padding - capsuleHeight;
+            var itemsRect = new Rect(new Vector2(min.X + padding, itemsTop),
+                new Vector2(min.X + padding + CoinArt.CapsuleWidth(label, capsuleHeight), itemsTop + capsuleHeight));
+            openItems = CoinArt.Capsule(drawList, ui, ImGui.GetID("coin.treats.items"), itemsRect, label,
+                CapsuleTone.Tinted, true);
         }
 
         return max.Y;
@@ -124,7 +129,7 @@ internal sealed class CoinTreatCard
     private string Status(int found)
     {
         var waiting = Treats.ActiveSpot();
-        var key = !Treats.HuntOpen ? StatusOffSeason : found >= Treats.Total ? StatusAllFound
+        var key = found >= Treats.Total ? BadgeStatus() : !Treats.HuntOpen ? StatusOffSeason
             : waiting != Treats.NoSpot ? StatusHiding + waiting : found < Treats.Unlocked ? StatusLater : StatusTomorrow;
         if (status.IsCurrent(key))
         {
@@ -133,7 +138,10 @@ internal sealed class CoinTreatCard
 
         var text = key switch
         {
-            StatusAllFound => Loc.T(L.Seasonal.TreatsAllFound),
+            StatusBadgeUnlocked => Loc.T(L.Seasonal.TreatsBadgeUnlocked),
+            StatusBadgeUnlocking => Loc.T(L.Seasonal.TreatsBadgeUnlocking),
+            StatusBadgeSignIn => Loc.T(L.Seasonal.TreatsBadgeSignIn),
+            StatusBadgeLater => Loc.T(L.Seasonal.TreatsBadgeLater),
             StatusOffSeason => Loc.T(L.Seasonal.HalloweenPassed),
             StatusLater => Loc.T(L.Seasonal.TreatLater),
             StatusTomorrow => Loc.T(L.Seasonal.TreatTomorrow),
@@ -141,6 +149,9 @@ internal sealed class CoinTreatCard
         };
         return status.Store(key, text);
     }
+
+    private static int BadgeStatus() => Treats.BadgeGranted ? StatusBadgeUnlocked
+        : !Treats.SignedIn ? StatusBadgeSignIn : Treats.BadgeWaiting ? StatusBadgeLater : StatusBadgeUnlocking;
 
     private static string HidingText(TreatSpot spot) => spot switch
     {

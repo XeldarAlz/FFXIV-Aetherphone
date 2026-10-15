@@ -42,6 +42,8 @@ internal static class CasinoFeatures
 
     public const string VenueBook = "venue.book";
 
+    public const string PartialCashOut = "cashier.partial";
+
     public static bool Has(CasinoStateDto? state, string feature)
     {
         var features = state?.Features;

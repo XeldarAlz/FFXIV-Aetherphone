@@ -9,8 +9,6 @@ internal static class CasinoLights
     public const float BulbDiameter = 6f;
     public const float BulbPitch = 14f;
     public const float ChaseBulbsPerSecond = 6f;
-    public const float NeonHaloScale = 2.4f;
-    public const float NeonHaloAlpha = 0.18f;
     public const float CoinRadius = 3.4f;
     public const float CoinDrag = 0.35f;
     public const float CoinSpin = 14f;
@@ -139,25 +137,6 @@ internal static class CasinoLights
                 ImGui.GetColorU32(Vector4.Lerp(tint, Vector4.One, 0.45f) with { W = MathF.Max(DimBulbAlpha, level) }),
                 BulbSegments);
         }
-    }
-
-    public static void NeonTube(ImDrawListPtr drawList, ReadOnlySpan<Vector2> path, Vector4 color, float width,
-        float glow)
-    {
-        if (path.Length < 2 || color.W <= 0f)
-        {
-            return;
-        }
-
-        var halo = ImGui.GetColorU32(color with { W = color.W * NeonHaloAlpha * Math.Clamp(glow, 0f, 2f) });
-        drawList.PathClear();
-        for (var index = 0; index < path.Length; index++)
-        {
-            drawList.PathLineTo(path[index]);
-        }
-
-        drawList.PathStroke(halo, ImDrawFlags.None, width * NeonStroke.HaloScale * NeonHaloScale * 0.5f);
-        NeonStroke.Path(drawList, path, false, color, width);
     }
 
     public static void Spotlight(ImDrawListPtr drawList, Vector2 origin, float direction, float length, float spread,

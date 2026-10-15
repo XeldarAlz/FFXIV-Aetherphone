@@ -35,18 +35,29 @@ internal static class EmojiText
         return layout.Size.Y;
     }
 
+    public static float ClampedBlockHeight(string text, in TextStyle style, float wrapWidth, int maxLines)
+    {
+        var layout = Layout(BlockLayouts, text, style, wrapWidth);
+        using (Plugin.Fonts.Push(style.Scale, style.Weight))
+        {
+            var lineHeight = BlockLineHeight(layout);
+            if (layout is not null)
+            {
+                return MathF.Min(layout.Size.Y, maxLines * lineHeight);
+            }
+
+            Plugin.Fonts.NoticeText(text);
+            return Math.Min(Typography.WrapCurrent(text, wrapWidth).Length, maxLines) * lineHeight;
+        }
+    }
+
     public static float DrawBlock(ImDrawListPtr drawList, Vector2 topLeft, string text, Vector4 ink, float alpha,
         in TextStyle style, float wrapWidth, float maxHeight)
     {
         var layout = Layout(BlockLayouts, text, style, wrapWidth);
         using (Plugin.Fonts.Push(style.Scale, style.Weight))
         {
-            var lineHeight = ImGui.GetTextLineHeight();
-            if (layout is not null && layout.EmojiFiles.Length > 0)
-            {
-                lineHeight = MathF.Max(lineHeight, EmojiRender.LineHeight(layout.FontSize));
-            }
-
+            var lineHeight = BlockLineHeight(layout);
             var lines = (int)MathF.Floor((maxHeight + 0.5f) / MathF.Max(lineHeight, 1f));
             if (lines <= 0)
             {
@@ -120,6 +131,14 @@ internal static class EmojiText
 
         var width = MathF.Min(layout.Size.X, maxWidth);
         DrawLine(drawList, id, text, topCenter with { X = topCenter.X - width * 0.5f }, maxWidth, ink, alpha, style);
+    }
+
+    private static float BlockLineHeight(RichTextLayout? layout)
+    {
+        var lineHeight = ImGui.GetTextLineHeight();
+        return layout is not null && layout.EmojiFiles.Length > 0
+            ? MathF.Max(lineHeight, EmojiRender.LineHeight(layout.FontSize))
+            : lineHeight;
     }
 
     private static RichTextInk Ink(Vector4 ink, float alpha) => new(ink, ink, ink, alpha, 1f, false);

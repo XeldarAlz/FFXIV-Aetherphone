@@ -1,4 +1,5 @@
 using Aetherphone.Apps.Casino.Tables;
+using Aetherphone.Apps.Casino.Venue;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
@@ -194,7 +195,7 @@ public sealed class CasinoHostSheetTests
     }
 
     [Fact]
-    public void SwitchingBackToBlackjackClampsTheSeatsToSix()
+    public void SwitchingBackToBlackjackClampsTheSeatsToSeven()
     {
         var draft = new HostDraft();
         draft.SelectGame(HostGame.Holdem, false);
@@ -203,6 +204,21 @@ public sealed class CasinoHostSheetTests
         draft.Normalize(false);
 
         Assert.Equal(CasinoHostingRules.MaxSeats, draft.Build(null).Seats);
+    }
+
+    [Fact]
+    public void AHoldemDraftStillStartsAtTheSixSeatHouseRing()
+    {
+        var draft = new HostDraft();
+        draft.SelectGame(HostGame.Holdem, true);
+        draft.Normalize(true);
+
+        Assert.Equal(HoldemRules.HouseSeats, draft.Build(null).Seats);
+
+        draft.SelectGame(HostGame.Blackjack, true);
+        draft.Normalize(true);
+
+        Assert.Equal(BlackjackRules.SeatCount, draft.Build(null).Seats);
     }
 
     [Theory]
@@ -361,25 +377,6 @@ public sealed class CasinoHostSheetTests
     }
 
     [Fact]
-    public void TheHostSheetSkipsThePlayForStepForABook()
-    {
-        var book = HostFlowLayout.Steps(HostGame.Book);
-        Assert.Equal(HostStep.None, book & HostStep.PlayFor);
-        Assert.Equal(1, HostFlowLayout.StepOrdinal(book, HostStep.Game));
-        Assert.Equal(0, HostFlowLayout.StepOrdinal(book, HostStep.PlayFor));
-        Assert.Equal(2, HostFlowLayout.StepOrdinal(book, HostStep.Table));
-
-        for (var game = HostGame.Blackjack; game < HostGame.Book; game++)
-        {
-            var steps = HostFlowLayout.Steps(game);
-            Assert.Equal(HostFlowLayout.EveryStep, steps);
-            Assert.Equal(1, HostFlowLayout.StepOrdinal(steps, HostStep.Game));
-            Assert.Equal(2, HostFlowLayout.StepOrdinal(steps, HostStep.PlayFor));
-            Assert.Equal(3, HostFlowLayout.StepOrdinal(steps, HostStep.Table));
-        }
-    }
-
-    [Fact]
     public void ABookPayoutCapRunsFromTheBottomOfTheLadderToTheBank()
     {
         var draft = new HostDraft();
@@ -431,5 +428,91 @@ public sealed class CasinoHostSheetTests
         Assert.True(HostDraft.Reopens(book.Snapshot(true), true));
         Assert.False(HostDraft.Reopens(book.Snapshot(true), false));
         Assert.True(HostDraft.Reopens(blackjack.Snapshot(true), false));
+    }
+
+    [Fact]
+    public void HostAgainSnapsOffListValuesSoTheTableStillOpens()
+    {
+        var draft = new HostDraft();
+        draft.SelectCurrency(CasinoCurrencies.Practice, true);
+        var memory = draft.Snapshot(true);
+        memory.TurnSeconds = 25;
+        memory.Decks = 5;
+        memory.Name = "  " + new string('x', 40) + "  ";
+
+        var restored = new HostDraft();
+        restored.Restore(memory);
+        restored.Normalize(true);
+
+        Assert.Contains(restored.TurnSeconds, CasinoHostingRules.TurnSeconds);
+        Assert.Contains(restored.Decks, CasinoRuleSheet.Decks);
+        Assert.Equal(CasinoHostingRules.NameMaxLength, restored.Name.Length);
+        Assert.Equal(string.Empty, CasinoHostingRules.Check(restored.Build(null)));
+    }
+
+    [Fact]
+    public void AHoldemDraftWithAnOffListTurnClockStillOpensAfterHostAgain()
+    {
+        var draft = new HostDraft();
+        draft.SelectGame(HostGame.Holdem, true);
+        var memory = draft.Snapshot(false);
+        memory.TurnSeconds = 0;
+
+        var restored = new HostDraft();
+        restored.Restore(memory);
+        restored.Normalize(true);
+
+        Assert.Equal(CasinoHostingRules.TurnSeconds[0], restored.TurnSeconds);
+        Assert.Equal(string.Empty, CasinoHostingRules.Check(restored.Build(null)));
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(3, 2)]
+    [InlineData(6, 6)]
+    [InlineData(7, 6)]
+    [InlineData(99, 8)]
+    [InlineData(int.MinValue, 1)]
+    [InlineData(int.MaxValue, 8)]
+    public void RestoredDeckCountsSnapToTheNearestAllowedShoe(int saved, int expected)
+    {
+        Assert.Equal(expected, HostDraft.Nearest(CasinoRuleSheet.Decks, saved));
+    }
+
+    [Fact]
+    public void ARestoredNameIsTrimmedAndCappedAndNeverNull()
+    {
+        Assert.Equal(string.Empty, HostDraft.FitName(null));
+        Assert.Equal("Mist Lounge", HostDraft.FitName("  Mist Lounge "));
+        Assert.Equal(CasinoHostingRules.NameMaxLength, HostDraft.FitName(new string('a', 60)).Length);
+    }
+
+    [Fact]
+    public void ThePinRowSaysWhyTheVenueWouldNotShowTheTable()
+    {
+        var onPlot = new CasinoHousingPosition(74, 339, 5, 12, 0, 0);
+        var onStreet = new CasinoHousingPosition(74, 339, 5, 0, 0, 0);
+        var outside = new CasinoHousingPosition(74, 339, 0, 0, 0, 0);
+
+        Assert.Equal(VenuePinNotes.None, VenueHostOptions.NotesFor(true, CasinoListings.Open, onPlot));
+        Assert.Equal(VenuePinNotes.None, VenueHostOptions.NotesFor(true, CasinoListings.Knock, onPlot));
+        Assert.Equal(VenuePinNotes.InviteOnly, VenueHostOptions.NotesFor(true, CasinoListings.Private, onPlot));
+        Assert.Equal(VenuePinNotes.NoPlot, VenueHostOptions.NotesFor(true, CasinoListings.Knock, onStreet));
+        Assert.Equal(VenuePinNotes.InviteOnly | VenuePinNotes.NoPlot,
+            VenueHostOptions.NotesFor(true, CasinoListings.Private, onStreet));
+        Assert.Equal(VenuePinNotes.None, VenueHostOptions.NotesFor(false, CasinoListings.Private, onStreet));
+        Assert.Equal(VenuePinNotes.None, VenueHostOptions.NotesFor(true, CasinoListings.Private, outside));
+    }
+
+    [Fact]
+    public void ANewDraftKeepsInviteOnlyAndThePinAndOnlyNotesTheClash()
+    {
+        var draft = new HostDraft();
+        var onPlot = new CasinoHousingPosition(74, 339, 5, 12, 0, 0);
+
+        Assert.Equal(CasinoListings.Private, draft.Listing);
+        Assert.Equal(VenuePinNotes.InviteOnly, VenueHostOptions.NotesFor(true, draft.Listing, onPlot));
+        Assert.Equal(CasinoListings.Private, draft.Listing);
+        Assert.Same(Ward, draft.Build(Ward).Location);
     }
 }

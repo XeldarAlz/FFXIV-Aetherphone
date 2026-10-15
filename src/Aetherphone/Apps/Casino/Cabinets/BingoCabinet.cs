@@ -933,8 +933,7 @@ internal sealed class BingoCabinet : ICabinetIdle
         requestedCards = Math.Clamp(requestedCards, 1, Math.Max(1, headroom));
         var stake = BingoRules.StakeFor(requestedCards);
         composer.Reset(stake);
-        var enabled = selling && headroom > 0 && !state.StakesPaused && !state.Draining && !rooms.StakeInFlight
-            && !frame.Blocked;
+        var enabled = selling && headroom > 0 && !state.StakesPaused && !state.Draining && !rooms.StakeInFlight;
         var model = new BetComposerModel(stake, stake, sitting.Stack, L.Bingo.BuyAction, enabled, FixedAmount: true,
             Knob: true, Repeat: enabled && stage.RepeatPressed(), Busy: rooms.StakeInFlight);
         var action = composer.Draw(stage, ui, frame.Deck, model, frame.DeltaSeconds);

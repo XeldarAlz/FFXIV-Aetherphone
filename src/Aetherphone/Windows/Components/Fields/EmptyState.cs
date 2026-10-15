@@ -52,8 +52,7 @@ internal static class EmptyState
         var top = bottom + ActionGap * scale;
         var rect = new Rect(new Vector2(body.Center.X - width * 0.5f, top),
             new Vector2(body.Center.X + width * 0.5f, top + ActionHeight * scale));
-        return ConfirmDialog.DrawPillButton(rect, actionLabel, true, ui.Theme, 1f, 1f, ConfirmButtonTone.Primary,
-            "emptyState.action");
+        return Button.Draw(rect, actionLabel, ui.Ink, id: "emptyState.action");
     }
 
     private static float DrawBody(Rect body, AppSkin ui, string glyph, string title, string hint, float glyphHeight)

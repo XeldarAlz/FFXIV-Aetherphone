@@ -1,4 +1,3 @@
-using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Casino;
 using Xunit;
 
@@ -6,187 +5,258 @@ namespace Aetherphone.Tests;
 
 public sealed class TradeSyncTests
 {
-    private const string Host = "u-host";
-    private const string Player = "u-mira";
-    private const string Table = "table-a1";
+    private const string Mira = "Mira Rhan";
+    private const string Ciri = "Ciri Vale";
+    private const string Home = "Phoenix";
 
-    private static readonly string[] MiraWindow = { "Trade", "Mira Rhan", "Confirm" };
-    private static readonly string[] HostWindow = { "Rhan Host" };
+    private static TradeWindowSample Open(string partner, long mine, long theirs, long wallet, string world = "") =>
+        new(true, partner, world, mine, theirs, wallet, true);
 
-    private static TradeWindowSample Open(string[] names, long mine, long theirs, long wallet) =>
-        new(true, names, mine, theirs, wallet);
+    private static TradeWindowSample Closed(long wallet) =>
+        new(false, string.Empty, string.Empty, 0, 0, wallet, true);
 
-    private static TradeWindowSample Closed(long wallet) => new(false, Array.Empty<string>(), 0, 0, wallet);
-
-    private static TradeTableContext HostContext(params CasinoLedgerEntryDto[] entries) =>
-        new(Table, Host, Host, "Rhan Host",
-            new[] { new TradeSeat(Player, "Mira Rhan"), new TradeSeat("u-other", "Other Person") }, entries);
-
-    private static TradeTableContext PlayerContext(params CasinoLedgerEntryDto[] entries) =>
-        new(Table, Player, Host, "Rhan Host", new[] { new TradeSeat(Player, "Mira Rhan") }, entries);
+    private static TradeWindowSample Unreadable(bool open, string partner, long mine, long theirs) =>
+        new(open, partner, string.Empty, mine, theirs, 0, false);
 
     [Fact]
-    public void ACompletedTradeIsReadFromTheWalletAndTheOffers()
+    public void ASingleReceiveCompletesAsReceived()
     {
         var tracker = new TradeSyncTracker();
-        Assert.Null(tracker.Observe(Open(MiraWindow, 0, 500_000, 1_000_000), 0));
+        Assert.Null(tracker.Observe(Open(Mira, 0, 500_000, 1_000_000, Home), 0));
         Assert.Null(tracker.Observe(Closed(1_000_000), 100));
+
         var done = tracker.Observe(Closed(1_500_000), 200);
-        Assert.NotNull(done);
-        Assert.Equal(500_000, done!.Value.Received);
-        Assert.Equal(0, done.Value.Sent);
-        Assert.Equal(TradeTrackerStage.Idle, tracker.Stage);
+
+        Assert.Equal(new TradeCompletion(Mira, Home, 500_000, 0), done);
+        Assert.Null(tracker.Observe(Closed(1_500_000), 300));
     }
 
     [Fact]
-    public void GilThatLandsBeforeTheWindowClosesStillCounts()
+    public void ASingleSendCompletesAsSent()
     {
         var tracker = new TradeSyncTracker();
-        Assert.Null(tracker.Observe(Open(MiraWindow, 0, 500_000, 1_000_000), 0));
-        Assert.Null(tracker.Observe(Open(MiraWindow, 0, 500_000, 1_500_000), 10));
-        var done = tracker.Observe(Closed(1_500_000), 20);
-        Assert.NotNull(done);
-        Assert.Equal(500_000, done!.Value.Received);
+        tracker.Observe(Open(Mira, 250_000, 0, 1_000_000), 0);
+        tracker.Observe(Closed(1_000_000), 100);
+
+        var done = tracker.Observe(Closed(750_000), 150);
+
+        Assert.Equal(new TradeCompletion(Mira, string.Empty, 0, 250_000), done);
+        Assert.Equal(-250_000, done!.Value.Net);
     }
 
     [Fact]
-    public void SwappedOfferSidesStillMatchTheWallet()
+    public void GilOnBothSidesCompletesWithTheNetThatReachedTheWallet()
     {
         var tracker = new TradeSyncTracker();
-        tracker.Observe(Open(MiraWindow, 300_000, 0, 1_000_000), 0);
-        var done = tracker.Observe(Closed(1_300_000), 50);
-        Assert.Equal(300_000, done!.Value.Received);
-        Assert.Equal(0, done.Value.Sent);
+        tracker.Observe(Open(Mira, 20_000, 50_000, 1_000_000), 0);
+        tracker.Observe(Closed(1_000_000), 50);
+
+        var done = tracker.Observe(Closed(1_030_000), 60);
+
+        Assert.Equal(new TradeCompletion(Mira, string.Empty, 30_000, 0), done);
     }
 
     [Fact]
-    public void ACancelledTradeLeavesNothingBehind()
+    public void AWindowThatReshowsWithinFourSecondsIsStillOneTrade()
     {
         var tracker = new TradeSyncTracker();
-        tracker.Observe(Open(MiraWindow, 0, 500_000, 1_000_000), 0);
-        Assert.Null(tracker.Observe(Closed(1_000_000), 10));
-        Assert.Null(tracker.Observe(Closed(1_000_000), TradeSyncTracker.SettleWindowMilliseconds + 20));
-        Assert.Equal(TradeTrackerStage.Idle, tracker.Stage);
-        Assert.Null(tracker.Observe(Closed(1_200_000), TradeSyncTracker.SettleWindowMilliseconds + 40));
+        tracker.Observe(Open(Mira, 0, 300_000, 1_000_000), 0);
+        Assert.Null(tracker.Observe(Closed(1_000_000), 1_000));
+        Assert.Null(tracker.Observe(Open(Mira, 0, 300_000, 1_000_000), 2_500));
+        Assert.Null(tracker.Observe(Closed(1_000_000), 3_000));
+
+        var done = tracker.Observe(Closed(1_300_000), 3_100);
+
+        Assert.Equal(new TradeCompletion(Mira, string.Empty, 300_000, 0), done);
+        Assert.Null(tracker.Observe(Closed(1_600_000), 3_200));
     }
 
     [Fact]
-    public void APartnerReadFromTheTradeArraysRidesOnToTheCompletion()
+    public void AReshownWindowWhosePartnerArrivesAFrameLateStillContinuesTheTrade()
     {
         var tracker = new TradeSyncTracker();
-        tracker.Observe(new TradeWindowSample(true, MiraWindow, 0, 500_000, 1_000_000, true), 0);
-        tracker.Observe(Open(MiraWindow, 0, 500_000, 1_000_000), 5);
-        var done = tracker.Observe(Closed(1_500_000), 10);
-        Assert.True(done!.Value.PartnerRead);
+        tracker.Observe(Open(Mira, 0, 300_000, 1_000_000), 0);
+        tracker.Observe(Closed(1_000_000), 1_000);
+        tracker.Observe(Open(string.Empty, 0, 0, 1_000_000), 2_000);
+        tracker.Observe(Open(Mira, 0, 300_000, 1_000_000), 2_016);
+        tracker.Observe(Closed(1_000_000), 2_500);
 
-        tracker.Observe(Open(MiraWindow, 0, 500_000, 1_500_000), 20);
-        var plain = tracker.Observe(Closed(2_000_000), 30);
-        Assert.False(plain!.Value.PartnerRead);
+        Assert.Equal(new TradeCompletion(Mira, string.Empty, 300_000, 0),
+            tracker.Observe(Closed(1_300_000), 2_600));
+        Assert.Null(tracker.Observe(Closed(1_600_000), 2_700));
     }
 
     [Fact]
-    public void UnreadOffersFallBackToTheWalletDelta()
+    public void BackToBackTradesOfOneAmountWithTwoPartnersCompleteOnceEachInOrder()
     {
         var tracker = new TradeSyncTracker();
-        tracker.Observe(Open(MiraWindow, 0, 0, 2_000_000), 0);
-        var done = tracker.Observe(Closed(1_250_000), 10);
-        Assert.Equal(0, done!.Value.Received);
-        Assert.Equal(750_000, done.Value.Sent);
+        tracker.Observe(Open(Mira, 0, 100_000, 1_000_000), 0);
+        tracker.Observe(Closed(1_000_000), 100);
+        tracker.Observe(Open(Ciri, 0, 100_000, 1_000_000), 200);
+        tracker.Observe(Closed(1_000_000), 300);
+
+        var first = tracker.Observe(Closed(1_100_000), 400);
+        var second = tracker.Observe(Closed(1_200_000), 500);
+        var third = tracker.Observe(Closed(1_300_000), 600);
+
+        Assert.Equal(Mira, first!.Value.PartnerName);
+        Assert.Equal(Ciri, second!.Value.PartnerName);
+        Assert.Null(third);
     }
 
     [Fact]
-    public void TheHostReceivingGilProposesABuyIn()
+    public void ThePreviousTradeCompletesWhileTheNextWindowIsOpen()
     {
-        var proposal = TradeLedgerMatcher.Match(new TradeCompletion(MiraWindow, 500_000, 0), HostContext());
-        Assert.Equal(TradeProposalKind.Propose, proposal.Kind);
-        Assert.Equal(CasinoLedgerKinds.BuyIn, proposal.LedgerKind);
-        Assert.Equal(Player, proposal.CounterpartyUserId);
-        Assert.Equal(500_000, proposal.Amount);
-        Assert.True(proposal.HostSide);
-        Assert.True(proposal.Incoming);
+        var tracker = new TradeSyncTracker();
+        tracker.Observe(Open(Mira, 0, 100_000, 1_000_000), 0);
+        tracker.Observe(Closed(1_000_000), 100);
+        tracker.Observe(Open(Ciri, 40_000, 0, 1_000_000), 150);
+
+        var first = tracker.Observe(Open(Ciri, 40_000, 0, 1_100_000), 200);
+        tracker.Observe(Closed(1_100_000), 300);
+        var second = tracker.Observe(Closed(1_060_000), 310);
+
+        Assert.Equal(new TradeCompletion(Mira, string.Empty, 100_000, 0), first);
+        Assert.Equal(new TradeCompletion(Ciri, string.Empty, 0, 40_000), second);
     }
 
     [Fact]
-    public void TheHostConfirmsTheBuyInThePlayerAlreadyClaimed()
+    public void AWalletChangeAFrameBeforeTheWindowClosesCompletesOnce()
     {
-        var claimed = new CasinoLedgerEntryDto("e1", Table, CasinoLedgerKinds.BuyIn, 500_000, Player, "Mira Rhan", Host,
-            "Rhan Host", PayerConfirmed: true);
-        var proposal = TradeLedgerMatcher.Match(new TradeCompletion(MiraWindow, 500_000, 0), HostContext(claimed));
-        Assert.Equal(TradeProposalKind.Confirm, proposal.Kind);
-        Assert.Equal("e1", proposal.EntryId);
+        var tracker = new TradeSyncTracker();
+        tracker.Observe(Open(Mira, 0, 500_000, 1_000_000), 0);
+
+        var done = tracker.Observe(Open(Mira, 0, 500_000, 1_500_000), 16);
+
+        Assert.Equal(new TradeCompletion(Mira, string.Empty, 500_000, 0), done);
+        Assert.Null(tracker.Observe(Open(Mira, 0, 500_000, 1_500_000), 32));
+        Assert.Null(tracker.Observe(Closed(1_500_000), 48));
+        Assert.Null(tracker.Observe(Closed(2_000_000), 64));
     }
 
     [Fact]
-    public void TheHostSendingGilSettlesTheCashOutOrProposesAPayout()
+    public void AnUnrelatedWalletChangeIsIgnoredWhileATradeIsArmed()
     {
-        var cashOut = new CasinoLedgerEntryDto("e2", Table, CasinoLedgerKinds.CashOut, 80_000, Host, "Rhan Host",
-            Player, "Mira Rhan");
-        var settled = TradeLedgerMatcher.Match(new TradeCompletion(MiraWindow, 0, 80_000), HostContext(cashOut));
-        Assert.Equal(TradeProposalKind.Confirm, settled.Kind);
-        Assert.Equal("e2", settled.EntryId);
-        var fresh = TradeLedgerMatcher.Match(new TradeCompletion(MiraWindow, 0, 90_000), HostContext(cashOut));
-        Assert.Equal(TradeProposalKind.Propose, fresh.Kind);
-        Assert.Equal(CasinoLedgerKinds.Payout, fresh.LedgerKind);
-        Assert.False(fresh.Incoming);
+        var tracker = new TradeSyncTracker();
+        tracker.Observe(Open(Mira, 0, 80_000, 1_000_000), 0);
+        tracker.Observe(Closed(1_000_000), 100);
+
+        Assert.Null(tracker.Observe(Closed(999_100), 200));
+        Assert.Null(tracker.Observe(Closed(1_049_100), 300));
+        var done = tracker.Observe(Closed(1_129_100), 400);
+
+        Assert.Equal(new TradeCompletion(Mira, string.Empty, 80_000, 0), done);
     }
 
     [Fact]
-    public void ATradeWithSomeoneNotSeatedIsIgnored()
+    public void ATradeWithNoGilOfferedNeverTakesALaterWalletChange()
     {
-        var proposal = TradeLedgerMatcher.Match(new TradeCompletion(new[] { "Stranger Danger" }, 500_000, 0),
-            HostContext());
-        Assert.Equal(TradeProposalKind.None, proposal.Kind);
+        var tracker = new TradeSyncTracker();
+        tracker.Observe(Open(Mira, 0, 0, 1_000_000), 0);
+        tracker.Observe(Closed(1_000_000), 100);
+
+        Assert.Null(tracker.Observe(Closed(999_000), 200));
+        Assert.Null(tracker.Observe(Closed(1_075_000), 300));
     }
 
     [Fact]
-    public void TheHostOfAVenueRoomReceivingGilProposesABuyIn()
+    public void AnArmedTradeExpiresAfterThirtySeconds()
     {
-        var proposal = TradeLedgerMatcher.Match(new TradeCompletion(MiraWindow, 500_000, 0),
-            HostContext() with { Venue = true });
-        Assert.Equal(TradeProposalKind.Propose, proposal.Kind);
-        Assert.Equal(CasinoLedgerKinds.BuyIn, proposal.LedgerKind);
-        Assert.Equal(Player, proposal.CounterpartyUserId);
-        Assert.True(proposal.HostSide);
+        var tracker = new TradeSyncTracker();
+        tracker.Observe(Open(Mira, 0, 50_000, 1_000_000), 0);
+        tracker.Observe(Closed(1_000_000), 1_000);
+
+        Assert.Null(tracker.Observe(Closed(1_050_000), 1_000 + TradeSyncTracker.ArmedMilliseconds + 1));
     }
 
     [Fact]
-    public void ThePlayerSendingGilToTheHostProposesTheirBuyIn()
+    public void AnArmedTradeStillCompletesOnItsLastArmedMillisecond()
     {
-        var proposal = TradeLedgerMatcher.Match(new TradeCompletion(HostWindow, 0, 250_000), PlayerContext());
-        Assert.Equal(TradeProposalKind.Propose, proposal.Kind);
-        Assert.Equal(CasinoLedgerKinds.BuyIn, proposal.LedgerKind);
-        Assert.Equal(Host, proposal.CounterpartyUserId);
-        Assert.False(proposal.HostSide);
+        var tracker = new TradeSyncTracker();
+        tracker.Observe(Open(Mira, 0, 50_000, 1_000_000), 0);
+        tracker.Observe(Closed(1_000_000), 1_000);
+
+        Assert.NotNull(tracker.Observe(Closed(1_050_000), 1_000 + TradeSyncTracker.ArmedMilliseconds));
     }
 
     [Fact]
-    public void ThePlayerReceivingAPayoutConfirmsIt()
+    public void AFifthArmedTradeDropsTheOldest()
     {
-        var payout = new CasinoLedgerEntryDto("e3", Table, CasinoLedgerKinds.Payout, 40_000, Host, "Rhan Host",
-            Player, "Mira Rhan", PayerConfirmed: true);
-        var proposal = TradeLedgerMatcher.Match(new TradeCompletion(HostWindow, 40_000, 0), PlayerContext(payout));
-        Assert.Equal(TradeProposalKind.Confirm, proposal.Kind);
-        Assert.Equal("e3", proposal.EntryId);
-        Assert.True(proposal.Incoming);
+        var tracker = new TradeSyncTracker();
+        string[] partners = { "Ana One", "Bea Two", "Cid Three", "Dax Four", "Eve Five" };
+        for (var index = 0; index < partners.Length; index++)
+        {
+            tracker.Observe(Open(partners[index], 0, (index + 1) * 10_000L, 1_000_000), index * 100L);
+            tracker.Observe(Closed(1_000_000), index * 100L + 50);
+        }
+
+        Assert.Null(tracker.Observe(Closed(1_010_000), 1_000));
+        var second = tracker.Observe(Closed(1_030_000), 1_100);
+        var fifth = tracker.Observe(Closed(1_080_000), 1_200);
+
+        Assert.Equal("Bea Two", second!.Value.PartnerName);
+        Assert.Equal("Eve Five", fifth!.Value.PartnerName);
     }
 
     [Fact]
-    public void NamesCompareWithoutWorldsIconsOrCase()
+    public void AnUnreadableWalletNeverCompletesAnything()
     {
-        Assert.Equal("mira rhan", TradeNames.Normalize("Mira Rhan@Gilgamesh"));
-        Assert.Equal("mira rhan", TradeNames.Normalize("  MIRA   Rhan "));
-        Assert.Equal("mira rhan", TradeNames.Normalize("Mira Rhan\uE05DGilgamesh"));
-        Assert.Equal("j'ayna o'ren", TradeNames.Normalize("J'ayna O'ren"));
+        var tracker = new TradeSyncTracker();
+        tracker.Observe(Open(Mira, 0, 20_000, 1_000_000), 0);
+        Assert.Null(tracker.Observe(Unreadable(true, Mira, 0, 20_000), 16));
+        Assert.Null(tracker.Observe(Unreadable(false, string.Empty, 0, 0), 32));
+        Assert.Null(tracker.Observe(Unreadable(false, string.Empty, 0, 0), 48));
+
+        Assert.Null(tracker.Observe(Closed(1_000_000), 64));
+        Assert.Equal(new TradeCompletion(Mira, string.Empty, 20_000, 0), tracker.Observe(Closed(1_020_000), 80));
     }
 
     [Fact]
-    public void AmountsParseWithGroupSeparatorsOnly()
+    public void TheFirstWalletReadOnlySetsTheReference()
     {
-        Assert.True(TradeNames.TryAmount("1,500,000", out var grouped));
-        Assert.Equal(1_500_000, grouped);
-        Assert.True(TradeNames.TryAmount("2 000", out var spaced));
-        Assert.Equal(2_000, spaced);
-        Assert.False(TradeNames.TryAmount("Mira", out _));
-        Assert.False(TradeNames.TryAmount("1234567890123", out _));
+        var tracker = new TradeSyncTracker();
+        Assert.Null(tracker.Observe(Closed(5_000_000), 0));
+        Assert.Null(tracker.Observe(Closed(5_000_000), 16));
+        tracker.Observe(Open(Mira, 0, 10_000, 5_000_000), 32);
+        tracker.Observe(Closed(5_000_000), 48);
+
+        Assert.NotNull(tracker.Observe(Closed(5_010_000), 64));
+    }
+
+    [Fact]
+    public void ResetForgetsArmedTradesAndTheWallet()
+    {
+        var tracker = new TradeSyncTracker();
+        tracker.Observe(Open(Mira, 0, 50_000, 1_000_000), 0);
+        tracker.Observe(Closed(1_000_000), 100);
+
+        tracker.Reset();
+
+        Assert.Null(tracker.Observe(Closed(1_050_000), 200));
+        Assert.Null(tracker.Observe(Closed(1_100_000), 300));
+    }
+
+    [Fact]
+    public void AWorldReadAFrameAfterTheNameStaysOneTrade()
+    {
+        var tracker = new TradeSyncTracker();
+        tracker.Observe(Open(Mira, 0, 70_000, 1_000_000), 0);
+        tracker.Observe(Open(Mira, 0, 70_000, 1_000_000, Home), 16);
+        tracker.Observe(Closed(1_000_000), 32);
+
+        Assert.Equal(new TradeCompletion(Mira, Home, 70_000, 0), tracker.Observe(Closed(1_070_000), 48));
+        Assert.Null(tracker.Observe(Closed(1_140_000), 64));
+    }
+
+    [Fact]
+    public void ANewPartnerInAnOpenWindowArmsThePreviousTrade()
+    {
+        var tracker = new TradeSyncTracker();
+        tracker.Observe(Open(Mira, 0, 60_000, 1_000_000), 0);
+        tracker.Observe(Open(Ciri, 0, 90_000, 1_000_000), 16);
+        tracker.Observe(Closed(1_000_000), 32);
+
+        Assert.Equal(Mira, tracker.Observe(Closed(1_060_000), 48)!.Value.PartnerName);
+        Assert.Equal(Ciri, tracker.Observe(Closed(1_150_000), 64)!.Value.PartnerName);
     }
 }

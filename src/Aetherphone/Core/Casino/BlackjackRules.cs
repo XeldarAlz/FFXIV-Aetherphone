@@ -98,7 +98,7 @@ internal static class BlackjackOutcomes
 
 internal static class BlackjackRules
 {
-    public const int SeatCount = 6;
+    public const int SeatCount = 7;
 
     public const int Decks = 6;
 

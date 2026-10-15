@@ -65,6 +65,18 @@ internal static class CasinoGlyphs
             case CasinoGames.Plinko:
                 DrawPlinko(drawList, center, extent, ink, hole);
                 break;
+            case CasinoGames.DiceTable:
+                DrawDiceTable(drawList, center, extent, ink, hole);
+                break;
+            case CasinoGames.Deathroll:
+                DrawDeathroll(drawList, center, extent, ink, hole);
+                break;
+            case CasinoGames.Raffle:
+                DrawRaffle(drawList, center, extent, ink, hole);
+                break;
+            case CasinoGames.Book:
+                DrawBook(drawList, center, extent, ink, hole);
+                break;
             default:
                 DrawChip(drawList, center, extent, ink, hole);
                 break;
@@ -367,6 +379,70 @@ internal static class CasinoGlyphs
         drawList.AddCircle(At(center, extent, 0f, 0.2f), extent * 0.44f, hole, 28, extent * 0.1f);
         drawList.AddLine(At(center, extent, 0f, -0.46f), At(center, extent, 0f, -0.72f), ink, extent * 0.1f);
         drawList.AddCircleFilled(At(center, extent, 0f, -0.82f), extent * 0.2f, ink, 16);
+    }
+
+    private static void DrawDiceTable(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var rounding = extent * 0.2f;
+        var pip = extent * 0.1f;
+        drawList.AddRectFilled(At(center, extent, -0.92f, -0.78f), At(center, extent, 0.12f, 0.26f), ink, rounding);
+        drawList.AddRectFilled(At(center, extent, -0.26f, -0.4f), At(center, extent, 0.96f, 0.96f), hole,
+            extent * 0.24f);
+        drawList.AddCircleFilled(At(center, extent, -0.66f, -0.52f), pip, hole, 12);
+        drawList.AddCircleFilled(At(center, extent, -0.44f, -0.04f), pip, hole, 12);
+        drawList.AddRectFilled(At(center, extent, -0.16f, -0.3f), At(center, extent, 0.86f, 0.86f), ink, rounding);
+        Span<float> pips = stackalloc float[3] { 0.08f, 0.35f, 0.62f };
+        for (var pipIndex = 0; pipIndex < pips.Length; pipIndex++)
+        {
+            drawList.AddCircleFilled(At(center, extent, pips[pipIndex], pips[pipIndex] - 0.14f), pip, hole, 12);
+        }
+    }
+
+    private static void DrawDeathroll(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        drawList.AddCircleFilled(At(center, extent, 0f, -0.15f), extent * 0.72f, ink, 32);
+        drawList.AddRectFilled(At(center, extent, -0.4f, 0.2f), At(center, extent, 0.4f, 0.86f), ink, extent * 0.14f);
+        drawList.AddCircleFilled(At(center, extent, -0.28f, -0.12f), extent * 0.18f, hole, 16);
+        drawList.AddCircleFilled(At(center, extent, 0.28f, -0.12f), extent * 0.18f, hole, 16);
+        Span<Vector2> nose = stackalloc Vector2[3]
+        {
+            At(center, extent, 0f, 0.12f), At(center, extent, 0.11f, 0.32f), At(center, extent, -0.11f, 0.32f),
+        };
+        FillConvex(drawList, hole, nose);
+        var tooth = extent * 0.08f;
+        drawList.AddLine(At(center, extent, -0.14f, 0.56f), At(center, extent, -0.14f, 0.86f), hole, tooth);
+        drawList.AddLine(At(center, extent, 0.14f, 0.56f), At(center, extent, 0.14f, 0.86f), hole, tooth);
+    }
+
+    private static void DrawRaffle(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        drawList.AddRectFilled(At(center, extent, -0.92f, -0.56f), At(center, extent, 0.92f, 0.56f), ink,
+            extent * 0.14f);
+        drawList.AddCircleFilled(At(center, extent, -0.92f, 0f), extent * 0.2f, hole, 16);
+        drawList.AddCircleFilled(At(center, extent, 0.92f, 0f), extent * 0.2f, hole, 16);
+        Span<float> dashes = stackalloc float[3] { -0.42f, -0.09f, 0.24f };
+        for (var dash = 0; dash < dashes.Length; dash++)
+        {
+            drawList.AddRectFilled(At(center, extent, 0.36f, dashes[dash]), At(center, extent, 0.46f, dashes[dash] + 0.18f),
+                hole, extent * 0.03f);
+        }
+
+        Span<Vector2> diamond = stackalloc Vector2[4]
+        {
+            At(center, extent, -0.3f, -0.3f), At(center, extent, -0.08f, 0f), At(center, extent, -0.3f, 0.3f),
+            At(center, extent, -0.52f, 0f),
+        };
+        FillConvex(drawList, hole, diamond);
+    }
+
+    private static void DrawBook(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)
+    {
+        drawList.AddRectFilled(At(center, extent, -0.72f, -0.86f), At(center, extent, 0.74f, 0.86f), ink,
+            extent * 0.14f);
+        drawList.AddLine(At(center, extent, -0.44f, -0.86f), At(center, extent, -0.44f, 0.86f), hole, extent * 0.1f);
+        var line = extent * 0.04f;
+        drawList.AddRectFilled(At(center, extent, -0.2f, -0.5f), At(center, extent, 0.5f, -0.36f), hole, line);
+        drawList.AddRectFilled(At(center, extent, -0.2f, -0.2f), At(center, extent, 0.5f, -0.06f), hole, line);
     }
 
     private static void DrawChip(ImDrawListPtr drawList, Vector2 center, float extent, uint ink, uint hole)

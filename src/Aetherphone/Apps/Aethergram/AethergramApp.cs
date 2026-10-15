@@ -232,6 +232,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     private string caption = string.Empty;
     private bool composeSensitive;
     private bool captionFocus;
+    private bool captionTyping;
     private readonly FailureSlot feedFailure = new();
     private readonly FailureSlot commentFailure = new();
     private string? commentRestore;
@@ -559,7 +560,12 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         {
             DrawHomeTopBar(area);
             var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-            Typography.DrawCentered(body.Center, Loc.T(L.Aethergram.SetUpAccount), AethergramInk.MutedInk);
+            if (EmptyState.Draw(body, ui, PhoneIcons.User, DisplayName, Loc.T(L.Aethergram.SetUpAccount),
+                    Loc.T(L.Aethergram.OpenSettings)))
+            {
+                navigation.Open("settings");
+            }
+
             return;
         }
 
@@ -1260,8 +1266,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         var metaHeight = Typography.LineHeight(CardMetaStyle);
         var nameTop = avatarCenter.Y - (nameHeight + metaHeight + 1f * scale) * 0.5f;
         var drawnNameWidth = UserName.DrawAuto(drawList, "aethergram.card." + post.Id, displayName, post.AuthorBadges,
-            post.AuthorBadgeIds, nameLeft, nameTop, headerTextMaxWidth, CardNameStyle, Ink.TitleInk, theme,
-            self: RewardedSelf(post.AuthorId));
+            post.AuthorBadgeIds, nameLeft, nameTop, headerTextMaxWidth, CardNameStyle, Ink.TitleInk, theme);
         var nameMin = new Vector2(nameLeft, nameTop);
         var nameMax = new Vector2(nameLeft + drawnNameWidth, nameTop + nameHeight);
         if (UiInteract.Hover(nameMin, nameMax))

@@ -151,7 +151,7 @@ internal sealed class WheelCabinet : ICabinetIdle
         WheelHistoryStrip.Draw(drawList, board.History, recent,
             LandingPop(playback.SpunLive, playback.Stage, playback.StageSeconds), scale);
         DrawWheel(drawList, board.Wheel, frame.Phase, delta, scale);
-        var choosing = snapshot.Phase == CasinoRoomPhases.Open && !frame.Blocked;
+        var choosing = snapshot.Phase == CasinoRoomPhases.Open;
         WheelSpotCaption.Draw(drawList, board.Caption, choosing ? Loc.T(L.Casino.WheelPickSpot) : string.Empty,
             ReturnCaption(wheel), scale);
         DrawCards(drawList, ui, wheel, board, choosing, scale);
@@ -533,7 +533,7 @@ internal sealed class WheelCabinet : ICabinetIdle
         var ceiling = chips.Ceiling.MaxBet;
         var maximum = Math.Min(headroom, ceiling);
         var open = snapshot.Phase == CasinoRoomPhases.Open;
-        var enabled = open && !state.StakesPaused && !state.Draining && !rooms.StakeInFlight && !frame.Blocked
+        var enabled = open && !state.StakesPaused && !state.Draining && !rooms.StakeInFlight
             && maximum >= WheelRules.MinStakePerSpot;
         var model = new BetComposerModel(WheelRules.MinStakePerSpot, maximum, sitting.Stack, L.Strip.BetFor, enabled,
             Repeat: stage.RepeatPressed(), Busy: rooms.StakeInFlight);

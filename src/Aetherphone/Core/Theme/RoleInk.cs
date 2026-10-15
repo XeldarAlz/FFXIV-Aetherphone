@@ -185,6 +185,8 @@ internal static class RoleInk
 
     private const float MinDarkLuminance = 0.42f;
     private const float MaxLightLuminance = 0.34f;
+    private const float MinBadgeDarkLuminance = 0.30f;
+    private const float MaxBadgeLightLuminance = 0.13f;
     private const float DarkHighlightLift = 1.22f;
     private const float LightHighlightLift = 0.72f;
 
@@ -205,7 +207,9 @@ internal static class RoleInk
 
     public static Vector4 For(Vector4 brand, bool light)
     {
-        return light ? Darkened(brand, MaxLightLuminance) : Lifted(brand, MinDarkLuminance);
+        return light
+            ? Palette.ShadeToLuminance(Darkened(brand, MaxLightLuminance), MaxBadgeLightLuminance)
+            : Palette.LiftToLuminance(Lifted(brand, MinDarkLuminance), MinBadgeDarkLuminance);
     }
 
     public static Vector4 Highlight(RoleKind kind, bool light)

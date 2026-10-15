@@ -38,6 +38,7 @@ internal sealed partial class OnlineCraterTable : IDisposable
     private static readonly Vector4 ResignTint = new(0.85f, 0.35f, 0.32f, 1f);
 
     private readonly GameRoomsStore store;
+    private readonly Action askResign;
     private readonly ITextureProvider textures;
     private readonly OnlineCraterScene scene = new();
     private readonly CraterJuice juice = new();
@@ -65,9 +66,10 @@ internal sealed partial class OnlineCraterTable : IDisposable
     private float skyProgress;
     private bool cameraPlaced;
 
-    public OnlineCraterTable(GameRoomsStore store, ITextureProvider textures)
+    public OnlineCraterTable(GameRoomsStore store, ITextureProvider textures, Action askResign)
     {
         this.store = store;
+        this.askResign = askResign;
         this.textures = textures;
         screen = new ScreenFx(backdrop);
         backdrop.Set(Backdrop.Sky);
@@ -170,7 +172,7 @@ internal sealed partial class OnlineCraterTable : IDisposable
             && GameHud.Button(resign.Center, resign.Size, Loc.T(L.Games.OnlineResign), ResignTint, theme)
             && !store.ActInFlight)
         {
-            store.SendResign();
+            askResign();
         }
     }
 

@@ -111,7 +111,7 @@ internal sealed partial class LinkpearlApp : IResumableApp
         setWallpaperPattern = SetWallpaperPattern;
         clearWallpaperOverride = ClearWallpaperOverride;
         chatMenu.SendTell = (name, world) => OpenDirectThread(name, SendTargetFor(name, world));
-        chatMenu.LookUp = (name, world) => router.Push(LinkpearlRoute.Character(string.Empty, name, world));
+        chatMenu.LookUp = OpenLodestoneProfile;
         chatMenu.OpenMarket = itemId =>
         {
             marketLauncher.RequestItem(itemId);
@@ -196,7 +196,7 @@ internal sealed partial class LinkpearlApp : IResumableApp
         }
 
         activeTab = MessagesTab.People;
-        router.Push(LinkpearlRoute.Character(string.Empty, lookupName, lookupWorld));
+        OpenLodestoneProfile(lookupName, lookupWorld);
     }
 
     public void OnClosed()

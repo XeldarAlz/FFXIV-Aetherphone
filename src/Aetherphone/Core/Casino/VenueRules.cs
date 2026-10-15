@@ -68,6 +68,8 @@ internal static class VenueActions
     public const string RaffleTicket = "raffle.ticket";
 
     public const string RaffleDraw = "raffle.draw";
+
+    public const string RaffleRemove = "raffle.remove";
 }
 
 internal static class DuelPhases
@@ -115,7 +117,9 @@ internal static class VenueRules
 
     public const int MinTicketsPerPerson = 1;
 
-    public const int MaxTicketsPerPerson = 100;
+    public const int MaxTicketsPerPerson = 1000;
+
+    public const int TicketDigits = 4;
 
     public const int MinWinners = 1;
 
@@ -187,6 +191,27 @@ internal static class VenueRules
             && ticketsPerPerson >= MinTicketsPerPerson && ticketsPerPerson <= MaxTicketsPerPerson
             && winners >= MinWinners && winners <= MaxWinners
             && durationSeconds >= MinRaffleSeconds && durationSeconds <= MaxRaffleSeconds;
+    }
+
+    public static int TicketsLeft(int held, int ticketsPerPerson)
+    {
+        return Math.Max(0, ticketsPerPerson - held);
+    }
+
+    public static bool IsTicketCount(int count, int held, int ticketsPerPerson)
+    {
+        return count >= 1 && count <= TicketsLeft(held, ticketsPerPerson);
+    }
+
+    public static int ClampTicketCount(int count, int held, int ticketsPerPerson)
+    {
+        var left = TicketsLeft(held, ticketsPerPerson);
+        return left == 0 ? 0 : Math.Clamp(count, 1, left);
+    }
+
+    public static long TicketsTotal(int count, long ticketPrice)
+    {
+        return count <= 0 || ticketPrice <= 0 ? 0 : count * ticketPrice;
     }
 
     public static bool Loses(long value)

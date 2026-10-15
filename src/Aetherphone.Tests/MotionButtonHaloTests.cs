@@ -18,6 +18,35 @@ public sealed class MotionButtonHaloTests
         Assert.Equal(30.8f, MotionButton.HaloReach(2f), Tolerance);
     }
 
+    [Theory]
+    [InlineData(0.5f, 280f)]
+    [InlineData(1f, 320f)]
+    [InlineData(2.23f, 292f)]
+    [InlineData(3f, 640f)]
+    public void FittedButtonContainsHoveredHaloInsideTheRow(float scale, float widthUnits)
+    {
+        var bounds = new Rect(new Vector2(108f, 802f), new Vector2(108f + widthUnits * scale, 846f));
+        var fitted = MotionButton.FitHaloWidth(bounds, scale);
+        var hoveredHalfWidth = fitted.Width * 1.03f * 0.5f;
+        var haloHalfWidth = hoveredHalfWidth + MotionButton.HaloReach(scale);
+
+        Assert.True(fitted.Center.X - haloHalfWidth >= bounds.Min.X + 0.99f);
+        Assert.True(fitted.Center.X + haloHalfWidth <= bounds.Max.X - 0.99f);
+        Assert.Equal(bounds.Center, fitted.Center);
+        Assert.Equal(bounds.Min.Y, fitted.Min.Y);
+        Assert.Equal(bounds.Max.Y, fitted.Max.Y);
+        Assert.True(fitted.Width > 0f);
+    }
+
+    [Fact]
+    public void FittingANarrowRowNeverInvertsTheButton()
+    {
+        var bounds = new Rect(new Vector2(10f, 20f), new Vector2(20f, 64f));
+        var fitted = MotionButton.FitHaloWidth(bounds, 3f);
+        Assert.Equal(0f, fitted.Width);
+        Assert.Equal(bounds.Center, fitted.Center);
+    }
+
     [Fact]
     public void SurfacePaddingInsetRelaxesToTheWindowEdge()
     {

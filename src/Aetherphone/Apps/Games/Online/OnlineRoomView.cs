@@ -5,6 +5,7 @@ using Aetherphone.Apps.Games.MiniGolf;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
@@ -56,6 +57,7 @@ internal sealed class OnlineRoomView : IDisposable
     ];
 
     private readonly GameRoomsStore store;
+    private readonly ConfirmService confirm;
     private readonly DropdownMenu rulesMenu = new();
     private readonly List<DropdownMenu.Item> rulesMenuItems = new();
     private readonly OnlineUnoTable unoTable;
@@ -88,16 +90,18 @@ internal sealed class OnlineRoomView : IDisposable
     private GameRoomRoster? labeledRoster;
     private LanguageInfo? labelLanguage;
 
-    public OnlineRoomView(GameRoomsStore store, ITextureProvider textures)
+    public OnlineRoomView(GameRoomsStore store, ITextureProvider textures, ConfirmService confirm)
     {
         this.store = store;
+        this.confirm = confirm;
+        Action askResign = AskResign;
         unoTable = new OnlineUnoTable(store);
-        chessTable = new OnlineChessTable(store);
-        poolTable = new OnlinePoolTable(store);
-        connectFourTable = new OnlineConnectFourTable(store);
-        broadsideTable = new OnlineBroadsideTable(store);
+        chessTable = new OnlineChessTable(store, askResign);
+        poolTable = new OnlinePoolTable(store, askResign);
+        connectFourTable = new OnlineConnectFourTable(store, askResign);
+        broadsideTable = new OnlineBroadsideTable(store, askResign);
         luckyDrawTable = new OnlineLuckyDrawTable(store);
-        craterTable = new OnlineCraterTable(store, textures);
+        craterTable = new OnlineCraterTable(store, textures, askResign);
         miniGolfTable = new OnlineMiniGolfTable(store);
     }
 
@@ -238,7 +242,7 @@ internal sealed class OnlineRoomView : IDisposable
             back);
         if (ui.HeaderAction(context.Content, leaveLabel, !store.IntentInFlight))
         {
-            LeaveOrClose(isHost);
+            AskLeaveOrClose(isHost, held);
         }
     }
 
@@ -298,6 +302,67 @@ internal sealed class OnlineRoomView : IDisposable
 
     private static string LeaveLabel(bool isHost) =>
         isHost ? Loc.T(L.Games.OnlineCloseRoom) : Loc.T(L.Games.OnlineLeave);
+
+    private void AskLeaveOrClose(bool isHost, GameRoomState held)
+    {
+        var playing = held.Snapshot.Phase == GameRoomWire.PhasePlaying;
+        var othersPresent = held.Roster is { Players.Length: > 1 };
+        if (!playing && !(isHost && othersPresent))
+        {
+            LeaveOrClose(isHost);
+            return;
+        }
+
+        confirm.Ask(new ConfirmRequest
+        {
+            Message = Loc.T(isHost ? L.Games.OnlineCloseRoomConfirm : L.Games.OnlineLeaveConfirm),
+            ConfirmLabel = LeaveLabel(isHost),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Sheet = true,
+            Danger = true,
+            Confirm = () => LeaveOrClose(isHost),
+        });
+    }
+
+    private void AskResign()
+    {
+        if (store.Room.State is not { } asked)
+        {
+            return;
+        }
+
+        var roomId = asked.RoomId;
+        var roundIndex = asked.Snapshot.RoundIndex;
+        confirm.Ask(new ConfirmRequest
+        {
+            Message = Loc.T(L.Games.OnlineResignConfirm),
+            ConfirmLabel = Loc.T(L.Games.OnlineResign),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Sheet = true,
+            Danger = true,
+            Confirm = () =>
+            {
+                if (store.Room.State?.IsPlayingRound(roomId, roundIndex) == true)
+                {
+                    store.SendResign();
+                }
+            },
+        });
+    }
+
+    private void AskKick(GameRoomMemberView player)
+    {
+        var userId = player.UserId;
+        confirm.Ask(new ConfirmRequest
+        {
+            Message = Loc.T(L.Games.OnlineKickConfirm, player.DisplayName),
+            ConfirmLabel = Loc.T(L.Games.OnlineKick),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Sheet = true,
+            Danger = true,
+            Confirm = () => store.Kick(userId),
+        });
+    }
 
     private void LeaveOrClose(bool isHost)
     {
@@ -436,7 +501,7 @@ internal sealed class OnlineRoomView : IDisposable
         if (Button.Draw(drawList, leaveRect, leaveLabel, ui.Ink, ButtonStyle.Tinted, ButtonRole.Destructive,
                 !store.IntentInFlight, id: "games.room.leave"))
         {
-            LeaveOrClose(isHost);
+            AskLeaveOrClose(isHost, held);
         }
 
         y = leaveRect.Max.Y;
@@ -892,7 +957,7 @@ internal sealed class OnlineRoomView : IDisposable
         if (Button.Draw(drawList, kickRect, kickLabel, ui.Ink, ButtonStyle.Tinted, ButtonRole.Destructive,
                 !store.IntentInFlight, id: KickIds[index]))
         {
-            store.Kick(player.UserId);
+            AskKick(player);
         }
     }
 }

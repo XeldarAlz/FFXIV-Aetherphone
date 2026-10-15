@@ -41,7 +41,8 @@ internal static class SocialChrome
     public static float HeaderReserve(int slots) => slots == 0 ? 0f : slots * HeaderIconPitch - 4f;
 
     public static float DrawScreenHeader(Rect area, string title, SocialInk ink, Action back, in TextStyle titleStyle,
-        float trailingReserve = 0f, string subtitle = "", bool showBack = true, bool centered = false)
+        float trailingReserve = 0f, string subtitle = "", bool showBack = true, bool centered = false,
+        bool overlay = false)
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
@@ -51,7 +52,7 @@ internal static class SocialChrome
         {
             var chipRadius = BackChipRadius * scale;
             var chipCenter = new Vector2(area.Min.X + BackChipInset * scale + chipRadius, rowCenterY);
-            if (DrawBackChip(drawList, chipCenter, chipRadius, ink))
+            if (DrawBackChip(drawList, chipCenter, chipRadius, ink, overlay))
             {
                 back();
             }
@@ -100,11 +101,12 @@ internal static class SocialChrome
         return titleLeft;
     }
 
-    public static bool DrawBackChip(ImDrawListPtr drawList, Vector2 center, float radius, SocialInk ink)
+    public static bool DrawBackChip(ImDrawListPtr drawList, Vector2 center, float radius, SocialInk ink,
+        bool overlay = false)
     {
         var scale = UiScale.Current;
         var clicked = GlassButton(drawList, ImGui.GetID(BackChipKey), center, radius, BackChipHitHalf * scale, ink,
-            false, UiSound.Tap, out var grow);
+            false, overlay, UiSound.Tap, out var grow);
         PhoneIcon.Draw(drawList, center, PhoneIcons.ChevronLeft, ink.TitleInk, BackChipGlyph * scale * grow);
         return clicked;
     }
@@ -117,7 +119,7 @@ internal static class SocialChrome
         var buttonRadius = HeaderIconRadius * scale;
         var extent = new Vector2(buttonRadius, buttonRadius);
         var clicked = GlassButton(drawList, ImGui.GetID(tooltip.Length > 0 ? tooltip : glyph), center, buttonRadius,
-            buttonRadius, ink, highlighted, tapSound, out var grow);
+            buttonRadius, ink, highlighted, false, tapSound, out var grow);
         PhoneIcon.Draw(drawList, center, glyph, highlighted ? ink.White : idleInk,
             NavBarMetrics.GlyphSize * scale * grow);
         DrawCountBadge(drawList, center + new Vector2(10f * scale, -10f * scale), badge, ink);
@@ -227,11 +229,13 @@ internal static class SocialChrome
     }
 
     private static bool GlassButton(ImDrawListPtr drawList, uint key, Vector2 center, float radius, float hitHalf,
-        SocialInk ink, bool highlighted, UiSound tapSound, out float grow)
+        SocialInk ink, bool highlighted, bool overlay, UiSound tapSound, out float grow)
     {
         var scale = UiScale.Current;
         var hit = new Vector2(hitHalf, hitHalf);
-        var hovered = UiInteract.Hover(center - hit, center + hit);
+        var hovered = overlay
+            ? UiInteract.HoverOverlay(new Rect(center - hit, center + hit))
+            : UiInteract.Hover(center - hit, center + hit);
         var down = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
         grow = PressFx.Scale(key, down, PressFx.ControlPressedScale);
         var drawn = new Vector2(radius * grow, radius * grow);

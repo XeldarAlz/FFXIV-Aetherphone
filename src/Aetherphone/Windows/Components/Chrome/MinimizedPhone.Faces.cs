@@ -43,11 +43,13 @@ internal sealed partial class MinimizedPhone
             new Vector2(screen.Max.X - StatusInset * scale, screen.Min.Y + (StatusTop + StatusHeight) * scale));
         MinimizedPhoneRenderer.DrawStatusLine(drawList, line, frameInk, heroAlpha, Math.Clamp(dnd.Value, 0f, 1f),
             countLabel, Math.Clamp(badge.Value, 0f, 1f), scale);
-        var musicPlaying = ShowsPcMusic() ? pcSnapshot.IsPlaying : playback.IsPlaying;
+        var musicPlaying = ShowsPcMusic() ? pcSnapshot.IsPlaying : MusicPlaying;
         MinimizedPhoneRenderer.DrawIsland(drawList, line.Center, liveCall, musicPlaying, clock,
             heroAlpha * Math.Clamp(island.Value, 0f, 1f), scale);
         var showDate = layout.IsEnabled(MinimizedPart.Date);
-        MinimizedPhoneRenderer.DrawHero(drawList, screen, screen.Min.Y + HeroTop * scale,
+        var hero = new Rect(new Vector2(screen.Min.X + HeroInset * scale, screen.Min.Y + HeroTop * scale),
+            new Vector2(screen.Max.X - HeroInset * scale, screen.Max.Y - (SlotBottom + SlotHeight) * scale));
+        MinimizedPhoneRenderer.DrawHero(drawList, hero,
             showDate ? dateLabel : string.Empty, showDate ? dateSize : Vector2.Zero,
             layout.IsEnabled(MinimizedPart.Clock) ? timeLabel : string.Empty, clockScale,
             layout.IsEnabled(MinimizedPart.Fps) ? fpsLabel : string.Empty, frameInk, heroAlpha);
@@ -139,16 +141,9 @@ internal sealed partial class MinimizedPhone
     {
         var scale = frameScale;
         var art = MinimizedPhoneRenderer.MusicArtRect(inner, scale);
-        var radius = MinimizedPhoneRenderer.ArtRadius(art.Width);
-        if (!NowPlayingArt.TryDrawSquircle(drawList, art.Min, art.Width, radius, playback.ArtworkUrl, alpha))
-        {
-            var swatch = ArtGradient.FromName(playback.Title);
-            Squircle.FillVerticalGradient(drawList, art.Min, art.Max, radius,
-                ImGui.GetColorU32(Palette.WithAlpha(swatch.Top, alpha)),
-                ImGui.GetColorU32(Palette.WithAlpha(swatch.Bottom, alpha)));
-        }
-
-        var state = new TransportState(playback.HasQueue, playback.HasQueue, true, playback.IsPlaying);
+        NowPlayingArt.DrawSquircle(drawList, art.Min, art.Width, MinimizedPhoneRenderer.ArtRadius(art.Width),
+            MusicArtworkUrl, MusicTitle, alpha);
+        var state = new TransportState(MusicHasQueue, MusicHasQueue, true, MusicPlaying);
         var result = MinimizedPhoneRenderer.DrawTransport(drawList, inner, state, frameInk, alpha, active, scale);
         ApplyMusicControl(result.Action);
         controlHovered |= result.Hovered;
@@ -168,7 +163,8 @@ internal sealed partial class MinimizedPhone
         }
 
         var scale = frameScale;
-        var height = MinimizedPhoneRenderer.BannerHeight(scale);
+        var height = MinimizedPhoneRenderer.BannerHeight(notification, screen.Width - BannerInset * 2f * scale,
+            scale);
         var top = screen.Min.Y + (BannerTop - BannerDrop * (1f - presence)) * scale;
         var banner = new Rect(new Vector2(screen.Min.X + BannerInset * scale, top),
             new Vector2(screen.Max.X - BannerInset * scale, top + height));
@@ -252,8 +248,8 @@ internal sealed partial class MinimizedPhone
                 PcMediaView.DrawDisc(drawList, center, radius, texture, pcSnapshot, MusicAccent, alpha);
                 return PcMediaView.Title(pcSnapshot);
             default:
-                NowPlayingArt.DrawDisc(drawList, center, radius, playback.ArtworkUrl, playback.Title, alpha);
-                return playback.Title;
+                NowPlayingArt.DrawDisc(drawList, center, radius, MusicArtworkUrl, MusicTitle, alpha);
+                return MusicTitle;
         }
     }
 
@@ -269,7 +265,7 @@ internal sealed partial class MinimizedPhone
         }
 
         var pc = displayedMode == SlotMode.PcMusic;
-        var playing = pc ? pcSnapshot.IsPlaying : playback.IsPlaying;
+        var playing = pc ? pcSnapshot.IsPlaying : MusicPlaying;
         var canToggle = !pc || pcSnapshot.CanPlayPause;
         var corner = new Vector2(radius, radius);
         controlHovered |= active && canToggle && UiInteract.Hover(center - corner, center + corner);

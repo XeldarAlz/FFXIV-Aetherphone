@@ -10,7 +10,8 @@ public sealed class CasinoHostingRulesTests
     public void ConstantsMatchTheBackendHostingRules()
     {
         Assert.Equal(2, CasinoHostingRules.MinSeats);
-        Assert.Equal(6, CasinoHostingRules.MaxSeats);
+        Assert.Equal(7, CasinoHostingRules.MaxSeats);
+        Assert.Equal(7, CasinoHostingRules.DefaultSeats);
         Assert.Equal(24, CasinoHostingRules.NameMaxLength);
         Assert.Equal(1_000, CasinoHostingRules.MinPracticeStack);
         Assert.Equal(1_000_000_000, CasinoHostingRules.MaxPracticeStack);
@@ -83,8 +84,10 @@ public sealed class CasinoHostingRulesTests
         Assert.Equal(string.Empty, CasinoHostingRules.Check(practice));
         Assert.Equal(string.Empty, CasinoHostingRules.Check(practice with { FaceUp = true, AutoDeal = false }));
         Assert.Equal(CasinoReasons.ConfigInvalid, CasinoHostingRules.Check(practice with { PracticeStack = 999 }));
-        Assert.Equal(CasinoReasons.ConfigInvalid,
+        Assert.Equal(CasinoReasons.MaxBetAboveStack,
             CasinoHostingRules.Check(practice with { MaxBet = 200_000, PracticeStack = 100_000 }));
+        Assert.Equal(CasinoReasons.MinBetAboveMax,
+            CasinoHostingRules.Check(practice with { MinBet = 50_000, MaxBet = 20_000 }));
         Assert.Equal(CasinoReasons.ConfigInvalid,
             CasinoHostingRules.Check(practice with { HouseRules = new CasinoBlackjackRuleSheetDto(Decks: 3) }));
     }
@@ -97,8 +100,9 @@ public sealed class CasinoHostingRulesTests
         Assert.Equal(20_000_000, CasinoHostingRules.PayoutCeiling(gil));
         Assert.Equal(CasinoReasons.PracticeOnly, CasinoHostingRules.Check(gil with { FaceUp = true }));
         Assert.Equal(CasinoReasons.ConfigInvalid, CasinoHostingRules.Check(gil with { Bank = 0 }));
-        Assert.Equal(CasinoReasons.ConfigInvalid, CasinoHostingRules.Check(gil with { MaxBet = 30_000_000 }));
-        Assert.Equal(CasinoReasons.ConfigInvalid, CasinoHostingRules.Check(gil with { MaxPayout = 100_000 }));
+        Assert.Equal(CasinoReasons.MaxBetAboveBank, CasinoHostingRules.Check(gil with { MaxBet = 30_000_000 }));
+        Assert.Equal(CasinoReasons.MinBetAboveMax, CasinoHostingRules.Check(gil with { MinBet = 600_000 }));
+        Assert.Equal(CasinoReasons.PayoutBelowMaxBet, CasinoHostingRules.Check(gil with { MaxPayout = 100_000 }));
         Assert.Equal(CasinoReasons.ConfigInvalid, CasinoHostingRules.Check(gil with { MaxPayout = 30_000_000 }));
         Assert.Equal(string.Empty, CasinoHostingRules.Check(gil with { MaxPayout = 5_000_000 }));
     }
@@ -108,7 +112,9 @@ public sealed class CasinoHostingRulesTests
     {
         var config = new CasinoTableConfigDto(Currency: CasinoCurrencies.Practice);
         Assert.Equal(CasinoReasons.ConfigInvalid, CasinoHostingRules.Check(config with { Seats = 1 }));
-        Assert.Equal(CasinoReasons.ConfigInvalid, CasinoHostingRules.Check(config with { Seats = 7 }));
+        Assert.Equal(CasinoReasons.ConfigInvalid,
+            CasinoHostingRules.Check(config with { Seats = CasinoHostingRules.MaxSeats + 1 }));
+        Assert.Equal(string.Empty, CasinoHostingRules.Check(config with { Seats = CasinoHostingRules.MaxSeats }));
         Assert.Equal(CasinoReasons.ConfigInvalid, CasinoHostingRules.Check(config with { TurnSeconds = 25 }));
         Assert.Equal(CasinoReasons.ConfigInvalid, CasinoHostingRules.Check(config with { TimeBankUses = 2 }));
         Assert.Equal(CasinoReasons.ConfigInvalid,
@@ -118,26 +124,26 @@ public sealed class CasinoHostingRulesTests
     }
 
     [Fact]
-    public void TheGilLedgerKnowsWhoseTapIsNext()
+    public void TheGilLedgerOffersTheHostOneActionPerEntry()
     {
-        var entry = new CasinoLedgerEntryDto(EntryId: "e1", Kind: CasinoLedgerKinds.BuyIn, Amount: 500_000,
-            PayerUserId: "player", PayeeUserId: "host", PayerConfirmed: true);
+        var recorded = new CasinoLedgerEntryDto(EntryId: "e1", Kind: CasinoLedgerKinds.BuyIn, Amount: 500_000,
+            PayerUserId: "player", PayeeUserId: "host", ProposedBy: "host", Settled: true);
+        var owed = new CasinoLedgerEntryDto(EntryId: "e2", Kind: CasinoLedgerKinds.CashOut, Amount: 650_000,
+            PayerUserId: "host", PayeeUserId: "player", ProposedBy: CasinoGilLedger.ServerProposer);
 
-        Assert.Equal(LedgerSide.Payer, CasinoGilLedger.SideOf(entry, "player"));
-        Assert.Equal(LedgerSide.Payee, CasinoGilLedger.SideOf(entry, "host"));
-        Assert.Equal(LedgerSide.None, CasinoGilLedger.SideOf(entry, "stranger"));
-        Assert.False(CasinoGilLedger.CanConfirm(entry, "player"));
-        Assert.True(CasinoGilLedger.CanConfirm(entry, "host"));
-        Assert.True(CasinoGilLedger.WaitsOnOtherSide(entry, "player"));
-        Assert.True(CasinoGilLedger.CanDispute(entry, "host"));
-        Assert.False(CasinoGilLedger.CanDispute(entry, "player"));
-        Assert.True(CasinoGilLedger.Unconfirmed(entry));
-
-        var settled = entry with { PayeeConfirmed = true, Settled = true };
-        Assert.False(CasinoGilLedger.CanConfirm(settled, "host"));
-        Assert.False(CasinoGilLedger.CanDispute(settled, "host"));
-        Assert.False(CasinoGilLedger.Unconfirmed(settled));
-        Assert.Equal(1, CasinoGilLedger.UnsettledCount(new[] { entry, settled }));
+        Assert.Equal(LedgerSide.Payer, CasinoGilLedger.SideOf(recorded, "player"));
+        Assert.Equal(LedgerSide.Payee, CasinoGilLedger.SideOf(recorded, "host"));
+        Assert.Equal(LedgerSide.None, CasinoGilLedger.SideOf(recorded, "stranger"));
+        Assert.Equal(LedgerEntryOption.Remove, CasinoGilLedger.OptionFor(recorded, true));
+        Assert.Equal(LedgerEntryOption.MarkPaid, CasinoGilLedger.OptionFor(owed, true));
+        Assert.Equal(LedgerEntryOption.MarkUnpaid, CasinoGilLedger.OptionFor(owed with { Settled = true }, true));
+        Assert.Equal(LedgerEntryOption.None, CasinoGilLedger.OptionFor(recorded, false));
+        Assert.Equal(LedgerEntryOption.None, CasinoGilLedger.OptionFor(owed, false));
+        Assert.Equal(LedgerEntryOption.None, CasinoGilLedger.OptionFor(owed with { EntryId = string.Empty }, true));
+        Assert.True(CasinoGilLedger.IsTableLine(owed));
+        Assert.False(CasinoGilLedger.IsTableLine(recorded));
+        Assert.Equal(1, CasinoGilLedger.UnsettledCount(new[] { recorded, owed }));
+        Assert.Equal(0, CasinoGilLedger.UnsettledCount(null));
 
         Assert.True(CasinoLedgerKinds.Proposable(CasinoLedgerKinds.BuyIn));
         Assert.True(CasinoLedgerKinds.Proposable(CasinoLedgerKinds.Payout));

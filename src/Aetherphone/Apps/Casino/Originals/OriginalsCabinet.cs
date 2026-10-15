@@ -143,7 +143,7 @@ internal sealed class OriginalsCabinet
         skin.Advance(frame.DeltaSeconds);
         Settle(stage, frame, state);
         var sitting = state.Sitting;
-        var blocked = state.StakesPaused || state.Draining || frame.Blocked;
+        var blocked = state.StakesPaused || state.Draining;
         var statusHeight = StatusHeight(state, frame.Safe.Width, scale);
         var hasStrip = skin.Strip.Key is not null;
         var layout = OriginalsLayout.Compute(frame.Safe, hasStrip, statusHeight, scale);

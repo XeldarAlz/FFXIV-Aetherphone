@@ -22,9 +22,14 @@ public sealed class CasinoCashierLayoutTests
     private static readonly float[] Scales = { 0.75f, 1f, 1.5f };
     private static readonly float[] DesignWidths = { 240f, 300f, 330f, 420f };
 
-    private static CashierBlocks CashierText(float scale, float notice = 0f, float note = 0f) =>
-        new(Caption * scale, Amount * scale, Footnote * scale, Footnote * scale, Heading * scale, Footnote * scale,
-            Line * scale, notice * scale, note * scale);
+    private static readonly int[] TileCounts = { 0, 1, 4 };
+
+    private static CashierBlocks CashierText(float scale, float notice = 0f, int statusLines = 1, int noteLines = 0,
+        int errorLines = 0, int hintLines = 2) =>
+        new(notice * scale, Footnote * scale, Amount * scale, Footnote * scale, Footnote * scale, Heading * scale,
+            CashierLayout.FieldHeightFor(Amount * 1.3f * scale, scale), statusLines * Footnote * scale,
+            noteLines * Footnote * scale, errorLines * Footnote * scale, (AutoTitle + hintLines * Footnote) * scale,
+            (AutoTitle + Footnote) * scale);
 
     private static GetChipsBlocks SheetText(float scale, int needLines, int hintLines, float note = 0f) =>
         new(Line * scale, needLines * Footnote * scale, Footnote * scale, Amount * scale, Footnote * scale,
@@ -39,39 +44,63 @@ public sealed class CasinoCashierLayoutTests
             for (var widthIndex = 0; widthIndex < DesignWidths.Length; widthIndex++)
             {
                 var width = DesignWidths[widthIndex] * scale;
-                for (var tiles = 0; tiles <= 3; tiles++)
+                for (var tileIndex = 0; tileIndex < TileCounts.Length; tileIndex++)
                 {
-                    AssertCashier(CashierLayout.Compute(Left, Top, width, CashierText(scale), true, true, tiles,
-                        scale), width, scale);
-                    AssertCashier(CashierLayout.Compute(Left, Top, width, CashierText(scale, 60f, 32f), true, true,
-                        tiles, scale), width, scale);
+                    var tiles = TileCounts[tileIndex];
+                    AssertCashier(CashierLayout.Compute(Left, Top, width, CashierText(scale), true, tiles, scale),
+                        width);
+                    AssertCashier(CashierLayout.Compute(Left, Top, width, CashierText(scale, 60f, 2, 2, 3, 4), true,
+                        tiles, scale), width);
+                    AssertCashier(CashierLayout.Compute(Left, Top, width, CashierText(scale, 60f, 3), false, tiles,
+                        scale), width);
                 }
             }
         }
     }
 
     [Fact]
-    public void ABlockedFloorKeepsOnlyTheBalancesAndCashOut()
+    public void ABlockedFloorDropsTheModeSegment()
     {
         const float scale = 1f;
-        var layout = CashierLayout.Compute(Left, Top, 330f, CashierText(scale, 60f), false, true, 3, scale);
+        var layout = CashierLayout.Compute(Left, Top, 330f, CashierText(scale, 60f), false, 4, scale);
 
         Assert.True(layout.HasNotice);
-        Assert.False(layout.HasBuy);
-        Assert.False(layout.HasTiles);
-        Assert.True(layout.HasCashOut);
-        Assert.True(layout.Balances.Min.Y >= layout.Notice.Max.Y - Tolerance);
-        Assert.True(layout.CashLine.Min.Y >= layout.Balances.Max.Y - Tolerance);
+        Assert.False(layout.HasSegment);
+        Assert.True(layout.Balances.Card.Min.Y >= layout.Notice.Max.Y - Tolerance);
+        Assert.True(layout.Amount.Card.Min.Y >= layout.Balances.Card.Max.Y - Tolerance);
     }
 
     [Fact]
-    public void WithoutABankrollTheCashierEndsAtBuyChips()
+    public void TheModeSegmentSitsBetweenTheBalancesAndTheAmount()
     {
         const float scale = 1f;
-        var layout = CashierLayout.Compute(Left, Top, 330f, CashierText(scale), true, false, 3, scale);
+        var layout = CashierLayout.Compute(Left, Top, 330f, CashierText(scale), true, 4, scale);
 
-        Assert.False(layout.HasCashOut);
-        Assert.Equal(layout.Buy.Max.Y, layout.Bottom, 3);
+        Assert.True(layout.HasSegment);
+        Assert.True(layout.Segment.Min.Y >= layout.Balances.Card.Max.Y - Tolerance);
+        Assert.True(layout.Amount.Card.Min.Y >= layout.Segment.Max.Y - Tolerance);
+        Assert.True(layout.Extras.Card.Min.Y >= layout.Amount.Card.Max.Y - Tolerance);
+        Assert.Equal(layout.Extras.Card.Max.Y, layout.Bottom, 3);
+    }
+
+    [Fact]
+    public void QuickTilesShareOneRowEvenly()
+    {
+        const float scale = 1f;
+        var layout = CashierLayout.Compute(Left, Top, 330f, CashierText(scale), true, 4, scale).Amount;
+
+        Assert.Equal(4, layout.TileCount);
+        Assert.Equal(layout.Tile(0).Width, layout.Tile(3).Width, 3);
+        Assert.Equal(layout.TileRow.Max.X, layout.Tile(3).Max.X, 3);
+        var single = CashierLayout.Compute(Left, Top, 330f, CashierText(scale), true, 1, scale).Amount;
+        Assert.Equal(single.TileRow.Width, single.Tile(0).Width, 3);
+    }
+
+    [Fact]
+    public void TheFieldGrowsWithTheTextSize()
+    {
+        Assert.Equal(CashierLayout.FieldHeight, CashierLayout.FieldHeightFor(10f, 1f), 3);
+        Assert.True(CashierLayout.FieldHeightFor(60f, 1f) > CashierLayout.FieldHeight);
     }
 
     [Fact]
@@ -80,12 +109,29 @@ public sealed class CasinoCashierLayoutTests
         for (var scaleIndex = 0; scaleIndex < Scales.Length; scaleIndex++)
         {
             var scale = Scales[scaleIndex];
-            var layout = CashierLayout.Compute(Left, Top, 330f * scale, CashierText(scale), true, true, 3, scale);
+            var layout = CashierLayout.Compute(Left, Top, 330f * scale, CashierText(scale), true, 4, scale);
             var touch = Button.LargeHeight * scale - Tolerance;
-            Assert.True(layout.Field.Height >= touch);
-            Assert.True(layout.Tile(0).Height >= touch);
-            Assert.True(layout.Buy.Height >= touch);
-            Assert.True(layout.CashOut.Height >= touch);
+            Assert.True(layout.Segment.Height >= touch);
+            Assert.True(layout.Amount.Field.Height >= touch);
+            Assert.True(layout.Amount.Tile(0).Height >= touch);
+            Assert.True(layout.Amount.Primary.Height >= touch);
+            Assert.True(layout.Extras.Auto.Row.Height >= touch);
+            Assert.True(layout.Extras.Limits.Row.Height >= touch);
+        }
+    }
+
+    [Fact]
+    public void ExtrasTextNeverRunsUnderItsTrailingControl()
+    {
+        for (var scaleIndex = 0; scaleIndex < Scales.Length; scaleIndex++)
+        {
+            var scale = Scales[scaleIndex];
+            var width = 330f * scale;
+            var extras = CashierLayout.Compute(Left, Top, width, CashierText(scale), true, 4, scale).Extras;
+            Assert.True(extras.Auto.Text.Max.X <= extras.Auto.Trailing.Min.X - Tolerance);
+            Assert.True(extras.Limits.Text.Max.X <= extras.Limits.Trailing.Min.X - Tolerance);
+            Assert.Equal(CashierLayout.AutoTextWidth(width, scale), extras.Auto.Text.Width, 2);
+            Assert.Equal(CashierLayout.LimitsTextWidth(width, scale), extras.Limits.Text.Width, 2);
         }
     }
 
@@ -127,56 +173,88 @@ public sealed class CasinoCashierLayoutTests
         }
     }
 
-    private static void AssertCashier(in CashierLayout layout, float width, float scale)
+    private static void AssertCashier(in CashierLayout layout, float width)
     {
-        var regions = new List<Rect> { layout.Balances };
+        var cards = new List<Rect> { layout.Balances.Card, layout.Amount.Card, layout.Extras.Card };
         if (layout.HasNotice)
         {
-            regions.Add(layout.Notice);
+            cards.Add(layout.Notice);
         }
 
-        if (layout.HasNote)
+        if (layout.HasSegment)
         {
-            regions.Add(layout.Note);
+            cards.Add(layout.Segment);
         }
 
-        if (layout.HasBuy)
+        var bounds = new Rect(new Vector2(Left, Top), new Vector2(Left + width, layout.Bottom));
+        for (var index = 0; index < cards.Count; index++)
         {
-            regions.Add(layout.BuyHeading);
-            regions.Add(layout.Field);
-            regions.Add(layout.Status);
-            regions.Add(layout.Buy);
+            AssertInside(bounds, cards[index]);
         }
 
-        for (var index = 0; index < layout.TileCount; index++)
+        AssertDisjoint(cards);
+        AssertBalances(layout.Balances);
+        AssertAmount(layout.Amount);
+        AssertExtras(layout.Extras);
+        Assert.True(layout.Bottom > Top);
+    }
+
+    private static void AssertBalances(in CashierBalancesLayout balances)
+    {
+        AssertInside(balances.Card, balances.WalletColumn);
+        AssertInside(balances.Card, balances.ChipsColumn);
+        AssertInside(balances.Card, balances.Exchange);
+        AssertInside(balances.Card, balances.RateRow);
+        Assert.True(balances.WalletColumn.Width > 0f);
+        Assert.True(balances.WalletColumn.Max.X <= balances.Exchange.Min.X + Tolerance);
+        Assert.True(balances.Exchange.Max.X <= balances.ChipsColumn.Min.X + Tolerance);
+        Assert.True(balances.RateRow.Min.Y >= balances.WalletColumn.Max.Y - Tolerance);
+    }
+
+    private static void AssertAmount(in CashierAmountLayout amount)
+    {
+        var regions = new List<Rect> { amount.Heading, amount.Field, amount.Status, amount.Primary };
+        if (amount.HasNote)
         {
-            var tile = layout.Tile(index);
+            regions.Add(amount.Note);
+        }
+
+        if (amount.HasError)
+        {
+            regions.Add(amount.Error);
+        }
+
+        for (var index = 0; index < amount.TileCount; index++)
+        {
+            var tile = amount.Tile(index);
             Assert.True(tile.Width > 0f);
             regions.Add(tile);
         }
 
-        if (layout.HasCashOut)
-        {
-            regions.Add(layout.CashLine);
-            regions.Add(layout.CashOut);
-            Assert.True(layout.Divider > (layout.HasBuy ? layout.Buy.Max.Y : layout.Balances.Max.Y) - Tolerance);
-            Assert.True(layout.Divider < layout.CashLine.Min.Y + Tolerance);
-        }
-
-        var bounds = new Rect(new Vector2(Left, Top), new Vector2(Left + width, layout.Bottom));
         for (var index = 0; index < regions.Count; index++)
         {
-            AssertInside(bounds, regions[index]);
+            AssertInside(amount.Card, regions[index]);
         }
 
         AssertDisjoint(regions);
-        AssertInside(layout.Balances, layout.WalletColumn);
-        AssertInside(layout.Balances, layout.ChipsColumn);
-        AssertInside(layout.Balances, layout.RateLine);
-        Assert.True(layout.WalletColumn.Max.X <= layout.ArrowSlot.Min.X + Tolerance);
-        Assert.True(layout.ArrowSlot.Max.X <= layout.ChipsColumn.Min.X + Tolerance);
-        Assert.True(layout.RateLine.Min.Y >= layout.WalletColumn.Max.Y - Tolerance);
-        Assert.True(layout.Bottom > Top);
+    }
+
+    private static void AssertExtras(in CashierExtrasLayout extras)
+    {
+        AssertInside(extras.Card, extras.Auto.Row);
+        AssertInside(extras.Card, extras.Limits.Row);
+        AssertDisjoint(new List<Rect> { extras.Auto.Row, extras.Limits.Row });
+        AssertRow(extras.Auto);
+        AssertRow(extras.Limits);
+        Assert.Equal(extras.Auto.Row.Max.Y, extras.Divider, 3);
+    }
+
+    private static void AssertRow(in CashierRowLayout row)
+    {
+        AssertInside(row.Row, row.Text);
+        AssertInside(row.Row, row.Trailing);
+        Assert.True(row.IconCenter.X < row.Text.Min.X);
+        Assert.True(row.IconCenter.Y >= row.Row.Min.Y && row.IconCenter.Y <= row.Row.Max.Y);
     }
 
     private static void AssertSheet(in GetChipsLayout layout, float width, float scale)

@@ -85,7 +85,8 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
             services.ChatHistory);
         var appearance = new AppearancePage(configuration, themes, this, photoLibrary, confirm, wallpapers,
             wallpaperImages, services.Looks);
-        var display = new DisplayPage(configuration, this, services.MinimizedLayout);
+        var display = new DisplayPage(configuration);
+        var minimized = new MinimizedPhonePage(services.MinimizedLayout, services.MinimizedPreview, configuration);
         var language = new LanguagePage(configuration, services.Translation);
         var general = new GeneralPage(configuration, services.Translation, confirm);
         var tutorials = new TutorialsPage(configuration);
@@ -132,7 +133,10 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
         linkedDevicesPage = new LinkedDevicesPage(configuration, aethernetSession, aethernet.Auth, this);
         var groups = new[]
         {
-            new ISettingsPage[] { general, appearance, display, sounds, notificationsPage, callsPage, nameplatePage, language },
+            new ISettingsPage[]
+            {
+                general, appearance, display, minimized, sounds, notificationsPage, callsPage, nameplatePage, language,
+            },
             new ISettingsPage[] { privacyPage, safetyPage, linkedDevicesPage },
             new ISettingsPage[] { tutorials, commands, changelogPage, about },
             new ISettingsPage[] { appsPage },
@@ -268,6 +272,11 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
     public void Draw(in PhoneContext context)
     {
         ConsumeSharedWallpaper();
+        if (GuideIntents.Consume(TourRegistry.SettingsRootIntent))
+        {
+            router.Reset();
+        }
+
         if (safetyLauncher.TryConsume())
         {
             router.Reset();

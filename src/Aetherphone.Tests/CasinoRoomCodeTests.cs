@@ -105,7 +105,7 @@ public sealed class CasinoRoomCodeTests
         var headline = 22f * scale;
         var footnote = 18f * scale;
         var row = 22f * scale;
-        var height = TableCardLayout.Height(scale, headline, footnote, row, 0f);
+        var height = TableCardLayout.Height(scale, headline, footnote, row);
         var card = new Rect(Vector2.Zero, new Vector2(PhoneWidth * scale, height));
         var layout = TableCardLayout.Compute(card, scale, headline, footnote, row, 90f * scale, 22f * scale);
 
@@ -130,7 +130,7 @@ public sealed class CasinoRoomCodeTests
         var footnote = 18f * scale;
         var row = 22f * scale;
         var card = new Rect(Vector2.Zero,
-            new Vector2(PhoneWidth * scale, TableCardLayout.Height(scale, headline, footnote, row, 0f)));
+            new Vector2(PhoneWidth * scale, TableCardLayout.Height(scale, headline, footnote, row)));
         var column = TableCardLayout.TextColumn(card, scale);
         var cap = Aetherphone.Apps.Casino.TableRow.PhaseCap(column);
         var layout = TableCardLayout.Compute(card, scale, headline, footnote, row, cap, 22f * scale);

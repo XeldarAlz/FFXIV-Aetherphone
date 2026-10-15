@@ -21,8 +21,6 @@ internal readonly record struct TableRowView(
     bool Draining,
     int Currency,
     string CurrencyLabel,
-    string Reputation,
-    bool ReputationWarns,
     bool Paused,
     string GameId = "",
     string HostLine = "",
@@ -61,15 +59,13 @@ internal static class TableRow
         float NameWidth,
         float LineWidth,
         float NameHeight,
-        float StakesHeight,
-        float ReputationHeight);
+        float StakesHeight);
 
     public static float HeightOf(in TableRowView view, float width)
     {
         var scale = MathF.Max(UiScale.Current, 0.0001f);
         var measure = Measure(view, new Rect(Vector2.Zero, new Vector2(width, 0f)), scale);
-        return TableCardLayout.Height(scale, measure.NameHeight, measure.StakesHeight, SeatRowHeight(scale),
-            measure.ReputationHeight) / scale;
+        return TableCardLayout.Height(scale, measure.NameHeight, measure.StakesHeight, SeatRowHeight(scale)) / scale;
     }
 
     private static RowMeasure Measure(in TableRowView view, in Rect row, float scale)
@@ -91,15 +87,11 @@ internal static class TableRow
 
         var nameWidth = MathF.Max(1f, column - pillWidth - TableCardLayout.PhaseGap * scale);
         var lineWidth = MathF.Max(1f, column);
-        var reputation = view.Reputation.Length > 0
-            ? Tables.PitText.Height(view.Reputation, TextStyles.Footnote, lineWidth) + TableCardLayout.LineGap * scale
-            : 0f;
         return new RowMeasure(phase, live, iconBadge, icon, pillWidth, nameWidth, lineWidth,
             MathF.Max(Typography.LineHeight(TextStyles.Headline),
                 Tables.PitText.Height(view.Name, TextStyles.Headline, nameWidth)),
             MathF.Max(Typography.LineHeight(TextStyles.Footnote),
-                Tables.PitText.Height(StakesLine(view), TextStyles.Footnote, lineWidth)),
-            reputation);
+                Tables.PitText.Height(StakesLine(view), TextStyles.Footnote, lineWidth)));
     }
 
     private static string StakesLine(in TableRowView view) =>
@@ -245,8 +237,6 @@ internal static class TableRow
         Tables.PitText.Draw(drawList, StakesLine(view), TextStyles.Footnote, ui.BodyInk, layout.TextLeft,
             layout.LineTop, measure.LineWidth, false);
         DrawSeatRow(drawList, ui, view, layout, rowHeight, scale);
-        Tables.PitText.Draw(drawList, view.Reputation, TextStyles.Footnote, view.ReputationWarns ? ui.Accent : GilTint,
-            layout.TextLeft, layout.ReputationTop + TableCardLayout.LineGap * scale, measure.LineWidth, false);
 
         return UiInteract.Click(row.Min, row.Max, hovered);
     }

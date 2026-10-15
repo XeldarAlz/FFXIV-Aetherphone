@@ -216,8 +216,13 @@ internal sealed class LodestoneService : IDisposable
         return await http.GetBytesAsync(uri, token).ConfigureAwait(false);
     }
 
-    private async Task<string?> ResolveIdAsync(string name, string world, CancellationToken token)
+    public async Task<string?> ResolveIdAsync(string name, string world, CancellationToken token)
     {
+        if (name.Length == 0 || world.Length == 0)
+        {
+            return null;
+        }
+
         EnsureIdsLoaded();
         var key = $"{name}@{world}";
         lock (idSync)

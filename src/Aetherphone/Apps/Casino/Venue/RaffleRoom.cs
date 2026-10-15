@@ -2,6 +2,7 @@ using Aetherphone.Apps.Casino.Stage;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Casino;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
@@ -17,11 +18,16 @@ internal sealed class RaffleRoom
     private const string EntrantsMarquee = "venue.raffle.entrants";
     private const string PrizeMarquee = "venue.raffle.prize";
     private const string SeedMarquee = "venue.raffle.seed";
+    private const string CapMarquee = "venue.raffle.cap";
+    private const string HostCaptionMarquee = "venue.raffle.hostCaption";
+    private const string EntrantsId = "venue.raffle.entrants";
 
     private readonly CasinoTextCache texts;
     private readonly RafflePlayback playback = new();
     private readonly VenueCheer cheer = new();
+    private readonly RaffleTicketPicker picker = new();
     private readonly RaffleComposer composer;
+    private readonly RaffleEntrantsSheet entrants;
     private readonly Action<VenueActDraft> act;
 
     private int shownWinners = -1;
@@ -29,11 +35,12 @@ internal sealed class RaffleRoom
     private string seedSource = string.Empty;
     private LanguageInfo? seedLanguage;
 
-    public RaffleRoom(CasinoTextCache texts, Action<VenueActDraft> act)
+    public RaffleRoom(CasinoTextCache texts, ConfirmService confirm, Action<VenueActDraft> act)
     {
         this.texts = texts;
         this.act = act;
         composer = new RaffleComposer(act);
+        entrants = new RaffleEntrantsSheet(texts, confirm, act);
     }
 
     public RafflePlayback Playback => playback;
@@ -43,17 +50,21 @@ internal sealed class RaffleRoom
         playback.Reset();
         cheer.Clear();
         composer.Close();
+        entrants.Close();
+        picker.Reset();
         shownWinners = -1;
     }
 
     public void Gate()
     {
         composer.Gate();
+        entrants.Gate();
     }
 
     public void DrawOverlay(Rect screen, AppSkin ui)
     {
         composer.Draw(screen, ui);
+        entrants.Draw(screen, ui);
     }
 
     public void Draw(in VenueRoomFrame room, Rect deck)
@@ -69,6 +80,7 @@ internal sealed class RaffleRoom
         var drawList = room.DrawList;
         var world = room.World;
         var live = board.Raffle;
+        entrants.Track(room.Hosting ? live : null, room.Me, room.Gil, room.Enabled);
         var shown = live ?? playback.Replaying ?? board.Last;
         var top = VenueArt.DrawSign(drawList, CasinoSign.Raffle, world, room.Frame.Phase, scale);
         var stateHeight = Typography.LineHeight(TextStyles.Title2);
@@ -114,6 +126,10 @@ internal sealed class RaffleRoom
         var entrants = shown.Entrants?.Length ?? 0;
         StageText.Label(room.DrawList, new Vector2(room.World.Center.X, top + lineHeight * 0.5f),
             texts.Counts(L.Venue.Entrants, entrants, shown.Tickets), room.World.Width, EntrantsMarquee,
+            TextStyles.Subheadline, false);
+        top += lineHeight + VenueArt.LineGap * scale;
+        StageText.Label(room.DrawList, new Vector2(room.World.Center.X, top + lineHeight * 0.5f),
+            texts.Count(L.Venue.TicketCap, shown.TicketsPerPerson), room.World.Width, CapMarquee,
             TextStyles.Subheadline, false);
         top += lineHeight + VenueArt.LineGap * scale;
         if (live is not null)
@@ -262,8 +278,6 @@ internal sealed class RaffleRoom
 
     private void DrawDeck(in VenueRoomFrame room, CasinoRaffleStateDto board, CasinoRaffleDto? live, Rect deck)
     {
-        var scale = room.Scale;
-        var drawList = room.DrawList;
         if (live is null)
         {
             DrawIdleDeck(room, board);
@@ -271,32 +285,54 @@ internal sealed class RaffleRoom
         }
 
         var held = MyTickets(live, room.Me);
-        var maxed = held >= live.TicketsPerPerson;
         if (room.Owner && room.Gil)
         {
-            VenueArt.DeckCaption(drawList, deck, Loc.T(L.Tables.ReasonHostTicket), scale);
-            if (room.Stage.PrimaryAction(Loc.T(L.Venue.DrawNow), room.Enabled, room.Ui.Ink))
-            {
-                act(new VenueActDraft(VenueActions.RaffleDraw));
-            }
-
+            DrawOwnerDeck(room, live, deck);
             return;
         }
 
-        var caption = room.Gil && live.TicketPrice > 0
-            ? texts.Number(L.Venue.TicketPriceGil, live.TicketPrice)
-            : Loc.T(L.Venue.RaffleFree);
-        VenueArt.DeckCaption(drawList, deck, caption, scale);
-        if (room.Hosting && room.Stage.SecondaryAction(Loc.T(L.Venue.DrawNow), room.Enabled, room.Ui.Ink))
+        if (room.Hosting)
+        {
+            if (room.Stage.SecondaryAction(EntrantsLabel(live), true, room.Ui.Ink))
+            {
+                entrants.Open();
+            }
+
+            if (room.Stage.SecondaryAction(Loc.T(L.Venue.DrawNow), room.Enabled, room.Ui.Ink))
+            {
+                act(new VenueActDraft(VenueActions.RaffleDraw));
+            }
+        }
+
+        if (picker.Draw(room, texts, live, deck, held))
+        {
+            CasinoSfx.Play(UiSound.Daub);
+            act(RaffleTicketPicker.Build(picker.Count));
+        }
+    }
+
+    private void DrawOwnerDeck(in VenueRoomFrame room, CasinoRaffleDto live, Rect deck)
+    {
+        var scale = room.Scale;
+        var row = DeckActions.Row(deck, scale);
+        var pills = DeckActions.Above(row, DeckActions.SecondaryHeight * scale, scale);
+        var caption = DeckActions.Above(pills, Typography.LineHeight(TextStyles.SubheadlineEmphasized), scale);
+        StageText.Label(room.DrawList, caption.Center, Loc.T(L.Tables.ReasonHostTicket), caption.Width,
+            HostCaptionMarquee, TextStyles.SubheadlineEmphasized, false);
+        if (DeckActions.DrawPill(pills, EntrantsLabel(live), room.Ui.Ink, ButtonStyle.Gray, true, EntrantsId))
+        {
+            entrants.Open();
+        }
+
+        if (room.Stage.PrimaryAction(Loc.T(L.Venue.DrawNow), room.Enabled, room.Ui.Ink))
         {
             act(new VenueActDraft(VenueActions.RaffleDraw));
         }
+    }
 
-        if (room.Stage.PrimaryAction(Loc.T(L.Venue.TakeTicket), room.Enabled && !maxed, room.Ui.Ink) && !maxed)
-        {
-            CasinoSfx.Play(UiSound.Daub);
-            act(new VenueActDraft(VenueActions.RaffleTicket, 1));
-        }
+    private string EntrantsLabel(CasinoRaffleDto live)
+    {
+        return texts.Count(L.Venue.EntrantsButton, live.Entrants?.Length ?? 0);
     }
 
     private void DrawIdleDeck(in VenueRoomFrame room, CasinoRaffleStateDto board)

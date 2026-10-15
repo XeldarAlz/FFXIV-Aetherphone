@@ -12,9 +12,7 @@ public sealed class BlackjackTableLayoutTests
 {
     private const float Epsilon = 0.01f;
     private const float PlateWidthAllowance = 72f;
-    private const float ShoeCardWidth = 22f;
-    private const float ShoeLift = 2.5f;
-
+    private const float TournamentFeltHeight = 330f;
     private const float FloorSlack = 60f;
 
     private static readonly float[] Scales = { 0.75f, 1f, 1.5f };
@@ -30,6 +28,8 @@ public sealed class BlackjackTableLayoutTests
         new(272f, 489f),
         new(272f, 437f),
         new(272f, 415f),
+        new(272f, 330f),
+        new(272f, 300f),
         new(312f, 520f),
         new(336f, 560f),
     };
@@ -57,16 +57,8 @@ public sealed class BlackjackTableLayoutTests
         bool seated)
     {
         var layout = Compute(scale, width, height, railCount, seated);
-        var felt = layout.Felt;
-        var dealerCardHalf = PlayingCards.HeightFor(layout.DealerCardPixels) * 0.5f;
-        Assert.True(layout.DealerPuck.Y - layout.DealerPuckPixels >= felt.Min.Y - Epsilon);
-        Assert.True(layout.DealerPuck.Y + layout.DealerPuckPixels < layout.DealerFanCenter.Y - dealerCardHalf);
-        Assert.True(layout.DealerFanCenter.Y + dealerCardHalf
-            < layout.DealerTotalY - BlackjackTableLayout.PillHeight * 0.5f * scale + Epsilon);
-        Assert.True(layout.DealerTotalY + BlackjackTableLayout.PillHeight * 0.5f * scale < layout.StateBand.Min.Y);
-        Assert.True(layout.StateBand.Max.Y < layout.RailTop + Epsilon);
-        Assert.True(layout.RailBottom < layout.HeroTop + Epsilon);
-        Assert.True(layout.HeroTop >= felt.Min.Y);
+        AssertZonesStack(layout, railCount, seated);
+        Assert.True(layout.HeroTop >= layout.Felt.Min.Y);
         Assert.True(layout.Fit >= BlackjackTableLayout.MinimumFit);
     }
 
@@ -86,14 +78,25 @@ public sealed class BlackjackTableLayoutTests
         }
 
         Assert.True(layout.HeroTop <= layout.HeroFanY - cardHalf - layout.RaisePixels + Epsilon);
-        var totalHalf = BlackjackTableLayout.TotalCapsuleHeight * 0.5f * scale;
+        var totalHalf = layout.TotalCapsulePixels * 0.5f;
         var plateHalf = BlackjackTableLayout.BetPlateHeight * 0.5f * scale;
         var capsuleHalf = layout.CapsulePixels * 0.5f;
-        Assert.True(layout.HeroFanY + cardHalf < layout.HeroTotalY - totalHalf);
+        var cardsBottom = layout.HeroFanY + cardHalf;
+        var totalTop = layout.HeroTotalY - totalHalf;
+        if (layout.Compact)
+        {
+            Assert.Equal(BlackjackTableLayout.CompactTotalOverlap * scale, cardsBottom - totalTop, 3);
+            Assert.True(layout.HeroTotalY > cardsBottom);
+        }
+        else
+        {
+            Assert.True(cardsBottom < totalTop);
+        }
+
         Assert.True(layout.HeroTotalY + totalHalf < layout.BetSpot.Y - layout.BetSpotPixels);
         Assert.True(layout.BetPlateY + plateHalf < layout.CapsuleCenter.Y - capsuleHalf);
         Assert.True(layout.CapsuleCenter.Y + capsuleHalf <= felt.Max.Y + Epsilon);
-        Assert.True(layout.BetSpotPixels >= BlackjackTableLayout.BetSpotRadius * scale - Epsilon);
+        Assert.True(layout.BetSpotPixels >= BetSpotFloor(layout) - Epsilon);
         Assert.True(layout.CapsulePuckPixels * 2f < layout.CapsulePixels);
     }
 
@@ -123,12 +126,32 @@ public sealed class BlackjackTableLayoutTests
 
     [Theory]
     [MemberData(nameof(Tables))]
+    public void SpotCaptionsSitInsideTheirCircles(float scale, float width, float height, int railCount,
+        bool seated)
+    {
+        if (!seated)
+        {
+            return;
+        }
+
+        var layout = Compute(scale, width, height, railCount, seated);
+        var radius = layout.BetSpotPixels;
+        Assert.True(layout.SpotCaptionWidth < radius * 2f);
+        Assert.True(layout.SpotCaptionWidth >= 34f * scale);
+        var captionHalf = layout.SpotCaptionWidth * 0.5f;
+        var lineHalf = 7f * scale;
+        Assert.True(captionHalf * captionHalf + lineHalf * lineHalf <= radius * radius);
+    }
+
+    [Theory]
+    [MemberData(nameof(Tables))]
     public void RailSeatsNeverTouchEachOtherOrLeaveTheFelt(float scale, float width, float height, int railCount,
         bool seated)
     {
         var layout = Compute(scale, width, height, railCount, seated);
         var felt = layout.Felt;
-        Assert.True(layout.SpotRadius >= BlackjackTableLayout.SpotRadiusMin * scale - Epsilon);
+        var spotFloor = layout.Compact ? BlackjackTableLayout.CompactSpotRadiusMin : BlackjackTableLayout.SpotRadiusMin;
+        Assert.True(layout.SpotRadius >= spotFloor * scale - Epsilon);
         Assert.True(layout.PuckRadius <= layout.SpotRadius + Epsilon);
         for (var slot = 0; slot < railCount; slot++)
         {
@@ -155,13 +178,12 @@ public sealed class BlackjackTableLayoutTests
         bool seated)
     {
         var layout = Compute(scale, width, height, railCount, seated);
-        var shoeHalf = new Vector2(ShoeCardWidth, PlayingCards.HeightFor(ShoeCardWidth) + ShoeLift * 2f) * 0.5f
-            * scale;
-        var shoe = new Rect(layout.ShoeAnchor - shoeHalf, layout.ShoeAnchor + shoeHalf);
+        var shoe = ShoeRect(layout);
         var fanHalf = new Vector2(layout.Felt.Width * BlackjackTableLayout.DealerFanShare,
             PlayingCards.HeightFor(layout.DealerCardPixels)) * 0.5f;
         Assert.False(Overlaps(shoe, new Rect(layout.DealerFanCenter - fanHalf, layout.DealerFanCenter + fanHalf)));
         Assert.True(shoe.Max.Y < layout.StateBand.Min.Y);
+        Assert.True(shoe.Max.X <= layout.Felt.Max.X);
         for (var slot = 0; slot < railCount; slot++)
         {
             Assert.False(Overlaps(shoe, layout.RailSeatRect(slot)));
@@ -172,20 +194,143 @@ public sealed class BlackjackTableLayoutTests
     public void TheOwnersPhoneKeepsReadableCards()
     {
         var layout = Compute(1f, 272f, 489f, BlackjackRules.SeatCount - 1, true);
+        Assert.False(layout.Compact);
         Assert.True(layout.Fit >= 0.7f);
         Assert.Equal(1f, layout.GapFit);
     }
 
-    [Fact]
-    public void TheSeatArcBowsTowardThePlayer()
+    [Theory]
+    [MemberData(nameof(ScaleData))]
+    public void ATournamentPhoneGoesCompactAndKeepsItsCardsReadable(float scale)
     {
-        var layout = Compute(1f, 272f, 489f, BlackjackRules.SeatCount - 1, true);
+        const int railCount = BlackjackRules.SeatCount - 1;
+        var layout = Compute(scale, 272f, TournamentFeltHeight, railCount, true);
+        Assert.True(layout.Compact);
+        Assert.True(layout.Fit >= BlackjackTableLayout.FitFloor - Epsilon);
+        AssertZonesStack(layout, railCount, true);
+        AssertRailSeatsStayApart(layout, railCount);
+        for (var handCount = 1; handCount <= BlackjackRules.MaxHandsPerSeat; handCount++)
+        {
+            AssertHeroHandsClearTheRail(layout, railCount, handCount);
+        }
+
+        AssertBetSpotsClearTheRailAndTheTotals(layout, railCount);
+    }
+
+    [Theory]
+    [MemberData(nameof(ScaleData))]
+    public void TheCompactFloorSitsWellBelowTheRegularOne(float scale)
+    {
+        const int railCount = BlackjackRules.SeatCount - 1;
+        var width = 272f * scale;
+        var regular = BlackjackTableLayout.MinimumHeight(width, railCount, true, scale);
+        var compact = BlackjackTableLayout.CompactMinimumHeight(width, railCount, true, scale);
+        var lastResort = BlackjackTableLayout.LastResortHeight(width, railCount, true, scale);
+        Assert.True(compact <= regular - 90f * scale);
+        Assert.True(lastResort < compact);
+        Assert.True(compact <= TournamentFeltHeight * scale);
+    }
+
+    [Theory]
+    [MemberData(nameof(ScaleData))]
+    public void TheRegularTableHoldsOnlyWhileItKeepsItsGapsAndSeventyPercentCards(float scale)
+    {
+        const int railCount = BlackjackRules.SeatCount - 1;
+        for (var height = 300f; height <= 600f; height += 5f)
+        {
+            var layout = Compute(scale, 272f, height, railCount, true);
+            if (layout.Compact)
+            {
+                continue;
+            }
+
+            Assert.Equal(1f, layout.GapFit);
+            Assert.True(layout.Fit >= BlackjackTableLayout.RegularFitFloor - Epsilon);
+        }
+
+        Assert.False(Compute(scale, 272f, 489f, railCount, true).Compact);
+        var floor = BlackjackTableLayout.MinimumHeight(272f * scale, railCount, true, scale) / scale;
+        var squeezed = Compute(scale, 272f, floor, railCount, true);
+        Assert.True(squeezed.Compact);
+        Assert.True(squeezed.Fit > BlackjackTableLayout.FitFloor);
+    }
+
+    [Theory]
+    [MemberData(nameof(ScaleData))]
+    public void GoingCompactNeverShrinksTheCards(float scale)
+    {
+        const int railCount = BlackjackRules.SeatCount - 1;
+        var previous = Compute(scale, 272f, 600f, railCount, true);
+        for (var height = 595f; height >= 300f; height -= 5f)
+        {
+            var layout = Compute(scale, 272f, height, railCount, true);
+            if (layout.Compact && !previous.Compact)
+            {
+                Assert.True(layout.Fit >= previous.Fit - Epsilon);
+            }
+
+            previous = layout;
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(ScaleData))]
+    public void TheCompactDealerRowSeatsThePuckLeftAndTheTotalRightOfTheFan(float scale)
+    {
+        var layout = Compute(scale, 272f, TournamentFeltHeight, BlackjackRules.SeatCount - 1, true);
+        Assert.True(layout.Compact);
+        var felt = layout.Felt;
+        var fanHalfWidth = felt.Width * BlackjackTableLayout.DealerFanShare * 0.5f;
+        var fanLeft = layout.DealerFanCenter.X - fanHalfWidth;
+        var fanRight = layout.DealerFanCenter.X + fanHalfWidth;
+        Assert.Equal(layout.DealerFanCenter.Y, layout.DealerPuck.Y, 3);
+        Assert.True(layout.DealerPuck.X - layout.DealerPuckPixels >= felt.Min.X);
+        Assert.True(layout.DealerPuck.X + layout.DealerPuckPixels < fanLeft);
+        Assert.Equal(0f, layout.SpeechArea.Width, 3);
+        Assert.Equal(layout.DealerFanCenter.Y, layout.DealerTotalY, 3);
+
+        var pillHalf = 18f * scale;
+        var shoeLeft = layout.ShoeAnchor.X - layout.ShoePixels * 0.5f;
+        var nearPill = layout.DealerTotalBesideX(layout.DealerFanCenter.X + 30f * scale, pillHalf);
+        Assert.True(nearPill - pillHalf > layout.DealerFanCenter.X + 30f * scale);
+        Assert.True(nearPill + pillHalf < shoeLeft);
+        var farPill = layout.DealerTotalBesideX(fanRight, pillHalf);
+        Assert.True(farPill + pillHalf < shoeLeft);
+        Assert.True(layout.DealerTotalY + layout.PillPixels * 0.5f <= layout.StateBand.Min.Y);
+    }
+
+    [Theory]
+    [MemberData(nameof(ScaleData))]
+    public void TheCompactRailPlateCoversOnlyTheLowerHalfOfTheAvatar(float scale)
+    {
+        const int railCount = BlackjackRules.SeatCount - 1;
+        var layout = Compute(scale, 272f, TournamentFeltHeight, railCount, true);
+        Assert.True(layout.Compact);
+        Assert.False(layout.ShowsRailTitles);
+        for (var slot = 0; slot < railCount; slot++)
+        {
+            var puck = layout.RailPuckCenter(slot);
+            var plate = layout.RailPlateRect(slot);
+            Assert.True(plate.Min.Y >= puck.Y + layout.PuckRadius * 0.5f - Epsilon);
+            Assert.True(plate.Min.Y < puck.Y + layout.PuckRadius);
+            var pips = BlackjackTableLayout.TimeBankPips(puck, layout.PuckRadius, scale);
+            Assert.True(pips.Y + BlackjackTableArt.TimeBankPipHalfHeight(scale) < plate.Min.Y);
+        }
+    }
+
+    [Theory]
+    [InlineData(BlackjackRules.SeatCount - 1, 36f)]
+    [InlineData(BlackjackRules.SeatCount - 2, 44f)]
+    public void TheSeatArcBowsTowardThePlayer(int railCount, float puckFloor)
+    {
+        var layout = Compute(1f, 272f, 489f, railCount, true);
         var edge = layout.RailPuckCenter(0);
-        var middle = layout.RailPuckCenter(2);
-        var last = layout.RailPuckCenter(4);
+        var middle = layout.RailPuckCenter(railCount / 2);
+        var last = layout.RailPuckCenter(railCount - 1);
+        Assert.Equal(0f, layout.Stagger);
         Assert.True(edge.Y < middle.Y);
         Assert.Equal(edge.Y, last.Y, 3);
-        Assert.True(layout.PuckRadius * 2f >= 44f);
+        Assert.True(layout.PuckRadius * 2f >= puckFloor - Epsilon);
     }
 
     [Fact]
@@ -248,8 +393,9 @@ public sealed class BlackjackTableLayoutTests
         Assert.Equal(0, BlackjackTableLayout.RailSlotOf(3, mySeat));
         Assert.Equal(1, BlackjackTableLayout.RailSlotOf(4, mySeat));
         Assert.Equal(2, BlackjackTableLayout.RailSlotOf(5, mySeat));
-        Assert.Equal(3, BlackjackTableLayout.RailSlotOf(0, mySeat));
-        Assert.Equal(4, BlackjackTableLayout.RailSlotOf(1, mySeat));
+        Assert.Equal(3, BlackjackTableLayout.RailSlotOf(6, mySeat));
+        Assert.Equal(4, BlackjackTableLayout.RailSlotOf(0, mySeat));
+        Assert.Equal(5, BlackjackTableLayout.RailSlotOf(1, mySeat));
     }
 
     [Fact]
@@ -274,28 +420,6 @@ public sealed class BlackjackTableLayoutTests
         var rightHand = layout.HeroHandCenter(2, 1);
         Assert.True(leftHand.X < rightHand.X);
         Assert.Equal(layout.Felt.Center.X - leftHand.X, rightHand.X - layout.Felt.Center.X, 3);
-    }
-
-    [Theory]
-    [MemberData(nameof(Tables))]
-    public void SideBetCaptionsStayClearOfTheCentreColumnAndInsideTheFelt(float scale, float width, float height,
-        int railCount, bool seated)
-    {
-        var layout = Compute(scale, width, height, railCount, seated);
-        if (!seated)
-        {
-            return;
-        }
-
-        var half = layout.SideCaptionWidth * 0.5f;
-        var pairs = layout.SideSpot(BlackjackSideBet.PerfectPairs);
-        var three = layout.SideSpot(BlackjackSideBet.TwentyOnePlusThree);
-        var ghostHalf = layout.HeroCardPixels(1) * 0.75f;
-        Assert.True(pairs.X + half <= layout.Felt.Center.X - ghostHalf + Epsilon);
-        Assert.True(three.X - half >= layout.Felt.Center.X + ghostHalf - Epsilon);
-        Assert.True(pairs.X - half >= layout.Felt.Min.X - Epsilon);
-        Assert.True(three.X + half <= layout.Felt.Max.X + Epsilon);
-        Assert.True(layout.SideCaptionWidth >= 56f * scale);
     }
 
     public static TheoryData<float, float, int, bool> FloorTables()
@@ -325,23 +449,30 @@ public sealed class BlackjackTableLayoutTests
         bool seated)
     {
         var floor = BlackjackTableLayout.MinimumHeight(width * scale, railCount, seated, scale) / scale;
-        for (var extra = 0f; extra <= FloorSlack; extra += FloorSlack * 0.5f)
-        {
-            var layout = Compute(scale, width, floor + extra, railCount, seated);
-            AssertZonesStack(layout, railCount, seated);
-            AssertRailSeatsStayApart(layout, railCount);
-            if (!seated)
-            {
-                continue;
-            }
+        AssertLaysOutCleanly(scale, width, floor, railCount, seated);
+    }
 
-            for (var handCount = 1; handCount <= BlackjackRules.MaxHandsPerSeat; handCount++)
-            {
-                AssertHeroHandsClearTheRail(layout, railCount, handCount);
-            }
+    [Theory]
+    [MemberData(nameof(FloorTables))]
+    public void EverySeatCountLaysOutWithoutOverlapDownToTheCompactFloor(float scale, float width, int railCount,
+        bool seated)
+    {
+        var floor = BlackjackTableLayout.CompactMinimumHeight(width * scale, railCount, seated, scale) / scale;
+        AssertLaysOutCleanly(scale, width, floor, railCount, seated);
+        var layout = Compute(scale, width, floor, railCount, seated);
+        Assert.True(layout.Fit >= BlackjackTableLayout.MinimumFit - Epsilon);
+    }
 
-            AssertBetSpotsClearTheRailAndTheTotals(layout, railCount);
-        }
+    [Theory]
+    [MemberData(nameof(FloorTables))]
+    public void EvenTheLastResortFeltKeepsItsZonesApart(float scale, float width, int railCount, bool seated)
+    {
+        var floor = BlackjackTableLayout.LastResortHeight(width * scale, railCount, seated, scale) / scale;
+        var layout = Compute(scale, width, floor, railCount, seated);
+        Assert.True(layout.Compact);
+        Assert.True(layout.Fit >= BlackjackTableLayout.LastResortFit - Epsilon);
+        AssertZonesStack(layout, railCount, seated);
+        AssertRailSeatsStayApart(layout, railCount);
     }
 
     [Theory]
@@ -349,8 +480,10 @@ public sealed class BlackjackTableLayoutTests
     public void SideStakesHangUnderEachSeatPlateInsideItsColumn(float scale, float width, int railCount,
         bool seated)
     {
-        var floor = BlackjackTableLayout.MinimumHeight(width * scale, railCount, seated, scale) / scale;
-        for (var extra = 0f; extra <= FloorSlack; extra += FloorSlack * 0.5f)
+        var floor = BlackjackTableLayout.CompactMinimumHeight(width * scale, railCount, seated, scale) / scale;
+        var regularFloor = BlackjackTableLayout.MinimumHeight(width * scale, railCount, seated, scale) / scale;
+        var span = regularFloor + FloorSlack - floor;
+        for (var extra = 0f; extra <= span; extra += span * 0.25f)
         {
             var layout = Compute(scale, width, floor + extra, railCount, seated);
             for (var slot = 0; slot < railCount; slot++)
@@ -383,17 +516,19 @@ public sealed class BlackjackTableLayoutTests
         }
     }
 
-    [Fact]
-    public void TheOwnersPhoneKeepsSideStakesOffTheStackLineAndTheHeroCards()
+    [Theory]
+    [InlineData(BlackjackRules.SeatCount - 1, 18f)]
+    [InlineData(BlackjackRules.SeatCount - 2, 20f)]
+    public void TheOwnersPhoneKeepsSideStakesOffTheStackLineAndTheHeroCards(int railCount, float stakeFloor)
     {
-        var layout = Compute(1f, 272f, 489f, BlackjackRules.SeatCount - 1, true);
-        for (var slot = 0; slot < BlackjackRules.SeatCount - 1; slot++)
+        var layout = Compute(1f, 272f, 489f, railCount, true);
+        for (var slot = 0; slot < railCount; slot++)
         {
             var plate = layout.RailPlateRect(slot);
             var stake = layout.RailSideStakeRect(slot, BlackjackSideBet.PerfectPairs, true);
             Assert.Equal(plate.Max.Y - BlackjackTableLayout.SideStakeOverlap, stake.Min.Y, 3);
             Assert.True(stake.Max.Y <= layout.SideStakeFloor + Epsilon);
-            Assert.True(stake.Width >= 20f);
+            Assert.True(stake.Width >= stakeFloor);
         }
     }
 
@@ -405,6 +540,7 @@ public sealed class BlackjackTableLayoutTests
         var pucks = new[]
         {
             (BlackjackTableLayout.RailPuckRadius, BlackjackTableLayout.RailRingGap),
+            (BlackjackTableLayout.CompactRailPuckRadius, BlackjackTableLayout.RailRingGap),
             (BlackjackTableLayout.CapsulePuckRadius, BlackjackTableLayout.CapsuleRingGap),
         };
         for (var index = 0; index < pucks.Length; index++)
@@ -466,14 +602,16 @@ public sealed class BlackjackTableLayoutTests
         AssertHeroHandsClearTheRail(layout, railCount, 2);
     }
 
-    [Fact]
-    public void BelowItsFloorTheRailWouldRunIntoTheHero()
+    [Theory]
+    [MemberData(nameof(ScaleData))]
+    public void BelowItsFloorTheRegularTableTurnsCompactInsteadOfRunningTheRailIntoTheHero(float scale)
     {
         const int railCount = BlackjackRules.SeatCount - 1;
-        var floor = BlackjackTableLayout.MinimumHeight(285f, railCount, true, 1f);
-        var squeezed = Compute(1f, 285f, floor - 40f, railCount, true);
+        var floor = BlackjackTableLayout.MinimumHeight(285f * scale, railCount, true, scale) / scale;
+        var squeezed = Compute(scale, 285f, floor - 40f, railCount, true);
 
-        Assert.True(squeezed.RailBottom > squeezed.HeroTop);
+        Assert.True(squeezed.Compact);
+        Assert.True(squeezed.RailBottom <= squeezed.HeroTop + Epsilon);
     }
 
     [Theory]
@@ -512,15 +650,48 @@ public sealed class BlackjackTableLayoutTests
         Assert.Equal(HostedInfoMode.Hidden, HostedInfoLayout.Mode(blocks, line, -50f * scale, 0f, scale));
     }
 
+    private static void AssertLaysOutCleanly(float scale, float width, float floor, int railCount, bool seated)
+    {
+        for (var extra = 0f; extra <= FloorSlack; extra += FloorSlack * 0.5f)
+        {
+            var layout = Compute(scale, width, floor + extra, railCount, seated);
+            AssertZonesStack(layout, railCount, seated);
+            AssertRailSeatsStayApart(layout, railCount);
+            if (!seated)
+            {
+                continue;
+            }
+
+            for (var handCount = 1; handCount <= BlackjackRules.MaxHandsPerSeat; handCount++)
+            {
+                AssertHeroHandsClearTheRail(layout, railCount, handCount);
+            }
+
+            AssertBetSpotsClearTheRailAndTheTotals(layout, railCount);
+        }
+    }
+
     private static void AssertZonesStack(BlackjackTableLayout layout, int railCount, bool seated)
     {
         var felt = layout.Felt;
-        var scale = layout.Scale;
         var dealerCardHalf = PlayingCards.HeightFor(layout.DealerCardPixels) * 0.5f;
-        var pillHalf = BlackjackTableLayout.PillHeight * 0.5f * scale;
+        var pillHalf = layout.PillPixels * 0.5f;
         Assert.True(layout.DealerPuck.Y - layout.DealerPuckPixels >= felt.Min.Y - Epsilon);
-        Assert.True(layout.DealerPuck.Y + layout.DealerPuckPixels <= layout.DealerFanCenter.Y - dealerCardHalf
-            + Epsilon);
+        Assert.True(layout.DealerFanCenter.Y - dealerCardHalf >= felt.Min.Y - Epsilon);
+        if (layout.Compact)
+        {
+            var fanLeft = layout.DealerFanCenter.X - felt.Width * BlackjackTableLayout.DealerFanShare * 0.5f;
+            Assert.True(layout.DealerPuck.X + layout.DealerPuckPixels <= fanLeft + Epsilon);
+            Assert.True(layout.DealerPuck.Y + layout.DealerPuckPixels <= layout.StateBand.Min.Y + Epsilon);
+            Assert.True(layout.DealerFanCenter.Y + dealerCardHalf <= layout.StateBand.Min.Y + Epsilon);
+        }
+        else
+        {
+            Assert.True(layout.DealerPuck.Y + layout.DealerPuckPixels <= layout.DealerFanCenter.Y - dealerCardHalf
+                + Epsilon);
+            Assert.True(layout.DealerFanCenter.Y + dealerCardHalf <= layout.DealerTotalY - pillHalf + Epsilon);
+        }
+
         Assert.True(layout.DealerTotalY + pillHalf <= layout.StateBand.Min.Y + Epsilon);
         if (railCount > 0)
         {
@@ -554,8 +725,9 @@ public sealed class BlackjackTableLayoutTests
             var plate = layout.RailPlateRect(slot);
             var betPlate = new Rect(new Vector2(seat.Min.X, puck.Y - layout.RailBetLift - BetPlateHalf(scale)),
                 new Vector2(seat.Max.X, puck.Y - layout.RailBetLift + BetPlateHalf(scale)));
+            var handHalf = PlayingCards.HeightFor(layout.RailCardPixels(1)) * 0.5f;
             var cards = new Rect(new Vector2(seat.Min.X, seat.Min.Y),
-                new Vector2(seat.Max.X, puck.Y - layout.RailCardsLift + RailHandHalf(scale)));
+                new Vector2(seat.Max.X, puck.Y - layout.RailCardsLift + handHalf));
             Assert.True(seat.Min.X >= felt.Min.X - Epsilon && seat.Max.X <= felt.Max.X + Epsilon);
             Assert.True(puck.X - layout.SpotRadius >= felt.Min.X - Epsilon);
             Assert.True(puck.X + layout.SpotRadius <= felt.Max.X + Epsilon);
@@ -564,11 +736,24 @@ public sealed class BlackjackTableLayoutTests
             Assert.True(Contains(seat, plate) && Contains(seat, betPlate) && Contains(seat, cards));
             Assert.False(Overlaps(cards, betPlate));
             Assert.False(Overlaps(betPlate, PuckBox(puck, layout.PuckRadius)));
-            Assert.False(Overlaps(plate, PuckBox(puck, layout.PuckRadius)));
+            if (layout.Compact)
+            {
+                Assert.True(plate.Min.Y >= puck.Y + layout.PuckRadius * BlackjackTableLayout.CompactPlateRise
+                    - Epsilon);
+            }
+            else
+            {
+                Assert.False(Overlaps(plate, PuckBox(puck, layout.PuckRadius)));
+            }
+
             for (var other = slot + 1; other < railCount; other++)
             {
+                var otherPuck = layout.RailPuckCenter(other);
                 Assert.False(Overlaps(seat, layout.RailSeatRect(other)));
-                Assert.True(Vector2.Distance(puck, layout.RailPuckCenter(other)) >= layout.SpotRadius * 2f - Epsilon);
+                Assert.True(Vector2.Distance(puck, otherPuck) >= layout.SpotRadius * 2f - Epsilon);
+                Assert.False(Overlaps(plate, layout.RailPlateRect(other)));
+                Assert.False(Overlaps(plate, PuckBox(otherPuck, layout.PuckRadius)));
+                Assert.False(Overlaps(layout.RailPlateRect(other), PuckBox(puck, layout.PuckRadius)));
             }
         }
     }
@@ -601,9 +786,8 @@ public sealed class BlackjackTableLayoutTests
 
     private static void AssertBetSpotsClearTheRailAndTheTotals(BlackjackTableLayout layout, int railCount)
     {
-        var scale = layout.Scale;
         var radius = layout.BetSpotPixels;
-        var totalsBottom = layout.HeroTotalY + BlackjackTableLayout.TotalCapsuleHeight * 0.5f * scale;
+        var totalsBottom = layout.HeroTotalY + layout.TotalCapsulePixels * 0.5f;
         var spots = new[]
         {
             layout.BetSpot, layout.SideSpot(BlackjackSideBet.PerfectPairs),
@@ -620,10 +804,19 @@ public sealed class BlackjackTableLayoutTests
         }
     }
 
-    private static float BetPlateHalf(float scale) => BlackjackTableLayout.BetPlateHeight * 0.5f * scale;
+    private static float BetSpotFloor(BlackjackTableLayout layout) =>
+        (layout.Compact ? BlackjackTableLayout.CompactBetSpotRadius : BlackjackTableLayout.BetSpotRadius)
+        * layout.Scale;
 
-    private static float RailHandHalf(float scale) =>
-        PlayingCards.HeightFor(BlackjackTableLayout.RailCardWidth * scale) * 0.5f;
+    private static Rect ShoeRect(BlackjackTableLayout layout)
+    {
+        var width = layout.ShoePixels;
+        var lift = BlackjackTableLayout.ShoeLift * layout.Scale;
+        var half = new Vector2(width, PlayingCards.HeightFor(width)) * 0.5f;
+        return new Rect(layout.ShoeAnchor - half, layout.ShoeAnchor + half + new Vector2(0f, lift));
+    }
+
+    private static float BetPlateHalf(float scale) => BlackjackTableLayout.BetPlateHeight * 0.5f * scale;
 
     private static bool Contains(in Rect outer, in Rect inner)
     {

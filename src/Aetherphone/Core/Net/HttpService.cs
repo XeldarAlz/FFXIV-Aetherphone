@@ -107,7 +107,7 @@ internal sealed class HttpService : IDisposable
     }
 
     public async Task<byte[]?> GetBytesAsync(Uri uri, CancellationToken token,
-        Action<AepFailure>? onFailure = null)
+        Action<AepFailure>? onFailure = null, bool expectNotFound = false)
     {
         if (IsPaused(uri))
         {
@@ -138,7 +138,15 @@ internal sealed class HttpService : IDisposable
                 if (!response.IsSuccessStatusCode)
                 {
                     var failure = await DescribeAsync(response, scope.Token).ConfigureAwait(false);
-                    AepLog.Warning($"HTTP GET {uri} returned {failure.Describe()}");
+                    if (expectNotFound && response.StatusCode == HttpStatusCode.NotFound)
+                    {
+                        AepLog.Debug($"HTTP GET {uri} returned {failure.Describe()}");
+                    }
+                    else
+                    {
+                        AepLog.Warning($"HTTP GET {uri} returned {failure.Describe()}");
+                    }
+
                     Report(onFailure, failure);
                     return null;
                 }

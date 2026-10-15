@@ -1,4 +1,5 @@
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Localization;
 
 namespace Aetherphone.Core.Casino;
 
@@ -127,9 +128,9 @@ internal static class CasinoHostingRules
 {
     public const int MinSeats = 2;
 
-    public const int MaxSeats = 6;
+    public const int MaxSeats = BlackjackRules.SeatCount;
 
-    public const int DefaultSeats = 6;
+    public const int DefaultSeats = BlackjackRules.SeatCount;
 
     public const int NameMaxLength = 24;
 
@@ -166,8 +167,6 @@ internal static class CasinoHostingRules
     public const int CreateCooldownSeconds = 60;
 
     public const int GilLedgerDays = 30;
-
-    public const int DisputesToFreeze = 3;
 
     public const long DefaultHoldemBigBlind = 100;
 
@@ -302,10 +301,19 @@ internal static class CasinoHostingRules
             return CasinoReasons.ConfigInvalid;
         }
 
-        if (config.MinBet < 0 || config.MaxBet < 0 || config.MaxBet > config.PracticeStack
-            || (config.MaxBet > 0 && config.MinBet > config.MaxBet))
+        if (config.MinBet < 0 || config.MaxBet < 0)
         {
             return CasinoReasons.ConfigInvalid;
+        }
+
+        if (config.MaxBet > config.PracticeStack)
+        {
+            return CasinoReasons.MaxBetAboveStack;
+        }
+
+        if (config.MaxBet > 0 && config.MinBet > config.MaxBet)
+        {
+            return CasinoReasons.MinBetAboveMax;
         }
 
         return CheckRules(config.HouseRules);
@@ -318,14 +326,28 @@ internal static class CasinoHostingRules
             return CasinoReasons.PracticeOnly;
         }
 
-        if (config.Bank < MinGil || config.Bank > MaxGil || config.MaxBet < MinGil || config.MaxBet > config.Bank
-            || config.MinBet < 0 || config.MinBet > config.MaxBet)
+        if (config.Bank < MinGil || config.Bank > MaxGil || config.MaxBet < MinGil || config.MinBet < 0)
         {
             return CasinoReasons.ConfigInvalid;
         }
 
+        if (config.MaxBet > config.Bank)
+        {
+            return CasinoReasons.MaxBetAboveBank;
+        }
+
+        if (config.MinBet > config.MaxBet)
+        {
+            return CasinoReasons.MinBetAboveMax;
+        }
+
         var payout = PayoutCeiling(config);
-        if (payout < config.MaxBet || payout > config.Bank)
+        if (payout < config.MaxBet)
+        {
+            return CasinoReasons.PayoutBelowMaxBet;
+        }
+
+        if (payout > config.Bank)
         {
             return CasinoReasons.ConfigInvalid;
         }
@@ -387,8 +409,18 @@ internal enum LedgerSide : byte
     Payee,
 }
 
+internal enum LedgerEntryOption : byte
+{
+    None,
+    MarkPaid,
+    MarkUnpaid,
+    Remove,
+}
+
 internal static class CasinoGilLedger
 {
+    public const string ServerProposer = "server";
+
     public static LedgerSide SideOf(CasinoLedgerEntryDto entry, string userId)
     {
         if (userId.Length == 0)
@@ -404,44 +436,36 @@ internal static class CasinoGilLedger
         return string.Equals(entry.PayeeUserId, userId, StringComparison.Ordinal) ? LedgerSide.Payee : LedgerSide.None;
     }
 
-    public static bool Unconfirmed(CasinoLedgerEntryDto entry)
+    public static LocString KindLabel(string kind) => kind switch
     {
-        return !entry.Settled;
+        CasinoLedgerKinds.BuyIn => L.Tables.KindBuyIn,
+        CasinoLedgerKinds.Rebuy => L.Tables.KindRebuy,
+        CasinoLedgerKinds.Payout => L.Tables.KindPayout,
+        CasinoLedgerKinds.CashOut => L.Tables.KindCashOut,
+        CasinoLedgerKinds.Stake => L.Tables.KindStake,
+        CasinoLedgerKinds.Ticket => L.Tables.KindTicket,
+        CasinoLedgerKinds.Prize => L.Tables.KindPrize,
+        _ => L.Tables.KindOther,
+    };
+
+    public static bool IsTableLine(CasinoLedgerEntryDto entry)
+    {
+        return string.Equals(entry.ProposedBy, ServerProposer, StringComparison.Ordinal);
     }
 
-    public static bool CanConfirm(CasinoLedgerEntryDto entry, string userId)
+    public static LedgerEntryOption OptionFor(CasinoLedgerEntryDto entry, bool host)
     {
-        if (entry.Settled || entry.Guest)
+        if (!host || entry.EntryId.Length == 0)
         {
-            return false;
+            return LedgerEntryOption.None;
         }
 
-        return SideOf(entry, userId) switch
+        if (!IsTableLine(entry))
         {
-            LedgerSide.Payer => !entry.PayerConfirmed,
-            LedgerSide.Payee => !entry.PayeeConfirmed,
-            _ => false,
-        };
-    }
-
-    public static bool CanDispute(CasinoLedgerEntryDto entry, string userId)
-    {
-        return !entry.Settled && !entry.Guest && !entry.Disputed && SideOf(entry, userId) == LedgerSide.Payee;
-    }
-
-    public static bool WaitsOnOtherSide(CasinoLedgerEntryDto entry, string userId)
-    {
-        if (entry.Settled)
-        {
-            return false;
+            return LedgerEntryOption.Remove;
         }
 
-        return SideOf(entry, userId) switch
-        {
-            LedgerSide.Payer => entry.PayerConfirmed && !entry.PayeeConfirmed,
-            LedgerSide.Payee => entry.PayeeConfirmed && !entry.PayerConfirmed,
-            _ => false,
-        };
+        return entry.Settled ? LedgerEntryOption.MarkUnpaid : LedgerEntryOption.MarkPaid;
     }
 
     public static int UnsettledCount(CasinoLedgerEntryDto[]? entries)

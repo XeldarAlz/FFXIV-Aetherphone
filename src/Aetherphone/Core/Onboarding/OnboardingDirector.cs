@@ -19,6 +19,7 @@ internal sealed class OnboardingDirector
     private GuideSequence? suspended;
     private int suspendedIndex;
     private bool pendingWelcome;
+    private bool pendingHalloweenGuide;
     private bool pendingResume;
     private string? pendingAppId;
     private bool suppressed = true;
@@ -59,12 +60,15 @@ internal sealed class OnboardingDirector
         if (!OnboardingState.HasCompleted(welcome.Id, welcome.ContentVersion))
         {
             pendingWelcome = true;
+            return;
         }
+
+        pendingHalloweenGuide = true;
     }
 
     public void OnAppOpened(string appId)
     {
-        if (!OnboardingState.Enabled)
+        if (!OnboardingState.Enabled || active is { LeavesHome: true })
         {
             return;
         }
@@ -89,7 +93,7 @@ internal sealed class OnboardingDirector
             return;
         }
 
-        if (exiting)
+        if (exiting || (active.Value.LeavesHome && stepIndex > 0))
         {
             CompleteExit();
             return;
@@ -111,6 +115,7 @@ internal sealed class OnboardingDirector
             suspended = null;
             TourCue.MiniPhone = false;
             pendingWelcome = false;
+            pendingHalloweenGuide = false;
             pendingResume = false;
             pendingAppId = null;
             suppressed = true;
@@ -190,6 +195,17 @@ internal sealed class OnboardingDirector
             pendingWelcome = false;
             Start(TourRegistry.GetWelcome());
             return;
+        }
+
+        if (pendingHalloweenGuide && atHome)
+        {
+            pendingHalloweenGuide = false;
+            var guide = TourRegistry.GetHalloweenGuide();
+            if (HalloweenGuideDue(guide))
+            {
+                Start(guide);
+                return;
+            }
         }
 
         if (pendingAppId is not null && currentAppId == pendingAppId && !TourHolds.IsHeld(pendingAppId))
@@ -330,6 +346,10 @@ internal sealed class OnboardingDirector
 
     private static bool CanStart(in GuideSequence sequence, bool atHome, string? currentAppId) =>
         sequence.RequiredAppId is null ? atHome : currentAppId == sequence.RequiredAppId;
+
+    private static bool HalloweenGuideDue(in GuideSequence guide) =>
+        SeasonalTheme.HalloweenByDate && !SeasonalTheme.Halloween &&
+        !OnboardingState.HasCompleted(guide.Id, guide.ContentVersion);
 
     private Rect? ResolveAnchor(in GuideStep step)
     {

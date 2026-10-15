@@ -30,6 +30,7 @@ internal sealed class OnlineConnectFourTable
     };
 
     private readonly GameRoomsStore store;
+    private readonly Action askResign;
     private readonly ParticleSystem particles = new(128);
 
     private int seenLastIndex = NotObserved;
@@ -43,9 +44,10 @@ internal sealed class OnlineConnectFourTable
     private Vector4 bannerAccent;
     private float bannerProgress = 1f;
 
-    public OnlineConnectFourTable(GameRoomsStore store)
+    public OnlineConnectFourTable(GameRoomsStore store, Action askResign)
     {
         this.store = store;
+        this.askResign = askResign;
     }
 
     public void Reset()
@@ -170,7 +172,7 @@ internal sealed class OnlineConnectFourTable
                 new Vector2(110f * scale, 30f * scale), Loc.T(L.Games.OnlineResign), ResignTint, theme)
             && !store.ActInFlight)
         {
-            store.SendResign();
+            askResign();
         }
     }
 

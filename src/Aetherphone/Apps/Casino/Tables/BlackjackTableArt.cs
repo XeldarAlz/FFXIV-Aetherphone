@@ -16,6 +16,7 @@ internal static class BlackjackTableArt
     public const float TimeBankPipPad = 0.8f;
 
     private const float ChipDiscStep = 4.2f;
+    private const float TotalPillPadX = 7f;
     private const float PlateDiscRadius = 6.5f;
     private const float FlightDiscRadius = 7.5f;
     private const float OutcomeBadgeStrokeAlpha = 0.8f;
@@ -31,22 +32,28 @@ internal static class BlackjackTableArt
     private static readonly Vector4 DiscShadow = new(0f, 0f, 0f, 0.30f);
     private static readonly Vector4 DiscRim = new(0f, 0f, 0f, 0.28f);
 
-    public static void DrawShoe(ImDrawListPtr drawList, Vector2 anchor, float scale)
+    public static void DrawShoe(ImDrawListPtr drawList, Vector2 anchor, float scale) =>
+        DrawShoe(drawList, anchor, BlackjackTableLayout.ShoeCardWidth * scale, scale);
+
+    public static void DrawShoe(ImDrawListPtr drawList, Vector2 anchor, float width, float scale)
     {
-        var width = 22f * scale;
         var height = PlayingCards.HeightFor(width);
         var half = new Vector2(width * 0.5f, height * 0.5f);
-        var lift = new Vector2(0f, 2.5f * scale);
+        var lift = new Vector2(0f, BlackjackTableLayout.ShoeLift * scale);
         var rounding = PlayingCards.RoundingFor(width);
         PlayingCards.DrawBack(drawList, new Rect(anchor - half + lift, anchor + half + lift), rounding, scale, false);
         PlayingCards.DrawBack(drawList, new Rect(anchor - half, anchor + half), rounding, scale, true);
     }
 
+    public static float TotalPillHalfWidth(string label, float scale) =>
+        Typography.Measure(label, TextStyles.FootnoteEmphasized).X * 0.5f + TotalPillPadX * scale;
+
     public static void DrawTotalPill(ImDrawListPtr drawList, Vector2 center, string label, Vector4 fill, Vector4 ink,
         float scale)
     {
         var size = Typography.Measure(label, TextStyles.FootnoteEmphasized);
-        var half = new Vector2(size.X * 0.5f + 7f * scale, MathF.Max(9f * scale, size.Y * 0.5f + 2.5f * scale));
+        var half = new Vector2(size.X * 0.5f + TotalPillPadX * scale,
+            MathF.Max(9f * scale, size.Y * 0.5f + 2.5f * scale));
         Squircle.Fill(drawList, center - half, center + half, half.Y, ImGui.GetColorU32(fill));
         Typography.DrawCentered(drawList, center, label, ink, TextStyles.FootnoteEmphasized);
     }

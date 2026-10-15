@@ -19,7 +19,7 @@ internal static class MissionText
             CasinoMissionMetrics.Games => Loc.T(L.Club.MissionGames, count),
             CasinoMissionMetrics.Wins => anyGame
                 ? Loc.T(L.Club.MissionWins, count)
-                : Loc.T(L.Club.MissionWinsOf, count, Loc.T(CasinoGameNames.Of(gameId))),
+                : Loc.T(L.Club.MissionWinsOf, count, GameName(gameId)),
             CasinoMissionMetrics.Hits => Hits(mission, target, count, gameId, anyGame),
             CasinoMissionMetrics.MaxBet => target == 1 ? Loc.T(L.Club.MissionMaxBet) : Loc.T(L.Club.MissionMaxBets, count),
             CasinoMissionMetrics.Hosted => target == 1 ? Loc.T(L.Club.MissionHosted) : Loc.T(L.Club.MissionHostedMany, count),
@@ -31,11 +31,10 @@ internal static class MissionText
     {
         CasinoGames.Slots => Loc.T(L.Club.MissionSpin, count),
         CasinoGames.Blackjack => Loc.T(L.Club.MissionHands, count),
-        CasinoGames.Wheel => Loc.T(L.Club.MissionWheel, count),
         CasinoGames.Scratch => Loc.T(L.Club.MissionScratch, count),
         CasinoGames.Plinko => Loc.T(L.Club.MissionDrop, count),
         CasinoGames.Race => Loc.T(L.Club.MissionRaces, count),
-        _ => Loc.T(L.Club.MissionRoundsOf, count, Loc.T(CasinoGameNames.Of(gameId))),
+        _ => Loc.T(L.Club.MissionRoundsOf, count, GameName(gameId)),
     };
 
     private static string Hits(CasinoMissionDto mission, long target, string count, string gameId, bool anyGame)
@@ -45,9 +44,11 @@ internal static class MissionText
         {
             return anyGame
                 ? Loc.T(L.Club.MissionHitOnce, multiple)
-                : Loc.T(L.Club.MissionHitOnceOf, multiple, Loc.T(CasinoGameNames.Of(gameId)));
+                : Loc.T(L.Club.MissionHitOnceOf, multiple, GameName(gameId));
         }
 
         return Loc.T(L.Club.MissionHits, multiple, count);
     }
+
+    private static string GameName(string gameId) => Loc.T(CasinoGameNames.OfEveryMachine(gameId));
 }

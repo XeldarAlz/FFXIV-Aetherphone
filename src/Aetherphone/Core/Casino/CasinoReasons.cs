@@ -74,6 +74,7 @@ internal static class CasinoReasons
     public const string PracticeOnly = "practice_only";
     public const string NotDealer = "not_dealer";
     public const string DealerCannotSit = "dealer_cannot_sit";
+    public const string HostCannotSit = "host_cannot_sit";
     public const string RebuyOff = "rebuy_off";
     public const string TournamentLive = "tournament_live";
     public const string NoTournament = "no_tournament";
@@ -91,25 +92,27 @@ internal static class CasinoReasons
     public const string RoundLive = "round_live";
     public const string AlreadyRolled = "already_rolled";
     public const string BankLimit = "bank_limit";
-    public const string HostFrozen = "host_frozen";
     public const string NotParty = "not_party";
-    public const string AlreadyConfirmed = "already_confirmed";
     public const string Settled = "settled";
     public const string GilOnly = "gil_only";
     public const string MachineUnknown = "machine_unknown";
     public const string MissionIncomplete = "mission_incomplete";
     public const string NotOwner = "not_owner";
     public const string CodeUnknown = "code_unknown";
-    public const string GuestEntry = "guest_entry";
     public const string TournamentHands = "tournament_hands";
     public const string TournamentPending = "tournament_pending";
+    public const string TicketCount = "ticket_count";
+    public const string MinBetAboveMax = "min_bet_above_max";
+    public const string MaxBetAboveStack = "max_bet_above_stack";
+    public const string MaxBetAboveBank = "max_bet_above_bank";
+    public const string PayoutBelowMaxBet = "payout_below_max_bet";
+    public const string NoGilTable = "no_gil_table";
 
     public static readonly string[] All =
     {
         MissionIncomplete,
         NotOwner,
         CodeUnknown,
-        GuestEntry,
         Ceiling,
         Ladder,
         BonusNotReady,
@@ -118,6 +121,7 @@ internal static class CasinoReasons
         PracticeOnly,
         NotDealer,
         DealerCannotSit,
+        HostCannotSit,
         RebuyOff,
         TournamentLive,
         NoTournament,
@@ -135,9 +139,7 @@ internal static class CasinoReasons
         RoundLive,
         AlreadyRolled,
         BankLimit,
-        HostFrozen,
         NotParty,
-        AlreadyConfirmed,
         Settled,
         GilOnly,
         StakesPaused,
@@ -203,6 +205,11 @@ internal static class CasinoReasons
         MachineUnknown,
         TournamentHands,
         TournamentPending,
+        TicketCount,
+        MinBetAboveMax,
+        MaxBetAboveStack,
+        MaxBetAboveBank,
+        PayoutBelowMaxBet,
     };
 
     private static readonly FrozenDictionary<string, LocString> Messages = new Dictionary<string, LocString>
@@ -216,6 +223,7 @@ internal static class CasinoReasons
         [PracticeOnly] = L.Tables.ReasonPracticeOnly,
         [NotDealer] = L.Tables.ReasonNotDealer,
         [DealerCannotSit] = L.Tables.ReasonDealerCannotSit,
+        [HostCannotSit] = L.Tables.ReasonHostCannotSit,
         [RebuyOff] = L.Tables.ReasonRebuyOff,
         [TournamentLive] = L.Tables.ReasonTournamentLive,
         [NoTournament] = L.Tables.ReasonNoTournament,
@@ -233,14 +241,11 @@ internal static class CasinoReasons
         [RoundLive] = L.Tables.ReasonRoundLive,
         [AlreadyRolled] = L.Tables.ReasonAlreadyRolled,
         [BankLimit] = L.Tables.ReasonBankLimit,
-        [HostFrozen] = L.Tables.ReasonHostFrozen,
         [NotParty] = L.Tables.ReasonNotParty,
-        [AlreadyConfirmed] = L.Tables.ReasonAlreadyConfirmed,
         [Settled] = L.Tables.ReasonSettled,
         [GilOnly] = L.Tables.ReasonGilOnly,
         [NotOwner] = L.Tables.ReasonNotOwner,
         [CodeUnknown] = L.Tables.ReasonCodeUnknown,
-        [GuestEntry] = L.Book.ReasonGuestEntry,
         [StakesPaused] = L.Casino.ReasonStakesPaused,
         [LossLimit] = L.Casino.ReasonLossLimit,
         [Draining] = L.Casino.ReasonDraining,
@@ -304,6 +309,11 @@ internal static class CasinoReasons
         [MachineUnknown] = L.Machines.ReasonMachineUnknown,
         [TournamentHands] = L.Tables.ReasonTournamentHands,
         [TournamentPending] = L.Tables.ReasonTournamentPending,
+        [TicketCount] = L.Venue.ReasonTicketCount,
+        [MinBetAboveMax] = L.Tables.ReasonMinBetAboveMax,
+        [MaxBetAboveStack] = L.Tables.ReasonMaxBetAboveStack,
+        [MaxBetAboveBank] = L.Tables.ReasonMaxBetAboveBank,
+        [PayoutBelowMaxBet] = L.Tables.ReasonPayoutBelowMaxBet,
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
     private static long ceilingTextValue;

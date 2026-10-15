@@ -118,6 +118,7 @@ public sealed class Plugin : IDalamudPlugin
             Cfg.MigrateHomeLooks();
             Cfg.MigrateRetiredWallpapers();
             Cfg.MigrateWindowsMediaOptIn();
+            Cfg.MigrateSeasonalThemeOptIn();
             InitializeLocalization();
             InstallSource.Initialize(PluginInterface);
             Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
@@ -456,6 +457,11 @@ public sealed class Plugin : IDalamudPlugin
             primaryCommand.HelpMessage = Loc.T(L.Plugin.CommandHelp, AepConstants.PrimaryCommand);
         }
 
+        RefreshServerBar();
+    }
+
+    public static void RefreshServerBar()
+    {
         Instance?.serverBar?.Refresh();
     }
 

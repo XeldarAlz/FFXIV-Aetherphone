@@ -38,6 +38,27 @@ public sealed class VenueWireContractTests
     }
 
     [Fact]
+    public void ATicketActCarriesItsCountOnTheExistingField()
+    {
+        var json = JsonSerializer.Serialize(new CasinoVenueActRequest("x2", VenueActions.RaffleTicket, 5),
+            AethernetJsonContext.Default.CasinoVenueActRequest);
+        using var document = JsonDocument.Parse(json);
+        Assert.Equal("raffle.ticket", document.RootElement.GetProperty("action").GetString());
+        Assert.Equal(5, document.RootElement.GetProperty("count").GetInt32());
+        Assert.Equal(5, RaffleTicketPicker.Build(5).Count);
+    }
+
+    [Fact]
+    public void ARemovalActNamesTheEntrantAsTargetUserId()
+    {
+        var json = JsonSerializer.Serialize(new CasinoVenueActRequest("x3", VenueActions.RaffleRemove,
+            TargetUserId: "u9"), AethernetJsonContext.Default.CasinoVenueActRequest);
+        using var document = JsonDocument.Parse(json);
+        Assert.Equal("raffle.remove", document.RootElement.GetProperty("action").GetString());
+        Assert.Equal("u9", document.RootElement.GetProperty("targetUserId").GetString());
+    }
+
+    [Fact]
     public void ATradeProposalCarriesTheTradeSource()
     {
         var json = JsonSerializer.Serialize(new CasinoLedgerProposeRequest("c1", CasinoLedgerKinds.BuyIn, "u-host",
@@ -94,16 +115,20 @@ public sealed class VenueWireContractTests
     }
 
     [Fact]
-    public void ListedTablesIndexByTheVenueAddress()
+    public void ANearbyTableTheListingLacksAsksForOneRefresh()
     {
-        var located = new CasinoTableRowDto(TableId: "t1", Listing: CasinoListings.Open, MaxSeats: 6, SeatedCount: 4,
-            Config: new CasinoTableConfigDto(Location: new CasinoTableLocationDto(74, 340, 5, 12)));
-        var hidden = located with { TableId = "t2", Listing = CasinoListings.Private };
-        var index = CasinoVenueStore.IndexByAddress(new[] { hidden, located }, _ => "Gilgamesh");
-        var address = VenueAddress.Of("Gilgamesh", "The Lavender Beds", 5, 12);
-        Assert.True(index.TryGetValue(address, out var row));
-        Assert.Equal("t1", row!.TableId);
-        Assert.Single(index);
+        var nearby = new[] { new CasinoTableRowDto(TableId: "t1", Listing: CasinoListings.Open) };
+        var listedElsewhere = new[] { new CasinoTableRowDto(TableId: "t9", Listing: CasinoListings.Open) };
+
+        Assert.Equal("t1", CasinoVenueStore.UnlistedNearby(nearby, listedElsewhere, string.Empty));
+        Assert.Equal(string.Empty, CasinoVenueStore.UnlistedNearby(nearby, listedElsewhere, "t1"));
+        Assert.Equal(string.Empty, CasinoVenueStore.UnlistedNearby(nearby, nearby, string.Empty));
+        Assert.Equal(string.Empty,
+            CasinoVenueStore.UnlistedNearby(Array.Empty<CasinoTableRowDto>(), listedElsewhere, string.Empty));
+
+        var second = new[] { nearby[0], new CasinoTableRowDto(TableId: "t2", Listing: CasinoListings.Knock) };
+        Assert.Equal("t2", CasinoVenueStore.UnlistedNearby(second, nearby, "t1"));
+        Assert.Equal(string.Empty, CasinoVenueStore.UnlistedNearby(second, nearby, "t2"));
     }
 
     [Fact]
@@ -223,6 +248,19 @@ public sealed class TournamentPlaybackTests
         Assert.Equal(TournamentGate.BadStack, TournamentDoorCard.GateOf(false, 2, 20, 1_000_000_001, 500));
         Assert.Equal(TournamentGate.Ready, TournamentDoorCard.GateOf(false, 2, 10, 0, 500));
         Assert.Equal(TournamentGate.Ready, TournamentDoorCard.GateOf(true, 2, 50, 50_000, 500));
+    }
+
+    [Fact]
+    public void OnlyAFreePlayBlackjackDoorOffersATournament()
+    {
+        Assert.True(TournamentDoorCard.Applies(
+            new CasinoTableRowDto(TableId: "t1", GameKind: CasinoWire.BlackjackKind, Practice: true)));
+        Assert.False(TournamentDoorCard.Applies(
+            new CasinoTableRowDto(TableId: "t1", GameKind: CasinoWire.BlackjackKind, Currency: CasinoCurrencies.Gil)));
+        Assert.False(TournamentDoorCard.Applies(new CasinoTableRowDto(TableId: "t1", GameKind: CasinoWire.BlackjackKind)));
+        Assert.False(TournamentDoorCard.Applies(
+            new CasinoTableRowDto(TableId: "t1", GameKind: HoldemRules.Kind, Practice: true)));
+        Assert.False(TournamentDoorCard.Applies(null));
     }
 
     [Fact]

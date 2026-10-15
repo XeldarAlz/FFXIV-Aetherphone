@@ -293,6 +293,11 @@ internal sealed partial class FishingApp
                 UiAnchors.Report("fishing.upcoming", row);
             }
 
+            if (!ImGui.IsRectVisible(row.Min, row.Max))
+            {
+                continue;
+            }
+
             DrawVoyageRow(row, card.Bounds, index, nowUnix, scale);
         }
 

@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
@@ -116,8 +117,19 @@ internal sealed partial class HuntsApp
         var rect = new Rect(origin, origin + new Vector2(width, AccountButtonHeight * scale));
         if (ui.DangerGhostButton(rect, Loc.T(L.Hunts.SignupLogoutButton)))
         {
-            hunts.Logout();
-            UiFeedback.Play(UiSound.ToggleOff);
+            confirm.Ask(new ConfirmRequest
+            {
+                Message = Loc.T(L.Hunts.LogoutConfirm),
+                ConfirmLabel = Loc.T(L.Hunts.SignupLogoutButton),
+                CancelLabel = Loc.T(L.Common.Cancel),
+                Sheet = true,
+                Danger = true,
+                Confirm = () =>
+                {
+                    hunts.Logout();
+                    UiFeedback.Play(UiSound.ToggleOff);
+                },
+            });
         }
 
         ImGui.SetCursorScreenPos(origin);

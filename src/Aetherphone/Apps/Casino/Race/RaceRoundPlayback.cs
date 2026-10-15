@@ -144,8 +144,7 @@ internal sealed class RaceRoundPlayback
         return true;
     }
 
-    public void Update(CasinoRoomSnapshotDto? snapshot, CasinoRaceRoomStateDto? board, long serverNowUnixMs,
-        bool instant)
+    public void Update(CasinoRoomSnapshotDto? snapshot, CasinoRaceRoomStateDto? board, long serverNowUnixMs)
     {
         if (snapshot is null)
         {
@@ -179,12 +178,6 @@ internal sealed class RaceRoundPlayback
         if (snapshot.Phase == CasinoRoomPhases.Result)
         {
             SettleAt(RaceStage.Result, lastFinishSubTick);
-            return;
-        }
-
-        if (instant)
-        {
-            SettleAt(RaceStage.Finished, lastFinishSubTick);
             return;
         }
 

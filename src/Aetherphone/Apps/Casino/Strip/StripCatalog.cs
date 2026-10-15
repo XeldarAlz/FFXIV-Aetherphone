@@ -16,6 +16,8 @@ internal readonly record struct StripEntry(string GameId, LocString Title, Casin
 
 internal static class StripCatalog
 {
+    private const string DealerSign = "DEALER";
+
     public static readonly StripShelf[] Shelves =
     {
         StripShelf.Cards,
@@ -63,9 +65,31 @@ internal static class StripCatalog
     public static LocString TitleOf(StripShelf shelf) => shelf switch
     {
         StripShelf.Cards => L.Floor.ShelfCards,
-        StripShelf.Machines => L.Strip.ShelfMachines,
+        StripShelf.Machines => L.FloorPage.SlotsTitle,
         _ => L.Floor.ShelfQuickBets,
     };
+
+    public static LocString SublineOf(StripShelf shelf) => shelf switch
+    {
+        StripShelf.Cards => L.FloorPage.CardsSubline,
+        StripShelf.Machines => L.FloorPage.SlotsSubline,
+        _ => L.FloorPage.QuickSubline,
+    };
+
+    public static int ColumnsOf(StripShelf shelf) =>
+        shelf == StripShelf.QuickBets ? StripShelves.QuickColumns : StripShelves.CardColumns;
+
+    public static PosterLayout LayoutOf(StripShelf shelf) => shelf switch
+    {
+        StripShelf.Cards => PosterTile.Grid,
+        StripShelf.Machines => PosterTile.GridBare,
+        _ => PosterTile.Quick,
+    };
+
+    public static ReadOnlySpan<char> SignOf(in StripEntry entry) =>
+        string.Equals(entry.GameId, CasinoGames.DealerHoldem, StringComparison.Ordinal)
+            ? DealerSign
+            : CasinoSigns.Text(entry.Sign);
 
     public static bool WearsSkillBadge(string gameId) =>
         string.Equals(gameId, CasinoGames.Barkeep, StringComparison.Ordinal);

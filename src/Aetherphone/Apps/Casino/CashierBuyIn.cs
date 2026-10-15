@@ -1,12 +1,7 @@
-using System.Globalization;
-using Aetherphone.Apps.Casino.Stage;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
-using Aetherphone.Windows.Components;
-using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino;
 
@@ -22,151 +17,78 @@ internal readonly record struct BuyInBounds(long WalletCoins, long Rate)
 
 internal sealed class CashierBuyIn
 {
-    private const int FieldDigits = 12;
-
     private readonly CasinoStore store;
     private readonly CasinoTextCache texts = new();
-    private readonly long[] quick = new long[ChipsAmounts.QuickCount];
-    private int quickCount;
-    private long quickWallet = -1;
-    private string buffer = string.Empty;
+    private readonly CashierField amount = new("##cashierBuyCoins");
+    private readonly long[] tiles = new long[CashierAmounts.TileCount];
 
     public CashierBuyIn(CasinoStore store)
     {
         this.store = store;
     }
 
-    public long Coins =>
-        long.TryParse(buffer, NumberStyles.None, CultureInfo.InvariantCulture, out var coins) && coins > 0 ? coins : 0;
+    public CashierField Field => amount;
+
+    public long Coins => amount.Coins;
 
     public void Reset(long suggestedChips)
     {
-        var coins = ChipsAmounts.CoinsFor(suggestedChips, store.Rate);
-        buffer = coins > 0 ? coins.ToString(CultureInfo.InvariantCulture) : string.Empty;
+        amount.Set(ChipsAmounts.CoinsFor(suggestedChips, store.Rate));
     }
 
     public void Clear()
     {
-        buffer = string.Empty;
+        amount.Clear();
     }
 
-    public int TileCount(long walletCoins)
-    {
-        if (walletCoins != quickWallet)
-        {
-            quickWallet = walletCoins;
-            quickCount = ChipsAmounts.Quick(walletCoins, quick);
-        }
+    public int Tiles(in BuyInBounds bounds) => CashierAmounts.BuyTiles(bounds.WalletCoins, tiles);
 
-        return quickCount;
+    public long Tile(int index) => tiles[index];
+
+    public string TileLabel(int index) => index == CashierAmounts.MaxTileIndex
+        ? Loc.T(L.CashierDesk.TileMax)
+        : NumberText.Compact(tiles[index]);
+
+    public void Pick(int index)
+    {
+        amount.Set(tiles[index]);
     }
 
-    public void Draw(ImDrawListPtr drawList, AppSkin ui, in CashierLayout layout, in BuyInBounds bounds,
-        bool interactive, bool overlay)
+    public CashierAmountState State(in BuyInBounds bounds) => CashierAmounts.BuyState(Coins, bounds.WalletCoins);
+
+    public string Status(in BuyInBounds bounds, CashierAmountState state, out CashierTone tone)
     {
-        var heading = layout.BuyHeading;
-        Typography.Draw(drawList, heading.Min, Typography.FitText(Loc.T(L.Chips.BuyHeading), heading.Width,
-            TextStyles.SubheadlineEmphasized), ui.TitleInk, TextStyles.SubheadlineEmphasized);
-        DrawField(drawList, ui, layout.Field, interactive);
-        if (layout.HasTiles)
+        switch (state)
         {
-            DrawTiles(drawList, ui, layout, interactive, overlay);
+            case CashierAmountState.Ready:
+                tone = CashierTone.Ready;
+                return texts.Number(L.CashierDesk.BuyReady, bounds.ChipsFor(Coins));
+            case CashierAmountState.Over:
+                tone = CashierTone.Warn;
+                return texts.Number(L.CashierDesk.BuyOver, bounds.WalletCoins);
         }
 
-        var coins = Coins;
-        var line = LineFor(bounds, coins, out var warning);
-        var status = layout.Status;
-        Typography.Draw(drawList, status.Min, Typography.FitText(line, status.Width, TextStyles.Footnote),
-            warning ? ui.Accent : ui.BodyInk, TextStyles.Footnote);
-
-        var allowed = bounds.Allows(coins);
-        var label = allowed ? texts.Compact(L.Strip.GetChipsFor, bounds.ChipsFor(coins)) : Loc.T(L.Chips.BuyHeading);
-        if (Button.Draw(drawList, layout.Buy, label, ui.Ink, ButtonStyle.Prominent,
-                enabled: interactive && allowed && !store.MovingMoney, overlay: overlay, id: "cashier.getchips"))
-        {
-            store.BuyChips(coins);
-        }
-    }
-
-    private void DrawTiles(ImDrawListPtr drawList, AppSkin ui, in CashierLayout layout, bool interactive,
-        bool overlay)
-    {
-        var enabled = interactive && !store.MovingMoney;
-        var style = Button.LabelStyle(layout.TileRow.Height);
-        for (var index = 0; index < layout.TileCount && index < quickCount; index++)
-        {
-            var rect = layout.Tile(index);
-            var hovered = enabled && (overlay
-                ? UiInteract.HoverWindowOnly(rect.Min, rect.Max)
-                : UiInteract.Hover(rect.Min, rect.Max));
-            var face = Button.Surface(drawList, rect, ui.Ink, ButtonStyle.Gray, ButtonRole.Normal, enabled, hovered,
-                ImGui.GetID($"cashier.quick{index}"));
-            var text = NumberText.Compact(quick[index]);
-            var size = CurrencyGlyph.MeasureAmount(text, style);
-            var room = face.Face.Width - face.Face.Height * 0.5f;
-            var origin = new Vector2(face.Face.Center.X - MathF.Min(size.X, room) * 0.5f,
-                face.Face.Center.Y - size.Y * 0.5f);
-            if (size.X <= room)
-            {
-                CurrencyGlyph.DrawAmount(drawList, origin, text, CurrencyKind.Coins, face.LabelInk, style,
-                    face.LabelInk.W);
-            }
-            else
-            {
-                Typography.DrawCentered(drawList, face.Face.Center, text, face.LabelInk, style);
-            }
-
-            if (enabled && UiInteract.Click(rect.Min, rect.Max, hovered))
-            {
-                buffer = quick[index].ToString(CultureInfo.InvariantCulture);
-                store.BuyChips(quick[index]);
-            }
-        }
-    }
-
-    private string LineFor(in BuyInBounds bounds, long coins, out bool warning)
-    {
-        warning = false;
         if (bounds.WalletCoins < ChipsAmounts.MinimumCoins)
         {
-            warning = true;
+            tone = CashierTone.Warn;
             return Loc.T(L.Casino.NotEnoughCoins);
         }
 
-        if (coins <= 0)
-        {
-            return texts.Numbers(L.Strip.BuyInRange, ChipsAmounts.MinimumCoins, bounds.WalletCoins);
-        }
-
-        if (coins > bounds.WalletCoins)
-        {
-            warning = true;
-            return Loc.T(L.Casino.NotEnoughCoins);
-        }
-
-        return texts.Number(L.Strip.BecomesChips, bounds.ChipsFor(coins));
+        tone = CashierTone.Idle;
+        return Loc.T(L.CashierDesk.BuyIdle);
     }
 
-    private void DrawField(ImDrawListPtr drawList, AppSkin ui, Rect field, bool interactive)
+    public string Primary(in BuyInBounds bounds, CashierAmountState state, bool compact)
     {
-        SearchBar.Surface(drawList, field, ui.Ink);
-        var capsule = SearchBar.Capsule(field);
-        var inset = capsule.Height * 0.4f;
-        var glyph = Typography.LineHeight(TextStyles.Body) * CurrencyGlyph.GlyphFraction;
-        CurrencyGlyph.Draw(drawList, CurrencyKind.Coins, new Vector2(capsule.Min.X + inset + glyph * 0.5f,
-            field.Center.Y), glyph);
-        var textLeft = capsule.Min.X + inset + glyph + inset * 0.5f;
-        var cursor = ImGui.GetCursorScreenPos();
-        ImGui.SetCursorScreenPos(new Vector2(textLeft, field.Center.Y - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(capsule.Max.X - inset - textLeft);
-        using (ImRaii.Disabled(!interactive))
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
+        if (state != CashierAmountState.Ready)
         {
-            ImGui.InputTextWithHint("##cashierCoins", Loc.T(L.Strip.CoinsFieldHint), ref buffer, FieldDigits + 1,
-                ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.AutoSelectAll);
+            return Loc.T(L.Chips.BuyHeading);
         }
 
-        ImGui.SetCursorScreenPos(cursor);
+        var chips = bounds.ChipsFor(Coins);
+        return compact ? texts.Compact(L.CashierDesk.BuyAction, chips) : texts.Number(L.CashierDesk.BuyAction, chips);
     }
+
+    public CashierPreview Preview(in BuyInBounds bounds, long stackChips) =>
+        CashierAmounts.BuyPreview(Coins, bounds.Rate, bounds.WalletCoins, stackChips);
 }

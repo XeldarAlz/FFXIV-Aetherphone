@@ -16,57 +16,74 @@ public sealed class CasinoDoorLayoutTests
 
     [Theory]
     [MemberData(nameof(Scales))]
-    public void ControlButtonsAreLargeAndNeverOverlap(float scale)
+    public void TheCodeTilesAndTheCopyPillShareOneRowInsideTheCard(float scale)
     {
-        var width = PhoneWidth * scale;
-        var labelBlock = 36f * scale;
-        for (var count = 2; count <= 5; count++)
+        var inner = (PhoneWidth - DoorLayout.Pad * 2f) * scale;
+        for (var copy = 60; copy <= 140; copy += 40)
         {
-            for (var index = 0; index < count; index++)
+            var copyWidth = copy * scale;
+            var row = DoorLayout.CodeRow(0f, 0f, inner, copyWidth, scale);
+            var lastTile = row.Tile(0f, 0f, CasinoRoomCodes.Length - 1);
+
+            Assert.True(row.TileWidth <= DoorLayout.CodeTileMax * scale + 0.01f);
+            Assert.True(row.TileHeight <= DoorLayout.Touch * scale + 0.01f);
+            Assert.True(lastTile.Max.X + DoorLayout.ButtonGap * scale <= row.Copy.Min.X + 0.01f);
+            Assert.Equal(inner, row.Copy.Max.X, 2);
+            Assert.True(row.Copy.Height >= DoorLayout.Touch * scale - 0.01f);
+            Assert.True(DoorLayout.CodeRowHeight(row, scale) >= row.TileHeight - 0.01f);
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(Scales))]
+    public void KnockCardsKeepTheirButtonsInsideAndClearOfTheName(float scale)
+    {
+        var name = 22f * scale;
+        var line = 18f * scale;
+        var width = PhoneWidth * scale;
+        var shortLabel = 70f * scale;
+        var longLabel = 125f * scale;
+        Assert.True(DoorLayout.KnockInline(width, shortLabel, shortLabel, scale));
+        Assert.False(DoorLayout.KnockInline(width, longLabel, longLabel, scale));
+        for (var arrangement = 0; arrangement < 2; arrangement++)
+        {
+            var inline = arrangement == 0;
+            var label = inline ? shortLabel : longLabel;
+            var height = DoorLayout.KnockHeight(scale, name, line, inline);
+            var card = new Rect(Vector2.Zero, new Vector2(width, height));
+            var buttons = DoorLayout.KnockButtonRects(card, label, label, inline, scale);
+            var avatar = DoorLayout.KnockAvatar(card, name, line, inline, scale);
+            var textLeft = DoorLayout.KnockTextLeft(card, scale);
+
+            Assert.True(buttons.Decline.Max.X <= buttons.Approve.Min.X || buttons.Decline.Max.Y <= buttons.Approve.Min.Y);
+            Assert.True(buttons.Approve.Max.X <= card.Max.X && buttons.Approve.Max.Y <= card.Max.Y);
+            Assert.True(buttons.Decline.Min.X >= card.Min.X && buttons.Decline.Min.Y >= card.Min.Y);
+            Assert.True(avatar.X + DoorLayout.Avatar * 0.5f * scale < textLeft);
+            if (inline)
             {
-                var cell = DoorLayout.ControlCell(0f, 0f, width, index, count, scale, labelBlock);
-                Assert.True(cell.Width >= DoorLayout.ControlButton * scale);
-                Assert.True(cell.Max.X <= width + 0.01f);
-                Assert.True(cell.Max.Y <= DoorLayout.ControlGridHeight(width, count, scale, labelBlock) + 0.01f);
-                for (var other = 0; other < index; other++)
-                {
-                    var earlier = DoorLayout.ControlCell(0f, 0f, width, other, count, scale, labelBlock);
-                    Assert.True(cell.Min.X >= earlier.Max.X - 0.01f || cell.Min.Y >= earlier.Max.Y - 0.01f);
-                }
+                Assert.True(buttons.Decline.Min.X - textLeft >= DoorLayout.KnockTextMin * scale);
+            }
+            else
+            {
+                Assert.True(avatar.Y + (name + line) * 0.5f <= buttons.Decline.Min.Y);
+                Assert.True(buttons.Decline.Width >= label * 0.5f);
             }
         }
     }
 
     [Theory]
     [MemberData(nameof(Scales))]
-    public void KnockCardsKeepTwoTouchButtonsUnderTheName(float scale)
+    public void MemberRowsKeepTheMenuClearOfTheName(float scale)
     {
-        var name = 22f * scale;
-        var line = 20f * scale;
-        var width = PhoneWidth * scale;
-        var shortLabel = 50f * scale;
-        var longLabel = 125f * scale;
-        Assert.True(DoorLayout.KnockSideBySide(width, shortLabel, shortLabel, scale));
-        Assert.False(DoorLayout.KnockSideBySide(width, shortLabel, longLabel, scale));
-        for (var arrangement = 0; arrangement < 2; arrangement++)
-        {
-            var sideBySide = arrangement == 0;
-            var label = sideBySide ? shortLabel : longLabel;
-            var height = DoorLayout.KnockHeight(scale, name, line, sideBySide);
-            var card = new Rect(Vector2.Zero, new Vector2(width, height));
-            var approve = DoorLayout.KnockButton(card, 0, sideBySide, scale);
-            var deny = DoorLayout.KnockButton(card, 1, sideBySide, scale);
-            var avatar = DoorLayout.KnockAvatar(card, scale);
+        var height = DoorLayout.MemberHeight(scale, 22f * scale, 17f * scale);
+        var row = new Rect(Vector2.Zero, new Vector2(PhoneWidth * scale, height));
+        var menu = DoorLayout.MenuCenter(row, scale);
 
-            Assert.True(approve.Height >= DoorLayout.Touch * scale - 0.01f);
-            Assert.True(deny.Height >= DoorLayout.Touch * scale - 0.01f);
-            Assert.True(approve.Max.X <= deny.Min.X || approve.Max.Y <= deny.Min.Y);
-            Assert.True(deny.Max.X <= card.Max.X && deny.Max.Y <= card.Max.Y);
-            Assert.True(approve.Width >= label + approve.Height - 0.01f);
-            Assert.True(deny.Width >= label + deny.Height - 0.01f);
-            Assert.True(avatar.Y + DoorLayout.Avatar * 0.5f * scale <= approve.Min.Y);
-            Assert.True(avatar.Y + (name + line) * 0.5f <= approve.Min.Y);
-        }
+        Assert.True(height >= DoorLayout.Touch * scale);
+        Assert.True(DoorLayout.MemberTextRight(row, true, scale) < menu.X - DoorLayout.MenuButton * 0.5f * scale);
+        Assert.Equal(row.Max.X - DoorLayout.Pad * scale, DoorLayout.MemberTextRight(row, false, scale), 3);
+        Assert.True(DoorLayout.ManageHeight(scale, 22f * scale, 40f * scale)
+            >= 22f * scale + 40f * scale + DoorLayout.ManagePadY * 2f * scale);
     }
 
     [Theory]
@@ -252,11 +269,17 @@ public sealed class CasinoDoorLayoutTests
         Assert.Equal(L.Book.DoorTitle.Key, TableDoor.TitleFor(book).Key);
         Assert.Equal(L.Book.OpenLedger.Key, TableDoor.OpenLabelFor(book).Key);
         Assert.Equal(L.Casino.DoorTitle.Key, TableDoor.TitleFor(blackjack).Key);
-        Assert.Equal(L.Casino.DoorOpenTable.Key, TableDoor.OpenLabelFor(blackjack).Key);
+        Assert.Equal(L.HostDesk.GoToTable.Key, TableDoor.OpenLabelFor(blackjack).Key);
         Assert.Equal(L.Casino.DoorTitle.Key, TableDoor.TitleFor(null).Key);
         Assert.Equal(L.Book.CloseTitle.Key, TableDoor.CloseTitleFor(book).Key);
         Assert.Equal(L.Book.CloseBody.Key, TableDoor.CloseBodyFor(book).Key);
-        Assert.Equal(L.Tables.CloseConfirmTitle.Key, TableDoor.CloseTitleFor(blackjack).Key);
-        Assert.Equal(L.Tables.CloseConfirmBody.Key, TableDoor.CloseBodyFor(blackjack).Key);
+        Assert.Equal(L.HostDesk.CloseBook.Key, TableDoor.CloseLabelFor(book).Key);
+        Assert.Equal(L.HostDesk.CloseNamed.Key, TableDoor.CloseTitleFor(blackjack).Key);
+        Assert.Equal(L.HostDesk.CloseBody.Key, TableDoor.CloseBodyFor(blackjack).Key);
+        Assert.Equal(L.HostDesk.CloseTitle.Key, TableDoor.CloseLabelFor(blackjack).Key);
+        var gil = blackjack with { Currency = CasinoCurrencies.Gil };
+        Assert.Equal(L.HostDesk.CloseGilBody.Key, TableDoor.CloseBodyFor(gil).Key);
+        Assert.Equal(L.HostDesk.CloseGilLine.Key, TableDoor.CloseLineFor(gil).Key);
+        Assert.Equal(L.HostDesk.CloseLine.Key, TableDoor.CloseLineFor(blackjack).Key);
     }
 }

@@ -295,13 +295,6 @@ public sealed class NameEffectSyncTests
     }
 
     [Fact]
-    public void TheHallowedRewardWearsWitchfire()
-    {
-        Assert.Equal(NameEffectKind.Witchfire, NameEffects.Hallowed(false).Kind);
-        Assert.Equal(4, NameEffects.Hallowed(true).Ramp.Count);
-    }
-
-    [Fact]
     public void StaticDecorationsStayStill()
     {
         string[] still = { "horizon", "outline", "shadow", "longshadow", "emboss" };

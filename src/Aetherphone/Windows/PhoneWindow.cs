@@ -452,6 +452,7 @@ internal sealed class PhoneWindow : Window
             }
         }
 
+        Components.WheelLock.ReleaseStale();
         if (shell.MinimizePhase == MinimizePhase.None && !turning)
         {
             if (shell.Turn.ShowsLandscape)

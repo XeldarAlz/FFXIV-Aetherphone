@@ -2,6 +2,8 @@ using Aetherphone.Core;
 
 namespace Aetherphone.Apps.Casino.Stage;
 
+internal readonly record struct HostPillPlacement(Rect Pill, bool Collapsed, Vector2 CapsuleCenter, float CapsuleWidth);
+
 internal readonly struct CasinoStageLayout
 {
     public const float ChromeBand = 52f;
@@ -15,6 +17,8 @@ internal readonly struct CasinoStageLayout
     public const float PracticeRibbonHeight = 22f;
     public const float DeckHeight = 118f;
     public const float SafeInset = 12f;
+    public const float HostGap = 8f;
+    public const float CapsuleMinimum = 120f;
 
     public readonly Rect Full;
     public readonly Rect Band;
@@ -28,10 +32,15 @@ internal readonly struct CasinoStageLayout
     public readonly Rect Practice;
     public readonly Rect Deck;
     public readonly Rect Safe;
+    public readonly Rect HostPill;
+    public readonly bool HostCollapsed;
 
     private CasinoStageLayout(Rect full, Rect band, Vector2 backCenter, Vector2 infoCenter, Vector2 capsuleCenter,
-        float capsuleMaxWidth, float chipRadius, float touchRadius, Rect ribbon, Rect practice, Rect deck, Rect safe)
+        float capsuleMaxWidth, float chipRadius, float touchRadius, Rect ribbon, Rect practice, Rect deck, Rect safe,
+        Rect hostPill = default, bool hostCollapsed = false)
     {
+        HostPill = hostPill;
+        HostCollapsed = hostCollapsed;
         Full = full;
         Band = band;
         BackCenter = backCenter;
@@ -53,6 +62,36 @@ internal readonly struct CasinoStageLayout
     public bool HasPractice => Practice.Height > 0f;
 
     public bool Landscape => Full.Width > Full.Height;
+
+    public bool HasHost => HostPill.Width > 0f;
+
+    public CasinoStageLayout WithHost(float pillWidth, float scale)
+    {
+        if (Landscape)
+        {
+            return this;
+        }
+
+        var placement = PlaceHost(BackCenter, InfoCenter, ChipRadiusPixels, pillWidth, scale);
+        return new CasinoStageLayout(Full, Band, BackCenter, InfoCenter, placement.CapsuleCenter, placement.CapsuleWidth,
+            ChipRadiusPixels, TouchRadiusPixels, Ribbon, Practice, Deck, Safe, placement.Pill, placement.Collapsed);
+    }
+
+    public static HostPillPlacement PlaceHost(Vector2 backCenter, Vector2 infoCenter, float chipRadius,
+        float pillWidth, float scale)
+    {
+        var gap = HostGap * scale;
+        var right = infoCenter.X - chipRadius - gap;
+        var laneLeft = backCenter.X + chipRadius + gap;
+        var diameter = chipRadius * 2f;
+        var collapsed = right - MathF.Max(pillWidth, diameter) - gap - laneLeft < CapsuleMinimum * scale;
+        var width = collapsed ? diameter : MathF.Max(pillWidth, diameter);
+        var pill = new Rect(new Vector2(right - width, infoCenter.Y - chipRadius),
+            new Vector2(right, infoCenter.Y + chipRadius));
+        var laneRight = pill.Min.X - gap;
+        return new HostPillPlacement(pill, collapsed, new Vector2((laneLeft + laneRight) * 0.5f, infoCenter.Y),
+            MathF.Max(0f, laneRight - laneLeft));
+    }
 
     public static CasinoStageLayout Compute(Rect full, bool ribbon, bool practice, float deckHeight, float scale) =>
         Compute(full, full, ribbon, practice, deckHeight, scale);
@@ -110,6 +149,12 @@ internal readonly struct CasinoStageLayout
         }
 
         if (Vector2.DistanceSquared(point, InfoCenter) <= radiusSquared)
+        {
+            return true;
+        }
+
+        if (HasHost && point.X >= HostPill.Min.X && point.X <= HostPill.Max.X && point.Y >= HostPill.Min.Y
+            && point.Y <= HostPill.Max.Y)
         {
             return true;
         }

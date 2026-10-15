@@ -4,6 +4,7 @@ using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Translation;
 using Aetherphone.Core.Platform;
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -27,6 +28,16 @@ internal sealed class GeneralPage : ISettingsPage
         new(L.Settings.Use24HourClock, L.Settings.ClockFormat),
         new(L.Settings.OpenOnStartup, L.Settings.Startup),
         new(L.Settings.OpenMinimized, L.Settings.Startup),
+        new(L.Settings.ServerBar),
+    };
+
+    private const float ServerBarLabelShare = 0.4f;
+
+    private static readonly LocString[] ServerBarStyles =
+    {
+        L.Settings.ServerBarIconAndText,
+        L.Settings.ServerBarText,
+        L.Settings.ServerBarIcon,
     };
 
     public string Title => Loc.T(L.Settings.General);
@@ -37,6 +48,8 @@ internal sealed class GeneralPage : ISettingsPage
     private readonly Configuration configuration;
     private readonly TranslationService translation;
     private readonly ConfirmService confirm;
+    private readonly string[] serverBarLabels = new string[ServerBarStyles.Length];
+    private bool editingServerBarText;
 
     public GeneralPage(Configuration configuration, TranslationService translation, ConfirmService confirm)
     {
@@ -173,8 +186,81 @@ internal sealed class GeneralPage : ISettingsPage
                 configuration.OpenMinimizedOnStartup = openMinimized;
                 configuration.Save();
             }
+
+            SettingsSection.Header(Loc.T(L.Settings.ServerBar), theme, Loc.T(L.Settings.ServerBarHint));
+            DrawServerBar(theme, scale);
+            ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
         }
     }
+
+    private void DrawServerBar(PhoneTheme theme, float scale)
+    {
+        for (var index = 0; index < ServerBarStyles.Length; index++)
+        {
+            serverBarLabels[index] = Loc.T(ServerBarStyles[index]);
+        }
+
+        var card = GroupCard.Begin(theme, 2);
+        DrawServerBarPreview(card.NextRow(), theme, scale);
+        var picked = SegmentStrip.Draw("settings.serverBar", card.NextRow(), serverBarLabels,
+            (int)configuration.ServerBarStyle, theme);
+        card.End();
+        if (picked == (int)configuration.ServerBarStyle)
+        {
+            return;
+        }
+
+        configuration.ServerBarStyle = (ServerBarStyle)picked;
+        configuration.Save();
+        Plugin.RefreshServerBar();
+    }
+
+    private void DrawServerBarPreview(Rect row, PhoneTheme theme, float scale)
+    {
+        var label = Loc.T(L.Settings.ServerBarPreview);
+        var labelHeight = Typography.Measure(label, TextStyles.BodyEmphasized).Y;
+        var labelWidth = Marquee.DrawLeftAuto("settings.serverBarPreview", label, row.Min.X,
+            row.Center.Y - labelHeight * 0.5f, row.Width * ServerBarLabelShare, TextStyles.BodyEmphasized,
+            theme.TextStrong);
+        var drawList = ImGui.GetWindowDrawList();
+        var iconSize = Metrics.Size.IconTile * scale;
+        var style = configuration.ServerBarStyle;
+        if (style == ServerBarStyle.Icon)
+        {
+            GameFontIcon.Draw(drawList, new Vector2(row.Max.X - iconSize * 0.5f, row.Center.Y), ServerBarEntry.Icon,
+                iconSize);
+            return;
+        }
+
+        var left = row.Min.X + labelWidth + Metrics.Space.Md * scale;
+        if (style == ServerBarStyle.IconAndText)
+        {
+            GameFontIcon.Draw(drawList, new Vector2(left + iconSize * 0.5f, row.Center.Y), ServerBarEntry.Icon,
+                iconSize);
+            left += iconSize + Metrics.Space.Sm * scale;
+        }
+
+        var halfHeight = Metrics.Size.FieldHeight * scale * 0.5f;
+        var field = new Rect(new Vector2(left, row.Center.Y - halfHeight),
+            new Vector2(row.Max.X, row.Center.Y + halfHeight));
+        SearchBar.Surface(drawList, field, ControlInk.From(theme));
+        var text = configuration.ServerBarText;
+        if (GlassField.Text(field, "##settings.serverBarText", ServerBarEntry.DefaultText, ref text, theme, scale,
+                ServerBarEntry.MaxTextLength, false, ImGuiInputTextFlags.None))
+        {
+            configuration.ServerBarText = text;
+            Plugin.RefreshServerBar();
+        }
+
+        var active = ImGui.IsItemActive();
+        if (editingServerBarText && !active)
+        {
+            configuration.Save();
+        }
+
+        editingServerBarText = active;
+    }
+
     private void SetAutoTranslate(bool enabled)
     {
         if (!enabled)

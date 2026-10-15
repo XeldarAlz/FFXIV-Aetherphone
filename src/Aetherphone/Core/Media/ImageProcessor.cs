@@ -6,6 +6,7 @@ using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin.Services;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
@@ -16,12 +17,14 @@ internal readonly struct BakedImage
     public readonly byte[] Bytes;
     public readonly int Width;
     public readonly int Height;
+    public readonly string ContentType;
 
-    public BakedImage(byte[] bytes, int width, int height)
+    public BakedImage(byte[] bytes, int width, int height, string contentType = "image/jpeg")
     {
         Bytes = bytes;
         Width = width;
         Height = height;
+        ContentType = contentType;
     }
 }
 
@@ -29,6 +32,8 @@ internal static class ImageProcessor
 {
     private const int JpegQuality = 88;
     private const JpegChromaSubsampling JpegSubsampling = JpegChromaSubsampling.Ratio420;
+    private const int MaxUploadBytes = 8 * 1024 * 1024;
+    private const float OversizeScale = 0.8f;
 
     public const long MaxDecodePixels = 4096L * 4096L;
     public const long MaxLocalDecodePixels = 8192L * 8192L;
@@ -120,6 +125,18 @@ internal static class ImageProcessor
     public static BakedImage BakeCroppedJpeg(string sourcePath, WallpaperCrop crop, int targetWidth, int targetHeight,
         bool revealWholeImage, in PhotoEdit edit)
     {
+        return BakeCroppedImage(sourcePath, crop, targetWidth, targetHeight, revealWholeImage, edit, false);
+    }
+
+    public static BakedImage BakeCroppedUpload(string sourcePath, WallpaperCrop crop, int targetWidth, int targetHeight,
+        bool revealWholeImage, in PhotoEdit edit)
+    {
+        return BakeCroppedImage(sourcePath, crop, targetWidth, targetHeight, revealWholeImage, edit, true);
+    }
+
+    private static BakedImage BakeCroppedImage(string sourcePath, WallpaperCrop crop, int targetWidth, int targetHeight,
+        bool revealWholeImage, in PhotoEdit edit, bool preserveTransparency)
+    {
         using var image = LoadForBake(sourcePath, edit);
         var size = new Vector2(image.Width, image.Height);
         var aspect = (float)targetWidth / targetHeight;
@@ -136,7 +153,7 @@ internal static class ImageProcessor
         image.Mutate(context => context
             .Crop(new Rectangle(x, y, width, height))
             .Resize(containedWidth, containedHeight));
-        return new BakedImage(EncodeJpeg(image), containedWidth, containedHeight);
+        return EncodeImage(image, preserveTransparency);
     }
 
     public static (int Width, int Height) ContainSize(int width, int height, int targetWidth, int targetHeight)
@@ -154,9 +171,19 @@ internal static class ImageProcessor
 
     public static BakedImage BakeJpeg(string sourcePath, int maxDimension)
     {
+        return BakeImage(sourcePath, maxDimension, false);
+    }
+
+    public static BakedImage BakeUpload(string sourcePath, int maxDimension)
+    {
+        return BakeImage(sourcePath, maxDimension, true);
+    }
+
+    private static BakedImage BakeImage(string sourcePath, int maxDimension, bool preserveTransparency)
+    {
         using var image = LoadForBake(sourcePath, PhotoEdit.None);
         ScaleWithin(image, maxDimension);
-        return new BakedImage(EncodeJpeg(image), image.Width, image.Height);
+        return EncodeImage(image, preserveTransparency);
     }
 
     private static Image<Rgba32> LoadForBake(string sourcePath, in PhotoEdit edit)
@@ -180,7 +207,7 @@ internal static class ImageProcessor
         }
     }
 
-    private static byte[] EncodeJpeg(Image<Rgba32> image)
+    private static BakedImage EncodeImage(Image<Rgba32> image, bool preserveTransparency)
     {
         var length = checked(image.Width * image.Height * 4);
         var pixels = ArrayPool<byte>.Shared.Rent(length);
@@ -188,12 +215,53 @@ internal static class ImageProcessor
         {
             var span = pixels.AsSpan(0, length);
             image.CopyPixelDataTo(span);
+            if (preserveTransparency && HasTransparency(span))
+            {
+                return EncodePng(image);
+            }
+
             FlattenOntoBlack(span);
-            return ScalarJpegEncoder.Encode(span, image.Width, image.Height, JpegQuality, JpegSubsampling);
+            var bytes = ScalarJpegEncoder.Encode(span, image.Width, image.Height, JpegQuality, JpegSubsampling);
+            return new BakedImage(bytes, image.Width, image.Height);
         }
         finally
         {
             ArrayPool<byte>.Shared.Return(pixels);
+        }
+    }
+
+    private static bool HasTransparency(ReadOnlySpan<byte> pixels)
+    {
+        for (var pixelOffset = 3; pixelOffset < pixels.Length; pixelOffset += 4)
+        {
+            if (pixels[pixelOffset] != byte.MaxValue)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static BakedImage EncodePng(Image<Rgba32> image)
+    {
+        var encoder = new PngEncoder
+        {
+            ColorType = PngColorType.RgbWithAlpha,
+            BitDepth = PngBitDepth.Bit8,
+            SkipMetadata = true,
+        };
+        using var stream = new MemoryStream();
+        while (true)
+        {
+            stream.SetLength(0);
+            image.Save(stream, encoder);
+            if (stream.Length <= MaxUploadBytes)
+            {
+                return new BakedImage(stream.ToArray(), image.Width, image.Height, "image/png");
+            }
+
+            ScaleWithin(image, Math.Max(1, (int)(Math.Max(image.Width, image.Height) * OversizeScale)));
         }
     }
 

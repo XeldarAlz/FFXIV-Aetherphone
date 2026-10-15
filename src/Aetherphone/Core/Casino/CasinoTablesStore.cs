@@ -15,7 +15,8 @@ internal sealed class CasinoTablesStore : IDisposable
     private static readonly TimeSpan ForegroundPollInterval = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan BackgroundPollInterval = TimeSpan.FromSeconds(120);
     private const long RetryAfterAttemptMilliseconds = 30_000;
-    private const long LedgerRefreshMilliseconds = 10_000;
+    private const long LedgerRetryMilliseconds = 3_000;
+    private const long LedgerRefreshMilliseconds = 5_000;
     private const long DoorRefreshMilliseconds = 5_000;
     private const long KnockRefreshMilliseconds = 3_000;
     private const long AwayKnockRefreshMilliseconds = 15_000;
@@ -27,16 +28,22 @@ internal sealed class CasinoTablesStore : IDisposable
     private readonly CasinoStore chips;
     private readonly PollCadence cadence;
     private readonly StoreWork work = new("CasinoTables");
+    private readonly BookLedgerAdmission bookLedgerAdmission = new();
     private readonly object intentGate = new();
     private readonly Action<int> tableStatusSink;
 
     private volatile CasinoTableRowDto[] tables = Array.Empty<CasinoTableRowDto>();
     private volatile CasinoTableRowDto[] listed = Array.Empty<CasinoTableRowDto>();
     private volatile CasinoTableDoorDto? door;
-    private volatile CasinoTableLedgerDto? ledger;
+    private readonly object ledgerGate = new();
+    private Dictionary<string, LedgerSlot> ledgerSlots = new(StringComparer.Ordinal);
+    private int ledgerVersion;
+    private volatile string ledgerWatchedRoomId = string.Empty;
+    private long ledgerWatchedAtTick;
     private volatile CasinoTableRowDto? card;
     private readonly Action<int> cardStatusSink;
     private int fetchingCard;
+    private string cardRefetchId = string.Empty;
     private long cardAtTick;
     private long listedAtTick;
     private int cardMissing;
@@ -49,14 +56,9 @@ internal sealed class CasinoTablesStore : IDisposable
     private long knockWatchedAtTick;
     private long doorWatchedAtTick;
     private volatile string doorWatchedRoomId = string.Empty;
-    private volatile string ledgerRoomId = string.Empty;
     private CasinoTableConfigDto? createIntentConfig;
     private string ledgerIntentId = string.Empty;
     private LedgerIntent ledgerIntentKey;
-    private int fetchingLedger;
-    private int ledgerRefetch;
-    private long ledgerAttemptedAtTick;
-    private long ledgerLoadedAtTick;
     private volatile CasinoLedgerEntryDto[] myEntries = Array.Empty<CasinoLedgerEntryDto>();
     private volatile bool myLedgerLoaded;
     private int fetchingMyLedger;
@@ -70,7 +72,6 @@ internal sealed class CasinoTablesStore : IDisposable
     private volatile bool intentInFlight;
     private CasinoSeatOutcome? seatOutcome;
     private CasinoStakeOutcome? noticeOutcome;
-    private CasinoStakeOutcome? guestOutcome;
     private string closedTableId = string.Empty;
     private string retiredTableId = string.Empty;
     private string quickSeatRefusal = string.Empty;
@@ -143,8 +144,14 @@ internal sealed class CasinoTablesStore : IDisposable
 
     public void RefreshCard(string roomId)
     {
-        if (roomId.Length == 0 || !session.IsSignedIn || Interlocked.Exchange(ref fetchingCard, 1) != 0)
+        if (roomId.Length == 0 || !session.IsSignedIn)
         {
+            return;
+        }
+
+        if (Interlocked.Exchange(ref fetchingCard, 1) != 0)
+        {
+            Interlocked.Exchange(ref cardRefetchId, roomId);
             return;
         }
 
@@ -164,7 +171,17 @@ internal sealed class CasinoTablesStore : IDisposable
             }
 
             Vanished(roomId);
-        }, () => Interlocked.Exchange(ref fetchingCard, 0));
+        }, CardFetched);
+    }
+
+    private void CardFetched()
+    {
+        Interlocked.Exchange(ref fetchingCard, 0);
+        var queued = Interlocked.Exchange(ref cardRefetchId, string.Empty);
+        if (queued.Length > 0)
+        {
+            RefreshCard(queued);
+        }
     }
 
     internal static bool LostOwnership(CasinoTableDoorDto fresh, CasinoTableRowDto? held, string accountId)
@@ -240,11 +257,6 @@ internal sealed class CasinoTablesStore : IDisposable
     public CasinoStakeOutcome? TakeNoticeOutcome()
     {
         return Interlocked.Exchange(ref noticeOutcome, null);
-    }
-
-    public CasinoStakeOutcome? TakeGuestOutcome()
-    {
-        return Interlocked.Exchange(ref guestOutcome, null);
     }
 
     public CasinoQuickSeatDto? TakeQuickSeat()
@@ -484,49 +496,229 @@ internal sealed class CasinoTablesStore : IDisposable
         }, EndIntent);
     }
 
-    public CasinoTableLedgerDto? LedgerFor(string roomId)
+    private sealed class LedgerSlot
     {
-        var held = ledger;
-        return held is not null && string.Equals(held.TableId, roomId, StringComparison.Ordinal) ? held : null;
+        public CasinoTableLedgerDto? Ledger;
+        public long AttemptedAtTick;
+        public long LoadedAtTick;
+        public bool Fetching;
+        public bool Refetch;
     }
 
-    public CasinoTableLedgerDto? HeldLedger => ledger;
-
-    public string LedgerRoomId => ledgerRoomId;
-
-    public void RefreshLedgerNow(string roomId)
+    public CasinoTableLedgerDto? LedgerFor(string tableId)
     {
-        if (roomId.Length == 0)
+        if (tableId.Length == 0)
         {
-            return;
+            return null;
         }
 
-        ledgerRoomId = roomId;
-        Interlocked.Exchange(ref ledgerAttemptedAtTick, 0);
-        Interlocked.Exchange(ref ledgerRefetch, 1);
-        RefreshLedger(roomId);
+        lock (ledgerGate)
+        {
+            return ledgerSlots.TryGetValue(tableId, out var slot) ? slot.Ledger : null;
+        }
     }
 
-    public void EnsureLedgerFresh(string roomId)
+    public int LedgerVersion => Volatile.Read(ref ledgerVersion);
+
+    public string AttendedTableId(long nowTick)
     {
-        if (roomId.Length == 0 || !session.IsSignedIn)
+        var ledgerId = ledgerWatchedRoomId;
+        if (ledgerId.Length > 0 && Attended(Interlocked.Read(ref ledgerWatchedAtTick), nowTick))
+        {
+            return ledgerId;
+        }
+
+        var doorId = doorWatchedRoomId;
+        return doorId.Length > 0 && Attended(Interlocked.Read(ref doorWatchedAtTick), nowTick)
+            ? doorId
+            : string.Empty;
+    }
+
+    public CasinoTableActionDto? JoinBookLedger(string roomId, bool retry = false)
+    {
+        var accountId = AccountId;
+        var attempt = bookLedgerAdmission.Begin(roomId, accountId, retry);
+        if (attempt is not null)
+        {
+            work.Run("join book ledger", async token =>
+            {
+                var answer = await casino.JoinBookLedgerAsync(roomId, token).ConfigureAwait(false);
+                if (!string.Equals(accountId, AccountId, StringComparison.Ordinal)
+                    || !bookLedgerAdmission.Complete(attempt, answer))
+                {
+                    return;
+                }
+
+                if (answer is { Granted: true })
+                {
+                    RefreshCard(roomId);
+                    RefreshLedgerNow(roomId);
+                }
+            }, () => bookLedgerAdmission.Complete(attempt, null));
+        }
+
+        return bookLedgerAdmission.For(roomId, accountId);
+    }
+
+    public void ForgetBookLedgerAdmission()
+    {
+        bookLedgerAdmission.Reset();
+    }
+
+    public void RefreshLedgerNow(string tableId)
+    {
+        if (tableId.Length == 0 || !session.IsSignedIn)
         {
             return;
         }
 
-        if (!string.Equals(ledgerRoomId, roomId, StringComparison.Ordinal))
-        {
-            RefreshLedgerNow(roomId);
-            return;
-        }
+        FetchLedger(tableId);
+    }
 
-        var last = Interlocked.Read(ref ledgerLoadedAtTick);
-        if (last != 0 && Environment.TickCount64 - last < LedgerRefreshMilliseconds)
+    public void EnsureLedgerFresh(string tableId)
+    {
+        if (tableId.Length == 0 || !session.IsSignedIn)
         {
             return;
         }
 
-        RefreshLedger(roomId);
+        var now = Environment.TickCount64;
+        ledgerWatchedRoomId = tableId;
+        Interlocked.Exchange(ref ledgerWatchedAtTick, now);
+        lock (ledgerGate)
+        {
+            var slot = SlotFor(tableId);
+            if (slot.Fetching || Within(slot.AttemptedAtTick, now, LedgerRetryMilliseconds)
+                || Within(slot.LoadedAtTick, now, LedgerRefreshMilliseconds))
+            {
+                return;
+            }
+        }
+
+        FetchLedger(tableId);
+    }
+
+    public void UpsertLedgerEntry(string tableId, CasinoLedgerEntryDto entry)
+    {
+        if (entry.EntryId.Length == 0)
+        {
+            return;
+        }
+
+        var accountId = AccountId;
+        lock (ledgerGate)
+        {
+            if (tableId.Length > 0 && ledgerSlots.TryGetValue(tableId, out var slot) && slot.Ledger is { } held)
+            {
+                slot.Ledger = held with
+                {
+                    Entries = LedgerEntryPatch.Upsert(held.Entries ?? Array.Empty<CasinoLedgerEntryDto>(), entry,
+                        false),
+                };
+                ledgerVersion++;
+            }
+
+            var mine = myEntries;
+            if (myLedgerLoaded && (LedgerEntryPatch.IndexOf(mine, entry.EntryId) >= 0
+                    || CasinoGilLedger.SideOf(entry, accountId) != LedgerSide.None))
+            {
+                myEntries = LedgerEntryPatch.Upsert(mine, entry, true);
+            }
+        }
+    }
+
+    public void RemoveLedgerEntry(string tableId, string entryId)
+    {
+        if (entryId.Length == 0)
+        {
+            return;
+        }
+
+        lock (ledgerGate)
+        {
+            if (tableId.Length > 0 && ledgerSlots.TryGetValue(tableId, out var slot) && slot.Ledger is { } held
+                && held.Entries is { } entries)
+            {
+                slot.Ledger = held with { Entries = LedgerEntryPatch.Remove(entries, entryId) };
+                ledgerVersion++;
+            }
+
+            myEntries = LedgerEntryPatch.Remove(myEntries, entryId);
+        }
+    }
+
+    private LedgerSlot SlotFor(string tableId)
+    {
+        if (!ledgerSlots.TryGetValue(tableId, out var slot))
+        {
+            slot = new LedgerSlot();
+            ledgerSlots[tableId] = slot;
+        }
+
+        return slot;
+    }
+
+    private static bool Within(long stampTick, long nowTick, long windowMilliseconds)
+    {
+        return stampTick != 0 && nowTick - stampTick < windowMilliseconds;
+    }
+
+    private void FetchLedger(string tableId)
+    {
+        LedgerSlot slot;
+        Dictionary<string, LedgerSlot> slots;
+        lock (ledgerGate)
+        {
+            slots = ledgerSlots;
+            slot = SlotFor(tableId);
+            if (slot.Fetching)
+            {
+                slot.Refetch = true;
+                return;
+            }
+
+            slot.Fetching = true;
+            slot.Refetch = false;
+            slot.AttemptedAtTick = Environment.TickCount64;
+        }
+
+        work.Run("table ledger", async token =>
+        {
+            var fresh = await casino.TableLedgerAsync(tableId, token).ConfigureAwait(false);
+            if (fresh is null)
+            {
+                return;
+            }
+
+            lock (ledgerGate)
+            {
+                if (!ReferenceEquals(slots, ledgerSlots))
+                {
+                    return;
+                }
+
+                slot.AttemptedAtTick = 0;
+                slot.LoadedAtTick = Environment.TickCount64;
+                slot.Ledger = fresh.TableId.Length > 0 ? fresh : fresh with { TableId = tableId };
+                ledgerVersion++;
+            }
+        }, () => LedgerFetched(tableId, slot, slots));
+    }
+
+    private void LedgerFetched(string tableId, LedgerSlot slot, Dictionary<string, LedgerSlot> slots)
+    {
+        bool again;
+        lock (ledgerGate)
+        {
+            slot.Fetching = false;
+            again = slot.Refetch && ReferenceEquals(slots, ledgerSlots);
+            slot.Refetch = false;
+        }
+
+        if (again)
+        {
+            FetchLedger(tableId);
+        }
     }
 
     public CasinoLedgerEntryDto[] MyEntries => myEntries;
@@ -554,7 +746,7 @@ internal sealed class CasinoTablesStore : IDisposable
     private void RefreshMyLedger()
     {
         if (!session.IsSignedIn
-            || CoolingDown(Interlocked.Read(ref myLedgerAttemptedAtTick), Environment.TickCount64)
+            || LedgerCoolingDown(Interlocked.Read(ref myLedgerAttemptedAtTick), Environment.TickCount64)
             || Interlocked.Exchange(ref fetchingMyLedger, 1) != 0)
         {
             return;
@@ -572,33 +764,30 @@ internal sealed class CasinoTablesStore : IDisposable
 
             Interlocked.Exchange(ref myLedgerAttemptedAtTick, 0);
             Interlocked.Exchange(ref myLedgerLoadedAtTick, Environment.TickCount64);
-            myEntries = fresh.Entries ?? Array.Empty<CasinoLedgerEntryDto>();
-            myLedgerLoaded = true;
+            lock (ledgerGate)
+            {
+                myEntries = fresh.Entries ?? Array.Empty<CasinoLedgerEntryDto>();
+                myLedgerLoaded = true;
+            }
         }, () => Interlocked.Exchange(ref fetchingMyLedger, 0));
     }
 
-    public void ForgetLedger()
+    public void RecordEntry(string tableId, string kind, string counterpartyUserId, string guestName, long amount)
     {
-        ledgerRoomId = string.Empty;
-        ledger = null;
-        Interlocked.Exchange(ref ledgerAttemptedAtTick, 0);
-        Interlocked.Exchange(ref ledgerLoadedAtTick, 0);
-    }
-
-    public void ProposeLedgerEntry(string roomId, string kind, string counterpartyUserId, long amount)
-    {
-        if (roomId.Length == 0 || counterpartyUserId.Length == 0 || amount <= 0 || !CasinoLedgerKinds.Proposable(kind)
-            || !Begin())
+        var guest = counterpartyUserId.Length == 0;
+        var name = guest ? CasinoBookRules.NormalizeGuestName(guestName) : string.Empty;
+        if (tableId.Length == 0 || amount <= 0 || amount > CasinoHostingRules.MaxGil
+            || !CasinoLedgerKinds.Proposable(kind) || (guest && !CasinoBookRules.IsGuestName(name)) || !Begin())
         {
             return;
         }
 
-        var clientEntryId = LedgerIntentIdFor(new LedgerIntent(kind, counterpartyUserId, amount));
+        var clientEntryId = LedgerIntentIdFor(new LedgerIntent(kind, guest ? name : counterpartyUserId, amount, guest));
         var request = new CasinoLedgerProposeRequest(clientEntryId, kind, counterpartyUserId, amount,
-            CasinoLedgerKinds.Manual);
-        work.Run("ledger propose", async token =>
+            CasinoLedgerKinds.Manual, name);
+        work.Run("ledger record", async token =>
         {
-            var answer = await casino.ProposeLedgerEntryAsync(roomId, request, token).ConfigureAwait(false);
+            var answer = await casino.ProposeLedgerEntryAsync(tableId, request, token).ConfigureAwait(false);
             if (answer is null)
             {
                 Interlocked.Exchange(ref intentFailed, 1);
@@ -607,37 +796,7 @@ internal sealed class CasinoTablesStore : IDisposable
 
             ForgetLedgerIntent(clientEntryId);
             Interlocked.Exchange(ref noticeOutcome, new CasinoStakeOutcome(answer.Granted, Named(answer.Reason)));
-            RefreshLedgerNow(roomId);
-        }, EndIntent);
-    }
-
-    public void ProposeGuestEntry(string roomId, string kind, string guestName, long amount, string source)
-    {
-        var name = CasinoBookRules.NormalizeGuestName(guestName);
-        if (roomId.Length == 0 || !CasinoBookRules.IsGuestName(name) || amount <= 0
-            || !CasinoLedgerKinds.Proposable(kind) || !Begin())
-        {
-            return;
-        }
-
-        var clientEntryId = LedgerIntentIdFor(new LedgerIntent(kind, name, amount, true));
-        var request = new CasinoLedgerProposeRequest(clientEntryId, kind, string.Empty, amount, source, name);
-        work.Run("guest entry", async token =>
-        {
-            var answer = await casino.ProposeLedgerEntryAsync(roomId, request, token).ConfigureAwait(false);
-            if (answer is null)
-            {
-                Interlocked.Exchange(ref guestOutcome, new CasinoStakeOutcome(false, CasinoReasons.Unreachable));
-                return;
-            }
-
-            ForgetLedgerIntent(clientEntryId);
-            Interlocked.Exchange(ref guestOutcome, new CasinoStakeOutcome(answer.Granted, Named(answer.Reason)));
-            RefreshLedgerNow(roomId);
-            if (myLedgerLoaded)
-            {
-                RefreshMyLedgerNow();
-            }
+            AbsorbLedgerAnswer(tableId, string.Empty, answer);
         }, EndIntent);
     }
 
@@ -666,16 +825,48 @@ internal sealed class CasinoTablesStore : IDisposable
         }
     }
 
-    public void ConfirmLedgerEntry(string roomId, string entryId)
+    public void RequestSettle(string tableId, string entryId)
     {
-        RunLedgerAction("ledger confirm", roomId, entryId,
-            token => casino.ConfirmLedgerEntryAsync(entryId, token));
+        RunLedgerAction("ledger settle", entryId, async token =>
+        {
+            var answer = await casino.SettleLedgerEntryAsync(entryId, token).ConfigureAwait(false);
+            AbsorbLedgerAnswer(tableId, entryId, answer);
+            return answer;
+        });
     }
 
-    public void DisputeLedgerEntry(string roomId, string entryId)
+    public void RequestRemove(string tableId, string entryId)
     {
-        RunLedgerAction("ledger dispute", roomId, entryId,
-            token => casino.DisputeLedgerEntryAsync(entryId, token));
+        RunLedgerAction("ledger remove", entryId, token => RemoveEntryAsync(tableId, entryId, token));
+    }
+
+    public async Task<CasinoLedgerResultDto?> RemoveEntryAsync(string tableId, string entryId,
+        CancellationToken token)
+    {
+        var answer = await casino.RemoveLedgerEntryAsync(entryId, token).ConfigureAwait(false);
+        AbsorbLedgerAnswer(tableId, entryId, answer);
+        return answer;
+    }
+
+    private void AbsorbLedgerAnswer(string tableId, string entryId, CasinoLedgerResultDto? answer)
+    {
+        if (answer is null)
+        {
+            return;
+        }
+
+        var entry = answer.Entry;
+        var table = tableId.Length > 0 ? tableId : entry?.TableId ?? string.Empty;
+        if (answer.Granted && entry is not null)
+        {
+            UpsertLedgerEntry(table, entry);
+        }
+        else if (answer.Granted)
+        {
+            RemoveLedgerEntry(table, entryId);
+        }
+
+        RefreshLedgerNow(table);
     }
 
     private void RunHostAction(string label, string roomId,
@@ -701,7 +892,7 @@ internal sealed class CasinoTablesStore : IDisposable
         }, EndIntent);
     }
 
-    private void RunLedgerAction(string label, string roomId, string entryId,
+    private void RunLedgerAction(string label, string entryId,
         Func<CancellationToken, Task<CasinoLedgerResultDto?>> call)
     {
         if (entryId.Length == 0 || !Begin())
@@ -719,54 +910,7 @@ internal sealed class CasinoTablesStore : IDisposable
             }
 
             Interlocked.Exchange(ref noticeOutcome, new CasinoStakeOutcome(answer.Granted, Named(answer.Reason)));
-            RefreshLedgerNow(roomId);
-            if (myLedgerLoaded)
-            {
-                RefreshMyLedgerNow();
-            }
         }, EndIntent);
-    }
-
-    private void RefreshLedger(string roomId)
-    {
-        if (!session.IsSignedIn
-            || CoolingDown(Interlocked.Read(ref ledgerAttemptedAtTick), Environment.TickCount64)
-            || Interlocked.Exchange(ref fetchingLedger, 1) != 0)
-        {
-            return;
-        }
-
-        Interlocked.Exchange(ref ledgerRefetch, 0);
-        Interlocked.Exchange(ref ledgerAttemptedAtTick, Environment.TickCount64);
-        work.Run("table ledger", async token =>
-        {
-            var fresh = await casino.TableLedgerAsync(roomId, token).ConfigureAwait(false);
-            if (fresh is null)
-            {
-                return;
-            }
-
-            Interlocked.Exchange(ref ledgerAttemptedAtTick, 0);
-            Interlocked.Exchange(ref ledgerLoadedAtTick, Environment.TickCount64);
-            if (!string.Equals(ledgerRoomId, roomId, StringComparison.Ordinal))
-            {
-                return;
-            }
-
-            ledger = fresh.TableId.Length > 0 ? fresh : fresh with { TableId = roomId };
-        }, LedgerFetched);
-    }
-
-    private void LedgerFetched()
-    {
-        Interlocked.Exchange(ref fetchingLedger, 0);
-        var roomId = ledgerRoomId;
-        if (Interlocked.Exchange(ref ledgerRefetch, 0) == 0 || roomId.Length == 0)
-        {
-            return;
-        }
-
-        RefreshLedger(roomId);
     }
 
     public void ResolveToken(string tableId)
@@ -1176,6 +1320,11 @@ internal sealed class CasinoTablesStore : IDisposable
         return attemptedAtTick != 0 && nowTick - attemptedAtTick < RetryAfterAttemptMilliseconds;
     }
 
+    internal static bool LedgerCoolingDown(long attemptedAtTick, long nowTick)
+    {
+        return attemptedAtTick != 0 && nowTick - attemptedAtTick < LedgerRetryMilliseconds;
+    }
+
     internal static string Named(string reason)
     {
         return reason.Length > 0 ? reason : CasinoReasons.Unreachable;
@@ -1247,6 +1396,7 @@ internal sealed class CasinoTablesStore : IDisposable
         }
 
         lastAccountId = accountId;
+        bookLedgerAdmission.Reset();
         tables = Array.Empty<CasinoTableRowDto>();
         listed = Array.Empty<CasinoTableRowDto>();
         loaded = false;
@@ -1257,11 +1407,11 @@ internal sealed class CasinoTablesStore : IDisposable
         Interlocked.Exchange(ref resolvedTable, null);
         Interlocked.Exchange(ref seatOutcome, null);
         Interlocked.Exchange(ref noticeOutcome, null);
-        Interlocked.Exchange(ref guestOutcome, null);
         Interlocked.Exchange(ref closedTableId, string.Empty);
         Interlocked.Exchange(ref retiredTableId, string.Empty);
         Interlocked.Exchange(ref vanishedTableId, string.Empty);
         Interlocked.Exchange(ref cardMissing, 0);
+        Interlocked.Exchange(ref cardRefetchId, string.Empty);
         Interlocked.Exchange(ref knockMissing, 0);
         knock = CasinoKnockStatus.Idle;
         Interlocked.Exchange(ref quickSeatRefusal, string.Empty);
@@ -1269,8 +1419,16 @@ internal sealed class CasinoTablesStore : IDisposable
         Interlocked.Exchange(ref intentFailed, 0);
         Interlocked.Exchange(ref tablesAttemptedAtTick, 0);
         Interlocked.Exchange(ref doorAttemptedAtTick, 0);
-        myEntries = Array.Empty<CasinoLedgerEntryDto>();
-        myLedgerLoaded = false;
+        lock (ledgerGate)
+        {
+            ledgerSlots = new Dictionary<string, LedgerSlot>(StringComparer.Ordinal);
+            ledgerVersion++;
+            myEntries = Array.Empty<CasinoLedgerEntryDto>();
+            myLedgerLoaded = false;
+        }
+
+        ledgerWatchedRoomId = string.Empty;
+        Interlocked.Exchange(ref ledgerWatchedAtTick, 0);
         Interlocked.Exchange(ref myLedgerAttemptedAtTick, 0);
         Interlocked.Exchange(ref myLedgerLoadedAtTick, 0);
         lock (intentGate)
@@ -1284,11 +1442,7 @@ internal sealed class CasinoTablesStore : IDisposable
             ledgerIntentId = string.Empty;
         }
 
-        ledger = null;
         card = null;
-        ledgerRoomId = string.Empty;
-        Interlocked.Exchange(ref ledgerAttemptedAtTick, 0);
-        Interlocked.Exchange(ref ledgerLoadedAtTick, 0);
         cadence.Reset();
     }
 

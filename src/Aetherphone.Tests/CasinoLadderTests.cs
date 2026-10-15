@@ -204,26 +204,4 @@ public sealed class CasinoLadderTests
         plan.Start(1_000);
         Assert.Equal(AutoStop.Chips, plan.Settle(1_000, 0, false, 250, 10_000, 200));
     }
-
-    [Fact]
-    public void TheRealityCheckComesEveryHundredRoundsOrHalfHour()
-    {
-        var check = new RealityCheck();
-        check.Tick(0);
-        for (var round = 0; round < RealityCheck.RoundsPerCheck - 1; round++)
-        {
-            check.Record(100, 0, round * 1000L);
-        }
-
-        Assert.False(check.Due);
-        check.Record(100, 250, 100_000);
-        Assert.True(check.Due);
-        Assert.Equal(-99 * 100 + 150, check.Net);
-        check.Acknowledge(100_000);
-        Assert.False(check.Due);
-        check.Tick(100_000 + RealityCheck.MillisecondsPerCheck);
-        Assert.False(check.Due);
-        check.Record(100, 0, 100_000 + RealityCheck.MillisecondsPerCheck);
-        Assert.True(check.Due);
-    }
 }

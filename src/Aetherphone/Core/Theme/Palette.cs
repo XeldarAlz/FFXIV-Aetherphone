@@ -32,6 +32,25 @@ internal static class Palette
             color.W);
     }
 
+    public static Vector4 LiftToLuminance(Vector4 color, float target)
+    {
+        var red = LinearChannel(color.X);
+        var green = LinearChannel(color.Y);
+        var blue = LinearChannel(color.Z);
+        var luminance = 0.2126f * red + 0.7152f * green + 0.0722f * blue;
+        if (luminance >= target)
+        {
+            return color;
+        }
+
+        var amount = (target - luminance) / (1f - luminance);
+        return new Vector4(
+            EncodeChannel(red + (1f - red) * amount),
+            EncodeChannel(green + (1f - green) * amount),
+            EncodeChannel(blue + (1f - blue) * amount),
+            color.W);
+    }
+
     private static float LinearChannel(float channel) =>
         channel <= 0.04045f ? channel / 12.92f : MathF.Pow((channel + 0.055f) / 1.055f, 2.4f);
 

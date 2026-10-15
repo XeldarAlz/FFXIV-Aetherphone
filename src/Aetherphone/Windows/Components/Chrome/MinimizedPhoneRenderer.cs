@@ -70,6 +70,7 @@ internal static partial class MinimizedPhoneRenderer
     private const float IslandEqualizerHeight = 6f;
     private const float IslandDot = 2.6f;
     private const float DateScale = 0.6f;
+    private const float TextFitStep = 0.05f;
     private const float ArtRadiusFactor = 0.24f;
     private const float ArtTransportGap = 4f;
     private const float TransportSmall = 8f;
@@ -83,9 +84,11 @@ internal static partial class MinimizedPhoneRenderer
     private const float CallButtonRadius = 10f;
     private const float CallButtonSpread = 15f;
     private const float CallButtonIcon = 9f;
-    private const float BannerTile = 20f;
-    private const float BannerPadding = 7f;
-    private const float BannerTextGap = 6f;
+    private const float BannerTile = 14f;
+    private const float BannerPadding = 6f;
+    private const float BannerTextGap = 4f;
+    private const float BannerBodyGap = 2f;
+    private const int BannerBodyLines = 2;
     private const float BannerTitleScale = 0.62f;
     private const float BannerBodyScale = 0.56f;
     private const float PageDotRadius = 1.3f;
@@ -153,10 +156,11 @@ internal static partial class MinimizedPhoneRenderer
             playing);
     }
 
-    public static void DrawHero(ImDrawListPtr drawList, Rect screen, float top, string date, Vector2 dateSize,
+    public static void DrawHero(ImDrawListPtr drawList, Rect hero, string date, Vector2 dateSize,
         string time, float clockScale, string fps, in FaceInk ink, float alpha)
     {
-        var centerX = screen.Center.X;
+        var centerX = hero.Center.X;
+        var top = hero.Min.Y;
         if (date.Length > 0)
         {
             Typography.Draw(drawList, new Vector2(centerX - dateSize.X * 0.5f, top), date,
@@ -177,9 +181,28 @@ internal static partial class MinimizedPhoneRenderer
             return;
         }
 
-        var fpsSize = Typography.Measure(fps, DateStyle());
-        Typography.Draw(drawList, new Vector2(centerX - fpsSize.X * 0.5f, y), fps,
-            Palette.WithAlpha(ink.Muted, ink.Muted.W * alpha), DateStyle());
+        var fpsStyle = FitFpsStyle(fps, new Vector2(hero.Width, hero.Max.Y - y));
+        var fitted = Typography.FitText(fps, hero.Width, fpsStyle);
+        var fpsSize = Typography.Measure(fitted, fpsStyle);
+        Typography.Draw(drawList, new Vector2(centerX - fpsSize.X * 0.5f, y), fitted,
+            Palette.WithAlpha(ink.Strong, alpha), fpsStyle);
+    }
+
+    private static TextStyle FitFpsStyle(string label, Vector2 available)
+    {
+        var minimum = DateStyle();
+        var preferred = TextStyles.FootnoteEmphasized;
+        for (var scale = Text(preferred.Scale); scale > minimum.Scale; scale -= TextFitStep)
+        {
+            var style = new TextStyle(scale, preferred.Weight);
+            var size = Typography.Measure(label, style);
+            if (size.X <= available.X && size.Y <= available.Y)
+            {
+                return style;
+            }
+        }
+
+        return minimum;
     }
 
     public static Rect MusicArtRect(Rect inner, float scale)
@@ -282,18 +305,22 @@ internal static partial class MinimizedPhoneRenderer
         return new MinimizedControlResult(clicked ? MinimizedControl.Hangup : MinimizedControl.None, hovered);
     }
 
-    public static float BannerHeight(float scale)
+    public static float BannerHeight(PhoneNotification notification, float width, float scale)
     {
-        var title = Typography.Measure("0", Text(BannerTitleScale), FontWeight.SemiBold).Y;
-        var body = Typography.Measure("0", Text(BannerBodyScale), FontWeight.Regular).Y;
-        return MathF.Max(BannerTile * scale, title + body) + BannerPadding * 2f * scale;
+        var padding = BannerPadding * scale;
+        var body = BannerBodyHeight(notification, width - padding * 2f);
+        return padding * 2f + BannerHeaderHeight(scale) + (body > 0f ? BannerBodyGap * scale + body : 0f);
     }
 
     public static void DrawBanner(ImDrawListPtr drawList, Rect banner, PhoneNotification notification,
         in FaceInk ink, float alpha, float scale)
     {
+        var padding = BannerPadding * scale;
         var tile = BannerTile * scale;
-        var tileMin = new Vector2(banner.Min.X + BannerPadding * scale, banner.Center.Y - tile * 0.5f);
+        var header = BannerHeaderHeight(scale);
+        var left = banner.Min.X + padding;
+        var top = banner.Min.Y + padding;
+        var tileMin = new Vector2(left, top + (header - tile) * 0.5f);
         var tileMax = tileMin + new Vector2(tile, tile);
         if (!AppIconTile.TryDraw(drawList, notification.AppId, notification.Accent, tileMin, tileMax,
                 tile * Metrics.Radius.TileFactor, alpha, false, scale))
@@ -301,18 +328,35 @@ internal static partial class MinimizedPhoneRenderer
             DrawFallbackTile(drawList, notification, tileMin, tileMax, tile, alpha);
         }
 
-        var left = tileMax.X + BannerTextGap * scale;
-        var width = MathF.Max(1f, banner.Max.X - BannerPadding * scale - left);
-        var titleStyle = new TextStyle(Text(BannerTitleScale), FontWeight.SemiBold);
-        var bodyStyle = new TextStyle(Text(BannerBodyScale), FontWeight.Regular);
-        var titleHeight = Typography.Measure(notification.Title, titleStyle).Y;
-        var bodyHeight = Typography.Measure("0", bodyStyle).Y;
-        var top = banner.Center.Y - (titleHeight + bodyHeight) * 0.5f;
-        Marquee.DrawLeftAuto(drawList, "minimized.banner.title", notification.Title, left, top, width, titleStyle,
+        var titleStyle = BannerTitleStyle();
+        var titleHeight = Typography.Measure("0", titleStyle).Y;
+        var titleLeft = tileMax.X + BannerTextGap * scale;
+        Marquee.DrawLeftAuto(drawList, "minimized.banner.title", notification.Title, titleLeft,
+            top + (header - titleHeight) * 0.5f, MathF.Max(1f, banner.Max.X - padding - titleLeft), titleStyle,
             Palette.WithAlpha(ink.Strong, alpha));
-        EmojiText.DrawLine(drawList, "minimized.banner.body", notification.SingleLineBody,
-            new Vector2(left, top + titleHeight), width, ink.Muted, alpha, bodyStyle);
+        var width = MathF.Max(1f, banner.Width - padding * 2f);
+        var body = BannerBodyHeight(notification, width);
+        if (body <= 0f)
+        {
+            return;
+        }
+
+        EmojiText.DrawBlock(drawList, new Vector2(left, top + header + BannerBodyGap * scale),
+            notification.SingleLineBody, ink.Muted, alpha, BannerBodyStyle(), width, body);
     }
+
+    private static float BannerHeaderHeight(float scale) =>
+        MathF.Max(BannerTile * scale, Typography.Measure("0", BannerTitleStyle()).Y);
+
+    private static float BannerBodyHeight(PhoneNotification notification, float width) =>
+        notification.SingleLineBody.Length == 0
+            ? 0f
+            : EmojiText.ClampedBlockHeight(notification.SingleLineBody, BannerBodyStyle(), MathF.Max(1f, width),
+                BannerBodyLines);
+
+    private static TextStyle BannerTitleStyle() => new(Text(BannerTitleScale), FontWeight.SemiBold);
+
+    private static TextStyle BannerBodyStyle() => new(Text(BannerBodyScale), FontWeight.Regular);
 
     public static void DrawPageDots(ImDrawListPtr drawList, Rect slot, int count, float position, in FaceInk ink,
         float alpha, float scale)

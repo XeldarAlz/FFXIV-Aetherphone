@@ -40,6 +40,7 @@ internal sealed class OnlineBroadsideTable
     private static readonly Vector4 ReadyInk = new(0.45f, 0.86f, 0.55f, 1f);
 
     private readonly GameRoomsStore store;
+    private readonly Action askResign;
     private readonly BroadsideLayout layout = new();
     private readonly BroadsidePlacement placement = new();
     private readonly BroadsideFleet draft = new();
@@ -90,9 +91,10 @@ internal sealed class OnlineBroadsideTable
     private Vector4 bannerColor;
     private Vector2 bannerCenter;
 
-    public OnlineBroadsideTable(GameRoomsStore store)
+    public OnlineBroadsideTable(GameRoomsStore store, Action askResign)
     {
         this.store = store;
+        this.askResign = askResign;
         screen = new ScreenFx(backdrop);
         backdrop.Set(Backdrop.Neon);
         confetti = new[] { AppAccents.For(AccentId), BroadsideArt.Flame, BroadsideArt.Cloud, BroadsideArt.Brass };
@@ -891,7 +893,7 @@ internal sealed class OnlineBroadsideTable
             if (GameHud.Button(new Vector2(footer.Max.X - size.X * 0.5f, footer.Center.Y), size,
                     Loc.T(L.Games.OnlineResign), ResignTint, theme) && !store.ActInFlight)
             {
-                store.SendResign();
+                askResign();
             }
         }
 

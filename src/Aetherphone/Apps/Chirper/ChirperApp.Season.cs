@@ -27,8 +27,6 @@ internal sealed partial class ChirperApp
     private readonly SeasonIntro intro = new();
     private bool? halloweenApplied;
 
-    private bool RewardedSelf(string userId) => SocialSeason.RewardedSelf(store.Me?.Id, userId);
-
     private Vector2 clawAnchor;
     private double clawStart = -100d;
 

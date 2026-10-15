@@ -32,7 +32,7 @@ internal sealed partial class BlackjackTable
         long turnRemaining, float delta, float phase, float scale)
     {
         var shoe = layout.ShoeAnchor;
-        BlackjackTableArt.DrawShoe(drawList, shoe, scale);
+        BlackjackTableArt.DrawShoe(drawList, shoe, layout.ShoePixels, scale);
         DrawDealerPuck(drawList, ui, board, phase, scale);
         DrawDealerCards(drawList, ui, board, scale);
         DrawStateBand(drawList, ui, board, turnRemaining, scale);
@@ -172,9 +172,16 @@ internal sealed partial class BlackjackTable
             return;
         }
 
-        var pillCenter = new Vector2(fanCenter.X, layout.DealerTotalY);
-        BlackjackTableArt.DrawTotalPill(drawList, pillCenter, TotalLabel(board.DealerTotal, board.DealerSoft, false),
-            PillFill, ui.TitleInk, scale);
+        var label = TotalLabel(board.DealerTotal, board.DealerSoft, false);
+        var pillX = fanCenter.X;
+        if (layout.Compact)
+        {
+            var fanRight = start + (count - 1) * step + cardWidth * 0.5f;
+            pillX = layout.DealerTotalBesideX(fanRight, BlackjackTableArt.TotalPillHalfWidth(label, scale));
+        }
+
+        BlackjackTableArt.DrawTotalPill(drawList, new Vector2(pillX, layout.DealerTotalY), label, PillFill,
+            ui.TitleInk, scale);
     }
 
     private static Rect SquashedRect(Vector2 center, float width, float scaleX)
@@ -200,7 +207,7 @@ internal sealed partial class BlackjackTable
         var shoe = layout.ShoeAnchor;
         var dealerAnchor = layout.DealerFanCenter;
         var seated = BlackjackRules.IsSeat(mySeat);
-        var canSit = !seated && !dealing;
+        var canSit = !seated && !dealing && !banking;
         var currency = CasinoCurrencies.Of(board);
         var limit = SeatLimit(board);
         var tapped = -1;
@@ -250,8 +257,12 @@ internal sealed partial class BlackjackTable
                     ImGui.GetColorU32(Palette.WithAlpha(ui.MutedInk, 0.45f + 0.4f * Pulse.Wave(Pulse.Breath))), 12);
             }
 
-            DrawSeatPlate(drawList, currency, view, puck, puckRadius, columnWidth - 2f * scale, dimmed, scale);
-            DrawBalanceTitle(drawList, currency, view.Stack, puck, puckRadius, columnWidth, scale);
+            DrawSeatPlate(drawList, currency, view, puck, puckRadius, layout.RailPlateWidth, dimmed, scale);
+            if (layout.ShowsRailTitles)
+            {
+                DrawBalanceTitle(drawList, currency, view.Stack, puck, puckRadius, columnWidth, scale);
+            }
+
             DrawRailSideStakes(drawList, board, seatIndex, slot, scale);
 
             DrawBetDisplay(drawList, ui, seatIndex, currency, puck,
@@ -383,8 +394,7 @@ internal sealed partial class BlackjackTable
         }
 
         var count = hands.Length < BlackjackRules.MaxHandsPerSeat ? hands.Length : BlackjackRules.MaxHandsPerSeat;
-        var cardWidth = (count > 1 ? BlackjackTableLayout.RailSplitCardWidth : BlackjackTableLayout.RailCardWidth)
-            * scale;
+        var cardWidth = layout.RailCardPixels(count);
         var handWidth = columnWidth / count;
         var fanY = puck.Y - layout.RailCardsLift;
         var activeHand = board.ActiveSeat == seatIndex ? board.ActiveHand : -1;
@@ -457,7 +467,7 @@ internal sealed partial class BlackjackTable
     {
         if (!BlackjackRules.IsSeat(mySeat))
         {
-            if (!dealing)
+            if (!dealing && !banking)
             {
                 DrawHeroGhostSlots(drawList, scale);
             }
@@ -588,9 +598,12 @@ internal sealed partial class BlackjackTable
         var title = currency == CasinoCurrencies.Chips ? StatusTitle.For(view.Stack) : BalanceTitle.None;
         var titleWidth = StatusTitle.Width(title, layout.CapsuleMaxWidth * 0.4f, scale);
         var titleReserve = titleWidth > 0f ? titleWidth + pad : 0f;
-        var stackSize = Typography.Measure(stackLabel, TextStyles.Title3);
+        var stackStyle = layout.Compact ? TextStyles.Headline : TextStyles.Title3;
+        var stackSize = Typography.Measure(stackLabel, stackStyle);
         var stackReserve = currency == CasinoCurrencies.Gil ? 0f : CurrencyGlyph.Reserve(stackSize.Y);
-        var chrome = puckRadius * 2f + pad * 2.75f + titleReserve;
+        var frame = Frames.Of(view.FrameId);
+        var frameReach = AvatarView.Reserve(frame, puckRadius);
+        var chrome = puckRadius * 2f + frameReach + pad * 2.75f + titleReserve;
         var nameRoom = MathF.Max(stackReserve + stackSize.X, layout.CapsuleMaxWidth - chrome);
         var name = Typography.FitText(view.DisplayName, nameRoom, TextStyles.Footnote);
         var nameSize = Typography.Measure(name, TextStyles.Footnote);
@@ -599,10 +612,10 @@ internal sealed partial class BlackjackTable
         var min = new Vector2(center.X - halfWidth, center.Y - height * 0.5f);
         var max = new Vector2(center.X + halfWidth, center.Y + height * 0.5f);
         Material.ThemedGlass(drawList, min, max, height * 0.5f, scale, CasinoColors.FeltBottom, 0.92f);
-        var puck = new Vector2(min.X + pad + puckRadius, center.Y);
+        var puck = new Vector2(min.X + pad + frameReach + puckRadius, center.Y);
         var dimmed = !view.Connected;
         AvatarView.DrawRemote(drawList, puck, puckRadius, ui.Theme, view.DisplayName, string.Empty, view.AvatarUrl,
-            images, lodestone, 1f, 32, dimmed ? 0.45f : 1f, Frames.Of(view.FrameId));
+            images, lodestone, 1f, 32, dimmed ? 0.45f : 1f, frame);
         if (board.ActiveSeat == mySeat && board.Phase == BlackjackPhases.PlayerTurns)
         {
             TurnTimerRing.Draw(drawList, puck, puckRadius + BlackjackTableLayout.CapsuleRingGap * scale,
@@ -627,7 +640,7 @@ internal sealed partial class BlackjackTable
         }
 
         Typography.Draw(drawList, new Vector2(textX + stackReserve, stackTop), stackLabel, StackInk(currency),
-            TextStyles.Title3.Scale * stackRoll.PopScale, TextStyles.Title3.Weight);
+            stackStyle.Scale * stackRoll.PopScale, stackStyle.Weight);
         if (titleWidth > 0f)
         {
             StatusTitle.Draw(drawList, new Vector2(max.X - pad - titleWidth * 0.5f, center.Y), title, titleWidth,

@@ -4,7 +4,7 @@ internal enum CasinoTab
 {
     Floor,
     Live,
-    Tables,
+    Host,
     Cashier,
 }
 
@@ -27,6 +27,7 @@ internal enum CasinoScreen
     Broadcast,
     Fame,
     GilLedger,
+    HostRules,
 }
 
 internal readonly record struct CasinoRoute(

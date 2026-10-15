@@ -87,8 +87,45 @@ public sealed class BlackjackDealerDeckTests
         Assert.Equal("casino.tables.reasonDealerCannotSit", message.Key);
     }
 
+    [Fact]
+    public void TheOwnerOfAClockDealtGilTableHoldsTheBankInsteadOfASeat()
+    {
+        var clockDealt = HostDealt with { DealerMode = CasinoDealerModes.House };
+
+        Assert.True(BlackjackHosting.BanksFromDeck(clockDealt, Owner, Owner, false));
+        Assert.Equal(BlackjackDeck.Bank, BlackjackDeckFlow.Pick(Facts(banking: true, onBoard: false,
+            holdsSeat: false)));
+        Assert.Equal(BlackjackDeck.Dealer, BlackjackDeckFlow.Pick(Facts(dealing: true, banking: true,
+            onBoard: false, holdsSeat: false)));
+    }
+
+    [Fact]
+    public void OnlyTheGilTableOwnerWithoutASeatIsKeptOffTheFelt()
+    {
+        var clockDealt = HostDealt with { DealerMode = CasinoDealerModes.House };
+
+        Assert.False(BlackjackHosting.BanksFromDeck(clockDealt, Owner, Owner, true));
+        Assert.False(BlackjackHosting.BanksFromDeck(clockDealt, Player, Owner, false));
+        Assert.False(BlackjackHosting.BanksFromDeck(clockDealt, CoDealer, Owner, false));
+        Assert.False(BlackjackHosting.BanksFromDeck(clockDealt, string.Empty, string.Empty, false));
+        Assert.False(BlackjackHosting.BanksFromDeck(clockDealt with { Currency = CasinoCurrencies.Practice },
+            Owner, Owner, false));
+        Assert.False(BlackjackHosting.BanksFromDeck(clockDealt with { Currency = CasinoCurrencies.Chips },
+            Owner, Owner, false));
+    }
+
+    [Fact]
+    public void AnOlderFlowThatStillTriesToSeatTheGilHostIsToldWhy()
+    {
+        Assert.Contains(CasinoReasons.HostCannotSit, CasinoReasons.All);
+        Assert.True(CasinoReasons.TryMessage(CasinoReasons.HostCannotSit, out var message));
+        Assert.Equal("casino.tables.reasonHostCannotSit", message.Key);
+    }
+
     internal static BlackjackDeckFacts Facts(bool dealing = false, bool bought = true, bool onBoard = true,
         bool holdsSeat = true, bool canRebuy = false, bool broke = false, bool paused = false,
-        bool insurance = false, bool canBet = false, bool committed = false, bool canAct = false) =>
-        new(dealing, bought, onBoard, holdsSeat, canRebuy, broke, paused, insurance, canBet, committed, canAct);
+        bool insurance = false, bool canBet = false, bool committed = false, bool canAct = false,
+        bool banking = false) =>
+        new(dealing, banking, bought, onBoard, holdsSeat, canRebuy, broke, paused, insurance, canBet, committed,
+            canAct);
 }

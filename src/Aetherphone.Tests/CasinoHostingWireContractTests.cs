@@ -24,9 +24,10 @@ public sealed class CasinoHostingWireContractTests
             CasinoClient.TablePath("table-a1", CasinoClient.TournamentStopLeaf));
         Assert.Equal("/casino/tables/table-a1/ledger", CasinoClient.TablePath("table-a1", CasinoClient.LedgerLeaf));
         Assert.Equal("/casino/tables/table-a1/close", CasinoClient.TablePath("table-a1", CasinoClient.CloseLeaf));
-        Assert.Equal("/casino/ledger/e1/confirm", CasinoClient.LedgerEntryPath("e1", "confirm"));
-        Assert.Equal("/casino/ledger/e1/dispute", CasinoClient.LedgerEntryPath("e1", "dispute"));
+        Assert.Equal("/casino/ledger/e1/settle", CasinoClient.LedgerEntryPath("e1", CasinoClient.SettleLeaf));
+        Assert.Equal("/casino/ledger/e1/remove", CasinoClient.LedgerEntryPath("e1", CasinoClient.RemoveLeaf));
         Assert.Equal("/casino/ledger", CasinoClient.LedgerPath);
+        Assert.Equal("/casino/ledger/trade", CasinoClient.LedgerTradePath);
         Assert.Equal("/casino/blackjack/rebuy", CasinoClient.BlackjackRebuyPath);
         Assert.Equal("/casino/venue/venue-x/act", CasinoClient.VenueActPath("venue-x"));
         Assert.Equal("/casino/rooms/table-a1/verify/12", CasinoClient.RoomVerifyPath("table-a1", 12));
@@ -66,7 +67,7 @@ public sealed class CasinoHostingWireContractTests
     }
 
     [Fact]
-    public void AHostedCardReadsItsCurrencyConfigAndReputation()
+    public void AHostedCardReadsItsCurrencyAndConfig()
     {
         const string json = """
         {
@@ -81,8 +82,7 @@ public sealed class CasinoHostingWireContractTests
                           "bank": 20000000, "maxPayout": 5000000, "maxBet": 500000, "minBet": 1,
                           "houseRules": { "blackjackPays": 0, "dealerHitsSoft17": true, "decks": 6, "splits": 2,
                                           "doubles": 1, "fiveCardCharlie": false, "dealerPeek": true } },
-              "currency": 2,
-              "reputation": { "gilTablesHosted": 3, "payoutsConfirmed": 12, "disputesOpen": 1, "frozen": false }
+              "currency": 2
             }
           ],
           "serverNowUnixMs": 0
@@ -98,8 +98,6 @@ public sealed class CasinoHostingWireContractTests
         Assert.Equal(20000000, card.Config!.Bank);
         Assert.True(card.Config.HouseRules!.DealerHitsSoft17);
         Assert.Equal(CasinoRuleSheet.DoublesNineToEleven, card.Config.HouseRules.Doubles);
-        Assert.Equal(12, card.Reputation!.PayoutsConfirmed);
-        Assert.Equal(1, card.Reputation.DisputesOpen);
     }
 
     [Fact]
@@ -180,7 +178,7 @@ public sealed class CasinoHostingWireContractTests
     }
 
     [Fact]
-    public void TheGilLedgerReadsBothSidesOfEveryEntry()
+    public void TheGilLedgerReadsEveryEntry()
     {
         const string json = """
         {
@@ -190,9 +188,8 @@ public sealed class CasinoHostingWireContractTests
           "serverNowUnixMs": 0, "currency": 2,
           "entries": [ { "entryId": "e1", "tableId": "table-a1b2", "kind": "buyin", "amount": 500000,
                          "payerUserId": "u1", "payerName": "Mira", "payeeUserId": "u-host", "payeeName": "Rhan",
-                         "proposedBy": "player", "source": "manual", "payerConfirmed": true, "payeeConfirmed": false,
-                         "settled": false, "disputed": false, "disputeResolved": false, "createdAtUnixMs": 1,
-                         "settledAtUnixMs": 0 } ]
+                         "proposedBy": "host", "source": "manual", "settled": true, "createdAtUnixMs": 1,
+                         "settledAtUnixMs": 1 } ]
         }
         """;
 
@@ -202,8 +199,8 @@ public sealed class CasinoHostingWireContractTests
         Assert.Equal(CasinoCurrencies.Gil, ledger!.Currency);
         var entry = Assert.Single(ledger.Entries!);
         Assert.Equal(CasinoLedgerKinds.BuyIn, entry.Kind);
-        Assert.True(entry.PayerConfirmed);
-        Assert.False(entry.PayeeConfirmed);
+        Assert.Equal("host", entry.ProposedBy);
+        Assert.True(entry.Settled);
         Assert.Equal(150000, ledger.Rows![0].Net);
 
         var propose = JsonSerializer.Serialize(new CasinoLedgerProposeRequest("x1", CasinoLedgerKinds.Payout, "u1",
@@ -220,8 +217,7 @@ public sealed class CasinoHostingWireContractTests
         { "granted": true, "reason": "",
           "entry": { "entryId": "7c0d", "tableId": "table-9b2e", "kind": "buyin", "amount": 50000,
             "payerUserId": "", "payerName": "Chea Thorne", "payeeUserId": "u_host", "payeeName": "Ciri",
-            "proposedBy": "host", "source": "trade", "payerConfirmed": true, "payeeConfirmed": true,
-            "settled": true, "disputed": false, "disputeResolved": false,
+            "proposedBy": "host", "source": "trade", "settled": true,
             "createdAtUnixMs": 1760227200000, "settledAtUnixMs": 1760227200000,
             "guest": true, "guestName": "Chea Thorne" } }
         """;
@@ -237,8 +233,6 @@ public sealed class CasinoHostingWireContractTests
         Assert.Equal(string.Empty, entry.PayerUserId);
         Assert.Equal("u_host", entry.PayeeUserId);
         Assert.True(entry.Settled);
-        Assert.True(entry.PayerConfirmed);
-        Assert.True(entry.PayeeConfirmed);
         Assert.Equal(CasinoLedgerKinds.Trade, entry.Source);
 
         var registered = JsonSerializer.Deserialize(
@@ -262,8 +256,6 @@ public sealed class CasinoHostingWireContractTests
         Assert.Equal("venue.book", CasinoFeatures.VenueBook);
         Assert.True(CasinoFeatureSet.From(new[] { "venue.book" }).Has(CasinoFeatures.VenueBook));
         Assert.False(CasinoFeatureSet.Empty.Has(CasinoFeatures.VenueBook));
-        Assert.Equal("guest_entry", CasinoReasons.GuestEntry);
-        Assert.Equal(L.Book.ReasonGuestEntry.Key, CasinoReasons.MessageFor(CasinoReasons.GuestEntry).Key);
 
         const string json = """
         { "tableId": "table-9b2e", "gameKind": "casino.book", "kind": 2, "stakeTier": 0,
@@ -279,7 +271,6 @@ public sealed class CasinoHostingWireContractTests
             "apartmentWing": 0, "room": 0 }, "poker": null, "dice": null, "deathroll": null,
             "currency": 2, "bank": 5000000, "maxPayout": 1000000 },
           "currency": 2,
-          "reputation": { "gilTablesHosted": 3, "payoutsConfirmed": 41, "disputesOpen": 0, "frozen": false },
           "joinCode": "KXRPMW" }
         """;
 

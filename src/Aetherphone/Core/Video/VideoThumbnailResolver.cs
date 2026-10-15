@@ -31,7 +31,8 @@ internal static class VideoThumbnailResolver
 
     private static async Task<byte[]?> FetchAsync(HttpService http, string videoId, CancellationToken token)
     {
-        var maxres = await http.GetBytesAsync(new Uri($"https://i.ytimg.com/vi/{videoId}/maxresdefault.jpg"), token)
+        var maxres = await http.GetBytesAsync(new Uri($"https://i.ytimg.com/vi/{videoId}/maxresdefault.jpg"), token,
+                expectNotFound: true)
             .ConfigureAwait(false);
         if (maxres is not null)
         {

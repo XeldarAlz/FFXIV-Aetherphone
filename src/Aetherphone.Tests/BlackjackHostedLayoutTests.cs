@@ -73,6 +73,29 @@ public sealed class BlackjackHostedLayoutTests
     }
 
     [Fact]
+    public void OnlyAnEntrantStillStandingInALiveTournamentForfeitsByLeaving()
+    {
+        const string me = "me";
+        var standing = new CasinoBlackjackStandingDto(UserId: me, Chips: 5000);
+        var running = new CasinoBlackjackTournamentDto(Live: true, Standings: new[] { standing });
+        var live = new CasinoBlackjackRoomStateDto(Tournament: running);
+
+        Assert.True(BlackjackHosting.StillInTournament(live, me));
+        Assert.False(BlackjackHosting.StillInTournament(live, "spectator"));
+        Assert.False(BlackjackHosting.StillInTournament(live, string.Empty));
+
+        var eliminated = live with
+        {
+            Tournament = running with { Standings = new[] { standing with { Eliminated = true } } },
+        };
+        Assert.False(BlackjackHosting.StillInTournament(eliminated, me));
+
+        var finished = live with { Tournament = running with { Live = false } };
+        Assert.False(BlackjackHosting.StillInTournament(finished, me));
+        Assert.False(BlackjackHosting.StillInTournament(new CasinoBlackjackRoomStateDto(), me));
+    }
+
+    [Fact]
     public void AFinishedStripGoesAwayOnceItsBoardWasClosedAndAClearedRecordNeverShows()
     {
         var overlay = new TournamentOverlay();

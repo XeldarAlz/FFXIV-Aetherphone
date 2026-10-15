@@ -3,6 +3,7 @@ using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Casino;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -28,7 +29,7 @@ internal sealed class VenueCabinet : ICabinetIdle
     private bool entered;
     private float idleClock;
 
-    public VenueCabinet(CasinoVenueStore venue, Action leaveRoom, Action openGilLedger)
+    public VenueCabinet(CasinoVenueStore venue, Action leaveRoom, Action openGilLedger, ConfirmService confirm)
     {
         this.venue = venue;
         this.leaveRoom = leaveRoom;
@@ -36,7 +37,7 @@ internal sealed class VenueCabinet : ICabinetIdle
         Action<VenueActDraft> act = Act;
         dice = new DiceTableRoom(texts, act);
         deathroll = new DeathrollRoom(texts, act);
-        raffle = new RaffleRoom(texts, act);
+        raffle = new RaffleRoom(texts, confirm, act);
     }
 
     public Backdrop IdleBackdrop => Backdrop.Strip;
@@ -44,8 +45,6 @@ internal sealed class VenueCabinet : ICabinetIdle
     public string RoomId => roomId;
 
     public VenueRoomKind Kind => kind;
-
-    public static float DeckHeight => CasinoStageLayout.DeckHeight;
 
     public int Currency => venue.ViewFor(roomId)?.Currency
         ?? (venue.Tables.CardFor(roomId) is { } card ? CasinoCurrencies.Of(card) : CasinoCurrencies.Practice);
@@ -66,7 +65,8 @@ internal sealed class VenueCabinet : ICabinetIdle
 
     public CasinoStageSpec Spec()
     {
-        return new CasinoStageSpec(GameIdOf(kind), NameOf(kind), Backdrop.Strip, Room: true, DeckHeight: DeckHeight,
+        return new CasinoStageSpec(GameIdOf(kind), NameOf(kind), Backdrop.Strip, Room: true,
+            DeckHeight: RaffleTicketPicker.DeckHeightFor(venue.ViewFor(roomId), Owning(), venue.AccountId),
             Practice: Currency == CasinoCurrencies.Practice, InstantAvailable: true, Extra: L.Venue.TableSheet,
             HouseBanked: false);
     }
@@ -165,6 +165,11 @@ internal sealed class VenueCabinet : ICabinetIdle
         DrawRibbon(drawList, frame, view, now, session.Attached, scale);
         var knockHeight = Tables.HostKnockBanner.Reserve(venue.Tables, roomId, safe.Width, scale);
         var world = new Rect(new Vector2(safe.Min.X, safe.Min.Y + knockHeight), safe.Max);
+        if (view.Gil)
+        {
+            world = DrawLedgerShortcut(drawList, ui, world, scale);
+        }
+
         if (inlineReason.Length > 0)
         {
             var message = CasinoReasons.Text(inlineReason, 0);
@@ -204,6 +209,22 @@ internal sealed class VenueCabinet : ICabinetIdle
     }
 
     public VenueRoomView? View => venue.ViewFor(roomId);
+
+    private Rect DrawLedgerShortcut(ImDrawListPtr drawList, AppSkin ui, Rect world, float scale)
+    {
+        var label = Loc.T(L.Tables.MyLedgerTitle);
+        var height = Button.RegularHeight * scale;
+        var width = MathF.Min(world.Width, Button.WidthFor(label, ButtonSize.Regular));
+        var rect = new Rect(new Vector2(world.Max.X - width, world.Min.Y),
+            new Vector2(world.Max.X, world.Min.Y + height));
+        if (Button.Draw(drawList, rect, label, ui.Ink, ButtonStyle.Tinted, id: "venue.gil.ledger"))
+        {
+            openGilLedger();
+        }
+
+        var top = MathF.Min(world.Max.Y, rect.Max.Y + Metrics.Space.Sm * scale);
+        return new Rect(new Vector2(world.Min.X, top), world.Max);
+    }
 
     private void Act(VenueActDraft draft)
     {

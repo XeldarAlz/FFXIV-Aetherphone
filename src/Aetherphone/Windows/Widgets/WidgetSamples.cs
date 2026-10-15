@@ -10,6 +10,9 @@ internal static class WidgetSamples
     public const long CoinEarnedToday = 180;
     public const long CoinDailyCap = 300;
     public const long Gil = 1284500;
+    public const int CasinoLevel = 67;
+    public const float CasinoLevelFraction = 0.62f;
+    public const long CasinoLevelCap = 308_000_000;
 
     public static readonly string[] Names = { "Aerin Vale", "Koto Mizu", "Rhea Solace", "Bram Ashford" };
     public static readonly string[] Worlds = { "Ultros", "Cactuar", "Balmung", "Twintania" };

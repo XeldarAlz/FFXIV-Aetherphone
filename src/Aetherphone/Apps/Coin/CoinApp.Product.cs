@@ -104,7 +104,7 @@ internal sealed partial class CoinApp
     private float DrawOwnedActions(ImDrawListPtr drawList, Vector2 origin, float width, CoinSkuStyle sku, float scale)
     {
         var height = CoinArt.LargeCapsuleHeight * scale;
-        var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
+        var rect = MotionButton.FitHaloWidth(new Rect(origin, new Vector2(origin.X + width, origin.Y + height)), scale);
         var item = FindOwnedItem(sku.Kind, sku.Payload);
         if (item is null)
         {
@@ -135,7 +135,7 @@ internal sealed partial class CoinApp
         var affordable = balance >= sku.Price;
         var frozen = wallet?.FrozenUntilUnix is not null;
         var height = CoinArt.LargeCapsuleHeight * scale;
-        var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
+        var rect = MotionButton.FitHaloWidth(new Rect(origin, new Vector2(origin.X + width, origin.Y + height)), scale);
         if (CoinArt.Capsule(drawList, ui, ImGui.GetID("coin.product.buy"), rect, texts.BuyFor(sku.Price),
                 CapsuleTone.Filled, affordable && !frozen && !store.Purchasing && wallet is not null))
         {
@@ -170,7 +170,8 @@ internal sealed partial class CoinApp
         cursorY = cardMax.Y + Metrics.Space.Md * scale;
 
         var saving = IsGoal(sku.Id);
-        var saveRect = new Rect(new Vector2(origin.X, cursorY), new Vector2(origin.X + width, cursorY + height));
+        var saveRect = MotionButton.FitHaloWidth(
+            new Rect(new Vector2(origin.X, cursorY), new Vector2(origin.X + width, cursorY + height)), scale);
         if (CoinArt.Capsule(drawList, ui, ImGui.GetID("coin.product.save"), saveRect,
                 Loc.T(saving ? L.Coin.SavingForThis : L.Coin.SaveForThis), saving ? CapsuleTone.Quiet : CapsuleTone.Tinted,
                 true))

@@ -18,7 +18,6 @@ internal sealed class DisplayPage : ISettingsPage
         new(L.Settings.TextSize),
         new(L.Settings.LiveGlass),
         new(L.ControlCenter.LockPosition),
-        new(L.Minimized.Title),
     };
 
     public string Title => Loc.T(L.Settings.Display);
@@ -48,15 +47,10 @@ internal sealed class DisplayPage : ISettingsPage
     private Vector2 liveGlassReadoutSize;
 #endif
     private readonly Configuration configuration;
-    private readonly ISettingsNavigator navigator;
-    private readonly MinimizedLayoutService minimizedLayout;
 
-    public DisplayPage(Configuration configuration, ISettingsNavigator navigator,
-        MinimizedLayoutService minimizedLayout)
+    public DisplayPage(Configuration configuration)
     {
         this.configuration = configuration;
-        this.navigator = navigator;
-        this.minimizedLayout = minimizedLayout;
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -73,8 +67,6 @@ internal sealed class DisplayPage : ISettingsPage
             DrawLiveGlassCard(theme);
             ImGui.Dummy(new Vector2(0f, CardGap * scale));
             DrawLockPositionCard(theme);
-            ImGui.Dummy(new Vector2(0f, CardGap * scale));
-            DrawMinimizedCard(theme);
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
         }
     }
@@ -168,17 +160,6 @@ internal sealed class DisplayPage : ISettingsPage
 
         configuration.LockPosition = lockPosition;
         configuration.Save();
-    }
-
-    private void DrawMinimizedCard(PhoneTheme theme)
-    {
-        var card = GroupCard.Begin(theme, 1);
-        var opened = SettingsRow.Disclosure(card.NextRow(), Loc.T(L.Minimized.Title), string.Empty, theme);
-        card.End();
-        if (opened)
-        {
-            navigator.Open(new MinimizedPhonePage(minimizedLayout, configuration));
-        }
     }
 
     private string WidthReadout(float width)

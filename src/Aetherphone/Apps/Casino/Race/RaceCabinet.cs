@@ -75,7 +75,7 @@ internal sealed class RaceCabinet : ICabinetIdle
         var phase = rooms.Room.State?.Snapshot?.Phase ?? CasinoRoomPhases.Open;
         var deckHeight = !landscape && phase == CasinoRoomPhases.Open ? DeckHeight : 0f;
         return new CasinoStageSpec(CasinoGames.Race, L.Race.Title, Backdrop.Arena, Room: true,
-            DeckHeight: deckHeight, InstantAvailable: true, ReturnTenths: RaceRules.ReturnTenths);
+            DeckHeight: deckHeight, ReturnTenths: RaceRules.ReturnTenths);
     }
 
     public void Enter()
@@ -113,7 +113,7 @@ internal sealed class RaceCabinet : ICabinetIdle
         var board = held?.Race;
         var localNow = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var remaining = snapshot is null ? 0 : room.RemainingMilliseconds(snapshot.PhaseEndsAtUnixMs, localNow);
-        playback.Update(snapshot, board, room.ServerNowUnixMs(localNow), frame.Instant);
+        playback.Update(snapshot, board, room.ServerNowUnixMs(localNow));
         var drawList = ImGui.GetWindowDrawList();
         var safe = frame.Safe;
         var closedReason = room.ClosedReason;
@@ -139,7 +139,7 @@ internal sealed class RaceCabinet : ICabinetIdle
         commentary.Advance(delta);
         HandleCues(stage, runners);
         Gallop(delta, stretch);
-        Settle(stage, frame, snapshot, bets);
+        Settle(stage, frame, bets);
         if (snapshot.Phase == CasinoRoomPhases.Locked)
         {
             DrawRace(drawList, frame, runners, landscape, delta, stretch, scale);
@@ -398,8 +398,7 @@ internal sealed class RaceCabinet : ICabinetIdle
         CasinoSfx.Play(UiSound.Gallop);
     }
 
-    private void Settle(CasinoStage stage, in CasinoStageFrame frame, CasinoRoomSnapshotDto snapshot,
-        CasinoRaceBetsDto? bets)
+    private void Settle(CasinoStage stage, in CasinoStageFrame frame, CasinoRaceBetsDto? bets)
     {
         if (playback.Stage is not (RaceStage.Finished or RaceStage.Result) || bets is null
             || bets.Phase == CasinoRoomPhases.Open
@@ -418,10 +417,9 @@ internal sealed class RaceCabinet : ICabinetIdle
         stage.Settle(new CasinoBetRecord(L.Race.Title, staked, bets.MyPayout, bets.RoundId,
             DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), bets.Capped));
         chips.RefreshNow();
-        var live = playback.WatchedLive || (frame.Instant && snapshot.Phase == CasinoRoomPhases.Locked);
-        if (live)
+        if (playback.WatchedLive)
         {
-            stage.Celebration.Celebrate(staked, bets.MyPayout, frame.Safe.Center, frame.Instant);
+            stage.Celebration.Celebrate(staked, bets.MyPayout, frame.Safe.Center, false);
         }
     }
 
@@ -486,7 +484,7 @@ internal sealed class RaceCabinet : ICabinetIdle
         var sitting = state.Sitting;
         var tickets = bets?.Tickets ?? Array.Empty<CasinoRaceTicketDto>();
         var full = tickets.Length >= RaceRules.MaxTickets;
-        var selectable = sitting is not null && !frame.Blocked && !full;
+        var selectable = sitting is not null && !full;
         var safe = frame.Safe;
         var message = inlineReason.Length > 0 ? Loc.T(CasinoReasons.MessageFor(inlineReason)) : string.Empty;
         var noticeHeight = message.Length > 0
@@ -555,7 +553,7 @@ internal sealed class RaceCabinet : ICabinetIdle
         CasinoStateDto state, CasinoSittingDto sitting, CasinoRaceRunnerDto[] runners, CasinoRaceBetsDto? bets,
         bool full)
     {
-        var enabled = !state.StakesPaused && !state.Draining && !rooms.StakeInFlight && !frame.Blocked && !full;
+        var enabled = !state.StakesPaused && !state.Draining && !rooms.StakeInFlight && !full;
         var ride = RideAmount(bets, sitting);
         var model = new RaceDeckModel(chips.Ceiling.MaxBet, sitting.Stack, builder.Kind, DeckCaption(runners, full),
             builder.Ready, enabled, ride > 0 ? texts.Ride(ride) : string.Empty, stage.RepeatPressed(), ride);

@@ -1,4 +1,6 @@
+using System.Numerics;
 using Aetherphone.Core.Honorific;
+using Newtonsoft.Json;
 using Xunit;
 
 namespace Aetherphone.Tests;
@@ -106,6 +108,110 @@ public sealed class NameplateTitleSettingsTests
 
         Assert.Equal(NameplateLongTitles.TakeTurns, settings.LongTitles);
         Assert.Equal(NameplateTitleSettings.MinimumTurnSeconds, settings.TurnSeconds);
+    }
+
+    [Fact]
+    public void NormalizeCarriesSavedPaletteColorsOver()
+    {
+        const string saved = "{\"Style\":2,\"CustomColor\":3,\"CustomGlow\":9}";
+        var settings = JsonConvert.DeserializeObject<NameplateTitleSettings>(saved)!;
+
+        settings.Normalize();
+
+        Assert.Equal(NameplatePalette.PackedAt(3), settings.TextColor);
+        Assert.Equal(NameplatePalette.PackedAt(9), settings.GlowColor);
+        var reloaded = JsonConvert.DeserializeObject<NameplateTitleSettings>(JsonConvert.SerializeObject(settings))!;
+        reloaded.TextColor = NameplatePalette.White;
+        reloaded.Normalize();
+        Assert.Equal(NameplatePalette.White, reloaded.TextColor);
+    }
+
+    [Fact]
+    public void FreshSettingsStartWhiteOnTheDarkGlow()
+    {
+        var settings = new NameplateTitleSettings();
+
+        settings.Normalize();
+
+        Assert.Equal(NameplatePalette.White, settings.TextColor);
+        Assert.Equal(NameplatePalette.DarkGlowPacked, settings.GlowColor);
+        Assert.Equal(NameplateGlow.Solid, settings.Glow);
+    }
+
+    [Fact]
+    public void NormalizeResetsAGradientHonorificDoesNotKnow()
+    {
+        var settings = new NameplateTitleSettings { Gradient = NameplateGradients.All.Length };
+
+        settings.Normalize();
+
+        Assert.Equal(0, settings.Gradient);
+    }
+
+    [Fact]
+    public void SolidLookSendsNoGradient()
+    {
+        var settings = new NameplateTitleSettings { TextColor = 0xFF8000, GlowColor = 0x102030 };
+
+        var look = settings.CustomLook();
+
+        Assert.Equal(NameplatePalette.Unpack(0xFF8000), look.Color);
+        Assert.Equal(NameplatePalette.Unpack(0x102030), look.Glow);
+        Assert.Null(look.GradientColourSet);
+        Assert.Null(look.GradientAnimationStyle);
+    }
+
+    [Fact]
+    public void GradientLookSendsHonorificSetAndMotion()
+    {
+        var settings = new NameplateTitleSettings
+        {
+            Glow = NameplateGlow.Gradient,
+            Gradient = 11,
+            Motion = NameplateGradientMotion.Static,
+        };
+
+        var look = settings.CustomLook();
+
+        Assert.Equal(11, look.GradientColourSet);
+        Assert.Equal(2, look.GradientAnimationStyle);
+        Assert.Null(look.Color3);
+    }
+
+    [Fact]
+    public void TwoColorLookSendsBothColors()
+    {
+        var settings = new NameplateTitleSettings
+        {
+            Glow = NameplateGlow.Gradient,
+            Gradient = NameplateGradients.TwoColors,
+            Motion = NameplateGradientMotion.Wave,
+            GradientFirst = 0xFF0000,
+            GradientSecond = 0x00FF00,
+        };
+
+        var look = settings.CustomLook();
+        var json = NameplateTitleText.ToJson(new NameplateTitle(NameplateStatus.Custom, "Hi", look, false));
+
+        Assert.Equal(-1, look.GradientColourSet);
+        Assert.Equal(1, look.GradientAnimationStyle);
+        Assert.Equal(new Vector3(1f, 0f, 0f), look.Glow);
+        Assert.Equal(new Vector3(0f, 1f, 0f), look.Color3);
+        Assert.Contains("\"GradientColourSet\":-1", json);
+        Assert.Contains("\"Color3\"", json);
+    }
+
+    [Fact]
+    public void ColorSlotsReadAndWriteTheirOwnColor()
+    {
+        var settings = new NameplateTitleSettings();
+
+        settings.SetColor(NameplateColorSlot.GradientSecond, 0x123456);
+
+        Assert.Equal(0x123456u, settings.ColorOf(NameplateColorSlot.GradientSecond));
+        Assert.NotEqual(0x123456u, settings.ColorOf(NameplateColorSlot.GradientFirst));
+        Assert.NotEqual(0x123456u, settings.ColorOf(NameplateColorSlot.Text));
+        Assert.NotEqual(0x123456u, settings.ColorOf(NameplateColorSlot.Glow));
     }
 
     [Fact]

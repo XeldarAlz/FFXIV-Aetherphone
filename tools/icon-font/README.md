@@ -32,10 +32,12 @@ covers how the plugin loads, draws and tests it.
 `[FirstIconCodepoint, LastIconCodepoint]` (U+E000..U+F8FF). Tabler's native
 codepoints collide with FontAwesome, most importantly the filled set at
 U+F669..U+FECF, which sits inside FontAwesome's classic U+F000..U+F8FF block.
-Every glyph is therefore remapped to `BASE` onward (U+E600), a gap above
-FontAwesome 6's U+E0xx..U+E5xx additions and below its classic block. If a
-future FontAwesome release reaches U+E600, move `BASE`, regenerate, and move
-`IconPlan.FirstTablerCodepoint` with it.
+Every glyph is therefore remapped to `BASE` onward (U+E600), above
+FontAwesome 6's U+E0xx..U+E5xx additions and below its classic block.
+FontAwesome 7 has since placed a few glyphs inside the block (U+E678,
+U+E67A, U+E682), so `FontService.ComposeIconRanges` never asks FontAwesome
+for `[FirstTablerCodepoint, LastTablerCodepoint]` and Tabler always wins
+there. Moving `BASE` is no longer needed when FontAwesome grows.
 
 ## Drawing
 

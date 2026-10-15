@@ -22,6 +22,7 @@ internal static class MotionButton
     private const int HaloLayers = 7;
     private const float HaloStepUnits = 2.2f;
     private const float HaloDropScale = 0.35f;
+    private const float HaloFringePixels = 1f;
     private const float ClipEdgeEpsilon = 0.5f;
     private static readonly Vector4 LabelInk = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 Shadow = new(0f, 0f, 0f, 1f);
@@ -130,6 +131,15 @@ internal static class MotionButton
     }
 
     public static float HaloReach(float scale) => HaloLayers * HaloStepUnits * scale;
+
+    public static Rect FitHaloWidth(Rect bounds, float scale)
+    {
+        var reach = HaloReach(scale) + HaloFringePixels;
+        var width = MathF.Max(0f, (bounds.Width - reach * 2f) / (1f + HoverLiftScale));
+        var inset = (bounds.Width - width) * 0.5f;
+        return new Rect(new Vector2(bounds.Min.X + inset, bounds.Min.Y),
+            new Vector2(bounds.Max.X - inset, bounds.Max.Y));
+    }
 
     public static void Halo(ImDrawListPtr drawList, Rect face, float radius, Vector4 tint, float strength)
     {
