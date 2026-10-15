@@ -37,6 +37,8 @@ internal sealed class HalloweenBadgeStore : IDisposable
 
     public bool Granted => progress?.Granted == true;
 
+    public bool Waiting => Environment.TickCount64 < Interlocked.Read(ref blockedUntilTick);
+
     public void Report(int found)
     {
         var known = progress;

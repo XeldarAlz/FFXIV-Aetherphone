@@ -75,7 +75,7 @@ internal static class Treats
 
     public static bool BadgeGranted => badge?.Granted == true;
 
-    public static bool CanClaimBadge => SignedIn;
+    public static bool BadgeWaiting => badge?.Waiting == true;
 
     public static void SyncBadge() => badge?.Report(Found);
 
@@ -186,7 +186,7 @@ internal static class Treats
 
     private static bool Installed(string appId) => installer is not null && installer.IsInstalled(appId);
 
-    private static bool SignedIn => session is not null && session.IsSignedIn;
+    public static bool SignedIn => session is not null && session.IsSignedIn;
 
     private static bool VelvetOpen => !VelvetBarred && Installed("velvet") && SignedIn &&
         Plugin.Cfg.VelvetAcknowledgedGate && Plugin.Cfg.IsVelvetOnboarded();
@@ -282,7 +282,7 @@ internal static class Treats
         badge?.Report(found);
         UiFeedback.Play(found >= Total ? UiSound.HalloweenFlare : UiSound.HalloweenSparkle);
         ShellToast.Show(found >= Total
-            ? Loc.T(L.Seasonal.TreatsComplete, Total)
+            ? Loc.T(SignedIn ? L.Seasonal.TreatsComplete : L.Seasonal.TreatsCompleteSignIn, Total)
             : Loc.T(L.Seasonal.TreatFound, found, Total));
     }
 }

@@ -26,6 +26,7 @@ internal sealed class CoinTreatCard
     private const int StatusBadgeUnlocked = 1000;
     private const int StatusBadgeUnlocking = 1100;
     private const int StatusBadgeSignIn = 1200;
+    private const int StatusBadgeLater = 1300;
     private const int StatusOffSeason = 2000;
 
     private CachedText count;
@@ -140,6 +141,7 @@ internal sealed class CoinTreatCard
             StatusBadgeUnlocked => Loc.T(L.Seasonal.TreatsBadgeUnlocked),
             StatusBadgeUnlocking => Loc.T(L.Seasonal.TreatsBadgeUnlocking),
             StatusBadgeSignIn => Loc.T(L.Seasonal.TreatsBadgeSignIn),
+            StatusBadgeLater => Loc.T(L.Seasonal.TreatsBadgeLater),
             StatusOffSeason => Loc.T(L.Seasonal.HalloweenPassed),
             StatusLater => Loc.T(L.Seasonal.TreatLater),
             StatusTomorrow => Loc.T(L.Seasonal.TreatTomorrow),
@@ -149,7 +151,7 @@ internal sealed class CoinTreatCard
     }
 
     private static int BadgeStatus() => Treats.BadgeGranted ? StatusBadgeUnlocked
-        : Treats.CanClaimBadge ? StatusBadgeUnlocking : StatusBadgeSignIn;
+        : !Treats.SignedIn ? StatusBadgeSignIn : Treats.BadgeWaiting ? StatusBadgeLater : StatusBadgeUnlocking;
 
     private static string HidingText(TreatSpot spot) => spot switch
     {

@@ -44,7 +44,6 @@ internal static class NameEffects
     private const int RainbowStops = 8;
     private const float RainbowSaturation = 0.72f;
 
-
     public static TextEffect For(RoleKind role, bool light)
     {
         var kind = KindFor(role);

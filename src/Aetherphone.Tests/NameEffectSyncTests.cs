@@ -294,7 +294,6 @@ public sealed class NameEffectSyncTests
         Assert.True(witchfire.Crest.W > 0f);
     }
 
-
     [Fact]
     public void StaticDecorationsStayStill()
     {

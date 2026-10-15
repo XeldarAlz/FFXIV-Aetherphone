@@ -105,7 +105,7 @@ internal sealed record CoinQuestBoardDto(int DayIndex, long ResetsAtUnix, CoinQu
 
 internal sealed record HalloweenTreatsReport(int Found);
 
-internal sealed record HalloweenTreatsDto(int Year, int Found, int Total, bool Granted);
+internal sealed record HalloweenTreatsDto(int Found, bool Granted);
 
 internal sealed record CoinListenStartRequest(string StationId);
 
