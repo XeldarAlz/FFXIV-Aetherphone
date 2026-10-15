@@ -204,6 +204,9 @@ internal static class AppIconArt
             case "tempo":
                 DrawTempo(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "syrcus":
+                DrawSyrcus(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -1261,6 +1264,32 @@ internal static class AppIconArt
             var y = -0.52f + dash * 0.22f;
             drawList.AddLine(At(center, extent, -1f + dash * 0.08f, y), At(center, extent, -0.78f, y), ink, extent * 0.07f);
         }
+    }
+
+    private static void DrawSyrcus(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var bodyMin = At(center, extent, -0.68f, -0.96f);
+        var bodyMax = At(center, extent, 0.68f, 0.96f);
+        var rounding = extent * 0.22f;
+        dl.AddRectFilled(bodyMin, bodyMax, ink, rounding);
+
+        var screenMin = At(center, extent, -0.43f, -0.67f);
+        var screenMax = At(center, extent, 0.43f, -0.10f);
+        dl.AddRectFilled(screenMin, screenMax, hole, extent * 0.08f);
+        dl.AddRect(screenMin, screenMax, hole, extent * 0.08f, ImDrawFlags.RoundCornersAll, extent * 0.06f);
+
+        var dpadCenter = At(center, extent, -0.34f, 0.38f);
+        var dpadSize = extent * 0.16f;
+        dl.AddRectFilled(new Vector2(dpadCenter.X - dpadSize, dpadCenter.Y - dpadSize * 0.34f),
+            new Vector2(dpadCenter.X + dpadSize, dpadCenter.Y + dpadSize * 0.34f), hole, dpadSize * 0.18f);
+        dl.AddRectFilled(new Vector2(dpadCenter.X - dpadSize * 0.34f, dpadCenter.Y - dpadSize),
+            new Vector2(dpadCenter.X + dpadSize * 0.34f, dpadCenter.Y + dpadSize), hole, dpadSize * 0.18f);
+
+        var buttonRadius = extent * 0.13f;
+        dl.AddCircleFilled(At(center, extent, 0.38f, 0.27f), buttonRadius, hole, 16);
+        dl.AddCircleFilled(At(center, extent, 0.18f, 0.47f), buttonRadius, hole, 16);
+        dl.AddCircleFilled(At(center, extent, -0.16f, 0.72f), extent * 0.06f, hole, 12);
+        dl.AddCircleFilled(At(center, extent, 0.16f, 0.72f), extent * 0.06f, hole, 12);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)

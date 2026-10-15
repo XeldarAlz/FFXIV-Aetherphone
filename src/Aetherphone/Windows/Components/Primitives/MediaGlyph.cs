@@ -15,6 +15,15 @@ internal static class MediaGlyph
             new Vector2(center.X - size * 0.7f, center.Y + size), new Vector2(center.X + size, center.Y), ink);
     }
 
+    public static void FastForward(ImDrawListPtr drawList, Vector2 center, float size, uint ink)
+    {
+        drawList.AddTriangleFilled(new Vector2(center.X - size * 1.35f, center.Y - size),
+            new Vector2(center.X - size * 1.35f, center.Y + size), new Vector2(center.X, center.Y), ink);
+        drawList.AddTriangleFilled(new Vector2(center.X - size * 0.05f, center.Y - size),
+            new Vector2(center.X - size * 0.05f, center.Y + size), new Vector2(center.X + size * 1.30f, center.Y),
+            ink);
+    }
+
     public static void Pause(ImDrawListPtr drawList, Vector2 center, float size, uint ink)
     {
         var barWidth = size * 0.34f;
