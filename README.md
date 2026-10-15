@@ -194,6 +194,8 @@ Gamba's Host tab shows your open table with its code, who is here and who is kno
 
 **Widgets and Smart Stacks.** Widgets for most apps, resized from the corner and stacked by dropping one onto another.
 
+**Folders.** Drop one app onto another to make a folder. Hold an app inside a folder to start editing and drag it into a new spot, or hold it just outside the folder to bring it back to the Home Screen.
+
 **A Dynamic Island** for calls, playback, timers, voyages, watch parties and meetups.
 
 **Spotlight and Control Center.** Pull down on the Home Screen to search apps, contacts, settings, notes and market items, or tap the top of the screen for music, volume, brightness and Do Not Disturb.
