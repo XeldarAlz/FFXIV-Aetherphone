@@ -260,6 +260,7 @@ internal sealed class MpvRenderer : IDisposable
         SetOption("ytdl-raw-options", ResolverSiteOptions.BaseRawOptions);
         SetOption("stream-lavf-o", StreamReconnectOptions);
         SetOption("volume", initialVolume.ToString(CultureInfo.InvariantCulture));
+        SetOption("audio-fallback-to-null", "yes");
         SetOption("msg-level", "all=warn,ffmpeg=error");
         SetOption("terminal", "no");
         SetOption("idle", "yes");
@@ -409,6 +410,28 @@ internal sealed class MpvRenderer : IDisposable
         }
     }
 
+    internal bool PlaysWithoutSound { get; private set; }
+
+    internal void PlayWithoutSound()
+    {
+        if (!IsRunning || PlaysWithoutSound)
+        {
+            return;
+        }
+
+        PlaysWithoutSound = true;
+        lock (commandLock)
+        {
+            if (mpvContext == IntPtr.Zero)
+            {
+                return;
+            }
+
+            _ = MpvCommand(mpvContext, ["set", "ao", "null", null]);
+            _ = MpvCommand(mpvContext, ["ao-reload", null]);
+        }
+    }
+
     internal void Pause(bool paused) => SetProperty("pause", paused ? "yes" : "no");
 
     internal void SetVolume(int volume) =>
@@ -475,13 +498,14 @@ internal sealed class MpvRenderer : IDisposable
             _ = mpv_get_property(mpvContext, "pause", FormatFlag, out int paused);
             _ = mpv_get_property(mpvContext, "core-idle", FormatFlag, out int coreIdle);
             _ = mpv_get_property(mpvContext, "seeking", FormatFlag, out int seeking);
+            _ = mpv_get_property(mpvContext, "paused-for-cache", FormatFlag, out int pausedForCache);
             var hasAudioPosition = mpv_get_property(mpvContext, "audio-pts", FormatDouble, out double audioPosition) >= 0;
             var hasVideo = mpv_get_property(mpvContext, "vid", FormatInt64, out long _) >= 0;
             var videoIsStill = hasVideo
                 && ((mpv_get_property(mpvContext, "current-tracks/video/albumart", FormatFlag, out int albumArt) >= 0 && albumArt == 1)
                     || (mpv_get_property(mpvContext, "current-tracks/video/image", FormatFlag, out int image) >= 0 && image == 1));
             return new MpvPlaybackInfo(position, duration, paused == 1, coreIdle == 1, seeking == 1,
-                hasVideo && !videoIsStill, hasAudioPosition, hasAudioPosition ? audioPosition : 0d);
+                pausedForCache == 1, hasVideo && !videoIsStill, hasAudioPosition, hasAudioPosition ? audioPosition : 0d);
         }
     }
 
@@ -766,6 +790,12 @@ internal sealed class MpvRenderer : IDisposable
             return;
         }
 
+        if (prefix is not null && prefix.StartsWith("ao", StringComparison.Ordinal))
+        {
+            AepLog.Warning($"[MPV/{prefix}] {text}");
+            return;
+        }
+
         AepLog.Verbose($"[MPV/{prefix}/{level}] {text}");
     }
 
@@ -982,6 +1012,7 @@ internal readonly record struct MpvPlaybackInfo(
     bool Paused,
     bool CoreIdle,
     bool Seeking,
+    bool PausedForCache,
     bool HasMovingVideo,
     bool HasAudioPosition,
     double AudioPositionSeconds);

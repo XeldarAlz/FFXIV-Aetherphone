@@ -6997,6 +6997,7 @@
   "aetherstream.screen": "Ekran",
   "aetherstream.watchingCount": "{0} kişi izliyor",
   "aetherstream.resolverRecovering": "Video hizmeti yayını geri çevirdi. Bağlantı çözücü güncelleniyor ve yeniden denenecek.",
+  "aetherstream.playingWithoutSound": "Ses cihazın yanıt vermeyi bıraktı, bu yüzden bu video sessiz oynatılıyor.",
   "aetherstream.resolverStillRefused": "Bağlantı çözücü güncellendikten sonra bile video hizmeti bu yayını geri çevirdi. Daha sonra tekrar dene.",
   "aetherstream.resolverAlreadyCurrent": "Video hizmeti bu yayını geri çevirdi ve bağlantı çözücü zaten en son sürümde. Daha sonra tekrar dene.",
   "aetherstream.resolverUpdateFailed": "Video hizmeti bu yayını geri çevirdi ve bağlantı çözücü güncellenemedi. Bağlantını kontrol edip tekrar dene.",

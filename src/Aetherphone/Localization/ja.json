@@ -6997,6 +6997,7 @@
   "aetherstream.screen": "スクリーン",
   "aetherstream.watchingCount": "{0} 人が視聴中",
   "aetherstream.resolverRecovering": "動画サービスに再生を拒否されました。リンク解決を更新して再試行しています。",
+  "aetherstream.playingWithoutSound": "オーディオデバイスが応答しなくなったため、この動画は音声なしで再生しています。",
   "aetherstream.resolverStillRefused": "リンク解決を更新しても、動画サービスに再生を拒否されました。しばらくしてからもう一度お試しください。",
   "aetherstream.resolverAlreadyCurrent": "動画サービスに再生を拒否されましたが、リンク解決はすでに最新です。しばらくしてからもう一度お試しください。",
   "aetherstream.resolverUpdateFailed": "動画サービスに再生を拒否され、リンク解決の更新もできませんでした。接続を確認してからもう一度お試しください。",

@@ -6997,6 +6997,7 @@
   "aetherstream.screen": "屏幕",
   "aetherstream.watchingCount": "{0} 人观看",
   "aetherstream.resolverRecovering": "视频服务拒绝了本次播放。正在更新链接解析并重试。",
+  "aetherstream.playingWithoutSound": "音频设备已停止响应，此视频将以静音播放。",
   "aetherstream.resolverStillRefused": "更新链接解析后，视频服务仍拒绝了此视频。请稍后再试。",
   "aetherstream.resolverAlreadyCurrent": "视频服务拒绝了此视频，且链接解析已是最新版本。请稍后再试。",
   "aetherstream.resolverUpdateFailed": "视频服务拒绝了此视频，且链接解析更新失败。请检查网络连接后再试。",

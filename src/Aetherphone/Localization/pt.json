@@ -6997,6 +6997,7 @@
   "aetherstream.screen": "Tela",
   "aetherstream.watchingCount": "{0} assistindo",
   "aetherstream.resolverRecovering": "O serviço de vídeo recusou a transmissão. O resolvedor de links está sendo atualizado para tentar de novo.",
+  "aetherstream.playingWithoutSound": "Seu dispositivo de áudio parou de responder, então este vídeo está tocando sem som.",
   "aetherstream.resolverStillRefused": "O serviço de vídeo recusou esta transmissão mesmo depois de atualizar o resolvedor de links. Tente de novo mais tarde.",
   "aetherstream.resolverAlreadyCurrent": "O serviço de vídeo recusou esta transmissão e o resolvedor de links já está na versão mais recente. Tente de novo mais tarde.",
   "aetherstream.resolverUpdateFailed": "O serviço de vídeo recusou esta transmissão e não foi possível atualizar o resolvedor de links. Verifique sua conexão e tente de novo.",

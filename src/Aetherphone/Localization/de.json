@@ -6997,6 +6997,7 @@
   "aetherstream.screen": "Bildschirm",
   "aetherstream.watchingCount": "{0} schauen zu",
   "aetherstream.resolverRecovering": "Der Videodienst hat den Stream abgewiesen. Die Link-Auflösung wird aktualisiert und die Wiedergabe neu gestartet.",
+  "aetherstream.playingWithoutSound": "Dein Audiogerät reagiert nicht mehr, daher läuft dieses Video ohne Ton.",
   "aetherstream.resolverStillRefused": "Der Videodienst hat diesen Stream auch nach dem Update der Link-Auflösung abgewiesen. Versuche es später erneut.",
   "aetherstream.resolverAlreadyCurrent": "Der Videodienst hat diesen Stream abgewiesen, obwohl die Link-Auflösung schon aktuell ist. Versuche es später erneut.",
   "aetherstream.resolverUpdateFailed": "Der Videodienst hat diesen Stream abgewiesen und das Update der Link-Auflösung ist fehlgeschlagen. Prüfe deine Verbindung und versuche es erneut.",

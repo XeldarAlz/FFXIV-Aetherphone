@@ -7466,6 +7466,8 @@ internal static class L
         public static readonly LocString WatchingCount = new("aetherstream.watchingCount", "{0} watching");
         public static readonly LocString ResolverRecovering = new("aetherstream.resolverRecovering",
             "The video service refused the stream. Updating the link resolver and retrying.");
+        public static readonly LocString PlayingWithoutSound = new("aetherstream.playingWithoutSound",
+            "Your audio device stopped responding, so this video is playing without sound.");
         public static readonly LocString ResolverStillRefused = new("aetherstream.resolverStillRefused",
             "The video service refused this stream even after a link resolver update. Try again later.");
         public static readonly LocString ResolverAlreadyCurrent = new("aetherstream.resolverAlreadyCurrent",

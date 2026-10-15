@@ -6997,6 +6997,7 @@
   "aetherstream.screen": "Pantalla",
   "aetherstream.watchingCount": "{0} viendo",
   "aetherstream.resolverRecovering": "El servicio de vídeo rechazó la transmisión. Se está actualizando el resolutor de enlaces para reintentarlo.",
+  "aetherstream.playingWithoutSound": "Tu dispositivo de audio dejó de responder, así que este vídeo se reproduce sin sonido.",
   "aetherstream.resolverStillRefused": "El servicio de vídeo rechazó esta transmisión incluso tras actualizar el resolutor de enlaces. Vuelve a intentarlo más tarde.",
   "aetherstream.resolverAlreadyCurrent": "El servicio de vídeo rechazó esta transmisión y el resolutor de enlaces ya está en su última versión. Vuelve a intentarlo más tarde.",
   "aetherstream.resolverUpdateFailed": "El servicio de vídeo rechazó esta transmisión y no se pudo actualizar el resolutor de enlaces. Revisa tu conexión y vuelve a intentarlo.",

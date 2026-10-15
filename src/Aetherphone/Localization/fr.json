@@ -6997,6 +6997,7 @@
   "aetherstream.screen": "Écran",
   "aetherstream.watchingCount": "{0} spectateurs",
   "aetherstream.resolverRecovering": "Le service vidéo a refusé la diffusion. Le résolveur de liens se met à jour avant un nouvel essai.",
+  "aetherstream.playingWithoutSound": "Votre périphérique audio ne répond plus, cette vidéo est donc lue sans son.",
   "aetherstream.resolverStillRefused": "Le service vidéo a encore refusé cette diffusion après la mise à jour du résolveur de liens. Réessayez plus tard.",
   "aetherstream.resolverAlreadyCurrent": "Le service vidéo a refusé cette diffusion alors que le résolveur de liens est déjà à jour. Réessayez plus tard.",
   "aetherstream.resolverUpdateFailed": "Le service vidéo a refusé cette diffusion et la mise à jour du résolveur de liens a échoué. Vérifiez votre connexion et réessayez.",

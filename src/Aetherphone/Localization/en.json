@@ -6997,6 +6997,7 @@
   "aetherstream.screen": "Screen",
   "aetherstream.watchingCount": "{0} watching",
   "aetherstream.resolverRecovering": "The video service refused the stream. Updating the link resolver and retrying.",
+  "aetherstream.playingWithoutSound": "Your audio device stopped responding, so this video is playing without sound.",
   "aetherstream.resolverStillRefused": "The video service refused this stream even after a link resolver update. Try again later.",
   "aetherstream.resolverAlreadyCurrent": "The video service refused this stream and the link resolver is already the latest release. Try again later.",
   "aetherstream.resolverUpdateFailed": "The video service refused this stream and the link resolver update did not go through. Check your connection and try again.",
