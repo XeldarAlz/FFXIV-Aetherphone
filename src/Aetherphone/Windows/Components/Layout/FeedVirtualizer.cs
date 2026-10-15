@@ -10,6 +10,7 @@ internal sealed class FeedVirtualizer
     public const int DefaultRowCap = 400;
     public const int MinAutoAdvanceSeconds = 3;
     public const int MaxAutoAdvanceSeconds = 30;
+    public const double AutoAdvanceIdleLimitSeconds = 300d;
 
     private const float ParkedAtTop = 1f;
     private const float StepEpsilon = 1f;
@@ -31,6 +32,7 @@ internal sealed class FeedVirtualizer
     private float glideTarget;
     private bool gliding;
     private double idleSince;
+    private double lastInputAt;
 
     public FeedVirtualizer(float cullMargin, int rowCap = DefaultRowCap)
     {
@@ -66,6 +68,7 @@ internal sealed class FeedVirtualizer
         {
             gliding = false;
             idleSince = ImGui.GetTime();
+            lastInputAt = idleSince;
         }
 
         rowTops.Clear();
@@ -97,6 +100,10 @@ internal sealed class FeedVirtualizer
         rows[rowId] = (ImGui.GetCursorScreenPos().Y - rowStartY, revision);
     }
 
+    internal static bool AutoAdvanceDue(double now, double idleSince, double lastInputAt, int seconds) =>
+        now - idleSince >= Math.Clamp(seconds, MinAutoAdvanceSeconds, MaxAutoAdvanceSeconds)
+        && now - lastInputAt < AutoAdvanceIdleLimitSeconds;
+
     private void Step(Configuration settings)
     {
         var io = ImGui.GetIO();
@@ -110,6 +117,7 @@ internal sealed class FeedVirtualizer
         if (direction != 0)
         {
             idleSince = ImGui.GetTime();
+            lastInputAt = idleSince;
         }
         else if (settings.FeedAutoAdvance)
         {
@@ -155,14 +163,25 @@ internal sealed class FeedVirtualizer
         var now = ImGui.GetTime();
         var touched = UiInteract.WindowHovered &&
             (io.MouseDelta != Vector2.Zero || io.MouseWheel != 0f || ImGui.IsMouseDown(ImGuiMouseButton.Left));
-        var busy = touched || io.WantTextInput || UiInteract.InputBlocked || InputShield.Active;
-        if (!busy && now - idleSince < Math.Clamp(seconds, MinAutoAdvanceSeconds, MaxAutoAdvanceSeconds))
+        var present = touched || io.WantTextInput;
+        if (present)
+        {
+            lastInputAt = now;
+        }
+
+        if (present || UiInteract.InputBlocked || InputShield.Active)
+        {
+            idleSince = now;
+            return 0;
+        }
+
+        if (!AutoAdvanceDue(now, idleSince, lastInputAt, seconds))
         {
             return 0;
         }
 
         idleSince = now;
-        return busy ? 0 : 1;
+        return 1;
     }
 
     private float NextStop(float from)

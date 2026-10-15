@@ -859,7 +859,7 @@
   "settings.arrowKeysStepPosts": "Arrow keys scroll posts",
   "settings.arrowKeysStepPostsHint": "While the phone is focused, Up and Down glide to the previous or next post in Aethergram and Chirper.",
   "settings.autoAdvancePosts": "Auto-advance posts",
-  "settings.autoAdvancePostsHint": "When you leave a feed alone, it moves to the next post on its own.",
+  "settings.autoAdvancePostsHint": "When you leave a feed alone, it moves to the next post on its own. It stops after 5 minutes without input.",
   "settings.autoAdvanceEvery": "Every {0} seconds",
   "settings.scrollWhileIdle": "Scroll While Idle",
   "settings.scrollWhileIdleHint": "When you open your phone and stand still, your character scrolls through it (Tomescroll emote). Move or cancel the emote and it stays off until you open the phone again. Does nothing if you haven't unlocked the emote.",

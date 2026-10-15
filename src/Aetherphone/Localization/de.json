@@ -859,7 +859,7 @@
   "settings.arrowKeysStepPosts": "Pfeiltasten scrollen Beiträge",
   "settings.arrowKeysStepPostsHint": "Solange das Handy im Fokus ist, gleiten Pfeil hoch und runter zum vorherigen oder nächsten Beitrag in Aethergram und Chirper.",
   "settings.autoAdvancePosts": "Beiträge automatisch weiterblättern",
-  "settings.autoAdvancePostsHint": "Wenn du einen Feed in Ruhe lässt, springt er von selbst zum nächsten Beitrag.",
+  "settings.autoAdvancePostsHint": "Wenn du einen Feed in Ruhe lässt, springt er von selbst zum nächsten Beitrag. Nach 5 Minuten ohne Eingabe hält er an.",
   "settings.autoAdvanceEvery": "Alle {0} Sekunden",
   "settings.scrollWhileIdle": "Im Leerlauf scrollen",
   "settings.scrollWhileIdleHint": "Wenn du dein Handy öffnest und still stehst, scrollt dein Charakter darauf (Tomescroll-Emote). Bewegst du dich oder brichst die Emote ab, bleibt sie aus, bis du das Handy erneut öffnest. Ohne Wirkung, falls die Emote nicht freigeschaltet ist.",

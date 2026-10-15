@@ -859,7 +859,7 @@
   "settings.arrowKeysStepPosts": "Las flechas desplazan las publicaciones",
   "settings.arrowKeysStepPostsHint": "Con el teléfono enfocado, Arriba y Abajo se deslizan a la publicación anterior o siguiente en Aethergram y Chirper.",
   "settings.autoAdvancePosts": "Avanzar publicaciones automáticamente",
-  "settings.autoAdvancePostsHint": "Si dejas un feed quieto, pasa solo a la siguiente publicación.",
+  "settings.autoAdvancePostsHint": "Si dejas un feed quieto, pasa solo a la siguiente publicación. Se detiene tras 5 minutos sin actividad.",
   "settings.autoAdvanceEvery": "Cada {0} segundos",
   "settings.scrollWhileIdle": "Desplazar estando inactivo",
   "settings.scrollWhileIdleHint": "Al abrir el teléfono y quedarte quieto, tu personaje lo revisa (emote Tomescroll). Si te mueves o cancelas el emote, no se repite hasta que vuelvas a abrir el teléfono. No hace nada si no has desbloqueado el emote.",

@@ -859,7 +859,7 @@
   "settings.arrowKeysStepPosts": "Les flèches font défiler les publications",
   "settings.arrowKeysStepPostsHint": "Quand le téléphone a le focus, Haut et Bas glissent vers la publication précédente ou suivante dans Aethergram et Chirper.",
   "settings.autoAdvancePosts": "Défilement automatique des publications",
-  "settings.autoAdvancePostsHint": "Quand vous laissez un fil tranquille, il passe tout seul à la publication suivante.",
+  "settings.autoAdvancePostsHint": "Quand vous laissez un fil tranquille, il passe tout seul à la publication suivante. Il s'arrête après 5 minutes sans action.",
   "settings.autoAdvanceEvery": "Toutes les {0} secondes",
   "settings.scrollWhileIdle": "Faire défiler à l'arrêt",
   "settings.scrollWhileIdleHint": "Quand vous ouvrez votre téléphone en restant immobile, votre personnage le fait défiler (émote Tomescroll). Si vous bougez ou annulez l'émote, elle ne revient pas avant la prochaine ouverture du téléphone. Sans effet si vous n'avez pas débloqué l'émote.",

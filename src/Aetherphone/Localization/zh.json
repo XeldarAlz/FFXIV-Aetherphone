@@ -859,7 +859,7 @@
   "settings.arrowKeysStepPosts": "方向键滚动帖子",
   "settings.arrowKeysStepPostsHint": "手机处于焦点时，上下方向键会平滑跳到 Aethergram 和 Chirper 中的上一条或下一条帖子。",
   "settings.autoAdvancePosts": "自动切换帖子",
-  "settings.autoAdvancePostsHint": "一段时间不操作时，动态会自动跳到下一条帖子。",
+  "settings.autoAdvancePostsHint": "一段时间不操作时，动态会自动跳到下一条帖子。5分钟无操作后会停止。",
   "settings.autoAdvanceEvery": "每 {0} 秒",
   "settings.scrollWhileIdle": "待机时滑动手机",
   "settings.scrollWhileIdleHint": "打开手机并站立不动时，你的角色会滑动手机（使用神典石情感动作）。移动或取消该动作后，直到下次打开手机前都不会再次执行。如果未解锁该动作则无效。",
