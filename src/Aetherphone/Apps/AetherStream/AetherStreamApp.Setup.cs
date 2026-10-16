@@ -85,17 +85,22 @@ internal sealed partial class AetherStreamApp
         var runtime = dependencies.JsRuntime.Snapshot();
         var busy = DependencySetup.IsBusy(library) || DependencySetup.IsBusy(resolver)
             || DependencySetup.IsBusy(runtime);
+        var installing = DependencySetup.IsInstalling(library) || DependencySetup.IsInstalling(resolver)
+            || DependencySetup.IsInstalling(runtime);
         var failed = library.State == DependencyState.Failed || resolver.State == DependencyState.Failed
             || runtime.State == DependencyState.Failed;
 
         var pending = dependencies.PendingDownloadBytes;
-        var label = busy
+        var label = installing
             ? Loc.T(L.AetherStream.SetupInstalling)
-            : failed
-                ? Loc.T(L.AetherStream.SetupRetry)
-                : pending > 0
-                    ? string.Format(Loc.T(L.AetherStream.SetupInstallSized), DependencySetup.FormatMegabytes(pending))
-                    : Loc.T(L.AetherStream.SetupInstall);
+            : busy
+                ? Loc.T(L.AetherStream.SetupChecking)
+                : failed
+                    ? Loc.T(L.AetherStream.SetupRetry)
+                    : pending > 0
+                        ? string.Format(Loc.T(L.AetherStream.SetupInstallSized),
+                            DependencySetup.FormatMegabytes(pending))
+                        : Loc.T(L.AetherStream.SetupInstall);
 
         if (Button.Draw(button, label, ui.Ink, ButtonStyle.Prominent, enabled: !busy))
         {
