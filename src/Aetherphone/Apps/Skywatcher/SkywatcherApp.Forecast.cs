@@ -196,10 +196,9 @@ internal sealed partial class SkywatcherApp
             }
 
             var labelStyle = window.IsCurrent ? TextStyles.BodyEmphasized : TextStyles.Body;
-            var label = Typography.FitText(hourLabels[index], labelWidth, labelStyle);
             var labelHeight = Typography.LineHeight(labelStyle);
-            Typography.Draw(drawList, new Vector2(card.Min.X + padding, centerY - labelHeight * 0.5f), label,
-                palette.Ink, labelStyle);
+            Typography.Draw(drawList, new Vector2(card.Min.X + padding, centerY - labelHeight * 0.5f),
+                hourLabels[index], palette.Ink, labelStyle);
             var kind = WeatherSky.Classify(window.Weather.EnglishKey);
             var isDay = IsDayWindow(window);
             WeatherCard.Glyph(drawList, kind, new Vector2(glyphX, centerY), 12f * scale, isDay, behind);
