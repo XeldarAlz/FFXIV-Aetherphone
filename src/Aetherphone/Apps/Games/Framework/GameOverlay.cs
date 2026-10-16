@@ -337,9 +337,11 @@ internal static class GameOverlay
         var pop = 0.85f + 0.15f * Easing.EaseOutBack(buttonPhase);
         var buttonSize = new Vector2(MathF.Min(buttonWidth, contentWidth), buttonHeight) * pop;
         var buttonLift = (1f - buttonPhase) * 8f * scale;
+        var restHalf = new Vector2(MathF.Min(buttonWidth, contentWidth), buttonHeight) * 0.5f;
         var action = ResultAction.None;
-        if (GameHud.Button(Place(footerAnchor, offset + buttonHeight * 0.5f, cardScale) + new Vector2(0f, buttonLift),
-                buttonSize, buttonLabel, accent, theme))
+        var primaryCenter = Place(footerAnchor, offset + buttonHeight * 0.5f, cardScale);
+        if (GameHud.Button(primaryCenter + new Vector2(0f, buttonLift), buttonSize, buttonLabel, accent, theme,
+                new Rect(primaryCenter - restHalf, primaryCenter + restHalf)))
         {
             action = ResultAction.Primary;
         }
@@ -347,8 +349,10 @@ internal static class GameOverlay
         offset += buttonHeight + Metrics.Space.Sm * scale;
         if (hasSecondary)
         {
-            if (GameHud.Button(Place(footerAnchor, offset + buttonHeight * 0.5f, cardScale) + new Vector2(0f, buttonLift),
-                    buttonSize, result.SecondaryLabel, Palette.Mix(StageInks.Surface, accent, SecondaryTint), theme))
+            var secondaryCenter = Place(footerAnchor, offset + buttonHeight * 0.5f, cardScale);
+            if (GameHud.Button(secondaryCenter + new Vector2(0f, buttonLift), buttonSize, result.SecondaryLabel,
+                    Palette.Mix(StageInks.Surface, accent, SecondaryTint), theme,
+                    new Rect(secondaryCenter - restHalf, secondaryCenter + restHalf)))
             {
                 action = ResultAction.Secondary;
             }

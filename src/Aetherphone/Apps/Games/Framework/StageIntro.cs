@@ -165,8 +165,8 @@ internal sealed class StageIntro
         {
             var pop = 0.85f + 0.15f * GameJuice.PopIn(playPhase);
             var size = layout.Play.Size * pop;
-            if (GameHud.Button(Lifted(layout.Play.Center, playPhase, scale), size, Loc.T(L.Games.Play), accent, theme) &&
-                playPhase > 0.6f)
+            if (GameHud.Button(Lifted(layout.Play.Center, playPhase, scale), size, Loc.T(L.Games.Play), accent, theme,
+                    layout.Play) && playPhase > 0.6f)
             {
                 action = IntroAction.Play;
             }
