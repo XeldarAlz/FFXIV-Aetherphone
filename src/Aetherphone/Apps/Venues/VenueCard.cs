@@ -3,6 +3,7 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Venues;
 using Aetherphone.Windows.Components;
+using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Venues;
@@ -320,8 +321,8 @@ internal static class VenueCard
 
         var metaTop = bottomRowTop + (bottomRowHeight - metaHeight) * 0.5f;
         var titleTop = bottomRowTop - titleHeight - 2f * scale;
-        Typography.Draw(drawList, new Vector2(textLeft, metaTop),
-            Typography.FitText(text.Meta, MathF.Max(1f, metaRight - textLeft), MetaStyle), OverlayMutedInk, MetaStyle);
+        WidgetText.Draw(drawList, new Vector2(textLeft, metaTop), text.Meta, OverlayMutedInk, MetaStyle,
+            metaRight - textLeft);
         Marquee.DrawLeftAuto(drawList, new MarqueeId("venues.featured.title.", venue.Id), text.Title, textLeft,
             titleTop, textWidth, FeaturedTitleStyle, MediaOverlay.White);
         var lineTop = titleTop;
