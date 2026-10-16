@@ -27,6 +27,7 @@ internal sealed partial class GamesApp
     private const string ProfileSeeAllId = "games.profile.seeAllBests";
     private const string ProfileJoinId = "games.profile.join";
     private const string ProfileSignInId = "games.profile.signIn";
+    private const string ProfileRanksRetryId = "games.profile.ranksRetry";
     private const string RankCardPrefix = "games.profile.rank.";
     private const float IdentityAvatarRadius = 32f;
     private const float IdentityTileSize = 64f;
@@ -254,7 +255,8 @@ internal sealed partial class GamesApp
         var signedIn = leaderboard.IsSignedIn;
         var optedOut = leaderboard.OptedOut;
         var loading = signedIn && !optedOut && !leaderboard.MyRanksLoaded && leaderboard.LoadingMyRanks;
-        if (signedIn && !optedOut && !loading && rankRowCount == 0)
+        var failed = signedIn && !optedOut && !leaderboard.MyRanksLoaded && !loading && leaderboard.MyRanksFailed;
+        if (signedIn && !optedOut && !loading && !failed && rankRowCount == 0)
         {
             return top;
         }
@@ -278,6 +280,19 @@ internal sealed partial class GamesApp
         if (optedOut)
         {
             return DrawConsentCompact(left, y, width, scale, ProfileJoinId);
+        }
+
+        if (failed)
+        {
+            var bottom = DrawCompactCard(drawList, left, y, width, scale, PhoneIcons.Refresh,
+                Loc.T(L.Common.LoadFailed), ui.MutedInk, Loc.T(L.Common.Retry), ProfileRanksRetryId, true,
+                out var retry);
+            if (retry)
+            {
+                leaderboard.RefreshMyRanksNow();
+            }
+
+            return bottom;
         }
 
         return loading ? DrawRankSkeleton(drawList, left, y, width, scale) : DrawRankRail(drawList, left, y, width,
