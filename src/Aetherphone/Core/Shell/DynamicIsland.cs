@@ -639,7 +639,7 @@ internal sealed partial class DynamicIsland
         var controlCenter = new Vector2(bounds.Max.X - CardPadX * scale - controlRadius, centerY);
         var textLeft = iconCenter.X + iconRadius + CardTextGap * scale;
         var textWidth = MathF.Max(1f, controlCenter.X - controlRadius - CardTextGap * scale - textLeft);
-        var active = alpha > ControlThreshold;
+        var active = alpha > ControlThreshold && expand.IsResting(1f, 0.001f, 0.005f);
         var controlExtent = new Vector2(controlRadius, controlRadius);
         var overControl = active && UiInteract.Hover(controlCenter - controlExtent, controlCenter + controlExtent);
         var controlFill = Palette.WithAlpha(Ink, ControlFillAlpha);
@@ -840,8 +840,8 @@ internal sealed partial class DynamicIsland
     private static bool RoundButton(ImDrawListPtr drawList, Vector2 center, float radius, FontAwesomeIcon icon,
         Vector4 fill, Vector4 ink, float alpha, bool active)
     {
-        var hovered = active &&
-                      UiInteract.Hover(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        var extent = new Vector2(radius, radius);
+        var hovered = active && UiInteract.Hover(center - extent, center + extent);
         var color = hovered ? Palette.Mix(fill, Ink, 0.14f) : fill;
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(color, alpha * color.W)), 28);
         using (ImRaii.PushFont(UiBuilder.IconFont))
@@ -860,7 +860,7 @@ internal sealed partial class DynamicIsland
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(center - extent, center + extent, hovered);
     }
 
     private static Rect CompactBounds(Rect rest, float scale)

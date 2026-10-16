@@ -48,7 +48,8 @@ internal sealed class AlarmOverlay
         ImGui.SetCursorScreenPos(screen.Min);
         using (ImRaii.Child("##alarmRinging", screen.Size, false, OverlayFlags))
         {
-            DrawContent(screen, theme, Math.Clamp(presence.Value, 0f, 1f), ringing);
+            DrawContent(screen, theme, Math.Clamp(presence.Value, 0f, 1f),
+                ringing && presence.IsResting(1f, 0.001f, 0.005f));
         }
     }
 
@@ -126,6 +127,6 @@ internal sealed class AlarmOverlay
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 }
