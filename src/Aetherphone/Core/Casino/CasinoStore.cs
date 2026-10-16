@@ -31,6 +31,7 @@ internal sealed class CasinoStore : IDisposable
     private readonly object cashOutGate = new();
 
     private volatile CasinoStateDto? state;
+    private volatile bool stateFailed;
     private volatile CasinoFeatureSet features = CasinoFeatureSet.Empty;
     private volatile string claimingBonus = string.Empty;
     private CasinoBonusClaimDto? bonusResult;
@@ -64,6 +65,8 @@ internal sealed class CasinoStore : IDisposable
     }
 
     public CasinoStateDto? State => state;
+
+    public bool StateFailed => stateFailed;
 
     public bool BuyingChips => buyingChips;
 
@@ -684,6 +687,7 @@ internal sealed class CasinoStore : IDisposable
         {
             lastAccountId = accountId;
             state = null;
+            stateFailed = false;
             features = CasinoFeatureSet.Empty;
             Interlocked.Exchange(ref buyResult, null);
             Interlocked.Exchange(ref buyFailed, 0);
@@ -746,6 +750,7 @@ internal sealed class CasinoStore : IDisposable
         work.Run("state refresh", async token =>
         {
             var fresh = await casino.GetStateAsync(token).ConfigureAwait(false);
+            stateFailed = fresh is null;
             if (fresh is null)
             {
                 return;

@@ -58,6 +58,18 @@ internal sealed partial class CasinoApp
         {
             ConsumeLimitsResult();
             var state = casino.State;
+            if (state is null && casino.StateFailed)
+            {
+                if (CoinArt.StateScreen(ImGui.GetWindowDrawList(), ui, body, FontAwesomeIcon.CloudShowersHeavy,
+                        Loc.T(L.Common.LoadFailed), Loc.T(CasinoReasons.MessageFor(CasinoReasons.Unreachable)),
+                        Loc.T(L.Common.Retry), ImGui.GetID("retry"), scale))
+                {
+                    casino.RefreshNow();
+                }
+
+                return;
+            }
+
             if (state is null)
             {
                 LoadingPulse.Draw(body.Center, 16f * scale, ui.Palette.Accent, ui.MutedInk, LoadingPulse.SafeLabel());
