@@ -161,10 +161,15 @@ internal sealed partial class CasinoApp
                 ui.Card(drawList, min, max, Metrics.Radius.Grouped * scale);
                 for (var entryIndex = day.Start; entryIndex < day.End; entryIndex++)
                 {
+                    var row = RowAt(min, max.X, rowHeight, entryIndex - day.Start);
+                    if (!ImGui.IsRectVisible(row.Min, row.Max))
+                    {
+                        continue;
+                    }
+
                     using (ImRaii.PushId(entryIndex))
                     {
-                        DrawHistoryRow(drawList, RowAt(min, max.X, rowHeight, entryIndex - day.Start), entryIndex,
-                            entryIndex > day.Start, scale);
+                        DrawHistoryRow(drawList, row, entryIndex, entryIndex > day.Start, scale);
                     }
                 }
 
