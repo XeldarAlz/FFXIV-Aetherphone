@@ -282,16 +282,28 @@ internal sealed partial class SkywatcherApp
         var amplitude = area.Height * 0.45f;
         drawList.AddLine(new Vector2(area.Min.X, horizonY), new Vector2(area.Max.X, horizonY),
             ImGui.GetColorU32(palette.Ink with { W = 0.22f }), 1f * scale);
+        var lit = ImGui.GetColorU32(palette.Ink with { W = 0.55f });
+        var dim = ImGui.GetColorU32(palette.Ink with { W = 0.18f });
         var previous = SunPoint(area, horizonY, amplitude, 0f);
+        var runAbove = false;
+        drawList.PathLineTo(previous);
         for (var segment = 1; segment <= SunArcSegments; segment++)
         {
             var bell = BellsPerDay * segment / (float)SunArcSegments;
             var point = SunPoint(area, horizonY, amplitude, bell);
             var above = point.Y <= horizonY && previous.Y <= horizonY;
-            drawList.AddLine(previous, point, ImGui.GetColorU32(palette.Ink with { W = above ? 0.55f : 0.18f }),
-                (above ? 1.6f : 1.2f) * scale);
+            if (segment > 1 && above != runAbove)
+            {
+                drawList.PathStroke(runAbove ? lit : dim, ImDrawFlags.None, (runAbove ? 1.6f : 1.2f) * scale);
+                drawList.PathLineTo(previous);
+            }
+
+            runAbove = above;
+            drawList.PathLineTo(point);
             previous = point;
         }
+
+        drawList.PathStroke(runAbove ? lit : dim, ImDrawFlags.None, (runAbove ? 1.6f : 1.2f) * scale);
 
         var now = EorzeaTime.Now();
         var sun = SunPoint(area, horizonY, amplitude, now.Hour + now.Minute / 60f);
