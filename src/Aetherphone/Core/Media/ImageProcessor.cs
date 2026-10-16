@@ -30,7 +30,7 @@ internal readonly struct BakedImage
 
 internal static class ImageProcessor
 {
-    private const int JpegQuality = 88;
+    private const int JpegQuality = 95;
     private const JpegChromaSubsampling JpegSubsampling = JpegChromaSubsampling.Ratio420;
     private const int MaxUploadBytes = 8 * 1024 * 1024;
     private const float OversizeScale = 0.8f;

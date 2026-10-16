@@ -1,3 +1,5 @@
+using System.Buffers;
+
 namespace Aetherphone.Core.Media;
 
 internal enum JpegChromaSubsampling
@@ -20,6 +22,27 @@ internal static class ScalarJpegEncoder
         }
     }
 
+    private sealed class HuffmanTable
+    {
+        public readonly byte[] Counts;
+        public readonly byte[] Symbols;
+        public readonly HuffmanCode[] Codes;
+
+        public HuffmanTable(byte[] counts, byte[] symbols)
+        {
+            Counts = counts;
+            Symbols = symbols;
+            Codes = BuildHuffman(counts, symbols);
+        }
+    }
+
+    private interface ISymbolSink
+    {
+        void Symbol(int table, int symbol);
+
+        void Bits(uint bits, int length);
+    }
+
     public const int MinQuality = 1;
     public const int MaxQuality = 100;
     public const int MaxDimension = ushort.MaxValue;
@@ -28,6 +51,8 @@ internal static class ScalarJpegEncoder
     private const int BlockLength = 64;
     private const int McuSide420 = 16;
     private const int McuLength420 = 256;
+    private const int BlocksPerMcu420 = 6;
+    private const int BlocksPerMcu444 = 3;
     private const int HuffmanSymbolCount = 256;
     private const int HuffmanLengthCount = 16;
     private const int MaxQuantValue = 255;
@@ -35,6 +60,12 @@ internal static class ScalarJpegEncoder
     private const float LevelShift = 128f;
     private const int BitWindow = 24;
     private const byte StuffedByte = 0xFF;
+
+    private const int TableDcLuminance = 0;
+    private const int TableAcLuminance = 1;
+    private const int TableDcChrominance = 2;
+    private const int TableAcChrominance = 3;
+    private const int TableCount = 4;
 
     private const byte MarkerStartOfImage = 0xD8;
     private const byte MarkerEndOfImage = 0xD9;
@@ -44,7 +75,8 @@ internal static class ScalarJpegEncoder
     private const byte MarkerHuffmanTable = 0xC4;
     private const byte MarkerStartOfScan = 0xDA;
 
-    // Tables and constants below are the ITU T.81 Annex K defaults and the AAN scaled DCT factors.
+    // The zigzag order, chrominance table and AAN scaled DCT factors are the ITU T.81 Annex K defaults; the
+    // luminance table is N. Robidoux's, mozjpeg's default, which kept more luma detail per byte on game screenshots.
     private static readonly byte[] NaturalToZigzag =
     {
         0, 1, 5, 6, 14, 15, 27, 28,
@@ -57,19 +89,19 @@ internal static class ScalarJpegEncoder
         35, 36, 48, 49, 57, 58, 62, 63,
     };
 
-    private static readonly byte[] LuminanceQuantBase =
+    private static readonly ushort[] LuminanceQuantBase =
     {
-        16, 11, 10, 16, 24, 40, 51, 61,
-        12, 12, 14, 19, 26, 58, 60, 55,
-        14, 13, 16, 24, 40, 57, 69, 56,
-        14, 17, 22, 29, 51, 87, 80, 62,
-        18, 22, 37, 56, 68, 109, 103, 77,
-        24, 35, 55, 64, 81, 104, 113, 92,
-        49, 64, 78, 87, 103, 121, 120, 101,
-        72, 92, 95, 98, 112, 100, 103, 99,
+        16, 16, 16, 18, 25, 37, 56, 85,
+        16, 17, 20, 27, 34, 40, 53, 75,
+        16, 20, 24, 31, 43, 62, 91, 135,
+        18, 27, 31, 40, 53, 74, 106, 156,
+        25, 34, 43, 53, 69, 94, 131, 189,
+        37, 40, 62, 74, 94, 124, 169, 238,
+        56, 53, 91, 106, 131, 169, 226, 311,
+        85, 75, 135, 156, 189, 238, 311, 418,
     };
 
-    private static readonly byte[] ChrominanceQuantBase =
+    private static readonly ushort[] ChrominanceQuantBase =
     {
         17, 18, 24, 47, 99, 99, 99, 99,
         18, 21, 26, 66, 99, 99, 99, 99,
@@ -92,49 +124,6 @@ internal static class ScalarJpegEncoder
         0.541196100f * 2.828427125f,
         0.275899379f * 2.828427125f,
     };
-
-    private static readonly byte[] DcLuminanceCounts = { 0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 };
-    private static readonly byte[] DcLuminanceSymbols = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
-    private static readonly byte[] DcChrominanceCounts = { 0, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0 };
-    private static readonly byte[] DcChrominanceSymbols = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
-    private static readonly byte[] AcLuminanceCounts = { 0, 2, 1, 3, 3, 2, 4, 3, 5, 5, 4, 4, 0, 0, 1, 0x7D };
-
-    private static readonly byte[] AcLuminanceSymbols =
-    {
-        0x01, 0x02, 0x03, 0x00, 0x04, 0x11, 0x05, 0x12, 0x21, 0x31, 0x41, 0x06, 0x13, 0x51, 0x61, 0x07,
-        0x22, 0x71, 0x14, 0x32, 0x81, 0x91, 0xA1, 0x08, 0x23, 0x42, 0xB1, 0xC1, 0x15, 0x52, 0xD1, 0xF0,
-        0x24, 0x33, 0x62, 0x72, 0x82, 0x09, 0x0A, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x25, 0x26, 0x27, 0x28,
-        0x29, 0x2A, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49,
-        0x4A, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69,
-        0x6A, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89,
-        0x8A, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9A, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7,
-        0xA8, 0xA9, 0xAA, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0xBA, 0xC2, 0xC3, 0xC4, 0xC5,
-        0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8, 0xD9, 0xDA, 0xE1, 0xE2,
-        0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8,
-        0xF9, 0xFA,
-    };
-
-    private static readonly byte[] AcChrominanceCounts = { 0, 2, 1, 2, 4, 4, 3, 4, 7, 5, 4, 4, 0, 1, 2, 0x77 };
-
-    private static readonly byte[] AcChrominanceSymbols =
-    {
-        0x00, 0x01, 0x02, 0x03, 0x11, 0x04, 0x05, 0x21, 0x31, 0x06, 0x12, 0x41, 0x51, 0x07, 0x61, 0x71,
-        0x13, 0x22, 0x32, 0x81, 0x08, 0x14, 0x42, 0x91, 0xA1, 0xB1, 0xC1, 0x09, 0x23, 0x33, 0x52, 0xF0,
-        0x15, 0x62, 0x72, 0xD1, 0x0A, 0x16, 0x24, 0x34, 0xE1, 0x25, 0xF1, 0x17, 0x18, 0x19, 0x1A, 0x26,
-        0x27, 0x28, 0x29, 0x2A, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48,
-        0x49, 0x4A, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68,
-        0x69, 0x6A, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
-        0x88, 0x89, 0x8A, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9A, 0xA2, 0xA3, 0xA4, 0xA5,
-        0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0xBA, 0xC2, 0xC3,
-        0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8, 0xD9, 0xDA,
-        0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8,
-        0xF9, 0xFA,
-    };
-
-    private static readonly HuffmanCode[] DcLuminance = BuildHuffman(DcLuminanceCounts, DcLuminanceSymbols);
-    private static readonly HuffmanCode[] AcLuminance = BuildHuffman(AcLuminanceCounts, AcLuminanceSymbols);
-    private static readonly HuffmanCode[] DcChrominance = BuildHuffman(DcChrominanceCounts, DcChrominanceSymbols);
-    private static readonly HuffmanCode[] AcChrominance = BuildHuffman(AcChrominanceCounts, AcChrominanceSymbols);
 
     public static byte[] Encode(ReadOnlySpan<byte> rgba, int width, int height, int quality,
         JpegChromaSubsampling subsampling)
@@ -159,20 +148,28 @@ internal static class ScalarJpegEncoder
         BuildQuantization(LuminanceQuantBase, clampedQuality, luminanceQuant, luminanceScale);
         BuildQuantization(ChrominanceQuantBase, clampedQuality, chrominanceQuant, chrominanceScale);
 
-        var writer = new JpegWriter(EstimateCapacity(width, height));
-        WriteHeaders(ref writer, width, height, subsampling, luminanceQuant, chrominanceQuant);
-        if (subsampling == JpegChromaSubsampling.Ratio420)
+        var subsampled = subsampling == JpegChromaSubsampling.Ratio420;
+        var mcuSide = subsampled ? McuSide420 : BlockSide;
+        var blocksPerMcu = subsampled ? BlocksPerMcu420 : BlocksPerMcu444;
+        var mcuCount = ((width + mcuSide - 1) / mcuSide) * ((height + mcuSide - 1) / mcuSide);
+        var coefficientCount = checked(mcuCount * blocksPerMcu * BlockLength);
+        var coefficients = ArrayPool<short>.Shared.Rent(coefficientCount);
+        try
         {
-            EncodeSubsampled(ref writer, rgba, width, height, luminanceScale, chrominanceScale);
+            var blocks = coefficients.AsSpan(0, coefficientCount);
+            Quantize(rgba, width, height, subsampled, luminanceScale, chrominanceScale, blocks);
+            var tables = BuildOptimalTables(blocks, blocksPerMcu);
+            var writer = new JpegWriter(EstimateCapacity(width, height), tables);
+            WriteHeaders(ref writer, width, height, subsampling, luminanceQuant, chrominanceQuant, tables);
+            Walk(blocks, blocksPerMcu, ref writer);
+            writer.FlushBits();
+            writer.WriteMarker(MarkerEndOfImage);
+            return writer.ToArray();
         }
-        else
+        finally
         {
-            EncodeFull(ref writer, rgba, width, height, luminanceScale, chrominanceScale);
+            ArrayPool<short>.Shared.Return(coefficients);
         }
-
-        writer.FlushBits();
-        writer.WriteMarker(MarkerEndOfImage);
-        return writer.ToArray();
     }
 
     private static int EstimateCapacity(int width, int height)
@@ -181,7 +178,8 @@ internal static class ScalarJpegEncoder
         return (int)Math.Min(int.MaxValue / 2, ((long)width * height / 2) + headerAllowance);
     }
 
-    private static void BuildQuantization(byte[] baseTable, int quality, Span<byte> zigzagTable, Span<float> scaleTable)
+    private static void BuildQuantization(ushort[] baseTable, int quality, Span<byte> zigzagTable,
+        Span<float> scaleTable)
     {
         var scale = quality < QualityPivot ? 5000 / quality : 200 - (quality * 2);
         Span<int> natural = stackalloc int[BlockLength];
@@ -223,8 +221,138 @@ internal static class ScalarJpegEncoder
         return table;
     }
 
+    private static HuffmanTable[] BuildOptimalTables(ReadOnlySpan<short> blocks, int blocksPerMcu)
+    {
+        var sink = new FrequencySink(new long[TableCount * HuffmanSymbolCount]);
+        Walk(blocks, blocksPerMcu, ref sink);
+        var tables = new HuffmanTable[TableCount];
+        for (var table = 0; table < TableCount; table++)
+        {
+            tables[table] = BuildOptimalTable(sink.Frequencies.AsSpan(table * HuffmanSymbolCount, HuffmanSymbolCount));
+        }
+
+        return tables;
+    }
+
+    // ITU T.81 Annex K.2, as in libjpeg's jpeg_gen_optimal_table: the reserved pseudo symbol keeps the all-ones code
+    // unused, and lengths past 16 bits are folded back into shorter ones.
+    private static HuffmanTable BuildOptimalTable(ReadOnlySpan<long> symbolFrequencies)
+    {
+        const int reserved = HuffmanSymbolCount;
+        const int extendedCount = HuffmanSymbolCount + 1;
+        Span<long> frequency = stackalloc long[extendedCount];
+        Span<int> codeSize = stackalloc int[extendedCount];
+        Span<int> chain = stackalloc int[extendedCount];
+        symbolFrequencies.CopyTo(frequency);
+        frequency[reserved] = 1;
+        codeSize.Clear();
+        chain.Fill(-1);
+        while (true)
+        {
+            var smallest = LeastFrequent(frequency, -1);
+            var nextSmallest = LeastFrequent(frequency, smallest);
+            if (nextSmallest < 0)
+            {
+                break;
+            }
+
+            frequency[smallest] += frequency[nextSmallest];
+            frequency[nextSmallest] = 0;
+            codeSize[smallest]++;
+            while (chain[smallest] >= 0)
+            {
+                smallest = chain[smallest];
+                codeSize[smallest]++;
+            }
+
+            chain[smallest] = nextSmallest;
+            codeSize[nextSmallest]++;
+            while (chain[nextSmallest] >= 0)
+            {
+                nextSmallest = chain[nextSmallest];
+                codeSize[nextSmallest]++;
+            }
+        }
+
+        Span<int> lengthCounts = stackalloc int[extendedCount + 1];
+        lengthCounts.Clear();
+        var longest = 0;
+        for (var symbol = 0; symbol < extendedCount; symbol++)
+        {
+            if (codeSize[symbol] > 0)
+            {
+                lengthCounts[codeSize[symbol]]++;
+                longest = Math.Max(longest, codeSize[symbol]);
+            }
+        }
+
+        for (var length = longest; length > HuffmanLengthCount; length--)
+        {
+            while (lengthCounts[length] > 0)
+            {
+                var donor = length - 2;
+                while (lengthCounts[donor] == 0)
+                {
+                    donor--;
+                }
+
+                lengthCounts[length] -= 2;
+                lengthCounts[length - 1]++;
+                lengthCounts[donor + 1] += 2;
+                lengthCounts[donor]--;
+            }
+        }
+
+        var reservedLength = HuffmanLengthCount;
+        while (lengthCounts[reservedLength] == 0)
+        {
+            reservedLength--;
+        }
+
+        lengthCounts[reservedLength]--;
+        var counts = new byte[HuffmanLengthCount];
+        var symbolTotal = 0;
+        for (var length = 1; length <= HuffmanLengthCount; length++)
+        {
+            counts[length - 1] = (byte)lengthCounts[length];
+            symbolTotal += lengthCounts[length];
+        }
+
+        var symbols = new byte[symbolTotal];
+        var written = 0;
+        for (var length = 1; length <= longest; length++)
+        {
+            for (var symbol = 0; symbol < HuffmanSymbolCount; symbol++)
+            {
+                if (codeSize[symbol] == length)
+                {
+                    symbols[written] = (byte)symbol;
+                    written++;
+                }
+            }
+        }
+
+        return new HuffmanTable(counts, symbols);
+    }
+
+    private static int LeastFrequent(ReadOnlySpan<long> frequency, int excluded)
+    {
+        var found = -1;
+        var lowest = long.MaxValue;
+        for (var symbol = 0; symbol < frequency.Length; symbol++)
+        {
+            if (frequency[symbol] != 0 && frequency[symbol] <= lowest && symbol != excluded)
+            {
+                lowest = frequency[symbol];
+                found = symbol;
+            }
+        }
+
+        return found;
+    }
+
     private static void WriteHeaders(ref JpegWriter writer, int width, int height, JpegChromaSubsampling subsampling,
-        scoped ReadOnlySpan<byte> luminanceQuant, scoped ReadOnlySpan<byte> chrominanceQuant)
+        scoped ReadOnlySpan<byte> luminanceQuant, scoped ReadOnlySpan<byte> chrominanceQuant, HuffmanTable[] tables)
     {
         const int app0Length = 16;
         const byte jfifMajor = 1;
@@ -277,14 +405,14 @@ internal static class ScalarJpegEncoder
 
         writer.WriteMarker(MarkerHuffmanTable);
         writer.WriteUInt16(2
-            + HuffmanSegmentLength(DcLuminanceSymbols)
-            + HuffmanSegmentLength(AcLuminanceSymbols)
-            + HuffmanSegmentLength(DcChrominanceSymbols)
-            + HuffmanSegmentLength(AcChrominanceSymbols));
-        WriteHuffmanSegment(ref writer, 0x00, DcLuminanceCounts, DcLuminanceSymbols);
-        WriteHuffmanSegment(ref writer, 0x10, AcLuminanceCounts, AcLuminanceSymbols);
-        WriteHuffmanSegment(ref writer, 0x01, DcChrominanceCounts, DcChrominanceSymbols);
-        WriteHuffmanSegment(ref writer, 0x11, AcChrominanceCounts, AcChrominanceSymbols);
+            + HuffmanSegmentLength(tables[TableDcLuminance])
+            + HuffmanSegmentLength(tables[TableAcLuminance])
+            + HuffmanSegmentLength(tables[TableDcChrominance])
+            + HuffmanSegmentLength(tables[TableAcChrominance]));
+        WriteHuffmanSegment(ref writer, 0x00, tables[TableDcLuminance]);
+        WriteHuffmanSegment(ref writer, 0x10, tables[TableAcLuminance]);
+        WriteHuffmanSegment(ref writer, 0x01, tables[TableDcChrominance]);
+        WriteHuffmanSegment(ref writer, 0x11, tables[TableAcChrominance]);
 
         writer.WriteMarker(MarkerStartOfScan);
         writer.WriteUInt16(6 + (componentCount * 2));
@@ -300,74 +428,58 @@ internal static class ScalarJpegEncoder
         writer.WriteByte(0);
     }
 
-    private static int HuffmanSegmentLength(byte[] symbols)
+    private static int HuffmanSegmentLength(HuffmanTable table)
     {
-        return 1 + HuffmanLengthCount + symbols.Length;
+        return 1 + HuffmanLengthCount + table.Symbols.Length;
     }
 
-    private static void WriteHuffmanSegment(ref JpegWriter writer, byte classAndId, byte[] counts, byte[] symbols)
+    private static void WriteHuffmanSegment(ref JpegWriter writer, byte classAndId, HuffmanTable table)
     {
         writer.WriteByte(classAndId);
-        writer.WriteBytes(counts);
-        writer.WriteBytes(symbols);
+        writer.WriteBytes(table.Counts);
+        writer.WriteBytes(table.Symbols);
     }
 
-    private static void EncodeSubsampled(ref JpegWriter writer, scoped ReadOnlySpan<byte> rgba, int width,
-        int height, scoped ReadOnlySpan<float> luminanceScale, scoped ReadOnlySpan<float> chrominanceScale)
+    private static void Quantize(ReadOnlySpan<byte> rgba, int width, int height, bool subsampled,
+        scoped ReadOnlySpan<float> luminanceScale, scoped ReadOnlySpan<float> chrominanceScale, Span<short> blocks)
     {
+        var side = subsampled ? McuSide420 : BlockSide;
         Span<float> luma = stackalloc float[McuLength420];
         Span<float> chromaBlue = stackalloc float[McuLength420];
         Span<float> chromaRed = stackalloc float[McuLength420];
         Span<float> blueBlock = stackalloc float[BlockLength];
         Span<float> redBlock = stackalloc float[BlockLength];
-        Span<int> quantized = stackalloc int[BlockLength];
-        var previousLuma = 0;
-        var previousBlue = 0;
-        var previousRed = 0;
-        for (var originY = 0; originY < height; originY += McuSide420)
+        var offset = 0;
+        for (var originY = 0; originY < height; originY += side)
         {
-            for (var originX = 0; originX < width; originX += McuSide420)
+            for (var originX = 0; originX < width; originX += side)
             {
-                FillMacroblock(rgba, width, height, originX, originY, McuSide420, luma, chromaBlue, chromaRed);
-                previousLuma = EncodeBlock(ref writer, luma, 0, McuSide420, luminanceScale, previousLuma,
-                    DcLuminance, AcLuminance, quantized);
-                previousLuma = EncodeBlock(ref writer, luma, BlockSide, McuSide420, luminanceScale, previousLuma,
-                    DcLuminance, AcLuminance, quantized);
-                previousLuma = EncodeBlock(ref writer, luma, BlockSide * McuSide420, McuSide420, luminanceScale,
-                    previousLuma, DcLuminance, AcLuminance, quantized);
-                previousLuma = EncodeBlock(ref writer, luma, (BlockSide * McuSide420) + BlockSide, McuSide420,
-                    luminanceScale, previousLuma, DcLuminance, AcLuminance, quantized);
+                FillMacroblock(rgba, width, height, originX, originY, side, luma, chromaBlue, chromaRed);
+                if (!subsampled)
+                {
+                    QuantizeBlock(luma, 0, BlockSide, luminanceScale, blocks.Slice(offset, BlockLength));
+                    QuantizeBlock(chromaBlue, 0, BlockSide, chrominanceScale,
+                        blocks.Slice(offset + BlockLength, BlockLength));
+                    QuantizeBlock(chromaRed, 0, BlockSide, chrominanceScale,
+                        blocks.Slice(offset + (2 * BlockLength), BlockLength));
+                    offset += BlocksPerMcu444 * BlockLength;
+                    continue;
+                }
+
+                QuantizeBlock(luma, 0, McuSide420, luminanceScale, blocks.Slice(offset, BlockLength));
+                QuantizeBlock(luma, BlockSide, McuSide420, luminanceScale,
+                    blocks.Slice(offset + BlockLength, BlockLength));
+                QuantizeBlock(luma, BlockSide * McuSide420, McuSide420, luminanceScale,
+                    blocks.Slice(offset + (2 * BlockLength), BlockLength));
+                QuantizeBlock(luma, (BlockSide * McuSide420) + BlockSide, McuSide420, luminanceScale,
+                    blocks.Slice(offset + (3 * BlockLength), BlockLength));
                 Downsample(chromaBlue, blueBlock);
                 Downsample(chromaRed, redBlock);
-                previousBlue = EncodeBlock(ref writer, blueBlock, 0, BlockSide, chrominanceScale, previousBlue,
-                    DcChrominance, AcChrominance, quantized);
-                previousRed = EncodeBlock(ref writer, redBlock, 0, BlockSide, chrominanceScale, previousRed,
-                    DcChrominance, AcChrominance, quantized);
-            }
-        }
-    }
-
-    private static void EncodeFull(ref JpegWriter writer, scoped ReadOnlySpan<byte> rgba, int width, int height,
-        scoped ReadOnlySpan<float> luminanceScale, scoped ReadOnlySpan<float> chrominanceScale)
-    {
-        Span<float> luma = stackalloc float[BlockLength];
-        Span<float> chromaBlue = stackalloc float[BlockLength];
-        Span<float> chromaRed = stackalloc float[BlockLength];
-        Span<int> quantized = stackalloc int[BlockLength];
-        var previousLuma = 0;
-        var previousBlue = 0;
-        var previousRed = 0;
-        for (var originY = 0; originY < height; originY += BlockSide)
-        {
-            for (var originX = 0; originX < width; originX += BlockSide)
-            {
-                FillMacroblock(rgba, width, height, originX, originY, BlockSide, luma, chromaBlue, chromaRed);
-                previousLuma = EncodeBlock(ref writer, luma, 0, BlockSide, luminanceScale, previousLuma,
-                    DcLuminance, AcLuminance, quantized);
-                previousBlue = EncodeBlock(ref writer, chromaBlue, 0, BlockSide, chrominanceScale, previousBlue,
-                    DcChrominance, AcChrominance, quantized);
-                previousRed = EncodeBlock(ref writer, chromaRed, 0, BlockSide, chrominanceScale, previousRed,
-                    DcChrominance, AcChrominance, quantized);
+                QuantizeBlock(blueBlock, 0, BlockSide, chrominanceScale,
+                    blocks.Slice(offset + (4 * BlockLength), BlockLength));
+                QuantizeBlock(redBlock, 0, BlockSide, chrominanceScale,
+                    blocks.Slice(offset + (5 * BlockLength), BlockLength));
+                offset += BlocksPerMcu420 * BlockLength;
             }
         }
     }
@@ -409,9 +521,8 @@ internal static class ScalarJpegEncoder
         }
     }
 
-    private static int EncodeBlock(ref JpegWriter writer, scoped Span<float> samples, int offset, int stride,
-        scoped ReadOnlySpan<float> scale, int previousDc, HuffmanCode[] dcTable, HuffmanCode[] acTable,
-        scoped Span<int> quantized)
+    private static void QuantizeBlock(Span<float> samples, int offset, int stride, scoped ReadOnlySpan<float> scale,
+        Span<short> quantized)
     {
         for (var row = 0; row < BlockSide; row++)
         {
@@ -429,20 +540,54 @@ internal static class ScalarJpegEncoder
             {
                 var natural = (row * BlockSide) + column;
                 var value = samples[offset + (row * stride) + column] * scale[natural];
-                quantized[NaturalToZigzag[natural]] = (int)(value < 0f ? value - 0.5f : value + 0.5f);
+                quantized[NaturalToZigzag[natural]] = (short)(value < 0f ? value - 0.5f : value + 0.5f);
             }
         }
+    }
 
+    private static void Walk<TSink>(ReadOnlySpan<short> blocks, int blocksPerMcu, ref TSink sink)
+        where TSink : ISymbolSink, allows ref struct
+    {
+        var previousLuma = 0;
+        var previousBlue = 0;
+        var previousRed = 0;
+        var blockCount = blocks.Length / BlockLength;
+        for (var blockIndex = 0; blockIndex < blockCount; blockIndex++)
+        {
+            var block = blocks.Slice(blockIndex * BlockLength, BlockLength);
+            var slot = blockIndex % blocksPerMcu;
+            if (slot < blocksPerMcu - 2)
+            {
+                EmitBlock(block, previousLuma, TableDcLuminance, TableAcLuminance, ref sink);
+                previousLuma = block[0];
+            }
+            else if (slot == blocksPerMcu - 2)
+            {
+                EmitBlock(block, previousBlue, TableDcChrominance, TableAcChrominance, ref sink);
+                previousBlue = block[0];
+            }
+            else
+            {
+                EmitBlock(block, previousRed, TableDcChrominance, TableAcChrominance, ref sink);
+                previousRed = block[0];
+            }
+        }
+    }
+
+    private static void EmitBlock<TSink>(ReadOnlySpan<short> quantized, int previousDc, int dcTable, int acTable,
+        ref TSink sink)
+        where TSink : ISymbolSink, allows ref struct
+    {
         var difference = quantized[0] - previousDc;
         if (difference == 0)
         {
-            writer.WriteCode(dcTable[0]);
+            sink.Symbol(dcTable, 0);
         }
         else
         {
             var (bits, length) = MagnitudeBits(difference);
-            writer.WriteCode(dcTable[length]);
-            writer.WriteBits(bits, length);
+            sink.Symbol(dcTable, length);
+            sink.Bits(bits, length);
         }
 
         var lastNonZero = BlockLength - 1;
@@ -453,8 +598,8 @@ internal static class ScalarJpegEncoder
 
         if (lastNonZero == 0)
         {
-            writer.WriteCode(acTable[0x00]);
-            return quantized[0];
+            sink.Symbol(acTable, 0x00);
+            return;
         }
 
         for (var index = 1; index <= lastNonZero; index++)
@@ -468,21 +613,19 @@ internal static class ScalarJpegEncoder
             var zeroRun = index - runStart;
             while (zeroRun >= 16)
             {
-                writer.WriteCode(acTable[0xF0]);
+                sink.Symbol(acTable, 0xF0);
                 zeroRun -= 16;
             }
 
             var (bits, length) = MagnitudeBits(quantized[index]);
-            writer.WriteCode(acTable[(zeroRun << 4) + length]);
-            writer.WriteBits(bits, length);
+            sink.Symbol(acTable, (zeroRun << 4) + length);
+            sink.Bits(bits, length);
         }
 
         if (lastNonZero != BlockLength - 1)
         {
-            writer.WriteCode(acTable[0x00]);
+            sink.Symbol(acTable, 0x00);
         }
-
-        return quantized[0];
     }
 
     private static (uint Bits, int Length) MagnitudeBits(int value)
@@ -549,19 +692,51 @@ internal static class ScalarJpegEncoder
         data[start + (7 * step)] = oddPlus - rotationHigh;
     }
 
-    private ref struct JpegWriter
+    private readonly struct FrequencySink : ISymbolSink
     {
+        public readonly long[] Frequencies;
+
+        public FrequencySink(long[] frequencies)
+        {
+            Frequencies = frequencies;
+        }
+
+        public void Symbol(int table, int symbol)
+        {
+            Frequencies[(table * HuffmanSymbolCount) + symbol]++;
+        }
+
+        public void Bits(uint bits, int length)
+        {
+        }
+    }
+
+    private ref struct JpegWriter : ISymbolSink
+    {
+        private readonly HuffmanTable[] tables;
         private byte[] buffer;
         private int length;
         private uint bitBuffer;
         private int bitCount;
 
-        public JpegWriter(int capacity)
+        public JpegWriter(int capacity, HuffmanTable[] tables)
         {
+            this.tables = tables;
             buffer = new byte[Math.Max(capacity, 1)];
             length = 0;
             bitBuffer = 0;
             bitCount = 0;
+        }
+
+        public void Symbol(int table, int symbol)
+        {
+            var code = tables[table].Codes[symbol];
+            WriteBits(code.Code, code.Length);
+        }
+
+        public void Bits(uint bits, int count)
+        {
+            WriteBits(bits, count);
         }
 
         public void WriteByte(byte value)
@@ -593,11 +768,6 @@ internal static class ScalarJpegEncoder
         {
             WriteByte(StuffedByte);
             WriteByte(marker);
-        }
-
-        public void WriteCode(HuffmanCode code)
-        {
-            WriteBits(code.Code, code.Length);
         }
 
         public void WriteBits(uint bits, int count)
