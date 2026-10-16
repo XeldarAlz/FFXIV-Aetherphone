@@ -289,6 +289,11 @@ internal sealed partial class CasinoApp
         using (AppSurface.Begin(body))
         {
             history.EnsureFresh();
+            if (history.TakeLoadFailure())
+            {
+                historyLoadFailed = true;
+            }
+
             SyncHistoryText();
             var drawList = ImGui.GetWindowDrawList();
             var origin = ImGui.GetCursorScreenPos();
@@ -371,8 +376,13 @@ internal sealed partial class CasinoApp
 
         if (count == 0)
         {
+            var body = history.Loading || (!historyLoadFailed && !history.Loaded)
+                ? Loc.T(L.Common.Loading)
+                : historyLoadFailed
+                    ? Loc.T(CasinoReasons.MessageFor(CasinoReasons.Unreachable))
+                    : Loc.T(L.Casino.FairnessNoRounds);
             return CoinArt.DrawPanel(ui, origin, width, FontAwesomeIcon.ShieldAlt, AccentRing.Green,
-                Loc.T(L.Casino.FairnessRecentHeading), Loc.T(L.Casino.FairnessNoRounds), scale);
+                Loc.T(L.Casino.FairnessRecentHeading), body, scale);
         }
 
         var rowHeight = HistoryRowHeight * scale;
