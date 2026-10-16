@@ -31,6 +31,12 @@ internal sealed partial class CasinoApp
 
     private void ResetLobby()
     {
+        if (casino.State is null)
+        {
+            stripHero.Forget();
+            return;
+        }
+
         stripHero.Snap(FloorBalance());
     }
 

@@ -386,7 +386,7 @@ public sealed class CasinoFloorLayoutTests
     private static int CasinoAppReturns(string gameId) => CasinoApp.ReturnTenthsOf(gameId);
 
     private static StripHeroModel Hero(CasinoBonusDto? timed, CasinoBonusDto? streak, bool spinReady) =>
-        new(0, false, 1, 0f, 0, false, timed, streak, spinReady, false, 0);
+        new(0, false, 1, 0f, 0, false, timed, streak, spinReady, false, 0, true);
 
     private static int Occurrences(string gameId)
     {
