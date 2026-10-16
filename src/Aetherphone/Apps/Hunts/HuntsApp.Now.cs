@@ -7,6 +7,7 @@ using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
+using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
@@ -651,9 +652,8 @@ internal sealed partial class HuntsApp
         var subRight = row.Max.X - secondaryWidth - HuntsArt.RowGap * scale;
         Marquee.DrawLeftAuto(drawList, new MarqueeId("hunts.row.name.", model.MarqueeKey), model.Name, textLeft, top,
             MathF.Max(1f, nameRight - textLeft), TextStyles.Headline, ui.TitleInk);
-        Typography.Draw(drawList, new Vector2(textLeft, top + titleHeight + lineGap),
-            Typography.FitText(model.Subtitle, MathF.Max(1f, subRight - textLeft), TextStyles.Footnote), ui.MutedInk,
-            TextStyles.Footnote);
+        WidgetText.Draw(drawList, new Vector2(textLeft, top + titleHeight + lineGap), model.Subtitle, ui.MutedInk,
+            TextStyles.Footnote, subRight - textLeft);
         if (UiInteract.Click(bounds.Min, bounds.Max, hovered))
         {
             OpenDetail(model.Window, backTitle);
