@@ -579,7 +579,7 @@ internal sealed partial class PhotosApp : IPhoneApp
             return null;
         }
 
-        _ = Task.Run(() => LoadThumbnailAsync(path));
+        QueueLoad(path, ThumbLoad);
         return null;
     }
 
@@ -595,9 +595,16 @@ internal sealed partial class PhotosApp : IPhoneApp
             return null;
         }
 
-        _ = Task.Run(() => LoadFullAsync(path));
+        QueueLoad(path, FullLoad);
         return null;
     }
+
+    private void QueueLoad(string path, int kind) => _ = Task.Run(() => kind switch
+    {
+        ThumbLoad => LoadThumbnailAsync(path),
+        FullLoad => LoadFullAsync(path),
+        _ => LoadCoverAsync(path),
+    });
 
     private async Task LoadThumbnailAsync(string path)
     {

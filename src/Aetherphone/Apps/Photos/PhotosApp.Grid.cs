@@ -223,7 +223,7 @@ internal sealed partial class PhotosApp
             return null;
         }
 
-        _ = Task.Run(() => LoadCoverAsync(path));
+        QueueLoad(path, CoverLoad);
         return null;
     }
 
