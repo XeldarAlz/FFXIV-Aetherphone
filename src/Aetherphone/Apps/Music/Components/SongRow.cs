@@ -101,7 +101,8 @@ internal static class SongRow
                 IconGlyph.Of(FontAwesomeIcon.ArrowDown), ui.MutedInk, DownloadGlyphScale);
         }
 
-        var menuTapped = ui.IconButton(menuCenter, MenuHitRadius * scale, IconGlyph.Of(FontAwesomeIcon.EllipsisH),
+        var menuTapped = ui.IconButton(menuCenter, Metrics.Size.TapTarget * 0.5f * scale,
+            IconGlyph.Of(FontAwesomeIcon.EllipsisH),
             ui.MutedInk, AppSkin.Transparent, MenuGlyphScale, Loc.T(L.Music.MoreOptions));
         var rightClicked = cell.Hovered && ImGui.IsMouseReleased(ImGuiMouseButton.Right);
         var separatorLeft = textLeft;

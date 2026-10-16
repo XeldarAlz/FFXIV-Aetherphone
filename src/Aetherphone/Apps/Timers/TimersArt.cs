@@ -113,7 +113,7 @@ internal static class TimersArt
     public static bool Bell(ImDrawListPtr drawList, string id, Vector2 center, bool on, AppSkin ui, string tooltip,
         float scale)
     {
-        var hit = new Vector2(BellHitRadius, BellHitRadius) * scale;
+        var hit = new Vector2(Metrics.Size.TapTarget * 0.5f * scale);
         var hovered = UiInteract.Hover(center - hit, center + hit);
         var faceExtent = new Vector2(RoundButton.SmallRadius, RoundButton.SmallRadius) * scale;
         var face = RoundButton.Surface(drawList, new Rect(center - faceExtent, center + faceExtent), ui.Ink,

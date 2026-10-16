@@ -1263,7 +1263,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         Typography.Draw(drawList, new Vector2(metaLeft, headerTop + (nameHeight - metaSize.Y) * 0.5f), metaFitted,
             ChirperInk.MutedInk, MetaStyle);
 
-        var moreExtent = new Vector2(moreRadius, moreRadius);
+        var moreExtent = new Vector2(MathF.Max(moreRadius, Metrics.Size.TapTarget * 0.5f * scale));
         var moreHovered = UiInteract.Hover(moreCenter - moreExtent, moreCenter + moreExtent);
         if (moreHovered)
         {

@@ -41,7 +41,7 @@ internal sealed class StageChrome
     public bool BackChip(ImDrawListPtr drawList, Vector2 center, float chipRadius, PhoneTheme theme, float scale)
     {
         backCenter = center;
-        radius = chipRadius;
+        radius = HitRadius(chipRadius, scale);
         backShown = true;
         return Chip(drawList, center, chipRadius, FontAwesomeIcon.ChevronLeft, theme, scale);
     }
@@ -50,7 +50,7 @@ internal sealed class StageChrome
         bool paused)
     {
         pauseCenter = center;
-        radius = chipRadius;
+        radius = HitRadius(chipRadius, scale);
         pauseShown = true;
         return Chip(drawList, center, chipRadius, paused ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause, theme, scale);
     }
@@ -65,9 +65,13 @@ internal sealed class StageChrome
         PhoneTheme theme, float scale)
     {
         var corner = new Vector2(chipRadius, chipRadius);
-        var hovered = UiInteract.Hover(center - corner, center + corner);
+        var hit = new Vector2(HitRadius(chipRadius, scale));
+        var hovered = UiInteract.Hover(center - hit, center + hit);
         Material.Frosted(drawList, center - corner, center + corner, chipRadius, scale, hovered ? 1f : 0.85f);
         ProgressRing.CenterIcon(drawList, center, icon, hovered ? StageInks.Strong : theme.Accent, chipRadius * 0.9f);
-        return UiInteract.HoverClickCircle(center, chipRadius);
+        return UiInteract.HoverClickCircle(center, hit.X);
     }
+
+    private static float HitRadius(float chipRadius, float scale) =>
+        MathF.Max(chipRadius, Metrics.Size.TapTarget * 0.5f * scale);
 }
