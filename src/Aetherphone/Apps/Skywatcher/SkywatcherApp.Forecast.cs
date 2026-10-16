@@ -3,6 +3,7 @@ using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;
+using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 
@@ -171,7 +172,12 @@ internal sealed partial class SkywatcherApp
         var card = new Rect(origin, origin + new Vector2(width, height));
         WeatherCard.Panel(drawList, card, palette, sky.Density, scale);
         WeatherCard.Header(drawList, card, FontAwesomeIcon.CalendarAlt, Loc.T(L.Skywatcher.Forecast), palette, scale);
-        var labelWidth = 62f * scale;
+        var labelWidth = 0f;
+        for (var index = 0; index < forecast.Count; index++)
+        {
+            labelWidth = MathF.Max(labelWidth, Typography.Measure(hourLabels[index], TextStyles.BodyEmphasized).X);
+        }
+
         var barWidth = 80f * scale;
         var glyphX = card.Min.X + padding + labelWidth + 12f * scale;
         var nameX = glyphX + 22f * scale;
@@ -197,10 +203,8 @@ internal sealed partial class SkywatcherApp
             var kind = WeatherSky.Classify(window.Weather.EnglishKey);
             var isDay = IsDayWindow(window);
             WeatherCard.Glyph(drawList, kind, new Vector2(glyphX, centerY), 12f * scale, isDay, behind);
-            var name = Typography.FitText(window.Weather.Name, MathF.Max(1f, barMinX - 10f * scale - nameX),
-                TextStyles.Body);
-            Typography.Draw(drawList, new Vector2(nameX, centerY - Typography.LineHeight(TextStyles.Body) * 0.5f),
-                name, palette.Ink, TextStyles.Body);
+            WidgetText.Draw(drawList, new Vector2(nameX, centerY - Typography.LineHeight(TextStyles.Body) * 0.5f),
+                window.Weather.Name, palette.Ink, TextStyles.Body, barMinX - 10f * scale - nameX);
             DrawDayBar(drawList, new Rect(new Vector2(barMinX, centerY - 2.5f * scale),
                 new Vector2(card.Max.X - padding, centerY + 2.5f * scale)), window, kind, isDay,
                 window.IsCurrent ? nowBell : -1f, palette, scale);
