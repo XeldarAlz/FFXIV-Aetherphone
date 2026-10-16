@@ -402,31 +402,8 @@ internal static partial class Typography
         }
     }
 
-    public static int CountWrappedLines(string text, in TextStyle style, float maxWidth)
-    {
-        using (Plugin.Fonts.Push(style.Scale, style.Weight))
-        {
-            Plugin.Fonts.NoticeText(text);
-            var buffer = new List<string>();
-            var lines = 0;
-            var segments = text.Split('\n');
-            for (var segmentIndex = 0; segmentIndex < segments.Length; segmentIndex++)
-            {
-                var segment = segments[segmentIndex].TrimEnd('\r');
-                if (segment.Length == 0)
-                {
-                    lines++;
-                    continue;
-                }
-
-                buffer.Clear();
-                WrapSegment(segment, maxWidth, buffer);
-                lines += buffer.Count;
-            }
-
-            return lines;
-        }
-    }
+    public static int CountWrappedLines(string text, in TextStyle style, float maxWidth) =>
+        WrapText(text, style, maxWidth).Length;
 
     public static void DrawCenteredHalo(Vector2 center, string text, Vector4 color, Vector4 halo, float haloRadius,
         float maxWidth, in TextStyle style)
