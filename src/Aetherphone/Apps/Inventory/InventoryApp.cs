@@ -186,7 +186,7 @@ internal sealed partial class InventoryApp : IPhoneApp
             if (sinceTextRefresh >= TextRefreshSeconds)
             {
                 sinceTextRefresh = 0f;
-                text.Build(catalog);
+                text.RefreshAges(catalog);
             }
         }
 
