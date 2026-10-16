@@ -118,19 +118,18 @@ internal static class WalletArt
         string subtitle, Vector4 titleInk, Vector4 subtitleInk, float scale)
     {
         var width = MathF.Max(1f, right - left);
-        var fittedTitle = Typography.FitText(title, width, TextStyles.BodyEmphasized);
         var titleHeight = Typography.LineHeight(TextStyles.BodyEmphasized);
         if (subtitle.Length == 0)
         {
-            Typography.Draw(drawList, new Vector2(left, centerY - titleHeight * 0.5f), fittedTitle, titleInk,
-                TextStyles.BodyEmphasized);
+            WidgetText.Draw(drawList, new Vector2(left, centerY - titleHeight * 0.5f), title, titleInk,
+                TextStyles.BodyEmphasized, width);
             return;
         }
 
         var fittedSubtitle = Typography.FitText(subtitle, width, TextStyles.Footnote);
         var subtitleHeight = Typography.LineHeight(TextStyles.Footnote);
         var top = centerY - (titleHeight + LineGap * scale + subtitleHeight) * 0.5f;
-        Typography.Draw(drawList, new Vector2(left, top), fittedTitle, titleInk, TextStyles.BodyEmphasized);
+        WidgetText.Draw(drawList, new Vector2(left, top), title, titleInk, TextStyles.BodyEmphasized, width);
         Typography.Draw(drawList, new Vector2(left, top + titleHeight + LineGap * scale), fittedSubtitle,
             subtitleInk, TextStyles.Footnote);
     }
