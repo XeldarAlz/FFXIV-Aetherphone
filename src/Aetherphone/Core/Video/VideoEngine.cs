@@ -399,6 +399,7 @@ internal sealed class VideoEngine : IDisposable
         var endGuardSeconds = info.HasAudioPosition ? StallEndGuardSeconds : AudioTrackEndGuardSeconds;
         var nearEnd = info.DurationSeconds > 0d && info.PositionSeconds >= info.DurationSeconds - endGuardSeconds;
         if (info.HasAudioPosition && !info.PausedForCache && !nearEnd && !player.PlaysWithoutSound
+            && !player.SawHttpForbidden && !player.SawStreamError
             && now - stallProgressAtTicks >= AudioDeviceStallMilliseconds)
         {
             AepLog.Warning(

@@ -373,6 +373,13 @@ internal sealed class MpvRenderer : IDisposable
             Interlocked.Exchange(ref httpForbiddenHits, 0);
             Interlocked.Exchange(ref streamErrorHits, 0);
             Interlocked.Exchange(ref detectedFailure, (int)PlaybackFailureKind.Unknown);
+            if (PlaysWithoutSound)
+            {
+                _ = MpvCommand(mpvContext, ["set", "ao", "", null]);
+                _ = MpvCommand(mpvContext, ["ao-reload", null]);
+                PlaysWithoutSound = false;
+            }
+
             _ = MpvCommand(mpvContext, ["set", "speed", "1", null]);
             _ = MpvCommand(mpvContext, ["set", "ytdl-raw-options", ResolverSiteOptions.RawOptionsFor(url), null]);
             var result = MpvCommand(mpvContext, ["loadfile", url, "replace", "0", options, null]);
@@ -419,7 +426,6 @@ internal sealed class MpvRenderer : IDisposable
             return;
         }
 
-        PlaysWithoutSound = true;
         lock (commandLock)
         {
             if (mpvContext == IntPtr.Zero)
@@ -427,8 +433,8 @@ internal sealed class MpvRenderer : IDisposable
                 return;
             }
 
-            _ = MpvCommand(mpvContext, ["set", "ao", "null", null]);
-            _ = MpvCommand(mpvContext, ["ao-reload", null]);
+            PlaysWithoutSound = MpvCommand(mpvContext, ["set", "ao", "null", null]) >= 0
+                && MpvCommand(mpvContext, ["ao-reload", null]) >= 0;
         }
     }
 
