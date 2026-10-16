@@ -23,7 +23,8 @@ internal static partial class Typography
         new(-0.7071f, -0.7071f),
     };
 
-    private static readonly Dictionary<(string Text, float Width, float FontSize), CacheSlot<string>> FitCache = new();
+    private static readonly Dictionary<(string Text, float Width, float FontSize, bool Middle), CacheSlot<string>>
+        FitCache = new();
 
     private const int SweepThreshold = 512;
 
@@ -230,6 +231,15 @@ internal static partial class Typography
 
     public static string FitText(string text, float maxWidth, in TextStyle style) =>
         FitText(text, maxWidth, style.Scale, style.Weight);
+
+    public static string FitTextMiddle(string text, float maxWidth, in TextStyle style)
+    {
+        using (Plugin.Fonts.Push(style.Scale, style.Weight))
+        {
+            Plugin.Fonts.NoticeText(text);
+            return Fit(text, maxWidth, true);
+        }
+    }
 
     private static readonly Dictionary<(string Text, float MaxWidth, float MaxScale, float MinScale, FontWeight Weight,
         float FontSize), CacheSlot<float>> FitScaleCache = new();
@@ -774,7 +784,7 @@ internal static partial class Typography
         return advance;
     }
 
-    private static string Fit(string text, float maxWidth)
+    private static string Fit(string text, float maxWidth, bool middle = false)
     {
         if (maxWidth <= 0f)
         {
@@ -784,7 +794,7 @@ internal static partial class Typography
         InvalidateCachesOnFontChange();
         var fontSize = ImGui.GetFontSize();
         var frame = ImGui.GetFrameCount();
-        var key = (text, maxWidth, fontSize);
+        var key = (text, maxWidth, fontSize, middle);
         if (FitCache.TryGetValue(key, out var cached))
         {
             if (cached.Frame != frame)
@@ -800,9 +810,37 @@ internal static partial class Typography
             SweepIdleCaches();
         }
 
-        var result = Shorten(text, maxWidth);
+        var result = middle ? ShortenMiddle(text, maxWidth) : Shorten(text, maxWidth);
         FitCache[key] = new CacheSlot<string>(result, frame);
         return result;
+    }
+
+    private static string ShortenMiddle(string text, float maxWidth)
+    {
+        var limit = maxWidth + FitTolerance;
+        if (ImGui.CalcTextSize(text).X <= limit)
+        {
+            return text;
+        }
+
+        for (var kept = text.Length - 1; kept > 0; kept--)
+        {
+            var head = kept / 3;
+            var tail = text.AsSpan(text.Length - (kept - head));
+            var space = tail.IndexOf(' ');
+            if (space >= 0 && space < tail.Length - 1)
+            {
+                tail = tail[(space + 1)..];
+            }
+
+            var candidate = string.Concat(text.AsSpan(0, head).TrimEnd(), Ellipsis.AsSpan(), tail);
+            if (ImGui.CalcTextSize(candidate).X <= limit)
+            {
+                return candidate;
+            }
+        }
+
+        return Ellipsis;
     }
 
     private static string Shorten(string text, float maxWidth)
