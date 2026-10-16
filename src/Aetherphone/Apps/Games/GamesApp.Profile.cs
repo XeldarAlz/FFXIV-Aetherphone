@@ -365,8 +365,8 @@ internal sealed partial class GamesApp
         var chipLeft = iconMin.X + icon + CardTextGap * scale;
         var chipWidth = MathF.Max(1f, card.Max.X - pad - chipLeft);
         var chipHeight = Typography.LineHeight(TextStyles.Title2);
-        Typography.Draw(drawList, new Vector2(chipLeft, iconMin.Y + (icon - chipHeight) * 0.5f),
-            Typography.FitText(rankChips[slot], chipWidth, TextStyles.Title2), ui.TitleInk, TextStyles.Title2);
+        WidgetText.Draw(drawList, new Vector2(chipLeft, iconMin.Y + (icon - chipHeight) * 0.5f), rankChips[slot],
+            ui.TitleInk, TextStyles.Title2, chipWidth);
         var textLeft = card.Min.X + pad;
         var textWidth = MathF.Max(1f, card.Width - pad * 2f);
         var y = iconMin.Y + icon + CardTextGap * scale;
