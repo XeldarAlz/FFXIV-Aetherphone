@@ -25,6 +25,7 @@ internal static class PrismArt
     private const float TopShadeUnits = 96f;
     private const float PressedAlpha = 0.82f;
     private const float PreviewAlpha = 0.32f;
+    private const float ArrowNudge = 0.08f;
 
     public static readonly Vector4 Black = new(0f, 0f, 0f, 1f);
     public static readonly Vector4 White = new(1f, 1f, 1f, 1f);
@@ -100,8 +101,9 @@ internal static class PrismArt
         var room = rect.Width - inset * 3f - PrismType.Measure(left, EditorialFace.Mono, pixels).X;
         if (right.Length > 0 && PrismType.Measure(right, EditorialFace.Mono, pixels).X <= room)
         {
-            PrismType.DrawRight(drawList, new Vector2(rect.Max.X - inset, top), right, text, EditorialFace.Mono,
-                pixels);
+            var nudge = PressFx.Toward(ImGui.GetID(left), hovered ? 1f + ArrowNudge : 1f) - 1f;
+            PrismType.DrawRight(drawList, new Vector2(rect.Max.X - inset + nudge * rect.Height, top), right, text,
+                EditorialFace.Mono, pixels);
         }
 
         if (hovered)

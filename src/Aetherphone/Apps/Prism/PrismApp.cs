@@ -47,7 +47,9 @@ internal sealed partial class PrismApp : IPhoneApp
 
     private PrismScreen screen = PrismScreen.Cover;
     private PrismScreen pickReturn = PrismScreen.Cover;
-    private Spring screenFade = new(1f);
+    private readonly Dictionary<string, double> loadedAt = new(StringComparer.Ordinal);
+    private float screenAge;
+    private int enterDirection = 1;
     private INavigator navigation = null!;
     private string? pendingSharedPhoto;
     private float sinceRefresh;
@@ -104,10 +106,24 @@ internal sealed partial class PrismApp : IPhoneApp
         var scale = UiScale.Current;
         var content = context.Content;
         var full = SceneChrome.ScreenFrom(content, context.Theme, scale);
-        var drawList = ImGui.GetWindowDrawList();
-        drawList.AddRectFilled(full.Min, full.Max, ImGui.GetColorU32(PrismArt.Black));
+        ImGui.GetWindowDrawList().AddRectFilled(full.Min, full.Max, ImGui.GetColorU32(PrismArt.Black));
         TickRefresh();
         ConsumeSharedPhoto();
+        screenAge += MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+        var enter = PrismMotion.At(screenAge, 0f, TransitionTiming.PresentSmoothTime);
+        var stage = ScreenLayer.Begin("prism.stage", full, enter < TransitionTiming.InteractiveProgress);
+        try
+        {
+            DrawScreen(ImGui.GetWindowDrawList(), full, content, scale);
+        }
+        finally
+        {
+            stage.Transform(PrismMotion.Stage(full, enter, enterDirection, scale));
+        }
+    }
+
+    private void DrawScreen(ImDrawListPtr drawList, Rect full, Rect content, float scale)
+    {
         switch (screen)
         {
             case PrismScreen.Entry:
@@ -129,18 +145,13 @@ internal sealed partial class PrismApp : IPhoneApp
                 DrawCover(drawList, full, content, scale);
                 break;
         }
-
-        var fade = screenFade.Step(1f, Motion.Appear, ImGui.GetIO().DeltaTime);
-        if (fade < 0.99f)
-        {
-            drawList.AddRectFilled(full.Min, full.Max, ImGui.GetColorU32(Palette.WithAlpha(PrismArt.Black, 1f - fade)));
-        }
     }
 
-    private void Go(PrismScreen next)
+    private void Go(PrismScreen next, int direction = 1)
     {
         screen = next;
-        screenFade.SnapTo(0f);
+        enterDirection = direction;
+        screenAge = 0f;
     }
 
     private float DrawHeader(ImDrawListPtr drawList, Rect content, string left, string right, bool back, float scale)
@@ -153,7 +164,7 @@ internal sealed partial class PrismApp : IPhoneApp
         {
             if (PrismArt.Link(drawList, row.Min, PrismType.Upper(Loc.T(L.Prism.Back)), PrismArt.White, scale))
             {
-                Go(screen == PrismScreen.Pick ? pickReturn : PrismScreen.Cover);
+                Go(screen == PrismScreen.Pick ? pickReturn : PrismScreen.Cover, -1);
             }
 
             height = PrismType.LineHeight(EditorialFace.Mono, PrismArt.MonoPixels());
@@ -173,11 +184,12 @@ internal sealed partial class PrismApp : IPhoneApp
         return rule + HeaderGapUnits * scale;
     }
 
-    private void DrawLook(ImDrawListPtr drawList, Rect rect, string url, bool contain, float alpha = 1f)
+    private Rect DrawLook(ImDrawListPtr drawList, Rect rect, string url, bool contain, float alpha = 1f,
+        float zoom = 1f)
     {
         if (url.Length == 0)
         {
-            return;
+            return rect;
         }
 
         var texture = images.Sized(url, MathF.Max(rect.Width, rect.Height));
@@ -187,15 +199,44 @@ internal sealed partial class PrismApp : IPhoneApp
             var size = PrismType.Measure(placeholder, EditorialFace.Mono, PrismArt.MonoPixels());
             PrismType.Draw(drawList, rect.Center - size * 0.5f, placeholder, PrismArt.Faint, EditorialFace.Mono,
                 PrismArt.MonoPixels());
-            return;
+            return rect;
         }
 
+        var now = ImGui.GetTime();
+        if (!loadedAt.TryGetValue(url, out var seen))
+        {
+            seen = now;
+            loadedAt[url] = seen;
+        }
+
+        alpha *= PrismMotion.At((float)(now - seen), 0f, Motion.Appear);
         var frame = contain ? ImageFit.CenteredRect(rect, texture.Size.X / MathF.Max(1f, texture.Size.Y)) : rect;
         var (uv0, uv1) = contain
             ? (Vector2.Zero, Vector2.One)
             : ImageFit.Cover(texture.Size.X, texture.Size.Y, rect.Width, rect.Height);
-        drawList.AddImage(texture.Handle, frame.Min, frame.Max, uv0, uv1,
+        var drawn = zoom == 1f ? frame : new Rect(frame.Center - frame.Size * 0.5f * zoom, frame.Center + frame.Size * 0.5f * zoom);
+        if (zoom != 1f)
+        {
+            drawList.PushClipRect(frame.Min, frame.Max, true);
+        }
+
+        drawList.AddImage(texture.Handle, drawn.Min, drawn.Max, uv0, uv1,
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, alpha)));
+        if (zoom != 1f)
+        {
+            drawList.PopClipRect();
+        }
+
+        return frame;
+    }
+
+    private static void DrawWipe(ImDrawListPtr drawList, Vector2 position, string text, EditorialFace face,
+        float pixels, float progress, Vector4 color)
+    {
+        var size = PrismType.Measure(text, face, pixels);
+        drawList.PushClipRect(position, position + size, true);
+        PrismType.Draw(drawList, position + new Vector2(0f, size.Y * (1f - progress)), text, color, face, pixels);
+        drawList.PopClipRect();
     }
 
     private float DrawNotice(ImDrawListPtr drawList, Rect content, string title, string body, float scale,

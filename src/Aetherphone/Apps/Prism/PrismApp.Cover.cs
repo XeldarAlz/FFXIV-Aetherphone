@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
@@ -15,6 +16,10 @@ internal sealed partial class PrismApp
     private const float HeadlineMinUnits = 30f;
     private const int HeadlineLines = 3;
     private const int BriefLines = 3;
+    private const float CoverZoom = 0.06f;
+    private const float RuleDelay = 0.05f;
+    private const float CreditsDelay = 0.12f;
+    private const float StoryDelay = 0.08f;
 
     private CachedText deadlineText;
     private CachedText judgedText;
@@ -57,15 +62,25 @@ internal sealed partial class PrismApp
         var cover = CoverPlacing(store.Results);
         if (cover is not null)
         {
-            DrawLook(drawList, full, cover.ImageUrl, false);
+            var zoom = 1f + CoverZoom * (1f - PrismMotion.At(screenAge, 0f, Motion.Sheet));
+            DrawLook(drawList, full, cover.ImageUrl, false, 1f, zoom);
         }
 
         PrismArt.Shade(drawList, full, scale);
         var below = DrawMasthead(drawList, content, IssueLine(week.Issue), scale);
+        var credits = PrismMotion.Mark(drawList);
         DrawCoverCredits(drawList, content, below, cover, week, scale);
-        DrawCoverStory(drawList, content, week, scale);
+        PrismMotion.Rise(drawList, credits, PrismMotion.At(screenAge, CreditsDelay, Motion.PageSettle), 0f);
+        var steps = DrawCoverStory(drawList, content, week, scale);
+        var strip = PrismMotion.Mark(drawList);
         DrawCoverStrip(drawList, content, week, scale);
+        RiseStep(drawList, strip, steps, scale);
     }
+
+    private void RiseStep(ImDrawListPtr drawList, int mark, int step, float scale) =>
+        PrismMotion.Rise(drawList, mark,
+            PrismMotion.At(screenAge, StoryDelay + step * PrismMotion.Stagger, Motion.PageSettle),
+            PrismMotion.RiseUnits * scale);
 
     private float DrawMasthead(ImDrawListPtr drawList, Rect content, string right, float scale)
     {
@@ -82,7 +97,9 @@ internal sealed partial class PrismApp
         }
 
         var rule = top + PrismType.LineHeight(EditorialFace.Headline, pixels) + HeaderGapUnits * scale;
-        PrismArt.SpectrumRule(drawList, content.Min.X + gutter, content.Max.X - gutter, rule, scale);
+        var draw = PrismMotion.At(screenAge, RuleDelay, Motion.Sheet);
+        var span = content.Width - gutter * 2f;
+        PrismArt.SpectrumRule(drawList, content.Min.X + gutter, content.Min.X + gutter + span * draw, rule, scale);
         return rule + HeaderGapUnits * scale;
     }
 
@@ -119,7 +136,7 @@ internal sealed partial class PrismApp
         }
     }
 
-    private void DrawCoverStory(ImDrawListPtr drawList, Rect content, PrismWeekDto week, float scale)
+    private int DrawCoverStory(ImDrawListPtr drawList, Rect content, PrismWeekDto week, float scale)
     {
         var gutter = PrismArt.Gutter(scale);
         var width = content.Width - gutter * 2f;
@@ -139,11 +156,24 @@ internal sealed partial class PrismApp
         var meta = monoLine * (briefCount + (count.Length > 0 ? 1 : 0) + (deadline.Length > 0 ? 1 : 0));
         var top = bottom - meta - gap - headline - gap - monoLine;
         var left = content.Min.X + gutter;
+        var step = 0;
+        var mark = PrismMotion.Mark(drawList);
         PrismType.Draw(drawList, new Vector2(left, top), PrismType.Upper(Loc.T(L.Prism.ThemeLabel)), PrismArt.Muted,
             EditorialFace.Mono, mono);
+        RiseStep(drawList, mark, step++, scale);
         top += monoLine + gap;
-        top += PrismType.DrawLines(drawList, new Vector2(left, top), lines, PrismArt.White, EditorialFace.Headline,
-            pixels) + gap;
+        var headlineLine = PrismType.LineHeight(EditorialFace.Headline, pixels);
+        for (var index = 0; index < lines.Length; index++)
+        {
+            mark = PrismMotion.Mark(drawList);
+            PrismType.Draw(drawList, new Vector2(left, top), lines[index], PrismArt.White, EditorialFace.Headline,
+                pixels);
+            RiseStep(drawList, mark, step++, scale);
+            top += headlineLine;
+        }
+
+        top += gap;
+        mark = PrismMotion.Mark(drawList);
         for (var index = 0; index < briefCount; index++)
         {
             PrismType.Draw(drawList, new Vector2(left, top), brief[index], PrismArt.White, EditorialFace.Mono, mono);
@@ -160,6 +190,9 @@ internal sealed partial class PrismApp
         {
             PrismType.Draw(drawList, new Vector2(left, top), count, PrismArt.Muted, EditorialFace.Mono, mono);
         }
+
+        RiseStep(drawList, mark, step++, scale);
+        return step;
     }
 
     private void DrawCoverStrip(ImDrawListPtr drawList, Rect content, PrismWeekDto week, float scale)

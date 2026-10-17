@@ -2,6 +2,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
@@ -12,10 +13,14 @@ internal sealed partial class PrismApp
 {
     private const float LookNumeralUnits = 96f;
     private const float DoneNumeralUnits = 120f;
-    private const float FadeStart = 0.35f;
+    private const float DoneNumeralMinUnits = 48f;
     private const float CircleDone = 0.97f;
     private const float NumeralShadowUnits = 2f;
     private const float NumeralOverlap = 0.55f;
+    private const float NumeralRoll = 0.6f;
+    private const float TurnShift = 0.35f;
+    private const float TurnIdle = 10f;
+    private const float DoneTextDelay = 0.12f;
     private const int OutcomePending = 0;
     private const int OutcomeSent = 1;
     private const int OutcomeFailed = 2;
@@ -31,7 +36,9 @@ internal sealed partial class PrismApp
     private float lookSeconds;
     private bool heatDone;
     private volatile int ballotOutcome;
-    private Spring lookFade = new(1f);
+    private string previousLookUrl = string.Empty;
+    private float turnAge = TurnIdle;
+    private Spring progressLine = new(0f);
     private Spring circle = new(0f);
     private CachedText lookCounter;
     private CachedText doneCounter;
@@ -81,7 +88,9 @@ internal sealed partial class PrismApp
             lookIndex = 0;
             chosen = 0;
             lookSeconds = 0f;
-            lookFade.SnapTo(0f);
+            previousLookUrl = string.Empty;
+            turnAge = TurnIdle;
+            progressLine.SnapTo(0f);
         }
 
         if (lookIndex >= looks.Length)
@@ -97,18 +106,22 @@ internal sealed partial class PrismApp
     private void DrawLookToRate(ImDrawListPtr drawList, Rect content, PrismBallotDto ballot, PrismLookDto[] looks,
         float scale)
     {
-        var delta = ImGui.GetIO().DeltaTime;
+        var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         lookSeconds += delta;
-        var fade = lookFade.Step(1f, Motion.Appear, delta);
+        turnAge += delta;
+        var turn = PrismMotion.At(turnAge, 0f, Motion.PageSettle);
         var look = looks[lookIndex];
         var gutter = PrismArt.Gutter(scale);
-        var top = DrawRunwayHeader(drawList, content, ballot, looks.Length, look.Id, scale);
+        var top = DrawRunwayHeader(drawList, content, ballot, looks.Length, look.Id, scale, delta);
         var labelHeight = PrismArt.LabelHeight(scale);
         var label = new Rect(new Vector2(content.Min.X + gutter, content.Max.Y - gutter - labelHeight),
             new Vector2(content.Max.X - gutter, content.Max.Y - gutter));
-        var photo = new Rect(new Vector2(content.Min.X, top), new Vector2(content.Max.X, label.Min.Y - Metrics.Space.Lg * scale));
-        DrawLook(drawList, photo, look.ImageUrl, true, FadeStart + (1f - FadeStart) * fade);
-        DrawLookNumeral(drawList, photo, Padded[Math.Min(lookIndex + 1, Padded.Length - 1)], gutter, scale);
+        var numeralPixels = LookNumeralUnits * scale;
+        var photoBottom = label.Min.Y - Metrics.Space.Lg * scale - numeralPixels * (1f - NumeralOverlap);
+        var photo = new Rect(new Vector2(content.Min.X, top), new Vector2(content.Max.X, photoBottom));
+        DrawTurningLook(drawList, photo, look, turn);
+        DrawLookNumeral(drawList, new Vector2(photo.Min.X + gutter, photo.Max.Y - numeralPixels * NumeralOverlap),
+            numeralPixels, turn, scale);
 
         var progress = chosen > 0 ? circle.Step(1f, Motion.Release, delta) : 0f;
         var failure = store.ActionFailed ? store.ActionFailureText : string.Empty;
@@ -129,7 +142,7 @@ internal sealed partial class PrismApp
     }
 
     private float DrawRunwayHeader(ImDrawListPtr drawList, Rect content, PrismBallotDto ballot, int total,
-        string lookId, float scale)
+        string lookId, float scale, float delta)
     {
         var gutter = PrismArt.Gutter(scale);
         var top = content.Min.Y + HeaderGapUnits * scale;
@@ -155,19 +168,51 @@ internal sealed partial class PrismApp
         var rule = top + PrismType.LineHeight(EditorialFace.Mono, mono) + HeaderGapUnits * 0.5f * scale;
         var span = content.Width - gutter * 2f;
         PrismArt.Hairline(drawList, content.Min.X + gutter, content.Max.X - gutter, rule, PrismArt.Faint, scale);
-        PrismArt.Hairline(drawList, content.Min.X + gutter, content.Min.X + gutter + span * (lookIndex + 1) / total,
-            rule, PrismArt.White, scale);
+        var filled = progressLine.Step((lookIndex + 1f) / total, Motion.PageSettle, delta);
+        PrismArt.Hairline(drawList, content.Min.X + gutter, content.Min.X + gutter + span * filled, rule,
+            PrismArt.White, scale);
         return rule + HeaderGapUnits * scale;
     }
 
-    private static void DrawLookNumeral(ImDrawListPtr drawList, Rect photo, string numeral, float gutter, float scale)
+    private void DrawTurningLook(ImDrawListPtr drawList, Rect photo, PrismLookDto look, float turn)
     {
-        var pixels = LookNumeralUnits * scale;
-        var position = new Vector2(photo.Min.X + gutter, photo.Max.Y - pixels * NumeralOverlap);
+        var shift = new Vector2(photo.Width * TurnShift, 0f);
+        drawList.PushClipRect(photo.Min, photo.Max, true);
+        if (turn < PrismMotion.Settled && previousLookUrl.Length > 0)
+        {
+            DrawLook(drawList, new Rect(photo.Min - shift * turn, photo.Max - shift * turn), previousLookUrl, true,
+                1f - turn);
+        }
+
+        var incoming = shift * (1f - turn);
+        DrawLook(drawList, new Rect(photo.Min + incoming, photo.Max + incoming), look.ImageUrl, true, turn);
+        drawList.PopClipRect();
+    }
+
+    private void DrawLookNumeral(ImDrawListPtr drawList, Vector2 position, float pixels, float turn, float scale)
+    {
+        var current = Padded[Math.Min(lookIndex + 1, Padded.Length - 1)];
+        var width = PrismType.Measure(Padded[Padded.Length - 1], EditorialFace.Numerals, pixels).X;
+        drawList.PushClipRect(position, position + new Vector2(width * 1.5f, pixels), true);
+        var roll = pixels * NumeralRoll;
+        if (turn < PrismMotion.Settled && lookIndex > 0)
+        {
+            DrawShadowedNumeral(drawList, position - new Vector2(0f, roll * turn), Padded[lookIndex], 1f - turn,
+                pixels, scale);
+        }
+
+        DrawShadowedNumeral(drawList, position + new Vector2(0f, roll * (1f - turn)), current, turn, pixels, scale);
+        drawList.PopClipRect();
+    }
+
+    private static void DrawShadowedNumeral(ImDrawListPtr drawList, Vector2 position, string numeral, float alpha,
+        float pixels, float scale)
+    {
         var shadow = NumeralShadowUnits * scale;
-        PrismType.Draw(drawList, position + new Vector2(shadow, shadow), numeral, NumeralShadow,
-            EditorialFace.Numerals, pixels);
-        PrismType.Draw(drawList, position, numeral, PrismArt.White, EditorialFace.Numerals, pixels);
+        PrismType.Draw(drawList, position + new Vector2(shadow, shadow), numeral,
+            Palette.WithAlpha(NumeralShadow, NumeralShadow.W * alpha), EditorialFace.Numerals, pixels);
+        PrismType.Draw(drawList, position, numeral, Palette.WithAlpha(PrismArt.White, alpha), EditorialFace.Numerals,
+            pixels);
     }
 
     private void Rate(PrismLookDto[] looks, PrismLookDto look, int value)
@@ -176,7 +221,8 @@ internal sealed partial class PrismApp
         lookIndex++;
         chosen = 0;
         lookSeconds = 0f;
-        lookFade.SnapTo(0f);
+        previousLookUrl = look.ImageUrl;
+        turnAge = 0f;
         if (lookIndex < looks.Length)
         {
             return;
@@ -203,7 +249,7 @@ internal sealed partial class PrismApp
         if (outcome == OutcomeSent)
         {
             heatDone = true;
-            screenFade.SnapTo(0f);
+            Go(PrismScreen.Runway, 0);
             return;
         }
 
@@ -232,9 +278,17 @@ internal sealed partial class PrismApp
         var top = DrawHeader(drawList, content, string.Empty, string.Empty, true, scale);
         var canJudge = store.Week is { } week && PrismPhases.Judgeable(week.Phase);
         var strips = canJudge ? 2 : 1;
+        var notice = PrismMotion.Mark(drawList);
         DrawNotice(drawList, content, Loc.T(L.Prism.HeatDoneTitle), Loc.T(L.Prism.HeatDoneHint), scale, strips);
-        PrismType.Draw(drawList, new Vector2(content.Min.X + PrismArt.Gutter(scale), top), DoneCounter(stars.Length),
-            PrismArt.White, EditorialFace.Numerals, DoneNumeralUnits * scale);
+        PrismMotion.Rise(drawList, notice, PrismMotion.At(screenAge, DoneTextDelay, Motion.PageSettle),
+            PrismMotion.RiseUnits * scale);
+        var gutter = PrismArt.Gutter(scale);
+        var count = DoneCounter(stars.Length);
+        var pixels = PrismType.Fit(count, EditorialFace.Numerals, content.Width - gutter * 2f,
+            DoneNumeralUnits * scale, DoneNumeralMinUnits * scale, 1, out _);
+        DrawWipe(drawList, new Vector2(content.Min.X + gutter, top), count, EditorialFace.Numerals, pixels,
+            PrismMotion.At(screenAge, 0f, Motion.Sheet), PrismArt.White);
+        var strip = PrismMotion.Mark(drawList);
         if (canJudge && PrismArt.Strip(drawList, StripRect(content, scale, 1), PrismType.Upper(Loc.T(L.Prism.JudgeAnother)),
                 "→", true))
         {
@@ -242,14 +296,17 @@ internal sealed partial class PrismApp
             ratingBallot = null;
             store.ClearBallot();
             store.RequestBallot();
-            screenFade.SnapTo(0f);
+            Go(PrismScreen.Runway);
         }
 
         if (PrismArt.Strip(drawList, StripRect(content, scale), PrismType.Upper(Loc.T(L.Prism.Back)), string.Empty,
                 strips == 1))
         {
-            Go(PrismScreen.Cover);
+            Go(PrismScreen.Cover, -1);
         }
+
+        PrismMotion.Rise(drawList, strip, PrismMotion.At(screenAge, DoneTextDelay + PrismMotion.Stagger,
+            Motion.PageSettle), PrismMotion.RiseUnits * scale);
     }
 
     private void DrawCenteredMono(ImDrawListPtr drawList, Rect content, string text)
