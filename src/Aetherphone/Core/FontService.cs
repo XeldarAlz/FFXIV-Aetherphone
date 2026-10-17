@@ -84,7 +84,7 @@ internal sealed class FontService : IDisposable
     private static readonly float[][] EditorialSizes =
     {
         new[] { 24f, 28f, 32f, 40f, 48f },
-        new[] { 48f, 64f, 88f, 96f, 120f, 200f },
+        new[] { 48f, 64f, 96f, 120f, 200f },
         new[] { 11f, 12f, 13f, 14f, 15f, 16f, 18f, 20f },
     };
 

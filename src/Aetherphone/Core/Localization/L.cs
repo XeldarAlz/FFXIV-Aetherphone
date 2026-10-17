@@ -10519,10 +10519,10 @@ internal static class L
         public static readonly LocString NoWeekTitle = new("prism.noWeekTitle", "No theme right now");
         public static readonly LocString NoWeekHint = new("prism.noWeekHint", "A new theme drops soon. Check back later.");
         public static readonly LocString ThemeLabel = new("prism.themeLabel", "This week's theme");
-        public static readonly LocString EntriesClose = new("prism.entriesClose", "Entries close {0}");
-        public static readonly LocString JudgingCloses = new("prism.judgingCloses", "Judging closes {0}");
-        public static readonly LocString FinalCloses = new("prism.finalCloses", "The final closes {0}");
-        public static readonly LocString ResultsAt = new("prism.resultsAt", "Results arrive {0}");
+        public static readonly LocString EntriesClose = new("prism.entriesClose", "Entries close");
+        public static readonly LocString JudgingCloses = new("prism.judgingCloses", "Judging closes");
+        public static readonly LocString FinalCloses = new("prism.finalCloses", "The final closes");
+        public static readonly LocString ResultsAt = new("prism.resultsAt", "Results arrive");
         public static readonly LocString EnterLook = new("prism.enterLook", "Enter your look");
         public static readonly LocString EnterThisLook = new("prism.enterThisLook", "Enter this look");
         public static readonly LocString Uploading = new("prism.uploading", "Uploading your look…");
@@ -10555,7 +10555,6 @@ internal static class L
         public static readonly LocString YourHeat = new("prism.yourHeat", "Your heat");
         public static readonly LocString FinalTitle = new("prism.finalTitle", "The final");
         public static readonly LocString Back = new("prism.back", "Back");
-        public static readonly LocString Report = new("prism.report", "Report");
         public static readonly LocString Issue = new("prism.issue", "N°{0}");
         public static readonly LocString CoverCredit = new("prism.coverCredit", "Cover: {0}");
         public static readonly LocPlural LooksThisIssue =
@@ -10569,6 +10568,12 @@ internal static class L
         public static readonly LocString YourPlacing = new("prism.yourPlacing", "Your placing");
         public static readonly LocString TapHint = new("prism.tapHint", "Tap for the next look");
         public static readonly LocString InspectHint = new("prism.inspectHint", "Hold to look closer");
+        public static readonly LocString StatusReviewTitle = new("prism.statusReviewTitle", "Your look is in review");
+        public static readonly LocString StatusLiveTitle = new("prism.statusLiveTitle", "Your look is in the running");
+        public static readonly LocString StatusRejectedTitle =
+            new("prism.statusRejectedTitle", "Your look wasn't accepted");
+        public static readonly LocString PlaceLabel = new("prism.placeLabel", "Place");
+        public static readonly LocString LooksIn = new("prism.looksIn", "Looks in");
     }
 
     internal static class Announcements

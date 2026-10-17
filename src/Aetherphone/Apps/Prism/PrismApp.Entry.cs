@@ -9,7 +9,7 @@ namespace Aetherphone.Apps.Prism;
 
 internal sealed partial class PrismApp
 {
-    private const float StatusMaxUnits = 40f;
+    private const float StatusMaxUnits = 32f;
     private const float StatusMinUnits = 24f;
     private const float TagDelay = 0.2f;
     private const float TagStamp = 0.35f;
@@ -25,21 +25,27 @@ internal sealed partial class PrismApp
         var top = DrawHeader(drawList, content, string.Empty, IssueLine(week.Issue), true, scale);
         var gutter = PrismArt.Gutter(scale);
         var width = content.Width - gutter * 2f;
+        var left = content.Min.X + gutter;
         var editable = week.Phase == PrismPhases.Entering;
-        var strips = editable ? 2 : 0;
-        var status = Loc.T(StatusName(entry.Status));
-        var pixels = PrismType.Fit(status, EditorialFace.Headline, width, StatusMaxUnits * scale,
-            StatusMinUnits * scale, 2, out var lines);
+        var judgeable = PrismPhases.Judgeable(week.Phase);
+        var labelPixels = PrismArt.LabelPixels();
+        var bottom = content.Max.Y - gutter;
+        var linkTop = bottom - PrismType.LineHeight(EditorialFace.Label, labelPixels);
+        var stripBottom = editable ? linkTop - Metrics.Space.Lg * scale : bottom;
+        var strip = new Rect(new Vector2(left, stripBottom - PrismArt.StripUnits * scale),
+            new Vector2(left + width, stripBottom));
+        var actionsTop = editable || judgeable ? strip.Min.Y : bottom;
+        var pixels = PrismType.Fit(Loc.T(StatusTitle(entry.Status)), EditorialFace.Headline, width,
+            StatusMaxUnits * scale, StatusMinUnits * scale, 2, out var lines);
         var hint = entry.Status == PrismPhases.StatusRejected
             ? entry.RejectReason
             : entry.Status == PrismPhases.StatusLive ? string.Empty : Loc.T(L.Prism.StatusReviewHint);
-        var hintHeight = hint.Length > 0 ? Typography.MeasureWrappedBlock(hint, TextStyles.Subheadline, width).Y : 0f;
-        var textHeight = lines.Length * PrismType.LineHeight(EditorialFace.Headline, pixels) + hintHeight +
-                         Metrics.Space.Sm * scale;
-        var stripsTop = strips > 0 ? StripRect(content, scale, strips - 1).Min.Y : content.Max.Y - gutter;
-        var textTop = stripsTop - Metrics.Space.Lg * scale - textHeight;
-        var photo = new Rect(new Vector2(content.Min.X + gutter, top),
-            new Vector2(content.Max.X - gutter, textTop - Metrics.Space.Lg * scale));
+        var hintHeight = hint.Length > 0
+            ? Typography.MeasureWrappedBlock(hint, TextStyles.Subheadline, width).Y + Metrics.Space.Sm * scale
+            : 0f;
+        var textTop = actionsTop - Metrics.Space.Xl * scale - hintHeight -
+                      lines.Length * PrismType.LineHeight(EditorialFace.Headline, pixels);
+        var photo = new Rect(new Vector2(left, top), new Vector2(left + width, textTop - Metrics.Space.Xl * scale));
         var frame = DrawLook(drawList, photo, store.Busy ? string.Empty : entry.ImageUrl, true);
         if (!store.Busy)
         {
@@ -50,26 +56,33 @@ internal sealed partial class PrismApp
             PrismMotion.Scale(drawList, tag, pivot, 1f + TagStamp * (1f - stamp), stamp);
         }
 
-        var left = content.Min.X + gutter;
         textTop += PrismType.DrawLines(drawList, new Vector2(left, textTop), lines, PrismArt.White,
-            EditorialFace.Headline, pixels) + Metrics.Space.Sm * scale;
+            EditorialFace.Headline, pixels);
         if (hint.Length > 0)
         {
-            Typography.DrawWrappedLeft(new Vector2(left, textTop), hint, PrismArt.Muted, TextStyles.Subheadline, width);
+            Typography.DrawWrappedLeft(new Vector2(left, textTop + Metrics.Space.Sm * scale), hint, PrismArt.Muted,
+                TextStyles.Subheadline, width);
         }
+
+        if (judgeable && PrismArt.Strip(drawList, strip,
+                Loc.T(week.Phase == PrismPhases.Final ? L.Prism.JudgeFinal : L.Prism.JudgeHeat), "→", true,
+                !store.Busy))
+        {
+            StartJudging();
+        }
+
         if (!editable)
         {
             return;
         }
 
-        if (PrismArt.Strip(drawList, StripRect(content, scale, 1), Loc.T(L.Common.ChangePhoto), "→",
-                true, !store.Busy))
+        if (PrismArt.Strip(drawList, strip, Loc.T(L.Common.ChangePhoto), "→", true, !store.Busy))
         {
             StartPick();
         }
 
-        if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Prism.Withdraw),
-                string.Empty, false, !store.Busy))
+        if (!store.Busy && PrismArt.Link(drawList, new Vector2(left, linkTop), Loc.T(L.Prism.Withdraw),
+                PrismArt.Muted, scale))
         {
             confirm.Ask(new ConfirmRequest
             {
@@ -82,4 +95,11 @@ internal sealed partial class PrismApp
             });
         }
     }
+
+    private static LocString StatusTitle(string status) => status switch
+    {
+        PrismPhases.StatusLive => L.Prism.StatusLiveTitle,
+        PrismPhases.StatusRejected => L.Prism.StatusRejectedTitle,
+        _ => L.Prism.StatusReviewTitle,
+    };
 }

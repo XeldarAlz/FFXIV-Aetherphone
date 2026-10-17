@@ -41,15 +41,12 @@ internal sealed partial class PrismApp
 
         pickIntake.AcceptDrop(content, library, PrismArt.White);
         var top = DrawHeader(drawList, content, string.Empty, Loc.T(L.Prism.EnterLook), true, scale);
-        var gutter = PrismArt.Gutter(scale);
         var paneHeight = MathF.Min(content.Width, (content.Max.Y - top) * PickPaneFraction);
         var pane = new Rect(new Vector2(content.Min.X, top), new Vector2(content.Max.X, top + paneHeight));
         pickSession.DrawPickPane(pane, scale, PickStyle, PrismStore.EntryRatio, PrismStore.EntryRevealsWholeImage,
             !store.Busy);
 
-        var stripTop = pane.Max.Y + Metrics.Space.Md * scale;
-        var strip = new Rect(new Vector2(content.Min.X + gutter, stripTop),
-            new Vector2(content.Max.X - gutter, stripTop + PrismArt.StripUnits * scale));
+        var strip = StripRect(content, scale);
         var label = Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.EnterThisLook);
         if (PrismArt.Strip(drawList, strip, label, "→", true, pickSession.HasSelection && !store.Busy,
                 UiSound.Shutter))
@@ -57,16 +54,19 @@ internal sealed partial class PrismApp
             store.Enter(pickSession.FirstSelected, pickSession.CropsArray()[0], entrySettled);
         }
 
-        var gridTop = strip.Max.Y + Metrics.Space.Md * scale;
+        var gridBottom = strip.Min.Y - Metrics.Space.Lg * scale;
         if (store.ActionFailed && !store.Busy)
         {
             var reason = store.ActionFailureText;
-            gridTop += Typography.DrawWrappedLeft(new Vector2(strip.Min.X, gridTop),
-                reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint), PrismArt.Muted, TextStyles.Subheadline,
-                strip.Width) + Metrics.Space.Md * scale;
+            var text = reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint);
+            gridBottom -= Typography.MeasureWrappedBlock(text, TextStyles.Subheadline, strip.Width).Y;
+            Typography.DrawWrappedLeft(new Vector2(strip.Min.X, gridBottom), text, PrismArt.Muted,
+                TextStyles.Subheadline, strip.Width);
+            gridBottom -= Metrics.Space.Md * scale;
         }
 
-        var gridRect = new Rect(new Vector2(content.Min.X, gridTop), content.Max);
+        var gridRect = new Rect(new Vector2(content.Min.X, pane.Max.Y + Metrics.Space.Md * scale),
+            new Vector2(content.Max.X, gridBottom));
         using (AppSurface.BeginEdgeToEdge(gridRect))
         {
             if (pickSession.DrawPickGrid(gridRect, scale, PickStyle, false, Loc.T(L.Common.ImportFromPc),

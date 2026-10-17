@@ -28,7 +28,7 @@ internal enum PrismScreen : byte
 internal sealed partial class PrismApp : IPhoneApp
 {
     private const float RefreshSeconds = 120f;
-    private const float HeaderGapUnits = 8f;
+    private const float HeaderGapUnits = 14f;
     private const float NoticeMaxUnits = 40f;
     private const float NoticeMinUnits = 24f;
     private const int NoticeLines = 3;
@@ -248,12 +248,12 @@ internal sealed partial class PrismApp : IPhoneApp
         var pixels = PrismType.Fit(title, EditorialFace.Headline, width, NoticeMaxUnits * scale,
             NoticeMinUnits * scale, NoticeLines, out var lines);
         var bodyHeight = body.Length > 0 ? Typography.MeasureWrappedBlock(body, TextStyles.Subheadline, width).Y : 0f;
-        var height = lines.Length * PrismType.LineHeight(EditorialFace.Headline, pixels) + Metrics.Space.Md * scale +
+        var height = lines.Length * PrismType.LineHeight(EditorialFace.Headline, pixels) + Metrics.Space.Lg * scale +
                      bodyHeight;
-        var bottom = StripRect(content, scale, strips - 1).Min.Y - Metrics.Space.Lg * scale;
+        var bottom = StripRect(content, scale, strips - 1).Min.Y - Metrics.Space.Xxl * scale;
         var top = bottom - height;
         top += PrismType.DrawLines(drawList, new Vector2(content.Min.X + gutter, top), lines, PrismArt.White,
-            EditorialFace.Headline, pixels) + Metrics.Space.Md * scale;
+            EditorialFace.Headline, pixels) + Metrics.Space.Lg * scale;
         if (body.Length > 0)
         {
             Typography.DrawWrappedLeft(new Vector2(content.Min.X + gutter, top), body, PrismArt.Muted,
@@ -267,7 +267,7 @@ internal sealed partial class PrismApp : IPhoneApp
     {
         var gutter = PrismArt.Gutter(scale);
         var height = PrismArt.StripUnits * scale;
-        var bottom = content.Max.Y - gutter - fromBottom * (height + Metrics.Space.Sm * scale);
+        var bottom = content.Max.Y - gutter - fromBottom * (height + Metrics.Space.Md * scale);
         return new Rect(new Vector2(content.Min.X + gutter, bottom - height), new Vector2(content.Max.X - gutter, bottom));
     }
 

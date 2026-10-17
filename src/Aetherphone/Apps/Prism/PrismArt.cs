@@ -8,18 +8,16 @@ namespace Aetherphone.Apps.Prism;
 
 internal static class PrismArt
 {
-    public const float StripUnits = 48f;
-    public const float GutterUnits = 14f;
+    public const float StripUnits = 52f;
+    public const float GutterUnits = 20f;
     public const int Stars = 5;
 
     private const float LabelRatio = 0.82f;
-    private const float LabelDigitUnits = 26f;
-    private const float LabelPadUnits = 12f;
+    private const float ScoreDigitUnits = 24f;
+    private const float PillUnits = 30f;
+    private const float PillPadUnits = 12f;
     private const float StitchInsetUnits = 4f;
     private const float StitchDashUnits = 5f;
-    private const float CircleStroke = 1.4f;
-    private const float CircleStart = -MathF.PI * 0.5f;
-    private const int CircleSegments = 40;
     private const float StoryBarUnits = 2f;
     private const float StoryBarSpacingUnits = 4f;
     private const float TagPadUnits = 8f;
@@ -27,7 +25,6 @@ internal static class PrismArt
     private const float ShadeShare = 0.62f;
     private const float TopShadeUnits = 96f;
     private const float PressedAlpha = 0.82f;
-    private const float PreviewAlpha = 0.32f;
     private const float ArrowNudge = 0.08f;
 
     public static readonly Vector4 Black = new(0f, 0f, 0f, 1f);
@@ -134,40 +131,53 @@ internal static class PrismArt
         return UiInteract.Click(min, max, hovered);
     }
 
-    public static float LabelHeight(float scale) =>
-        LabelPadUnits * 2f * scale + LabelPixels() * 1.6f + Metrics.Size.TapTarget * scale;
-
-    public static int Label(ImDrawListPtr drawList, Rect rect, string prompt, int chosen, float circle, bool enabled,
-        float scale)
+    public static bool Pill(ImDrawListPtr drawList, Vector2 topLeft, string label, bool lit, float scale,
+        out float width)
     {
-        drawList.AddRectFilled(rect.Min, rect.Max, ImGui.GetColorU32(Bone));
-        DrawStitch(drawList, rect, scale);
-        var pad = LabelPadUnits * scale;
         var pixels = LabelPixels();
-        PrismType.Draw(drawList, new Vector2(rect.Min.X + pad, rect.Min.Y + pad), prompt, InkMuted,
-            EditorialFace.Label, pixels);
-        var cellTop = rect.Max.Y - pad - Metrics.Size.TapTarget * scale;
-        var cellWidth = (rect.Width - pad * 2f) / Stars;
-        var digitPixels = LabelDigitUnits * scale;
+        var pad = PillPadUnits * scale;
+        var height = PillUnits * scale;
+        width = PrismType.Measure(label, EditorialFace.Label, pixels).X + pad * 2f;
+        var max = new Vector2(topLeft.X + width, topLeft.Y + height);
+        var reach = MathF.Max(0f, (Metrics.Size.TapTarget * scale - height) * 0.5f);
+        var hitMin = new Vector2(topLeft.X, topLeft.Y - reach);
+        var hitMax = new Vector2(max.X, max.Y + reach);
+        var hovered = UiInteract.Hover(hitMin, hitMax);
+        var bright = lit || hovered;
+        drawList.AddRect(topLeft, max, ImGui.GetColorU32(bright ? White : Faint), height * 0.5f, ImDrawFlags.None, 1f);
+        PrismType.Draw(drawList, new Vector2(topLeft.X + pad, topLeft.Y + (height - pixels) * 0.5f), label,
+            bright ? White : Muted, EditorialFace.Label, pixels);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return UiInteract.Click(hitMin, hitMax, hovered);
+    }
+
+    public static int Score(ImDrawListPtr drawList, Rect row, int chosen, float fill, bool enabled, float scale)
+    {
+        var gap = Metrics.Space.Sm * scale;
+        var cellWidth = (row.Width - gap * (Stars - 1)) / Stars;
+        var digitPixels = ScoreDigitUnits * scale;
         var picked = 0;
         for (var index = 0; index < Stars; index++)
         {
-            var min = new Vector2(rect.Min.X + pad + cellWidth * index, cellTop);
-            var max = new Vector2(min.X + cellWidth, cellTop + Metrics.Size.TapTarget * scale);
-            var center = (min + max) * 0.5f;
+            var min = new Vector2(row.Min.X + index * (cellWidth + gap), row.Min.Y);
+            var max = new Vector2(min.X + cellWidth, row.Max.Y);
             var hovered = enabled && UiInteract.Hover(min, max);
-            var size = PrismType.Measure(Digits[index], EditorialFace.Headline, digitPixels);
-            PrismType.Draw(drawList, center - size * 0.5f, Digits[index], Ink, EditorialFace.Headline, digitPixels);
-            var radius = MathF.Min(cellWidth, max.Y - min.Y) * 0.42f;
-            if (chosen == index + 1)
+            var selected = chosen == index + 1;
+            var share = selected ? fill : 0f;
+            drawList.AddRect(min, max, ImGui.GetColorU32(hovered || selected ? White : Faint), 0f, ImDrawFlags.None,
+                1f);
+            if (share > 0f)
             {
-                DrawCircle(drawList, center, radius, circle, Ink, scale);
-            }
-            else if (hovered && chosen == 0)
-            {
-                DrawCircle(drawList, center, radius, 1f, Palette.WithAlpha(Ink, PreviewAlpha), scale);
+                drawList.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(White, share)));
             }
 
+            var size = PrismType.Measure(Digits[index], EditorialFace.Headline, digitPixels);
+            PrismType.Draw(drawList, (min + max) * 0.5f - size * 0.5f, Digits[index], Vector4.Lerp(White, Ink, share),
+                EditorialFace.Headline, digitPixels);
             if (hovered)
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -181,7 +191,6 @@ internal static class PrismArt
 
         return picked;
     }
-
     public static void SpectrumRule(ImDrawListPtr drawList, float left, float right, float y, float scale)
     {
         var segment = (right - left) / Spectrum.Length;
@@ -225,19 +234,6 @@ internal static class PrismArt
             drawList.AddLine(new Vector2(x, top), new Vector2(end, top), color);
             drawList.AddLine(new Vector2(x, bottom), new Vector2(end, bottom), color);
         }
-    }
-
-    private static void DrawCircle(ImDrawListPtr drawList, Vector2 center, float radius, float progress,
-        Vector4 color, float scale)
-    {
-        if (progress <= 0f)
-        {
-            return;
-        }
-
-        var sweep = MathF.Tau * MathF.Min(1f, progress);
-        drawList.PathArcTo(center, radius, CircleStart, CircleStart + sweep, CircleSegments);
-        drawList.PathStroke(ImGui.GetColorU32(color), ImDrawFlags.None, CircleStroke * scale);
     }
 
     public static void StoryBars(ImDrawListPtr drawList, float left, float right, float top, int count, int current,
