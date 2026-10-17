@@ -29,8 +29,12 @@ internal static class PrismArt
     private const float ArrowNudge = 0.08f;
     private const double GlowPeriodSeconds = 4.5;
     private const double GlowSweepSeconds = 1.4;
-    private const float GlowBandUnits = 72f;
-    private const float GlowHaloUnits = 6f;
+    private const float GlowBandUnits = 140f;
+    private const float GlowHaloUnits = 9f;
+    private const float GlowSliceUnits = 3f;
+    private const float GlowHaloAlpha = 0.55f;
+    private const float GlowHaloLift = 0.25f;
+    private const float GlowCoreLift = 0.7f;
 
     public static readonly Vector4 Black = new(0f, 0f, 0f, 1f);
     public static readonly Vector4 White = new(1f, 1f, 1f, 1f);
@@ -45,9 +49,6 @@ internal static class PrismArt
     private static readonly Vector4 ShadeDeep = new(0f, 0f, 0f, 0.92f);
     private static readonly Vector4 ShadeTop = new(0f, 0f, 0f, 0.55f);
     private static readonly Vector4 Stitch = new(0.067f, 0.067f, 0.067f, 0.35f);
-    private static readonly Vector4 GlowCore = new(1f, 1f, 1f, 0.9f);
-    private static readonly Vector4 GlowHalo = new(1f, 1f, 1f, 0.16f);
-    private static readonly Vector4 GlowClear = new(1f, 1f, 1f, 0f);
 
     private static readonly Vector4[] Spectrum =
     {
@@ -226,25 +227,48 @@ internal static class PrismArt
 
         var progress = (float)(phase / GlowSweepSeconds);
         progress = progress * progress * (3f - 2f * progress);
-        var band = GlowBandUnits * scale;
-        var center = left - band + (right - left + band * 2f) * progress;
-        var height = MathF.Max(1f, 2f * scale);
+        var half = GlowBandUnits * scale * 0.5f;
+        var center = left - half + (right - left + half * 2f) * progress;
+        var bottom = y + MathF.Max(1f, 2f * scale);
         var halo = GlowHaloUnits * scale;
-        drawList.PushClipRect(new Vector2(left, y - halo), new Vector2(right, y + height + halo), true);
-        DrawGlowBand(drawList, center, band, y - halo, y + height + halo, GlowHalo);
-        DrawGlowBand(drawList, center, band * 0.5f, y, y + height, GlowCore);
-        drawList.PopClipRect();
+        var slice = MathF.Max(1f, GlowSliceUnits * scale);
+        var x = MathF.Max(left, center - half);
+        var end = MathF.Min(right, center + half);
+        var previous = GlowAt(x, left, right, center, half);
+        while (x < end)
+        {
+            var next = MathF.Min(x + slice, end);
+            var current = GlowAt(next, left, right, center, half);
+            drawList.AddRectFilledMultiColor(new Vector2(x, y - halo), new Vector2(next, y), previous.Clear,
+                current.Clear, current.Halo, previous.Halo);
+            drawList.AddRectFilledMultiColor(new Vector2(x, bottom), new Vector2(next, bottom + halo), previous.Halo,
+                current.Halo, current.Clear, previous.Clear);
+            drawList.AddRectFilledMultiColor(new Vector2(x, y), new Vector2(next, bottom), previous.Core, current.Core,
+                current.Core, previous.Core);
+            previous = current;
+            x = next;
+        }
     }
 
-    private static void DrawGlowBand(ImDrawListPtr drawList, float center, float half, float top, float bottom,
-        Vector4 color)
+    private static (uint Clear, uint Halo, uint Core) GlowAt(float x, float left, float right, float center,
+        float half)
     {
-        var clear = ImGui.GetColorU32(GlowClear);
-        var lit = ImGui.GetColorU32(color);
-        drawList.AddRectFilledMultiColor(new Vector2(center - half, top), new Vector2(center, bottom), clear, lit, lit,
-            clear);
-        drawList.AddRectFilledMultiColor(new Vector2(center, top), new Vector2(center + half, bottom), lit, clear,
-            clear, lit);
+        var distance = (x - center) / half;
+        var falloff = MathF.Max(0f, 1f - distance * distance);
+        falloff *= falloff;
+        var tint = SpectrumAt((x - left) / MathF.Max(1f, right - left));
+        var halo = Vector4.Lerp(tint, White, GlowHaloLift);
+        return (ImGui.GetColorU32(Palette.WithAlpha(halo, 0f)),
+            ImGui.GetColorU32(Palette.WithAlpha(halo, GlowHaloAlpha * falloff)),
+            ImGui.GetColorU32(Palette.WithAlpha(Vector4.Lerp(tint, White, GlowCoreLift), falloff)));
+    }
+
+    private static Vector4 SpectrumAt(float share)
+    {
+        var position = Math.Clamp(share, 0f, 1f) * Spectrum.Length - 0.5f;
+        var index = Math.Clamp((int)MathF.Floor(position), 0, Spectrum.Length - 1);
+        var next = Math.Min(index + 1, Spectrum.Length - 1);
+        return Vector4.Lerp(Spectrum[index], Spectrum[next], Math.Clamp(position - index, 0f, 1f));
     }
 
     public static void Refraction(ImDrawListPtr drawList, Rect screen, float progress)
