@@ -86,17 +86,19 @@ public sealed class ImageProcessorUploadTests
     }
 
     [Fact]
-    public void OpaqueUploadKeepsTheExistingScalarJpegOutput()
+    public void OpaqueUploadBakesTheScalarJpegAtUploadQuality()
     {
         using var source = Image.LoadPixelData<Rgba32>(ScalarJpegEncoderTests.BuildGradient(48, 32), 48, 32);
         var sourcePath = WritePng(source);
         try
         {
             var baked = ImageProcessor.BakeUpload(sourcePath, 24);
-            var jpeg = ImageProcessor.BakeJpeg(sourcePath, 24);
+            var jpeg = ImageProcessor.BakeJpeg(sourcePath, 24, ImageProcessor.UploadJpegQuality);
+            var smallImageJpeg = ImageProcessor.BakeJpeg(sourcePath, 24);
 
             Assert.Equal("image/jpeg", baked.ContentType);
             Assert.Equal(jpeg.Bytes, baked.Bytes);
+            Assert.True(smallImageJpeg.Bytes.Length < baked.Bytes.Length);
             Assert.Equal(24, baked.Width);
             Assert.Equal(16, baked.Height);
         }
