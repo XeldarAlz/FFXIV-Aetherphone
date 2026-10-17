@@ -10575,6 +10575,17 @@ internal static class L
         public static readonly LocString PlaceLabel = new("prism.placeLabel", "Place");
         public static readonly LocString LooksIn = new("prism.looksIn", "Looks in");
         public static readonly LocString Done = new("prism.done", "Done");
+        public static readonly LocString HowItWorks = new("prism.howItWorks", "How it works");
+        public static readonly LocString GuideEnterTitle = new("prism.guideEnterTitle", "Enter one look");
+        public static readonly LocString GuideEnterBody = new("prism.guideEnterBody",
+            "A new theme drops every week. Pick the one photo that wears it best, mods and all.");
+        public static readonly LocString GuideJudgeBody = new("prism.guideJudgeBody",
+            "Score looks from 1 to 5 in heats of about twelve. Entries are anonymous, and every judge's scores are evened out so nobody can sink a look alone.");
+        public static readonly LocString GuideFinalBody = new("prism.guideFinalBody",
+            "The top looks from each heat meet in the final, and everyone judges it.");
+        public static readonly LocString GuideRevealTitle = new("prism.guideRevealTitle", "The reveal");
+        public static readonly LocString GuideRevealBody = new("prism.guideRevealBody",
+            "Results play out as a countdown to first place. The podium and active judges earn Aether Coin.");
     }
 
     internal static class Announcements

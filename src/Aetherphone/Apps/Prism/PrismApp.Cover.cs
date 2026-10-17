@@ -129,11 +129,20 @@ internal sealed partial class PrismApp
 
     private void DrawCoverPills(ImDrawListPtr drawList, Rect content, float top, PrismWeekDto week, float scale)
     {
-        if (week.MyEntry is not null && week.Phase != PrismPhases.Entering &&
-            PrismArt.Pill(drawList, new Vector2(content.Min.X + PrismArt.Gutter(scale), top), Loc.T(L.Prism.YourLook),
-                scale, out _))
+        var left = content.Min.X + PrismArt.Gutter(scale);
+        if (week.MyEntry is not null && week.Phase != PrismPhases.Entering)
         {
-            Go(PrismScreen.Entry);
+            if (PrismArt.Pill(drawList, new Vector2(left, top), Loc.T(L.Prism.YourLook), scale, out var width))
+            {
+                Go(PrismScreen.Entry);
+            }
+
+            left += width + Metrics.Space.Sm * scale;
+        }
+
+        if (PrismArt.Pill(drawList, new Vector2(left, top), Loc.T(L.Prism.HowItWorks), scale, out _))
+        {
+            Go(PrismScreen.Guide);
         }
     }
 
@@ -231,7 +240,8 @@ internal sealed partial class PrismApp
         }
 
         var label = week.Phase == PrismPhases.Final ? L.Prism.JudgeFinal : L.Prism.JudgeHeat;
-        if (PrismArt.Strip(drawList, strip, Loc.T(label), JudgedLine(week.BallotsCast), true, !store.Busy))
+        var right = HeatInProgress ? LookCounter(lookIndex + 1, stars.Length) : JudgedLine(week.BallotsCast);
+        if (PrismArt.Strip(drawList, strip, Loc.T(label), right, true, !store.Busy))
         {
             StartJudging();
         }

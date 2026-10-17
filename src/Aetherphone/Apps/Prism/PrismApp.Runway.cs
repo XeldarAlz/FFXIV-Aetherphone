@@ -45,12 +45,19 @@ internal sealed partial class PrismApp
     private CachedText heatTitle;
     private CachedText doneCounter;
 
+    private bool HeatInProgress => store.Ballot is { } ballot && ReferenceEquals(ratingBallot, ballot) &&
+                                   lookIndex > 0 && lookIndex < stars.Length;
+
     private void StartJudging()
     {
         heatDone = false;
-        ratingBallot = null;
         chosen = 0;
-        store.RequestBallot();
+        if (!HeatInProgress)
+        {
+            ratingBallot = null;
+            store.RequestBallot();
+        }
+
         Go(PrismScreen.Runway);
     }
 

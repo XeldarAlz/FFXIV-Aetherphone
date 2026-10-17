@@ -23,6 +23,7 @@ internal enum PrismScreen : byte
     Runway,
     Reveal,
     Final,
+    Guide,
 }
 
 internal sealed partial class PrismApp : IPhoneApp
@@ -89,8 +90,18 @@ internal sealed partial class PrismApp : IPhoneApp
 
     public void OnOpened()
     {
-        Go(PrismScreen.Cover);
-        introDelay = IntroSeconds;
+        if (!configuration.PrismGuideSeen)
+        {
+            configuration.PrismGuideSeen = true;
+            configuration.Save();
+            Go(PrismScreen.Guide);
+        }
+        else
+        {
+            Go(PrismScreen.Cover);
+            introDelay = IntroSeconds;
+        }
+
         sinceRefresh = 0f;
         store.ClearBallot();
         store.Refresh();
@@ -141,6 +152,9 @@ internal sealed partial class PrismApp : IPhoneApp
                 break;
             case PrismScreen.Final:
                 DrawFinal(drawList, content, scale);
+                break;
+            case PrismScreen.Guide:
+                DrawGuide(drawList, content, scale);
                 break;
             default:
                 DrawCover(drawList, full, content, scale);
