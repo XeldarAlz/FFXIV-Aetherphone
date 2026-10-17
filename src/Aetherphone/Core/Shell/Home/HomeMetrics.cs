@@ -76,10 +76,11 @@ internal readonly struct HomeMetrics
         var origin = CellOrigin(page, scrollValue, cell);
         var inset = (CellWidth - IconSize) * 0.5f;
         var min = new Vector2(origin.X + inset, origin.Y + 3f * Scale);
-        var max = new Vector2(origin.X + columnSpan * CellWidth - inset,
-            origin.Y + rowSpan * CellHeight - LabelBandUnits * Scale + 6f * Scale);
+        var max = new Vector2(origin.X + columnSpan * CellWidth - inset, min.Y + WidgetHeight(rowSpan));
         return new Rect(min, max);
     }
+
+    public float WidgetHeight(int rowSpan) => (rowSpan - 1) * CellHeight + IconSize + LabelBandUnits * Scale;
 
     public Rect TileRect(int page, float scrollValue, GridCell cell, HomeTile tile)
     {

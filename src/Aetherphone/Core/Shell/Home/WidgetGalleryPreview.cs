@@ -8,7 +8,6 @@ namespace Aetherphone.Core.Shell.Home;
 
 internal static class WidgetGalleryPreview
 {
-    private const float TileTopUnits = 3f;
     private const float StackInsetUnits = 9f;
     private const float StackLiftUnits = 6f;
     private const float StackPlateAlpha = 0.22f;
@@ -23,9 +22,7 @@ internal static class WidgetGalleryPreview
     public static Vector2 Footprint(WidgetSize size, in HomeMetrics metrics)
     {
         var width = WidgetSizes.ColumnSpan(size) * metrics.CellWidth - (metrics.CellWidth - metrics.IconSize);
-        var height = WidgetSizes.RowSpan(size) * metrics.CellHeight -
-                     (HomeMetrics.LabelBandUnits - TileTopUnits) * metrics.Scale;
-        return new Vector2(MathF.Max(width, 1f), MathF.Max(height, 1f));
+        return new Vector2(MathF.Max(width, 1f), MathF.Max(metrics.WidgetHeight(WidgetSizes.RowSpan(size)), 1f));
     }
 
     public static float Fit(Vector2 footprint, Vector2 room) =>
