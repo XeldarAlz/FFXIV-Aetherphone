@@ -10548,7 +10548,7 @@ internal static class L
         public static readonly LocString NothingLeftHint = new("prism.nothingLeftHint",
             "You've judged every heat you can for now.");
         public static readonly LocString ReportTitle = new("prism.reportTitle", "Report this look");
-        public static readonly LocString LastResults = new("prism.lastResults", "Last week's results");
+        public static readonly LocString LastResults = new("prism.lastResults", "Results");
         public static readonly LocString FinalRank = new("prism.finalRank", "Rank {0} in the final");
         public static readonly LocString TopPercent = new("prism.topPercent", "Top {0}%");
         public static readonly LocString CoinsWon = new("prism.coinsWon", "+{0} Aether Coin");
@@ -10561,7 +10561,7 @@ internal static class L
             new("prism.looksThisIssue", "{0} look this issue", "{0} looks this issue");
         public static readonly LocString YourLook = new("prism.yourLook", "Your look");
         public static readonly LocString YourLookStatus = new("prism.yourLookStatus", "Your look: {0}");
-        public static readonly LocString ResultsIn = new("prism.resultsIn", "The results are in");
+        public static readonly LocString ResultsIn = new("prism.resultsIn", "New results");
         public static readonly LocString ReplayReveal = new("prism.replayReveal", "Replay the reveal");
         public static readonly LocString Submitting = new("prism.submitting", "Sending your scores…");
         public static readonly LocString HeatName = new("prism.heatName", "Heat {0}");
@@ -10575,6 +10575,7 @@ internal static class L
         public static readonly LocString PlaceLabel = new("prism.placeLabel", "Place");
         public static readonly LocString LooksIn = new("prism.looksIn", "Looks in");
         public static readonly LocString Done = new("prism.done", "Done");
+        public static readonly LocString Submit = new("prism.submit", "Submit");
         public static readonly LocString HowItWorks = new("prism.howItWorks", "How it works");
         public static readonly LocString GuideEnterTitle = new("prism.guideEnterTitle", "Enter one look");
         public static readonly LocString GuideEnterBody = new("prism.guideEnterBody",

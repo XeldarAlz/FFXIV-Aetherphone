@@ -8,7 +8,7 @@ namespace Aetherphone.Apps.Prism;
 
 internal static class PrismArt
 {
-    public const float StripUnits = 52f;
+    public const float StripUnits = 46f;
     public const float GutterUnits = 20f;
     public const float ButtonUnits = 30f;
     public const int Stars = 5;

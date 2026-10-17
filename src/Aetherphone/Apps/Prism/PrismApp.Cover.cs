@@ -220,7 +220,7 @@ internal sealed partial class PrismApp
                 return;
             }
 
-            var left = Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.EnterLook);
+            var left = Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.Submit);
             if (PrismArt.Strip(drawList, strip, left, "→", true, !store.Busy))
             {
                 StartPick();
