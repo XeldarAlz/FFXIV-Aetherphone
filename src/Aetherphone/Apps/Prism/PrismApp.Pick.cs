@@ -40,7 +40,16 @@ internal sealed partial class PrismApp
         }
 
         pickIntake.AcceptDrop(content, library, PrismArt.White);
-        var top = DrawHeader(drawList, content, string.Empty, Loc.T(L.Prism.EnterLook), true, scale);
+        var week = store.Week;
+        var top = DrawHeader(drawList, content, string.Empty,
+            week is null ? Loc.T(L.Prism.EnterLook) : PrismType.Title(week.Title), true, scale);
+        if (week is { Brief.Length: > 0 })
+        {
+            var gutter = PrismArt.Gutter(scale);
+            top += Typography.DrawWrappedLeft(new Vector2(content.Min.X + gutter, top), week.Brief, PrismArt.Muted,
+                TextStyles.Subheadline, content.Width - gutter * 2f) + Metrics.Space.Lg * scale;
+        }
+
         var paneHeight = MathF.Min(content.Width, (content.Max.Y - top) * PickPaneFraction);
         var pane = new Rect(new Vector2(content.Min.X, top), new Vector2(content.Max.X, top + paneHeight));
         pickSession.DrawPickPane(pane, scale, PickStyle, PrismStore.EntryRatio, PrismStore.EntryRevealsWholeImage,

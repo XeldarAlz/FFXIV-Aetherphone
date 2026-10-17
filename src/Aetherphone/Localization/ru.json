@@ -5604,6 +5604,7 @@
   "prism.statusRejectedTitle": "Ваш образ не принят",
   "prism.placeLabel": "Место",
   "prism.looksIn": "Образов прислано",
+  "prism.done": "Готово",
   "announcements.signInRequired": "Войдите в Aethernet в Настройках, чтобы читать объявления",
   "announcements.signInTitle": "Требуется вход",
   "announcements.emptyTitle": "Пока нет объявлений",

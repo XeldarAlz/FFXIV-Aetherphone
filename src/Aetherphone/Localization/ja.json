@@ -5604,6 +5604,7 @@
   "prism.statusRejectedTitle": "あなたのルックは承認されませんでした",
   "prism.placeLabel": "順位",
   "prism.looksIn": "エントリー数",
+  "prism.done": "完了",
   "announcements.signInRequired": "お知らせを読むには設定からAethernetにログインしてください",
   "announcements.signInTitle": "ログインが必要です",
   "announcements.emptyTitle": "まだお知らせはありません",

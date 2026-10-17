@@ -295,7 +295,7 @@ internal sealed partial class PrismApp
             Go(PrismScreen.Runway);
         }
 
-        if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Prism.Back), string.Empty,
+        if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Prism.Done), string.Empty,
                 strips == 1))
         {
             Go(PrismScreen.Cover, -1);

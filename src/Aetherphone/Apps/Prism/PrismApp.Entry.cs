@@ -27,14 +27,15 @@ internal sealed partial class PrismApp
         var width = content.Width - gutter * 2f;
         var left = content.Min.X + gutter;
         var editable = week.Phase == PrismPhases.Entering;
-        var judgeable = PrismPhases.Judgeable(week.Phase);
         var labelPixels = PrismArt.LabelPixels();
+        var stripHeight = PrismArt.StripUnits * scale;
         var bottom = content.Max.Y - gutter;
         var linkTop = bottom - PrismType.LineHeight(EditorialFace.Label, labelPixels);
-        var stripBottom = editable ? linkTop - Metrics.Space.Lg * scale : bottom;
-        var strip = new Rect(new Vector2(left, stripBottom - PrismArt.StripUnits * scale),
-            new Vector2(left + width, stripBottom));
-        var actionsTop = editable || judgeable ? strip.Min.Y : bottom;
+        var change = new Rect(new Vector2(left, linkTop - Metrics.Space.Lg * scale - stripHeight),
+            new Vector2(left + width, linkTop - Metrics.Space.Lg * scale));
+        var doneBottom = editable ? change.Min.Y - Metrics.Space.Md * scale : bottom;
+        var done = new Rect(new Vector2(left, doneBottom - stripHeight), new Vector2(left + width, doneBottom));
+        var actionsTop = done.Min.Y;
         var pixels = PrismType.Fit(Loc.T(StatusTitle(entry.Status)), EditorialFace.Headline, width,
             StatusMaxUnits * scale, StatusMinUnits * scale, 2, out var lines);
         var hint = entry.Status == PrismPhases.StatusRejected
@@ -64,11 +65,9 @@ internal sealed partial class PrismApp
                 TextStyles.Subheadline, width);
         }
 
-        if (judgeable && PrismArt.Strip(drawList, strip,
-                Loc.T(week.Phase == PrismPhases.Final ? L.Prism.JudgeFinal : L.Prism.JudgeHeat), "→", true,
-                !store.Busy))
+        if (PrismArt.Strip(drawList, done, Loc.T(L.Prism.Done), string.Empty, true))
         {
-            StartJudging();
+            Go(PrismScreen.Cover, -1);
         }
 
         if (!editable)
@@ -76,7 +75,7 @@ internal sealed partial class PrismApp
             return;
         }
 
-        if (PrismArt.Strip(drawList, strip, Loc.T(L.Common.ChangePhoto), "→", true, !store.Busy))
+        if (PrismArt.Strip(drawList, change, Loc.T(L.Common.ChangePhoto), "→", false, !store.Busy))
         {
             StartPick();
         }

@@ -90,6 +90,7 @@ internal sealed partial class PrismApp : IPhoneApp
     public void OnOpened()
     {
         Go(PrismScreen.Cover);
+        introDelay = IntroSeconds;
         sinceRefresh = 0f;
         store.ClearBallot();
         store.Refresh();
@@ -152,6 +153,7 @@ internal sealed partial class PrismApp : IPhoneApp
         screen = next;
         enterDirection = direction;
         screenAge = 0f;
+        introDelay = 0f;
     }
 
     private float DrawHeader(ImDrawListPtr drawList, Rect content, string left, string right, bool back, float scale)

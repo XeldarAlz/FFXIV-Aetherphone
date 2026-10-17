@@ -5604,6 +5604,7 @@
   "prism.statusRejectedTitle": "Your look wasn't accepted",
   "prism.placeLabel": "Place",
   "prism.looksIn": "Looks in",
+  "prism.done": "Done",
   "announcements.signInRequired": "Sign in to Aethernet in Settings to read announcements",
   "announcements.signInTitle": "Sign in required",
   "announcements.emptyTitle": "No announcements yet",

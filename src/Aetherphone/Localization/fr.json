@@ -5604,6 +5604,7 @@
   "prism.statusRejectedTitle": "Votre look a été refusé",
   "prism.placeLabel": "Place",
   "prism.looksIn": "Looks envoyés",
+  "prism.done": "Terminé",
   "announcements.signInRequired": "Connectez-vous à Aethernet dans les Paramètres pour lire les annonces",
   "announcements.signInTitle": "Connexion requise",
   "announcements.emptyTitle": "Aucune annonce pour le moment",

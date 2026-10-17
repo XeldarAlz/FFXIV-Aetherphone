@@ -10574,6 +10574,7 @@ internal static class L
             new("prism.statusRejectedTitle", "Your look wasn't accepted");
         public static readonly LocString PlaceLabel = new("prism.placeLabel", "Place");
         public static readonly LocString LooksIn = new("prism.looksIn", "Looks in");
+        public static readonly LocString Done = new("prism.done", "Done");
     }
 
     internal static class Announcements
