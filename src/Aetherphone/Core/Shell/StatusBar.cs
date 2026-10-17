@@ -56,7 +56,8 @@ internal static class StatusBar
         var earGap = EarGap * scale;
         var groupWidth = timeSize.X + IndicatorsWidth(scale);
         var earRight = island.Min.X - earGap;
-        var timeLeft = MathF.Min((screen.Min.X + earRight - groupWidth) * 0.5f, earRight - groupWidth);
+        var edgeInset = (earRight - screen.Min.X - StatusIcons.MeasureWidth(scale, Plugin.Device.BatteryPercent)) * 0.5f;
+        var timeLeft = MathF.Min(screen.Min.X + edgeInset, earRight - groupWidth);
         Typography.Draw(new Vector2(timeLeft, rowCenterY - timeSize.Y * 0.5f), localTime, theme.TextStrong, TimeScale,
             TimeWeight);
         DrawIndicators(drawList, timeLeft + timeSize.X, rowCenterY, scale, theme);
