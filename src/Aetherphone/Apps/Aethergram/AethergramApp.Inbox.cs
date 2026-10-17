@@ -23,6 +23,8 @@ internal sealed partial class AethergramApp
     private const float InboxArchiveGlyph = 21f;
     private const float InboxPinGlyph = 14f;
     private const float InboxPinGap = 6f;
+    private const float InboxTickGlyph = 14f;
+    private const float InboxTickGap = 4f;
     private const int MaxPinnedChats = 3;
     private const long MinuteTicks = 60000;
 
@@ -339,15 +341,29 @@ internal sealed partial class AethergramApp
         var name = SocialIdentity.Name(thread.OtherDisplayName, thread.OtherHandle);
         Typography.Draw(drawList, new Vector2(textLeft, blockTop), Typography.FitText(name, textWidth, nameStyle),
             Ink.TitleInk, nameStyle);
+        var previewTop = blockTop + nameHeight + 3f * scale;
+        var previewLeft = textLeft;
+        var previewWidth = textWidth;
+        if (thread.LastMessagePreview.Length > 0
+            && string.Equals(thread.LastMessageSenderId, dmStore.MyUserId, StringComparison.Ordinal))
+        {
+            var tick = InboxTickGlyph * scale;
+            PhoneIcon.Draw(drawList, new Vector2(previewLeft + tick * 0.5f, previewTop + previewHeight * 0.5f),
+                thread.LastMessageSeen ? PhoneIcons.Checks : PhoneIcons.Check,
+                thread.LastMessageSeen ? Core.Theme.ChatInk.SeenTick : Ink.MutedInk, tick);
+            previewLeft += tick + InboxTickGap * scale;
+            previewWidth = MathF.Max(1f, textRight - previewLeft);
+        }
+
         var preview = InboxPreview(thread, out var stampLength);
         if (!inboxPreviewFits.TryGetValue(thread.OtherUserId, out var previewFit)
-            || !RichLine.Valid(previewFit, preview, textWidth, previewStyle))
+            || !RichLine.Valid(previewFit, preview, previewWidth, previewStyle))
         {
-            previewFit = RichLine.Fit(preview, stampLength, textWidth, previewStyle);
+            previewFit = RichLine.Fit(preview, stampLength, previewWidth, previewStyle);
             inboxPreviewFits[thread.OtherUserId] = previewFit;
         }
 
-        RichLine.Draw(drawList, previewFit, new Vector2(textLeft, blockTop + nameHeight + 3f * scale),
+        RichLine.Draw(drawList, previewFit, new Vector2(previewLeft, previewTop),
             unread ? Ink.TitleInk : Ink.MutedInk);
         if (unread)
         {

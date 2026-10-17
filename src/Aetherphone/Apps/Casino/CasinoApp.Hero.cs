@@ -43,7 +43,7 @@ internal sealed partial class CasinoApp
             levelFraction, casino.Ceiling.LevelCap, progress is not null,
             bonuses ? casino.BonusFor(CasinoBonusKinds.Timed) : null,
             bonuses ? casino.BonusFor(CasinoBonusKinds.Streak) : null, spinReady, casino.ClaimingBonus.Length > 0,
-            DateTimeOffset.UtcNow.ToUnixTimeSeconds(), casino.Rate);
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds(), state is not null, casino.Rate);
         var action = stripHero.Draw(drawList, ui, model, origin, width, delta, scale, out var bottom);
         switch (action)
         {

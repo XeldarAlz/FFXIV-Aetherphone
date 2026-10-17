@@ -32,7 +32,6 @@ internal sealed partial class DynamicIsland
     private const float CompactTrailingInset = 11f;
     private const float CompactTrailingGap = 8f;
     private const float BubbleGap = 7f;
-    private const float ExpandedHeight = 96f;
     private const float ExpandedHalfWidth = 150f;
     private const float ExpandedSideInset = 14f;
     private const float ExpandedLift = 2f;
@@ -231,7 +230,7 @@ internal sealed partial class DynamicIsland
         var rest = StatusBar.BaseIsland(screen);
         var compact = LerpRect(CompactBounds(rest, scale), NoticeBounds(screen, rest, scale),
             Math.Clamp(noticeWidth.Value, 0f, 1f));
-        var card = ExpandedBounds(screen, rest, scale);
+        var card = ExpandedBounds(screen, rest, scale, IslandActivities.ExpandedHeightUnits(shownKind));
         var morphed = LerpRect(rest, compact, presenceValue);
         var suppress = shownKind != IslandActivity.Call &&
                        string.Equals(IslandActivities.OwnerAppId(shownKind), foregroundAppId, StringComparison.Ordinal);
@@ -686,21 +685,8 @@ internal sealed partial class DynamicIsland
                 break;
             }
             case IslandActivity.Playback:
-            {
-                DrawPlaybackArt(drawList, iconCenter, iconRadius, alpha);
-                DrawLines(drawList, playback.Title, TextStyles.Headline, Ink, playback.Subtitle,
-                    TextStyles.Subheadline, accent, textLeft, textWidth, centerY, scale, alpha, true);
-                drawList.AddCircleFilled(controlCenter, controlRadius,
-                    ImGui.GetColorU32(Palette.WithAlpha(Ink, ControlFillAlpha * alpha)), 32);
-                if (TransportButton.Draw(controlCenter, controlRadius,
-                        playback.IsPlaying ? TransportAction.Pause : TransportAction.Play, accent, Ink, alpha, active,
-                        drawList))
-                {
-                    playback.TogglePlayPause();
-                }
-
+                overControl = DrawPlaybackExpanded(drawList, bounds, scale, accent, alpha, active);
                 break;
-            }
             case IslandActivity.PcMedia:
                 overControl = DrawPcMediaExpanded(drawList, bounds, scale, accent, alpha, active);
                 break;
@@ -889,13 +875,13 @@ internal sealed partial class DynamicIsland
             new Vector2(MathF.Max(compact.Max.X, centerX + halfWidth), compact.Max.Y));
     }
 
-    private static Rect ExpandedBounds(Rect screen, Rect rest, float scale)
+    private static Rect ExpandedBounds(Rect screen, Rect rest, float scale, float heightUnits)
     {
         var halfWidth = MathF.Min(screen.Width * 0.5f - ExpandedSideInset * scale, ExpandedHalfWidth * scale);
         var top = rest.Min.Y - ExpandedLift * scale;
         var centerX = screen.Center.X;
         return new Rect(new Vector2(centerX - halfWidth, top),
-            new Vector2(centerX + halfWidth, top + ExpandedHeight * scale));
+            new Vector2(centerX + halfWidth, top + heightUnits * scale));
     }
 
     private static Rect Swell(Rect rect, float amount)

@@ -169,4 +169,83 @@ public sealed class FeedLaneTests
         Assert.Equal("a", lane.Items[2].Id);
         Assert.DoesNotContain(lane.Items, post => post.Id == "c");
     }
+
+    [Fact]
+    public void ParkHoldsThePageUntilApplied()
+    {
+        var lane = NewLane();
+        lane.ApplyRefresh(new[] { new FakePost("a", 10) }, "page-2");
+
+        lane.Park(new[] { new FakePost("b", 20), new FakePost("a", 10) }, null);
+
+        Assert.Single(lane.Items);
+        Assert.True(lane.HasPending);
+        Assert.Equal(1, lane.PendingCount);
+
+        Assert.True(lane.ApplyPending());
+
+        Assert.False(lane.HasPending);
+        Assert.Equal(0, lane.PendingCount);
+        Assert.Equal(2, lane.Items.Length);
+        Assert.Equal("b", lane.Items[0].Id);
+        Assert.Equal("page-2", lane.Cursor);
+    }
+
+    [Fact]
+    public void PendingCountIgnoresPostsThatArrivedMeanwhile()
+    {
+        var lane = NewLane();
+        lane.ApplyRefresh(new[] { new FakePost("a", 10) }, null);
+        lane.Park(new[] { new FakePost("c", 30), new FakePost("b", 20), new FakePost("a", 10) }, null);
+        Assert.Equal(2, lane.PendingCount);
+
+        lane.Items = new[] { new FakePost("b", 20), new FakePost("a", 10) };
+
+        Assert.Equal(1, lane.PendingCount);
+    }
+
+    [Fact]
+    public void ExplicitRefreshDropsThePendingPage()
+    {
+        var lane = NewLane();
+        lane.ApplyRefresh(new[] { new FakePost("a", 10) }, null);
+        lane.Park(new[] { new FakePost("b", 20) }, null);
+
+        lane.ApplyRefresh(new[] { new FakePost("c", 30) }, null);
+
+        Assert.False(lane.HasPending);
+        Assert.False(lane.ApplyPending());
+        Assert.Equal(2, lane.Items.Length);
+        Assert.Equal("c", lane.Items[0].Id);
+    }
+
+    [Fact]
+    public void ServerOrderedPendingPageReplacesItemsAndCursor()
+    {
+        var lane = FeedLane<FakePost>.ServerOrdered();
+        lane.ApplyRefresh(new[] { new FakePost("a", 10), new FakePost("b", 9) }, "page-2");
+        lane.ApplyMore(new[] { new FakePost("c", 8) }, null);
+
+        lane.Park(new[] { new FakePost("d", 20), new FakePost("a", 10) }, "fresh-page-2");
+
+        Assert.Equal(1, lane.PendingCount);
+        Assert.True(lane.ApplyPending());
+        Assert.Equal(2, lane.Items.Length);
+        Assert.Equal("d", lane.Items[0].Id);
+        Assert.Equal("fresh-page-2", lane.Cursor);
+    }
+
+    [Fact]
+    public void ClearDropsThePendingPage()
+    {
+        var lane = NewLane();
+        lane.ApplyRefresh(new[] { new FakePost("a", 10) }, null);
+        lane.Park(new[] { new FakePost("b", 20) }, null);
+
+        lane.Clear();
+
+        Assert.False(lane.HasPending);
+        Assert.False(lane.Prefetching);
+        Assert.Empty(lane.Items);
+    }
 }

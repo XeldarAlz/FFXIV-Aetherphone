@@ -217,7 +217,8 @@ internal sealed class CashierPanel
         {
             var bounds = new BuyInBounds(wallet, rate);
             var state = buyIn.State(bounds);
-            var status = buyIn.Status(bounds, state, out var tone);
+            var tone = CashierTone.Idle;
+            var status = coins.Wallet is null ? Loc.T(L.Common.Loading) : buyIn.Status(bounds, state, out tone);
             return new CashierView(CashierMode.Buy, Loc.T(L.Strip.CoinsFieldHint), buyIn.Field, true, state,
                 buyIn.Tiles(bounds), status, tone, string.Empty, stack, wallet, rate, bankrollRate, false, default);
         }

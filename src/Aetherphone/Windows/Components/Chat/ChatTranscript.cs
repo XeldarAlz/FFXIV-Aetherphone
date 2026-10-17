@@ -252,6 +252,7 @@ internal sealed class ChatTranscript
     private const float TravelPillHeight = 26f;
     private const float TravelIconSpace = 17f;
     private const float CaptionTextScale = 0.9f;
+    private const float MaxPortraitAspect = 1.4f;
     private const float ReactionChipHeight = 26f;
     private const float ReactionChipGap = 4f;
     private const float ReactionChipEmoji = 17f;
@@ -266,7 +267,6 @@ internal sealed class ChatTranscript
     private static readonly Vector4 ReactionChipStroke = new(1f, 1f, 1f, 0.14f);
     private static readonly Vector4 ReactionCountInk = new(0.94f, 0.94f, 0.97f, 1f);
     private static readonly TextStyle ReactionCountStyle = TextStyles.FootnoteEmphasized;
-    private static readonly Vector4 SeenTickColor = new(0.45f, 0.83f, 1f, 1f);
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
 
     private const float FlashSeconds = 1.6f;
@@ -1925,20 +1925,17 @@ internal sealed class ChatTranscript
         var aspect = message.MediaWidth > 0 && message.MediaHeight > 0
             ? (float)message.MediaHeight / message.MediaWidth
             : 1f;
-        var imageWidth = available * 0.62f;
-        var imageHeight = imageWidth * aspect;
+        var frameWidth = available * 0.62f;
+        var imageWidth = frameWidth;
         var maxHeight = 280f * scale;
-        if (imageHeight > maxHeight)
-        {
-            imageHeight = maxHeight;
-            imageWidth = imageHeight / aspect;
-        }
-
-        var header = TakeSenderHeader(message, imageWidth - 8f * scale, scale);
+        var shownAspect = MathF.Min(aspect, MathF.Min(MaxPortraitAspect, maxHeight / frameWidth));
+        var imageHeight = imageWidth * shownAspect;
+        var cropInset = aspect > shownAspect ? (1f - shownAspect / aspect) * 0.5f : 0f;
+        var header = TakeSenderHeader(message, frameWidth - 8f * scale, scale);
         var headerBlock = header.Height > 0f ? header.Height + 2f * scale : 0f;
         var caption = message.Body ?? string.Empty;
         var stamp = MeasureStamp(message, mine, scale);
-        var captionLayout = caption.Length > 0 ? LinkText.LayoutFor(caption, imageWidth / CaptionTextScale) : null;
+        var captionLayout = caption.Length > 0 ? LinkText.LayoutFor(caption, frameWidth / CaptionTextScale) : null;
         var captionTextHeight = captionLayout is not null
             ? captionLayout.Size.Y * CaptionTextScale
             : Typography.Measure(caption, CaptionTextScale).Y;
@@ -1946,7 +1943,7 @@ internal sealed class ChatTranscript
         var stampRowHeight = caption.Length > 0 ? stamp.Height + 3f * scale : 0f;
         var forwardLabel = MeasureForwardLabel(message, scale);
         var forwardBlock = forwardLabel.Y > 0f ? forwardLabel.Y + 4f * scale : 0f;
-        var bubbleWidth = imageWidth + padding * 2f;
+        var bubbleWidth = frameWidth + padding * 2f;
         var bubbleHeight = imageHeight + padding * 2f + captionHeight + stampRowHeight + forwardBlock + headerBlock;
         var start = ImGui.GetCursorScreenPos();
         var offsetX = mine ? available - bubbleWidth : 0f;
@@ -1981,8 +1978,9 @@ internal sealed class ChatTranscript
         }
         else
         {
-            drawList.AddImageRounded(texture.Handle, imageMin, imageMax, Vector2.Zero, Vector2.One,
-                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, fx.Alpha)), rounding, ImDrawFlags.RoundCornersAll);
+            drawList.AddImageRounded(texture.Handle, imageMin, imageMax, new Vector2(0f, cropInset),
+                new Vector2(1f, 1f - cropInset), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, fx.Alpha)), rounding,
+                ImDrawFlags.RoundCornersAll);
             if (entrance >= 1f && model.Media is { } media && Hovering(imageMin, imageMax))
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -2005,15 +2003,16 @@ internal sealed class ChatTranscript
         {
             var ink = BubbleInk(mine, model);
             var captionTop = imageMax.Y + 4f * scale * fx.Pop;
-            var captionMaxWidth = imageMax.X - imageMin.X;
+            var captionLeft = scaledMin.X + padding * fx.Pop;
+            var captionMaxWidth = frameWidth * fx.Pop;
             if (captionLayout is not null)
             {
-                LinkText.Draw(drawList, captionLayout, new Vector2(imageMin.X, captionTop), CaptionTextScale * fx.Pop,
+                LinkText.Draw(drawList, captionLayout, new Vector2(captionLeft, captionTop), CaptionTextScale * fx.Pop,
                     ink, mine ? ink : model.Accent, fx.Alpha, entrance >= 1f);
             }
             else
             {
-                Marquee.DrawLeftAuto(new MarqueeId("chattranscript.caption.", message.Id), caption, imageMin.X,
+                Marquee.DrawLeftAuto(new MarqueeId("chattranscript.caption.", message.Id), caption, captionLeft,
                     captionTop, captionMaxWidth, new TextStyle(CaptionTextScale * fx.Pop, FontWeight.Regular),
                     Palette.WithAlpha(ink, fx.Alpha));
             }
@@ -2272,7 +2271,7 @@ internal sealed class ChatTranscript
         }
 
         var tickCenter = new Vector2(bottomRight.X - stamp.TickWidth * 0.5f, bottomRight.Y - stamp.Height * 0.5f);
-        var tickColor = stamp.Seen ? SeenTickColor : timeColor;
+        var tickColor = stamp.Seen ? ChatInk.SeenTick : timeColor;
         PhoneIcon.Draw(drawList, fx.Apply(tickCenter), stamp.TickGlyph,
             Palette.WithAlpha(tickColor, tickColor.W * fx.Alpha), stamp.TickWidth * fx.Pop);
     }

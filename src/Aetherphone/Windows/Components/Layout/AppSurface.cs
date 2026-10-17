@@ -16,8 +16,12 @@ internal static class AppSurface
     private const float ScrollbarRoundingUnits = 2f;
     private const float IndicatorHoldSeconds = 0.8f;
     private const float IndicatorStripUnits = 16f;
+    private const float IndicatorThumbSlackUnits = 6f;
     private const float IndicatorWidthUnits = 3f;
-    private const float IndicatorAlphaScale = 0.45f;
+    private const float IndicatorWideUnits = 5f;
+    private const float IndicatorIdleAlpha = 0.30f;
+    private const float IndicatorHoverAlpha = 0.48f;
+    private const float IndicatorActiveAlpha = 0.62f;
     private const float IndicatorMotionEpsilon = 0.5f;
     private const float MaxFrameSeconds = 0.1f;
 
@@ -138,7 +142,11 @@ internal static class AppSurface
         var windowMin = ImGui.GetWindowPos();
         var windowSize = ImGui.GetWindowSize();
         var windowMax = windowMin + windowSize;
-        if (grabbing || DragScrollHost.HoversEdgeStrip(IndicatorStripUnits * scale))
+        var maxY = ImGui.GetScrollMaxY();
+        var thumb = ScrollThumb.Measure(windowMin.Y, windowSize.Y, scrollY, maxY, scale);
+        var awake = DragScrollHost.HoversEdgeStrip(IndicatorStripUnits * scale);
+        var hovering = awake && maxY > 0f && thumb.Spans(ImGui.GetMousePos().Y, IndicatorThumbSlackUnits * scale);
+        if (grabbing || awake)
         {
             lastScrollMotion = now;
         }
@@ -156,19 +164,18 @@ internal static class AppSurface
             return;
         }
 
-        var maxY = ImGui.GetScrollMaxY();
         if (maxY <= 0f)
         {
             return;
         }
 
-        var thumb = ScrollThumb.Measure(windowMin.Y, windowSize.Y, scrollY, maxY, scale);
         var right = windowMax.X - ScrollThumb.InsetUnits * scale;
-        var width = IndicatorWidthUnits * scale;
+        var width = (grabbing || hovering ? IndicatorWideUnits : IndicatorWidthUnits) * scale;
+        var strength = grabbing ? IndicatorActiveAlpha : hovering ? IndicatorHoverAlpha : IndicatorIdleAlpha;
         var ink = ScrollbarInk ?? new Vector4(1f, 1f, 1f, 1f);
         ImGui.GetWindowDrawList().AddRectFilled(new Vector2(right - width, thumb.Top),
             new Vector2(right, thumb.Top + thumb.Height),
-            ImGui.GetColorU32(Palette.WithAlpha(ink, ink.W * IndicatorAlphaScale * IndicatorAlpha)), width * 0.5f);
+            ImGui.GetColorU32(Palette.WithAlpha(ink, ink.W * strength * IndicatorAlpha)), width * 0.5f);
     }
 
     public static bool ResetScrollOnNewVisit()

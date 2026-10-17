@@ -295,6 +295,11 @@ internal static class MusterArt
             var ellipsisWidth = Typography.Measure(Ellipsis, TitleStyle).X;
             var fitted = Typography.FitText(lines[index], MathF.Max(1f, maxWidth - ellipsisWidth), TitleStyle);
             Typography.Draw(drawList, new Vector2(left, lineTop), fitted, ink, TitleStyle);
+            if (!string.Equals(fitted, lines[index], StringComparison.Ordinal))
+            {
+                continue;
+            }
+
             var fittedWidth = Typography.Measure(fitted, TitleStyle).X;
             Typography.Draw(drawList, new Vector2(left + fittedWidth, lineTop), Ellipsis, ink, TitleStyle);
         }

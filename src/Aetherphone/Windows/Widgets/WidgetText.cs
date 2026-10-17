@@ -199,10 +199,13 @@ internal static class WidgetText
         Typography.Draw(drawList, new Vector2(centerX - width * 0.5f, top), fitted, color, fittedScale, style.Weight);
     }
 
-    public static string Fit(string text, float maxWidth, in TextStyle style, out float fittedScale)
+    public static string Fit(string text, float maxWidth, in TextStyle style, out float fittedScale) =>
+        Fit(text, maxWidth, style, WidgetType.MinimumFit, out fittedScale);
+
+    public static string Fit(string text, float maxWidth, in TextStyle style, float minimumFit,
+        out float fittedScale)
     {
-        fittedScale = Typography.FitScale(text, maxWidth, style.Scale, style.Scale * WidgetType.MinimumFit,
-            style.Weight);
+        fittedScale = Typography.FitScale(text, maxWidth, style.Scale, style.Scale * minimumFit, style.Weight);
         return Typography.FitText(text, maxWidth, fittedScale, style.Weight);
     }
 

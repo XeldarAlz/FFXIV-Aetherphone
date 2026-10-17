@@ -23,6 +23,7 @@ using Aetherphone.Core.Translation;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
+using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Textures.TextureWraps;
@@ -86,6 +87,13 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
     private const int FilterToggleCount = 3;
     private const int TabRevalidateCooldownSeconds = 15;
     private const float FeedTopPadding = 2f;
+    private const float FeedTopThresholdUnits = 24f;
+    private const float NewChirpsPillTopUnits = 10f;
+    private const float NewChirpsPillPadX = 14f;
+    private const float NewChirpsGlyphGap = 6f;
+    private const float NewChirpsHoverLift = 0.10f;
+    private const float NewChirpsShadowAlpha = 0.28f;
+    private const string NewChirpsChildId = "##chirperNewChirps";
     private const float CellPadX = 16f;
     private const float CellPadTop = 11f;
     private const float CellPadBottom = 6f;
@@ -240,6 +248,9 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
     private string draft = string.Empty;
     private bool composeFocus;
     private bool feedScrollTopPending;
+    private float feedScrollY;
+    private Spring newChirpsReveal;
+    private CachedText newChirpsLabel;
     private bool feedActionsAnchorPending;
     private readonly FailureSlot composeFailure = new();
     private readonly FailureSlot feedFailure = new();
@@ -342,16 +353,17 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         composeSensitive = false;
         store.ClearDiscover();
         trendingRequested = false;
+        feedScrollY = 0f;
         BeginIntro();
-        RefreshAndConsumeLaunch();
+        RefreshAndConsumeLaunch(false);
     }
 
     public void OnResumed()
     {
-        RefreshAndConsumeLaunch();
+        RefreshAndConsumeLaunch(true);
     }
 
-    private void RefreshAndConsumeLaunch()
+    private void RefreshAndConsumeLaunch(bool keepPlace)
     {
         for (var index = 0; index < tabRevalidateGates.Length; index++)
         {
@@ -364,8 +376,8 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         {
             store.EnsureMe();
             RestoreFeedScope();
-            store.RefreshFeed(SocialFeedScope.ForYou);
-            store.RefreshFeed(latestScope);
+            RefreshFeedOnReturn(SocialFeedScope.ForYou, keepPlace);
+            RefreshFeedOnReturn(latestScope, keepPlace);
         }
 
         if (store.IsSignedIn && launcher.TryConsume(Id, out var link))
@@ -560,6 +572,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         var listTop = activeScope == SocialFeedScope.ForYou ? rowRect.Max.Y : DrawLatestScopeRow(area, rowRect.Max.Y);
         var listRect = new Rect(new Vector2(area.Min.X, listTop), area.Max);
         DrawFeedList(listRect, activeScope);
+        DrawNewChirpsPill(listRect, activeScope);
         if (ComposeFab.Draw(TabBar.ContentArea(listRect, scale), "##chirperComposeFab", FabTop, PhoneIcons.Feather,
                 Loc.T(L.Chirper.NewChirp), "chirper.compose", FabBottom, FabRadius, true, FabGlyph,
                 SocialSeason.Sound(UiSound.HalloweenRustle)))
@@ -784,7 +797,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             default:
                 if (!store.IsLoading(activeScope))
                 {
-                    store.RefreshFeed(activeScope);
+                    RefreshFeedOnReturn(activeScope, true);
                 }
 
                 break;
@@ -1024,6 +1037,98 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         store.RefreshFeed(scope);
     }
 
+    private bool FeedScrolledAway => feedScrollY > FeedTopThresholdUnits * UiScale.Current;
+
+    private void RefreshFeedOnReturn(SocialFeedScope scope, bool keepPlace)
+    {
+        if (keepPlace && scope == activeScope && FeedScrolledAway)
+        {
+            store.PrefetchFeed(scope);
+            return;
+        }
+
+        store.RefreshFeed(scope);
+    }
+
+    private void ApplyPendingFeed(SocialFeedScope scope)
+    {
+        if (!store.ApplyPendingFeed(scope))
+        {
+            return;
+        }
+
+        actions.Reset();
+        feedScrollTopPending = true;
+    }
+
+    private void DrawNewChirpsPill(Rect listRect, SocialFeedScope scope)
+    {
+        var scale = UiScale.Current;
+        var wanted = store.HasPendingFeed(scope) && FeedScrolledAway ? 1f : 0f;
+        var reveal = Math.Clamp(newChirpsReveal.Step(wanted, Motion.Appear,
+            MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds)), 0f, 1f);
+        if (reveal <= 0.01f)
+        {
+            return;
+        }
+
+        var label = NewChirpsLabel(store.PendingFeedCount(scope));
+        var style = ChipRail.LabelStyle;
+        var height = ChipRail.ChipHeight * scale;
+        var glyphBox = height * 0.5f;
+        var labelSize = Typography.Measure(label, style);
+        var width = NewChirpsPillPadX * 2f * scale + glyphBox + NewChirpsGlyphGap * scale + labelSize.X;
+        var travel = (NewChirpsPillTopUnits + ChipRail.ChipHeight) * scale;
+        var top = listRect.Min.Y + NewChirpsPillTopUnits * scale - (1f - reveal) * travel;
+        var left = listRect.Center.X - width * 0.5f;
+        var rect = new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
+        var boxPad = 4f * scale;
+        var box = new Rect(new Vector2(left - boxPad, listRect.Min.Y),
+            new Vector2(left + width + boxPad, listRect.Min.Y + travel + boxPad));
+        ImGui.SetCursorScreenPos(box.Min);
+        using var overlay = ImRaii.Child(NewChirpsChildId, new Vector2(box.Width, box.Height), false,
+            ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
+        var drawList = ImGui.GetWindowDrawList();
+        var hovered = UiInteract.HoverOverlay(rect);
+        var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
+        var press = PressFx.Scale(NewChirpsChildId, pressed, PressFx.ControlPressedScale);
+        var half = new Vector2(rect.Width, rect.Height) * (0.5f * press);
+        var drawRect = new Rect(rect.Center - half, rect.Center + half);
+        var radius = drawRect.Height * 0.5f;
+        var shadowOffset = new Vector2(0f, 2f * scale);
+        Squircle.Fill(drawList, drawRect.Min + shadowOffset, drawRect.Max + shadowOffset, radius,
+            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, NewChirpsShadowAlpha * reveal)));
+        var fill = Palette.Mix(ChirperInk.Accent, ChirperInk.White, hovered ? NewChirpsHoverLift : 0f);
+        Squircle.Fill(drawList, drawRect.Min, drawRect.Max, radius,
+            ImGui.GetColorU32(Palette.WithAlpha(fill, reveal)));
+        var ink = Palette.WithAlpha(ChirperInk.White, reveal);
+        var glyphCenter = new Vector2(drawRect.Min.X + NewChirpsPillPadX * scale + glyphBox * 0.5f, drawRect.Center.Y);
+        PhoneIcon.Draw(drawList, glyphCenter, PhoneIcons.ChevronUp, ink, glyphBox * 0.9f);
+        var textOrigin = new Vector2(glyphCenter.X + glyphBox * 0.5f + NewChirpsGlyphGap * scale,
+            drawRect.Center.Y - labelSize.Y * 0.5f);
+        Typography.Draw(drawList, textOrigin, label, ink, style);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        if (UiInteract.Click(rect.Min, rect.Max, hovered))
+        {
+            ApplyPendingFeed(scope);
+        }
+    }
+
+    private string NewChirpsLabel(int count)
+    {
+        if (newChirpsLabel.IsCurrent(count))
+        {
+            return newChirpsLabel.Value;
+        }
+
+        return newChirpsLabel.Store(count,
+            count > 0 ? Loc.Plural(L.Chirper.NewChirpsCount, count) : Loc.T(L.Chirper.NewChirps));
+    }
+
     private void DrawFeedList(Rect listRect, SocialFeedScope scope)
     {
         var snapshot = store.Feed(scope);
@@ -1033,6 +1138,12 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             {
                 surface.JumpToTop();
                 feedScrollTopPending = false;
+            }
+
+            feedScrollY = ImGui.GetScrollY();
+            if (store.HasPendingFeed(scope) && !FeedScrolledAway && !surface.Dragging)
+            {
+                ApplyPendingFeed(scope);
             }
 
             pullToRefresh[scope].Draw(listRect, surface.Pull, surface.Dragging,

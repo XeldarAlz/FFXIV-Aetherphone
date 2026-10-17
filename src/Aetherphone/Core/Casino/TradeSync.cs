@@ -117,6 +117,7 @@ internal sealed class TradeSyncTracker
             return;
         }
 
+        AepLog.Info($"[TradeSync] Trade window closed: offered {open.MyOffer} gil, received {open.TheirOffer} gil");
         Arm(open with { ClosedAtTick = nowTick });
     }
 
@@ -212,6 +213,11 @@ internal sealed class TradeSyncTracker
         var matched = OldestMatching(delta, windowOpen && !openDone);
         if (matched == NoMatch)
         {
+            if (armedCount > 0 || (windowOpen && !openDone))
+            {
+                AepLog.Info($"[TradeSync] The wallet moved by {delta} gil and matched none of the {armedCount} armed trades");
+            }
+
             return null;
         }
 

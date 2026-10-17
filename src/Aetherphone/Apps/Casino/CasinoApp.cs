@@ -43,6 +43,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
     private readonly Core.Casino.CasinoHistoryStore history;
     private readonly Core.Casino.CasinoRoomsStore casinoRooms;
     private readonly Core.Casino.CasinoTablesStore casinoTables;
+    private readonly Core.Casino.CasinoTradeSync tradeSync;
     private readonly Core.Casino.CasinoSpinStore casinoSpin;
     private readonly Core.Casino.CasinoLauncher launcher;
     private readonly ConfirmService confirm;
@@ -152,6 +153,7 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
         dealerHoldem = new DealerHoldem.DealerHoldemCabinet(casino, casinoPlay.DealerHoldem);
         blackjack = new Tables.BlackjackTable(casino, casinoRooms, casinoTables, history, casinoTurns, confirm,
             remoteImages, lodestone, tournament, PopRoute, OpenLedger, OpenGilLedger);
+        this.tradeSync = tradeSync;
         playerLedger = new Tables.TableLedger(casinoTables, casino, confirm, tradeSync);
         gilLedger = new Tables.GilLedgerView(casinoTables);
         openTable = OpenTable;
@@ -1162,8 +1164,12 @@ internal sealed partial class CasinoApp : IPhoneApp, ITabRouteTarget, INameplate
 
     private void LeaveClosedTable()
     {
-        PopRoutesHolding(casinoTables.TakeClosedTable());
-        if (PopRoutesHolding(casinoTables.TakeVanishedTable()))
+        var closed = casinoTables.TakeClosedTable();
+        tradeSync.ForgetTable(closed);
+        PopRoutesHolding(closed);
+        var vanished = casinoTables.TakeVanishedTable();
+        tradeSync.ForgetTable(vanished);
+        if (PopRoutesHolding(vanished))
         {
             ShellToast.Show(Loc.T(L.Casino.ReasonEnded));
         }

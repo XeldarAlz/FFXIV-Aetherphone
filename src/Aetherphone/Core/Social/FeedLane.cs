@@ -14,7 +14,12 @@ internal sealed class FeedLane<TPost> : ITrimmable where TPost : class, IIdentif
     private volatile string? cursor;
     private volatile bool loading;
     private volatile bool loadingMore;
+    private volatile bool prefetching;
     private volatile AepFailureBox? failureBox;
+    private volatile TPost[]? pendingItems;
+    private volatile string? pendingCursor;
+    private TPost[]? pendingCountedAgainst;
+    private int pendingCount;
 
     public FeedLane(Comparison<TPost> order, Func<TPost, long>? createdAtUnix = null)
     {
@@ -51,6 +56,38 @@ internal sealed class FeedLane<TPost> : ITrimmable where TPost : class, IIdentif
         set => loadingMore = value;
     }
 
+    public bool Prefetching
+    {
+        get => prefetching;
+        set => prefetching = value;
+    }
+
+    public bool HasPending => pendingItems is not null;
+
+    public int PendingCount
+    {
+        get
+        {
+            var pending = pendingItems;
+            if (pending is null)
+            {
+                return 0;
+            }
+
+            var current = items;
+            lock (gate)
+            {
+                if (!ReferenceEquals(pendingCountedAgainst, current))
+                {
+                    pendingCount = CountUnknown(current, pending);
+                    pendingCountedAgainst = current;
+                }
+
+                return pendingCount;
+            }
+        }
+    }
+
     public bool Failed => failureBox is not null;
 
     public AepFailure Failure => failureBox?.Failure ?? AepFailure.None;
@@ -72,20 +109,95 @@ internal sealed class FeedLane<TPost> : ITrimmable where TPost : class, IIdentif
         failureBox = null;
         lock (gate)
         {
-            if (order is null)
+            DropPendingLocked();
+            ApplyRefreshLocked(incoming, nextCursor);
+        }
+    }
+
+    public void Park(TPost[] incoming, string? nextCursor)
+    {
+        failureBox = null;
+        lock (gate)
+        {
+            pendingItems = incoming;
+            pendingCursor = nextCursor;
+            pendingCountedAgainst = null;
+        }
+    }
+
+    public bool ApplyPending()
+    {
+        lock (gate)
+        {
+            var incoming = pendingItems;
+            if (incoming is null)
             {
-                items = incoming;
-                cursor = nextCursor;
-                return;
+                return false;
             }
 
-            var wasEmpty = items.Length == 0;
-            items = IdentifiedMerge.ReconcileNewestPage(items, incoming, order);
-            if (wasEmpty)
+            var nextCursor = pendingCursor;
+            DropPendingLocked();
+            ApplyRefreshLocked(incoming, nextCursor);
+            return true;
+        }
+    }
+
+    public void DiscardPending()
+    {
+        lock (gate)
+        {
+            DropPendingLocked();
+        }
+    }
+
+    private void ApplyRefreshLocked(TPost[] incoming, string? nextCursor)
+    {
+        if (order is null)
+        {
+            items = incoming;
+            cursor = nextCursor;
+            return;
+        }
+
+        var wasEmpty = items.Length == 0;
+        items = IdentifiedMerge.ReconcileNewestPage(items, incoming, order);
+        if (wasEmpty)
+        {
+            cursor = nextCursor;
+        }
+    }
+
+    private void DropPendingLocked()
+    {
+        pendingItems = null;
+        pendingCursor = null;
+        pendingCountedAgainst = null;
+        pendingCount = 0;
+    }
+
+    private static int CountUnknown(TPost[] existing, TPost[] incoming)
+    {
+        if (incoming.Length == 0)
+        {
+            return 0;
+        }
+
+        var knownIds = new HashSet<string>(existing.Length, StringComparer.Ordinal);
+        for (var index = 0; index < existing.Length; index++)
+        {
+            knownIds.Add(existing[index].Id);
+        }
+
+        var unknown = 0;
+        for (var index = 0; index < incoming.Length; index++)
+        {
+            if (!knownIds.Contains(incoming[index].Id))
             {
-                cursor = nextCursor;
+                unknown++;
             }
         }
+
+        return unknown;
     }
 
     public void ApplyMore(TPost[] incoming, string? nextCursor)
@@ -168,6 +280,8 @@ internal sealed class FeedLane<TPost> : ITrimmable where TPost : class, IIdentif
             cursor = null;
             loading = false;
             loadingMore = false;
+            prefetching = false;
+            DropPendingLocked();
         }
     }
 }

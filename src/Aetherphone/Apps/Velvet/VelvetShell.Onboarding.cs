@@ -75,6 +75,8 @@ internal sealed partial class VelvetShell
     private bool onboardPhotoEditing;
     private volatile bool onboardIdentityBusy;
     private volatile int onboardIdentityOutcome;
+    private volatile int onboardFinishOutcome;
+    private bool onboardFinishFailed;
     private AepFailure onboardIdentityFailure;
     private readonly FailureSlot onboardIdentityError = new();
     private bool onboardHandleInvalid;
@@ -99,6 +101,7 @@ internal sealed partial class VelvetShell
         store.EnsureMe();
         SeedOnboarding();
         ConsumeIdentityOutcome();
+        ConsumeFinishOutcome();
 
         if (onboardPhotoEditing)
         {
@@ -179,6 +182,28 @@ internal sealed partial class VelvetShell
         onboardIdentityError.Set(onboardIdentityFailure.Failed
             ? onboardIdentityFailure
             : AepFailure.Transport(AepFailureKind.Offline));
+    }
+
+    private void ConsumeFinishOutcome()
+    {
+        var outcome = onboardFinishOutcome;
+        if (outcome == 0)
+        {
+            return;
+        }
+
+        onboardFinishOutcome = 0;
+        onboardFinishFailed = outcome != OnboardIdentitySaved;
+        if (onboardFinishFailed)
+        {
+            return;
+        }
+
+        configuration.VelvetOnboarded = true;
+        configuration.VelvetOnboardedVersion = Configuration.VelvetOnboardVersion;
+        configuration.Save();
+        activeTab = VelvetPage.Discover;
+        OnboardingState.RequestAppTour(Id);
     }
 
     private void DrawOnboardChrome(Rect area)
@@ -279,6 +304,7 @@ internal sealed partial class VelvetShell
         OnboardStepIdentity => !onboardIdentityBusy && onboardSeeded && HasIdentityBasics(),
         OnboardStepIntent => VelvetIntent.Sanitize(editIntent) != 0,
         OnboardStepAbout => editIntro.Trim().Length > 0,
+        OnboardStepReady => !onboardIdentityBusy,
         _ => true,
     };
 
@@ -619,6 +645,12 @@ internal sealed partial class VelvetShell
 
             Gap(VCard.Gap);
             DrawOnboardSettingsCard(width);
+            if (onboardFinishFailed)
+            {
+                Gap(10f);
+                WrapText(Loc.T(L.Velvet.SaveFailed), VelvetTheme.Danger, TextStyles.Callout);
+            }
+
             Gap(30f);
         }
     }
@@ -660,11 +692,12 @@ internal sealed partial class VelvetShell
 
     private void FinishOnboarding()
     {
-        configuration.VelvetOnboarded = true;
-        configuration.VelvetOnboardedVersion = Configuration.VelvetOnboardVersion;
-        configuration.Save();
-        store.UpdateProfile(BuildEditRequest(onboardDiscoverable, onboardWho), _ => { });
-        activeTab = VelvetPage.Discover;
-        OnboardingState.RequestAppTour(Id);
+        onboardFinishFailed = false;
+        onboardIdentityBusy = true;
+        store.UpdateProfile(BuildEditRequest(onboardDiscoverable, onboardWho), saved =>
+        {
+            onboardIdentityBusy = false;
+            onboardFinishOutcome = saved ? OnboardIdentitySaved : OnboardIdentityRejected;
+        });
     }
 }

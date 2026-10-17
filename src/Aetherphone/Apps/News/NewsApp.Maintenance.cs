@@ -103,11 +103,9 @@ internal sealed partial class NewsApp
         var textWidth = MathF.Max(1f, right - columnWidth - HeroColumnGap * scale - textLeft);
         var headline = Loc.T(active ? L.News.BannerActive : L.News.BannerUpcoming);
         var textTop = rest.Center.Y - (valueHeight + Typography.LineHeight(TextStyles.Subheadline)) * 0.5f;
-        Typography.Draw(drawList, new Vector2(textLeft, textTop), Typography.FitText(headline, textWidth,
-            TextStyles.Headline), HeroInk, TextStyles.Headline);
-        Typography.Draw(drawList, new Vector2(textLeft, textTop + valueHeight),
-            Typography.FitText(story.WindowText(window), textWidth, TextStyles.Subheadline), subInk,
-            TextStyles.Subheadline);
+        WidgetText.Draw(drawList, new Vector2(textLeft, textTop), headline, HeroInk, TextStyles.Headline, textWidth);
+        WidgetText.Draw(drawList, new Vector2(textLeft, textTop + valueHeight), story.WindowText(window), subInk,
+            TextStyles.Subheadline, textWidth);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

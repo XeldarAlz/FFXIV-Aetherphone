@@ -307,6 +307,18 @@ internal sealed partial class VelvetShell
             {
                 DrawEmpty(empty, Loc.T(L.Social.ListEmpty), string.Empty);
             }
+            else if (!store.ThreadsLoaded || !store.ConnectionsLoaded)
+            {
+                DrawEmpty(empty, Loc.T(L.Common.Loading), string.Empty);
+            }
+            else if (store.ThreadListFailed)
+            {
+                if (EmptyState.Draw(empty, ui, PhoneIcons.CloudDownload, Loc.T(L.Failure.CouldNotLoad),
+                        Loc.T(L.Common.LoadFailedHint), Loc.T(L.Common.Retry)))
+                {
+                    store.RefreshThreads();
+                }
+            }
             else
             {
                 DrawEmpty(empty, Loc.T(L.Velvet.MessagesEmpty), Loc.T(L.Velvet.MessagesEmptyHint));
@@ -415,6 +427,8 @@ internal sealed partial class VelvetShell
         var preview = string.IsNullOrEmpty(thread.LastMessagePreview)
             ? Loc.T(L.Velvet.ThreadEmpty)
             : ChatText.ListPreview(thread.LastMessagePreview);
+        var mine = !string.IsNullOrEmpty(thread.LastMessagePreview)
+            && string.Equals(thread.LastMessageSenderId, store.Me?.UserId, StringComparison.Ordinal);
         var model = new VRowModel
         {
             Title = DisplayNameOf(thread.OtherDisplayName, thread.OtherHandle),
@@ -429,6 +443,8 @@ internal sealed partial class VelvetShell
             Time = TimeText.Short(thread.LastMessageAtUnix),
             Badge = thread.UnreadCount,
             Pinned = pinned,
+            SubtitleGlyph = mine ? (thread.LastMessageSeen ? PhoneIcons.Checks : PhoneIcons.Check) : null,
+            SubtitleGlyphTint = thread.LastMessageSeen ? Core.Theme.ChatInk.SeenTick : VelvetTheme.MutedInk,
         };
         var hit = VRow.Cell(in model, theme, images, lodestone);
         if (hit == VRowHit.Body)
@@ -485,8 +501,10 @@ internal sealed partial class VelvetShell
         var sent = store.SentRequests;
         if (requests.Length == 0 && sent.Length == 0)
         {
+            var loaded = store.RequestsLoaded && store.SentRequestsLoaded;
             DrawEmpty(new Rect(new Vector2(listRect.Min.X, ImGui.GetCursorScreenPos().Y), listRect.Max),
-                Loc.T(L.Velvet.RequestsEmpty), Loc.T(L.Velvet.RequestsEmptyHint));
+                Loc.T(loaded ? L.Velvet.RequestsEmpty : L.Common.Loading),
+                loaded ? Loc.T(L.Velvet.RequestsEmptyHint) : string.Empty);
             return;
         }
 

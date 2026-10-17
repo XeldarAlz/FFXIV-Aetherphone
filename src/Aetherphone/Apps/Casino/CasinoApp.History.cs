@@ -161,10 +161,15 @@ internal sealed partial class CasinoApp
                 ui.Card(drawList, min, max, Metrics.Radius.Grouped * scale);
                 for (var entryIndex = day.Start; entryIndex < day.End; entryIndex++)
                 {
+                    var row = RowAt(min, max.X, rowHeight, entryIndex - day.Start);
+                    if (!ImGui.IsRectVisible(row.Min, row.Max))
+                    {
+                        continue;
+                    }
+
                     using (ImRaii.PushId(entryIndex))
                     {
-                        DrawHistoryRow(drawList, RowAt(min, max.X, rowHeight, entryIndex - day.Start), entryIndex,
-                            entryIndex > day.Start, scale);
+                        DrawHistoryRow(drawList, row, entryIndex, entryIndex > day.Start, scale);
                     }
                 }
 
@@ -289,6 +294,11 @@ internal sealed partial class CasinoApp
         using (AppSurface.Begin(body))
         {
             history.EnsureFresh();
+            if (history.TakeLoadFailure())
+            {
+                historyLoadFailed = true;
+            }
+
             SyncHistoryText();
             var drawList = ImGui.GetWindowDrawList();
             var origin = ImGui.GetCursorScreenPos();
@@ -371,8 +381,13 @@ internal sealed partial class CasinoApp
 
         if (count == 0)
         {
+            var body = history.Loading || (!historyLoadFailed && !history.Loaded)
+                ? Loc.T(L.Common.Loading)
+                : historyLoadFailed
+                    ? Loc.T(CasinoReasons.MessageFor(CasinoReasons.Unreachable))
+                    : Loc.T(L.Casino.FairnessNoRounds);
             return CoinArt.DrawPanel(ui, origin, width, FontAwesomeIcon.ShieldAlt, AccentRing.Green,
-                Loc.T(L.Casino.FairnessRecentHeading), Loc.T(L.Casino.FairnessNoRounds), scale);
+                Loc.T(L.Casino.FairnessRecentHeading), body, scale);
         }
 
         var rowHeight = HistoryRowHeight * scale;

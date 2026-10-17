@@ -135,9 +135,13 @@ internal sealed class BetsRail
                 return;
             }
 
-            DrawEmpty(tab == MyBetsTab ? L.Strip.MyBetsEmpty : L.Strip.FloorFeedEmpty, scale);
+            var pending = tab != MyBetsTab && feed is not null && feed.FeedPending(FeedKey);
+            DrawEmpty(tab == MyBetsTab ? L.Strip.MyBetsEmpty : pending ? L.Common.Loading : L.Strip.FloorFeedEmpty,
+                scale);
         }
     }
+
+    private string FeedKey => tab == HighRollersTab ? CasinoFeedTabs.High : CasinoFeedTabs.All;
 
     private CasinoFeedItemDto[]? FeedItems()
     {
@@ -146,9 +150,8 @@ internal sealed class BetsRail
             return null;
         }
 
-        var key = tab == HighRollersTab ? CasinoFeedTabs.High : CasinoFeedTabs.All;
-        feed.EnsureFeed(key);
-        return feed.Feed(key)?.Items;
+        feed.EnsureFeed(FeedKey);
+        return feed.Feed(FeedKey)?.Items;
     }
 
     private void DrawFeedRows(CasinoFeedItemDto[] items, float scale)

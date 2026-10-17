@@ -10,6 +10,7 @@ internal sealed class WeatherControl : IDisposable
 {
     private const float TransitionSeconds = 0.5f;
     private const long EorzeaSecondsPerDay = 86400;
+    private const long ReleaseHoldMilliseconds = 1_000;
     private const byte NoWeather = 0;
     private const int NoTime = -1;
     private readonly WeatherService weather;
@@ -19,6 +20,7 @@ internal sealed class WeatherControl : IDisposable
     private readonly AppGate installed;
     private byte weatherOverride = NoWeather;
     private int timeOverride = NoTime;
+    private long releaseUntilTick;
 
     public WeatherControl(WeatherService weather, IFramework framework, IClientState clientState, ICondition condition,
         AppGate installed)
@@ -41,6 +43,8 @@ internal sealed class WeatherControl : IDisposable
     public byte WeatherOverride => weatherOverride;
     public int TimeOverrideMinutes => timeOverride;
 
+    private bool ReleasingTime => releaseUntilTick != 0;
+
     public void SetWeather(byte id)
     {
         if (id != NoWeather && CanControl)
@@ -53,6 +57,7 @@ internal sealed class WeatherControl : IDisposable
     {
         if (CanControl)
         {
+            releaseUntilTick = 0;
             timeOverride = Math.Clamp(minuteOfDay, 0, EorzeaTime.MinutesPerDay - 1);
         }
     }
@@ -74,14 +79,15 @@ internal sealed class WeatherControl : IDisposable
         }
     }
 
-    public unsafe void ClearTime()
+    public void ClearTime()
     {
-        timeOverride = NoTime;
-        var instance = Framework.Instance();
-        if (instance != null)
+        if (timeOverride == NoTime)
         {
-            instance->ClientTime.IsEorzeaTimeOverridden = false;
+            return;
         }
+
+        timeOverride = NoTime;
+        releaseUntilTick = Environment.TickCount64 + ReleaseHoldMilliseconds;
     }
 
     public void ClearAll()
@@ -90,22 +96,33 @@ internal sealed class WeatherControl : IDisposable
         ClearTime();
     }
 
+    private unsafe void DropTime()
+    {
+        timeOverride = NoTime;
+        releaseUntilTick = 0;
+        var instance = Framework.Instance();
+        if (instance != null)
+        {
+            instance->ClientTime.IsEorzeaTimeOverridden = false;
+        }
+    }
+
+    private void DropAll()
+    {
+        ClearWeather();
+        DropTime();
+    }
+
     private unsafe void OnUpdate(IFramework _)
     {
-        if (weatherOverride == NoWeather && timeOverride == NoTime)
+        if (weatherOverride == NoWeather && timeOverride == NoTime && !ReleasingTime)
         {
             return;
         }
 
-        if (!installed.Open)
+        if (!installed.Open || !CanControl)
         {
-            ClearAll();
-            return;
-        }
-
-        if (!CanControl)
-        {
-            ClearAll();
+            DropAll();
             return;
         }
 
@@ -128,19 +145,39 @@ internal sealed class WeatherControl : IDisposable
                 instance->ClientTime.IsEorzeaTimeOverridden = true;
                 instance->ClientTime.EorzeaTimeOverride = days * EorzeaSecondsPerDay + timeOverride * 60L;
             }
+
+            return;
         }
+
+        if (ReleasingTime)
+        {
+            ReleaseTime();
+        }
+    }
+
+    private unsafe void ReleaseTime()
+    {
+        var instance = Framework.Instance();
+        if (instance == null || Environment.TickCount64 >= releaseUntilTick)
+        {
+            DropTime();
+            return;
+        }
+
+        instance->ClientTime.IsEorzeaTimeOverridden = true;
+        instance->ClientTime.EorzeaTimeOverride = instance->ClientTime.EorzeaTime;
     }
 
     private void OnTerritoryChanged(uint _)
     {
         weatherOverride = NoWeather;
-        ClearTime();
+        DropTime();
     }
 
     public void Dispose()
     {
         framework.Update -= OnUpdate;
         clientState.TerritoryChanged -= OnTerritoryChanged;
-        ClearAll();
+        DropAll();
     }
 }

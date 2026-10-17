@@ -118,7 +118,7 @@ internal static class WalletArt
         string subtitle, Vector4 titleInk, Vector4 subtitleInk, float scale)
     {
         var width = MathF.Max(1f, right - left);
-        var fittedTitle = Typography.FitText(title, width, TextStyles.BodyEmphasized);
+        var fittedTitle = Typography.FitTextMiddle(title, width, TextStyles.BodyEmphasized);
         var titleHeight = Typography.LineHeight(TextStyles.BodyEmphasized);
         if (subtitle.Length == 0)
         {

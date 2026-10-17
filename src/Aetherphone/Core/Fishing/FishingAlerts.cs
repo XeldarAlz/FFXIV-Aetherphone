@@ -27,7 +27,9 @@ internal readonly record struct FishingIslandStatus(
 
 internal sealed class FishingAlerts : IDisposable
 {
-    public const long FishLeadSeconds = 300;
+    public const int DefaultLeadMinutes = 5;
+    public const int MinLeadMinutes = 1;
+    public const int MaxLeadMinutes = 60;
     public const long VoyageLeadSeconds = 600;
     public const long BoardingWindowSeconds = 900;
     private const long TickIntervalMilliseconds = 1000;
@@ -85,8 +87,24 @@ internal sealed class FishingAlerts : IDisposable
         return enabled;
     }
 
-    public static bool AlertWindowRunning(in FishWindow window, long nowUnix) =>
-        window.Exists && nowUnix >= window.StartUnix - FishLeadSeconds && nowUnix < window.EndUnix;
+    public int LeadMinutes => Math.Clamp(configuration.FishingAlertLeadMinutes, MinLeadMinutes, MaxLeadMinutes);
+
+    public long LeadSeconds => LeadMinutes * 60L;
+
+    public void SetLeadMinutes(int minutes)
+    {
+        var clamped = Math.Clamp(minutes, MinLeadMinutes, MaxLeadMinutes);
+        if (configuration.FishingAlertLeadMinutes == clamped)
+        {
+            return;
+        }
+
+        configuration.FishingAlertLeadMinutes = clamped;
+        configuration.Save();
+    }
+
+    public static bool AlertWindowRunning(in FishWindow window, long nowUnix, long leadSeconds) =>
+        window.Exists && nowUnix >= window.StartUnix - leadSeconds && nowUnix < window.EndUnix;
 
     private void SkipRunningWindow(uint itemId)
     {
@@ -108,7 +126,7 @@ internal sealed class FishingAlerts : IDisposable
             window = FishWindowMath.Next(entry.Fish.Rule, entry.Odds, nowUnix);
         }
 
-        if (AlertWindowRunning(window, nowUnix))
+        if (AlertWindowRunning(window, nowUnix, LeadSeconds))
         {
             notifiedWindowStart[itemId] = window.StartUnix;
         }
@@ -243,6 +261,7 @@ internal sealed class FishingAlerts : IDisposable
 
         var alarms = configuration.FishingAlarms;
         var entries = catalog.Entries;
+        var leadSeconds = LeadSeconds;
         for (var alarmIndex = 0; alarmIndex < alarms.Count; alarmIndex++)
         {
             var itemId = alarms[alarmIndex];
@@ -258,7 +277,7 @@ internal sealed class FishingAlerts : IDisposable
             }
 
             var window = catalog.WindowAt(index);
-            if (!window.Exists || nowUnix < window.StartUnix - FishLeadSeconds || nowUnix >= window.EndUnix)
+            if (!window.Exists || nowUnix < window.StartUnix - leadSeconds || nowUnix >= window.EndUnix)
             {
                 continue;
             }

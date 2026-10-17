@@ -13,9 +13,18 @@ internal sealed partial class SkywatcherApp
 {
     private const float HeroExpandedUnits = 232f;
     private const float HeroCollapsedUnits = 70f;
-    private const float FadeRangeUnits = 30f;
+    private const float HeroTopInsetUnits = 6f;
+    private const float CompactLineGapUnits = 10f;
+    private const float ScrimUnits = 18f;
+    private const float CaptionFadeEnd = 0.2f;
+    private const float BlockFadeEnd = 0.42f;
+    private const float BlockParallax = 0.6f;
+    private const float CompactFadeStart = 0.5f;
+    private const float CompactFadeEnd = 0.8f;
+    private const float ScrimFadeStart = 0.7f;
+    private const float ZoneMinimumFit = 0.62f;
+    private const float CompactZoneScale = 1.20f;
     private static readonly TextStyle ZoneStyle = new(1.65f, FontWeight.Medium);
-    private static readonly TextStyle CompactZoneStyle = new(1.20f, FontWeight.SemiBold);
     private static readonly TextStyle ClockStyle = new(2.65f, FontWeight.Regular);
     private static readonly TextStyle ConditionStyle = new(1.20f, FontWeight.Medium);
     private CachedText heroClock;
@@ -24,7 +33,7 @@ internal sealed partial class SkywatcherApp
     private float HeroVisibleHeight(float scale) =>
         MathF.Max(HeroCollapsedUnits * scale, HeroExpandedUnits * scale - scrollY);
 
-    private void DrawHero(Rect body, in SkyPalette palette, float scale)
+    private void DrawHero(Rect body, Rect screen, in SkyPalette palette, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
         var top = body.Min.Y;
@@ -38,90 +47,134 @@ internal sealed partial class SkywatcherApp
             UiAnchors.Report("skywatcher.current", new Rect(body.Min, new Vector2(body.Max.X, top + visible)));
         }
 
-        var fadeLine = top + HeroCollapsedUnits * scale;
-        var cursor = top + 6f * scale - scrollY;
+        var inset = HeroTopInsetUnits * scale;
+        var cursor = top + inset - scrollY;
         if (ViewingCurrentZone)
         {
-            var caption = Loc.Upper(Loc.T(L.Skywatcher.CurrentZone));
             var captionHeight = Typography.LineHeight(TextStyles.Caption1);
-            var captionAlpha = FadeOut(cursor + scrollY, fadeLine, scale);
+            var captionAlpha = 1f - Math.Clamp(collapse / CaptionFadeEnd, 0f, 1f);
             if (captionAlpha > 0.01f)
             {
-                DrawCaption(drawList, new Vector2(centerX, cursor + captionHeight * 0.5f), caption,
-                    palette.InkSoft with { W = palette.InkSoft.W * captionAlpha }, palette, scale);
+                DrawCaption(drawList, new Vector2(centerX, cursor + captionHeight * 0.5f), captionAlpha, palette,
+                    scale);
             }
 
             cursor += captionHeight;
         }
 
-        var zoneScale =
-            Plugin.Fonts.NearestScale(ZoneStyle.Scale + (CompactZoneStyle.Scale - ZoneStyle.Scale) * collapse);
-        var zoneWeight = collapse > 0.5f ? CompactZoneStyle.Weight : ZoneStyle.Weight;
-        var fittedScale = Typography.FitScale(zone, maxWidth, zoneScale, zoneScale * 0.62f, zoneWeight);
-        var zoneText = Typography.FitText(zone, maxWidth, fittedScale, zoneWeight);
-        var zoneHeight = Typography.LineHeight(new TextStyle(fittedScale, zoneWeight));
-        var zoneCenterY = MathF.Max(top + 6f * scale + zoneHeight * 0.5f, cursor + zoneHeight * 0.5f);
-        ShadowCentered(drawList, new Vector2(centerX, zoneCenterY), zoneText, palette.Ink,
-            new TextStyle(fittedScale, zoneWeight), palette, scale);
+        var zoneScale = ZoneStyle.Scale + (CompactZoneScale - ZoneStyle.Scale) * collapse;
+        var fittedScale = FitZoneScale(zone, maxWidth, zoneScale);
+        var zoneText = fittedScale > zoneScale * ZoneMinimumFit
+            ? zone
+            : Typography.FitText(zone, maxWidth * Plugin.Fonts.NearestScale(fittedScale) / fittedScale, fittedScale,
+                ZoneStyle.Weight);
+        var zoneHeight = ExactLineHeight(fittedScale, ZoneStyle.Weight);
+        var zoneCenterY = MathF.Max(top + inset + zoneHeight * 0.5f, cursor + zoneHeight * 0.5f);
         cursor += zoneHeight;
 
-        var clockHeight = Typography.LineHeight(ClockStyle);
-        var clockAlpha = FadeOut(cursor + scrollY, fadeLine, scale);
-        if (clockAlpha > 0.01f)
+        var blockAlpha = 1f - Math.Clamp(collapse / BlockFadeEnd, 0f, 1f);
+        if (blockAlpha > 0.01f)
         {
-            DrawClock(drawList, new Vector2(centerX, cursor + clockHeight * 0.5f), palette, clockAlpha, scale);
+            DrawExpandedLines(drawList, centerX, cursor + scrollY * (1f - BlockParallax), maxWidth, blockAlpha,
+                palette, scale);
         }
 
-        cursor += clockHeight;
-        var conditionHeight = Typography.LineHeight(ConditionStyle);
-        var conditionAlpha = FadeOut(cursor + scrollY, fadeLine, scale);
-        if (conditionAlpha > 0.01f)
-        {
-            ShadowCentered(drawList, new Vector2(centerX, cursor + conditionHeight * 0.5f),
-                Typography.FitText(forecast[0].Weather.Name, maxWidth, ConditionStyle), palette.Ink with
-                {
-                    W = palette.Ink.W * conditionAlpha,
-                }, ConditionStyle, palette, scale);
-        }
+        HeroTitle(drawList, new Vector2(centerX, zoneCenterY), zoneText, palette.Ink, fittedScale, palette, scale);
 
-        cursor += conditionHeight + 2f * scale;
-        var summaryAlpha = FadeOut(cursor + scrollY, fadeLine, scale);
-        if (summaryAlpha > 0.01f)
-        {
-            var summaryCenterY = cursor + Typography.LineHeight(TextStyles.Subheadline) * 0.5f;
-            ShadowCentered(drawList, new Vector2(centerX, summaryCenterY),
-                Typography.FitText(summaryText, maxWidth, TextStyles.Subheadline),
-                palette.InkSoft with { W = palette.InkSoft.W * summaryAlpha }, TextStyles.Subheadline, palette, scale);
-        }
-
-        var compactAlpha = Math.Clamp((collapse - 0.72f) / 0.28f, 0f, 1f);
+        var compactAlpha = Math.Clamp((collapse - CompactFadeStart) / (CompactFadeEnd - CompactFadeStart), 0f, 1f);
         if (compactAlpha > 0.01f)
         {
-            var line = CompactLine();
-            ShadowCentered(drawList, new Vector2(centerX, zoneCenterY + zoneHeight * 0.5f + 10f * scale),
-                Typography.FitText(line, maxWidth, TextStyles.Subheadline),
-                palette.InkSoft with { W = palette.InkSoft.W * compactAlpha }, TextStyles.Subheadline, palette, scale);
+            var compactCenterY = zoneCenterY + zoneHeight * 0.5f + CompactLineGapUnits * scale;
+            HeroText(drawList, new Vector2(centerX, compactCenterY),
+                Typography.FitText(CompactLine(), maxWidth, TextStyles.Subheadline), palette.InkSoft,
+                TextStyles.Subheadline, compactAlpha, palette, scale);
         }
+
+        var scrimAlpha = Math.Clamp((collapse - ScrimFadeStart) / (1f - ScrimFadeStart), 0f, 1f);
+        DrawScrim(drawList, body, screen, top + visible, scrimAlpha, palette, scale);
     }
 
-    private float FadeOut(float restY, float line, float scale)
-    {
-        var travelBeforeFade = MathF.Max(0f, restY - line);
-        return Math.Clamp(1f - MathF.Max(0f, scrollY - travelBeforeFade) / (FadeRangeUnits * scale), 0f, 1f);
-    }
-
-    private static void DrawCaption(ImDrawListPtr drawList, Vector2 center, string caption, Vector4 color,
+    private void DrawExpandedLines(ImDrawListPtr drawList, float centerX, float top, float maxWidth, float alpha,
         in SkyPalette palette, float scale)
     {
+        var clockHeight = Typography.LineHeight(ClockStyle);
+        DrawClock(drawList, new Vector2(centerX, top + clockHeight * 0.5f), palette, alpha, scale);
+        top += clockHeight;
+        var conditionHeight = Typography.LineHeight(ConditionStyle);
+        HeroText(drawList, new Vector2(centerX, top + conditionHeight * 0.5f),
+            Typography.FitText(forecast[0].Weather.Name, maxWidth, ConditionStyle), palette.Ink, ConditionStyle,
+            alpha, palette, scale);
+        top += conditionHeight + 2f * scale;
+        var summaryHeight = Typography.LineHeight(TextStyles.Subheadline);
+        HeroText(drawList, new Vector2(centerX, top + summaryHeight * 0.5f),
+            Typography.FitText(summaryText, maxWidth, TextStyles.Subheadline), palette.InkSoft,
+            TextStyles.Subheadline, alpha, palette, scale);
+    }
+
+    private static float FitZoneScale(string text, float maxWidth, float textScale)
+    {
+        var width = Typography.MeasureExact(text, textScale, ZoneStyle.Weight).X;
+        if (width <= maxWidth)
+        {
+            return textScale;
+        }
+
+        return MathF.Max(textScale * ZoneMinimumFit, textScale * maxWidth / width);
+    }
+
+    private static float ExactLineHeight(float textScale, FontWeight weight) =>
+        Typography.LineHeight(new TextStyle(textScale, weight)) * textScale / Plugin.Fonts.NearestScale(textScale);
+
+    private static Vector4 ShadowInk(in SkyPalette palette, float alpha) =>
+        new(0f, 0f, 0f, (palette.LightSky ? 0.18f : 0.36f) * alpha);
+
+    private static void HeroTitle(ImDrawListPtr drawList, Vector2 center, string text, Vector4 color,
+        float textScale, in SkyPalette palette, float scale)
+    {
+        Typography.DrawCenteredExact(drawList, center + new Vector2(0f, 1.2f * scale), text, ShadowInk(palette, 1f),
+            textScale, ZoneStyle.Weight);
+        Typography.DrawCenteredExact(drawList, center, text, color, textScale, ZoneStyle.Weight);
+    }
+
+    private static void HeroText(ImDrawListPtr drawList, Vector2 center, string text, Vector4 color,
+        in TextStyle style, float alpha, in SkyPalette palette, float scale)
+    {
+        Typography.DrawCentered(drawList, center + new Vector2(0f, 1.2f * scale), text, ShadowInk(palette, alpha),
+            style.Scale, style.Weight);
+        Typography.DrawCentered(drawList, center, text, color with { W = color.W * alpha }, style.Scale,
+            style.Weight);
+    }
+
+    private static void DrawScrim(ImDrawListPtr drawList, Rect body, Rect screen, float edge, float alpha,
+        in SkyPalette palette, float scale)
+    {
+        if (alpha <= 0.01f)
+        {
+            return;
+        }
+
+        var depth = Math.Clamp((edge - screen.Min.Y) / MathF.Max(1f, screen.Height), 0f, 1f);
+        var sky = Vector4.Lerp(palette.Top, palette.Bottom, depth);
+        var solid = ImGui.GetColorU32(sky with { W = sky.W * alpha });
+        var clear = ImGui.GetColorU32(sky with { W = 0f });
+        drawList.AddRectFilledMultiColor(new Vector2(body.Min.X, edge),
+            new Vector2(body.Max.X, edge + ScrimUnits * scale), solid, solid, clear, clear);
+    }
+
+    private static void DrawCaption(ImDrawListPtr drawList, Vector2 center, float alpha, in SkyPalette palette,
+        float scale)
+    {
+        var caption = Loc.Upper(Loc.T(L.Skywatcher.CurrentZone));
         var style = TextStyles.Caption1 with { Weight = FontWeight.SemiBold };
+        var color = palette.InkSoft with { W = palette.InkSoft.W * alpha };
         var textWidth = Typography.Measure(caption, style).X;
         var iconSize = 9f * scale;
         var gap = 5f * scale;
         var startX = center.X - (textWidth + iconSize + gap) * 0.5f;
         ProgressRing.CenterIcon(drawList, new Vector2(startX + iconSize * 0.5f, center.Y),
             FontAwesomeIcon.LocationArrow, color, iconSize);
-        ShadowCentered(drawList, new Vector2(startX + iconSize + gap + textWidth * 0.5f, center.Y), caption, color,
-            style, palette, scale);
+        HeroText(drawList, new Vector2(startX + iconSize + gap + textWidth * 0.5f, center.Y), caption,
+            palette.InkSoft, style, alpha, palette, scale);
     }
 
     private void DrawClock(ImDrawListPtr drawList, Vector2 center, in SkyPalette palette, float alpha, float scale)
@@ -137,12 +190,11 @@ internal sealed partial class SkywatcherApp
         var suffixSize = Typography.Measure(suffix, suffixStyle);
         var gap = 4f * scale;
         var left = center.X - (clockSize.X + gap + suffixSize.X) * 0.5f;
-        ShadowCentered(drawList, new Vector2(left + clockSize.X * 0.5f, center.Y), clock,
-            palette.Ink with { W = palette.Ink.W * alpha }, ClockStyle, palette, scale);
+        HeroText(drawList, new Vector2(left + clockSize.X * 0.5f, center.Y), clock, palette.Ink, ClockStyle, alpha,
+            palette, scale);
         var suffixCenter = new Vector2(left + clockSize.X + gap + suffixSize.X * 0.5f,
             center.Y + clockSize.Y * 0.5f - suffixSize.Y * 0.5f - clockSize.Y * 0.16f);
-        ShadowCentered(drawList, suffixCenter, suffix, palette.InkSoft with { W = palette.InkSoft.W * alpha },
-            suffixStyle, palette, scale);
+        HeroText(drawList, suffixCenter, suffix, palette.InkSoft, suffixStyle, alpha, palette, scale);
     }
 
     private string CompactLine()
