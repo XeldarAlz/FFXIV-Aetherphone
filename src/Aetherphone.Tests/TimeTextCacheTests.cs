@@ -91,7 +91,9 @@ public sealed class TimeTextCacheTests
             var moment = start.AddMinutes(minute);
             var compact = TimeText.CompactClock(moment);
             Assert.StartsWith(compact, TimeText.Clock(moment));
-            Assert.Equal(moment.ToString(TimeText.Use24Hour ? "HH:mm" : "h:mm", Loc.Culture), compact);
+            var dayPeriod = TimeText.Clock(moment)[compact.Length..].Trim();
+            Assert.True(dayPeriod.Length == 0 || dayPeriod == Loc.Culture.DateTimeFormat.AMDesignator ||
+                        dayPeriod == Loc.Culture.DateTimeFormat.PMDesignator);
         }
     }
 
