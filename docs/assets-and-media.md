@@ -176,6 +176,10 @@ public static readonly LocString CaseNightBloom = new("catalog.case.nightbloom",
 
 src/Aetherphone/Cases/_template holds the guide SVG and two PowerShell scripts. The guide script keeps its own copies of the case geometry, so a change to the canvas, corners, band, glass or hardware keys means updating it and rerunning it, and forces artists to re-export their cases. Its README lists which source files it copies and has the run lines.
 
+## Baking photos
+
+`ImageProcessor` (src/Aetherphone/Core/Media/ImageProcessor.cs) decodes, crops and resizes with ImageSharp, then encodes every JPEG through `ScalarJpegEncoder`, a baseline encoder written as plain loops. ImageSharp's SIMD encoder produced red, blue and white dashes on machines where an injected overlay drops the upper AVX lanes across a thread suspension, so keep the encoder free of `Vector<T>` and intrinsics. It uses mozjpeg's default luminance table, the Annex K chrominance table, and Huffman tables built per image. Post, story and DM photos bake at `UploadJpegQuality` (95) because the zoom and pop-out viewers show them at full size; avatars, banners, covers, icons and thumbnails are shown small and bake at 90, which on these tables matches the old encoder's 88.
+
 ## Landing delivered art
 
 | Delivered | Lands in | Code change | Reaches players |
