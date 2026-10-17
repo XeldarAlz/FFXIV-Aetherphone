@@ -27,6 +27,10 @@ internal static class PrismArt
     private const float TopShadeUnits = 96f;
     private const float PressedAlpha = 0.82f;
     private const float ArrowNudge = 0.08f;
+    private const double GlowPeriodSeconds = 4.5;
+    private const double GlowSweepSeconds = 1.4;
+    private const float GlowBandUnits = 72f;
+    private const float GlowHaloUnits = 6f;
 
     public static readonly Vector4 Black = new(0f, 0f, 0f, 1f);
     public static readonly Vector4 White = new(1f, 1f, 1f, 1f);
@@ -41,6 +45,9 @@ internal static class PrismArt
     private static readonly Vector4 ShadeDeep = new(0f, 0f, 0f, 0.92f);
     private static readonly Vector4 ShadeTop = new(0f, 0f, 0f, 0.55f);
     private static readonly Vector4 Stitch = new(0.067f, 0.067f, 0.067f, 0.35f);
+    private static readonly Vector4 GlowCore = new(1f, 1f, 1f, 0.9f);
+    private static readonly Vector4 GlowHalo = new(1f, 1f, 1f, 0.16f);
+    private static readonly Vector4 GlowClear = new(1f, 1f, 1f, 0f);
 
     private static readonly Vector4[] Spectrum =
     {
@@ -207,6 +214,37 @@ internal static class PrismArt
             var min = new Vector2(left + segment * index, y);
             drawList.AddRectFilled(min, new Vector2(min.X + segment, y + height), ImGui.GetColorU32(Spectrum[index]));
         }
+    }
+
+    public static void RuleGlow(ImDrawListPtr drawList, float left, float right, float y, float scale)
+    {
+        var phase = ImGui.GetTime() % GlowPeriodSeconds;
+        if (phase >= GlowSweepSeconds)
+        {
+            return;
+        }
+
+        var progress = (float)(phase / GlowSweepSeconds);
+        progress = progress * progress * (3f - 2f * progress);
+        var band = GlowBandUnits * scale;
+        var center = left - band + (right - left + band * 2f) * progress;
+        var height = MathF.Max(1f, 2f * scale);
+        var halo = GlowHaloUnits * scale;
+        drawList.PushClipRect(new Vector2(left, y - halo), new Vector2(right, y + height + halo), true);
+        DrawGlowBand(drawList, center, band, y - halo, y + height + halo, GlowHalo);
+        DrawGlowBand(drawList, center, band * 0.5f, y, y + height, GlowCore);
+        drawList.PopClipRect();
+    }
+
+    private static void DrawGlowBand(ImDrawListPtr drawList, float center, float half, float top, float bottom,
+        Vector4 color)
+    {
+        var clear = ImGui.GetColorU32(GlowClear);
+        var lit = ImGui.GetColorU32(color);
+        drawList.AddRectFilledMultiColor(new Vector2(center - half, top), new Vector2(center, bottom), clear, lit, lit,
+            clear);
+        drawList.AddRectFilledMultiColor(new Vector2(center, top), new Vector2(center + half, bottom), lit, clear,
+            clear, lit);
     }
 
     public static void Refraction(ImDrawListPtr drawList, Rect screen, float progress)

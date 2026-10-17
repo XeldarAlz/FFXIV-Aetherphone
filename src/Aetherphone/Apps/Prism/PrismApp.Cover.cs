@@ -112,6 +112,11 @@ internal sealed partial class PrismApp
         var draw = PrismMotion.At(screenAge, introDelay + RuleDelay, Motion.Sheet);
         var span = content.Width - gutter * 2f;
         PrismArt.SpectrumRule(drawList, content.Min.X + gutter, content.Min.X + gutter + span * draw, rule, scale);
+        if (draw >= PrismMotion.Settled)
+        {
+            PrismArt.RuleGlow(drawList, content.Min.X + gutter, content.Max.X - gutter, rule, scale);
+        }
+
         var ruleBottom = rule + MathF.Max(1f, 2f * scale);
         if (under.Length == 0)
         {
