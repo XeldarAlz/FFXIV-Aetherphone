@@ -12,9 +12,9 @@ namespace Aetherphone.Apps.Prism;
 internal sealed partial class PrismApp
 {
     private const float MastheadUnits = 24f;
-    private const float HeadlineMaxUnits = 50f;
-    private const float HeadlineMinUnits = 30f;
-    private const int HeadlineLines = 3;
+    private const float HeadlineMaxUnits = 48f;
+    private const float HeadlineMinUnits = 26f;
+    private const int HeadlineLines = 1;
     private const float CoverZoom = 0.06f;
     private const float RuleDelay = 0.05f;
     private const float CreditsDelay = 0.12f;
@@ -148,16 +148,17 @@ internal sealed partial class PrismApp
             HeadlineMinUnits * scale, HeadlineLines, out var lines);
         var headline = lines.Length * PrismType.LineHeight(EditorialFace.Headline, pixels);
         var gap = Metrics.Space.Md * scale;
+        var eyebrowGap = Metrics.Space.Xs * scale;
         var bottom = StripRect(content, scale).Min.Y - Metrics.Space.Lg * scale;
         var meta = briefHeight + labelLine * ((count.Length > 0 ? 1 : 0) + (deadline.Length > 0 ? 1 : 0));
-        var top = bottom - meta - gap - headline - gap - labelLine;
+        var top = bottom - meta - gap - headline - eyebrowGap - labelLine;
         var left = content.Min.X + gutter;
         var step = 0;
         var mark = PrismMotion.Mark(drawList);
         PrismType.Draw(drawList, new Vector2(left, top), Loc.T(L.Prism.ThemeLabel), PrismArt.Muted,
             EditorialFace.Label, labelPixels);
         RiseStep(drawList, mark, step++, scale);
-        top += labelLine + gap;
+        top += labelLine + eyebrowGap;
         var headlineLine = PrismType.LineHeight(EditorialFace.Headline, pixels);
         for (var index = 0; index < lines.Length; index++)
         {

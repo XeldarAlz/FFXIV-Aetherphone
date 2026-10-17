@@ -9,7 +9,7 @@ internal static class PrismType
     private const float FallbackDisplayScale = 1.90f;
     private const float FallbackLabelScale = 1.00f;
     private const float LabelLeading = 1.45f;
-    private const float HeadlineLeading = 1.08f;
+    private const float HeadlineLeading = 1.02f;
     private const int CacheLimit = 256;
     private const float FitStep = 0.92f;
 

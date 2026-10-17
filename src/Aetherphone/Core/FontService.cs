@@ -81,7 +81,7 @@ internal sealed class FontService : IDisposable
         "Inter-Bold.ttf", "Inter-Regular.ttf", "Inter-Medium.ttf",
     };
 
-    private static readonly float[] EditorialMultipliers = { 2.60f, 6.40f, 0.80f };
+    private static readonly float[] EditorialMultipliers = { 3.00f, 12.50f, 0.90f };
     private static readonly float[] EditorialTracking = { -0.03f, -0.05f, 0f };
 
     private static readonly ushort[][] EditorialRanges =
@@ -109,6 +109,7 @@ internal sealed class FontService : IDisposable
     private IFontHandle? displayHandle;
     private readonly IFontHandle?[] editorialHandles = new IFontHandle?[EditorialFiles.Length];
     private long editorialUsedAt = -EditorialIdleMs;
+    private float editorialZoom;
     private ushort[] nativeRanges;
     private ushort[] sharedRanges;
     private ushort[] fontAwesomeRanges;
@@ -197,24 +198,11 @@ internal sealed class FontService : IDisposable
 
     public void SyncEditorial()
     {
-        var idle = Environment.TickCount64 - editorialUsedAt >= EditorialIdleMs;
+        var wanted = Environment.TickCount64 - editorialUsedAt < EditorialIdleMs;
         var built = editorialHandles[0] is not null;
-        if (built == !idle)
+        var outgrown = built && phoneZoom > editorialZoom + 0.001f;
+        if (built == wanted && !outgrown)
         {
-            return;
-        }
-
-        if (!built)
-        {
-            using (atlas.SuppressAutoRebuild())
-            {
-                for (var index = 0; index < editorialHandles.Length; index++)
-                {
-                    editorialHandles[index] = BuildFaceHandle(EditorialFiles[index], EditorialMultipliers[index],
-                        EditorialRanges[index], EditorialTracking[index]);
-                }
-            }
-
             return;
         }
 
@@ -222,6 +210,21 @@ internal sealed class FontService : IDisposable
         {
             editorialHandles[index]?.Dispose();
             editorialHandles[index] = null;
+        }
+
+        if (!wanted)
+        {
+            return;
+        }
+
+        editorialZoom = phoneZoom;
+        using (atlas.SuppressAutoRebuild())
+        {
+            for (var index = 0; index < editorialHandles.Length; index++)
+            {
+                editorialHandles[index] = BuildFaceHandle(EditorialFiles[index], EditorialMultipliers[index],
+                    EditorialRanges[index], EditorialTracking[index], editorialZoom);
+            }
         }
     }
 
@@ -582,11 +585,12 @@ internal sealed class FontService : IDisposable
         displayHandle = null;
     }
 
-    private IFontHandle BuildDisplayHandle() => BuildFaceHandle(DisplayFontFile, DisplayMultiplier, DisplayRanges, 0f);
+    private IFontHandle BuildDisplayHandle() =>
+        BuildFaceHandle(DisplayFontFile, DisplayMultiplier, DisplayRanges, 0f, MaxZoom);
 
-    private IFontHandle BuildFaceHandle(string file, float multiplier, ushort[] ranges, float tracking)
+    private IFontHandle BuildFaceHandle(string file, float multiplier, ushort[] ranges, float tracking, float scale)
     {
-        var pixels = baseSize * multiplier * MaxZoom;
+        var pixels = baseSize * multiplier * scale;
         var path = Path.Combine(fontDirectory, file);
         return atlas.NewDelegateFontHandle(e => e.OnPreBuild(tk =>
         {
