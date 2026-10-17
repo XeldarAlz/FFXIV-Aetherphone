@@ -1,6 +1,6 @@
 # AI Usage
 
-**Last updated:** 6 October 2026
+**Last updated:** 16 October 2026
 
 This document explains how AI tools are used to build Aetherphone, the level of involvement that amounts to, where the content inside the phone comes from, and how AI relates to your content on Aethernet.
 
@@ -49,7 +49,7 @@ Nobody is judged for the level they declare. An undeclared one is the problem.
 
 | Content | Source |
 | --- | --- |
-| App icons | Painted from [Phosphor Icons](https://phosphoricons.com) fill glyphs, recolored, by the generator in tools/icon-generator |
+| App icons | Painted from [Phosphor Icons](https://phosphoricons.com) fill glyphs, recolored, by the generator in tools/icon-generator. The one exception is the Rolladeck partner logo, shown with Rolladeck's live DJ listings in the Music app |
 | Emoji | [Twemoji](https://github.com/jdecked/twemoji) 15.1.0, unmodified |
 | Fonts | Inter in four weights, [Pirata One](https://github.com/google/fonts/tree/main/ofl/pirataone) for the seasonal Chirper, Aethergram and Velvet wordmarks and display names, and a subset of [Tabler Icons](https://tabler.io/icons) for the glyphs inside apps |
 | Phone cases | Drawn by human artists, each credited by name in the app's Settings |
@@ -69,7 +69,7 @@ English text is written by hand. The eight other interface languages are transla
 
 The **Translate** feature uses AI to translate the text you choose, in the plugin and the companion app. Only that text is sent, never your account details, and translations of private messages are not stored.
 
-No AI moderates content on Aethernet. Moderation is done by people, who act on reports and may also review content directly. We do not use your posts or messages to train AI models and do not provide them to anyone for that purpose.
+No AI moderates content on Aethernet. Moderation is done by people, who act on reports and may also review public content. We do not use your posts or messages to train AI models and do not provide them to anyone for that purpose. The [privacy policy](../PRIVACY.md) explains what Aethernet stores and for how long.
 
 ## Questions
 

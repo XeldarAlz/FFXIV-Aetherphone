@@ -35,4 +35,21 @@ public sealed class PhoneNotificationTests
         var notification = Build("\nbody text\n");
         Assert.Equal("body text", notification.SingleLineBody);
     }
+
+    [Fact]
+    public void TheStackKeyIsTheAppWhenThereIsNoGroup()
+    {
+        var notification = Build("body");
+        Assert.Equal("settings", notification.StackKey);
+    }
+
+    [Fact]
+    public void TheStackKeyScopesTheGroupToItsApp()
+    {
+        var velvet = new PhoneNotification("velvet", "Alice", "hi", DateTime.Now, default, "user-1");
+        var aethergram = new PhoneNotification("aethergram", "Alice", "hi", DateTime.Now, default, "user-1");
+        Assert.Equal("velvet:user-1", velvet.StackKey);
+        Assert.Equal(PhoneNotification.StackKeyOf("aethergram", "user-1"), aethergram.StackKey);
+        Assert.NotEqual(velvet.StackKey, aethergram.StackKey);
+    }
 }

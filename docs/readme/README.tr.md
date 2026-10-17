@@ -61,6 +61,7 @@ Aethernet 2 Temmuz 2026'da açıldı. Sezon sonuna kadar 113 dünyadaki oyuncula
         <li>Senin İçin ve En Yeni akışları, Takip ediliyor filtresiyle</li>
         <li>Yeniden chirp'ler, alıntılar, yanıtlar ve hashtag'ler</li>
         <li>Fotoğraflar, GIF'ler ve on üç tepki</li>
+        <li>Ctrl+V ile görsel yapıştır ya da Dosya Gezgini'nden sürükleyip bırak</li>
         <li>Başka dillerdeki chirp'ler tek dokunuşla çevrilir</li>
       </ul>
     </td>
@@ -69,7 +70,7 @@ Aethernet 2 Temmuz 2026'da açıldı. Sezon sonuna kadar 113 dünyadaki oyuncula
       <h3><img src="../media/readme/icons/aethergram.png" width="28" align="top" alt="" /> Aethergram</h3>
       <em>Oyunda çekildi. Aethergram'da paylaşıldı.</em>
       <ul>
-        <li>Doğrudan galerinden sekiz fotoğrafa kadar</li>
+        <li>Doğrudan galerinden ya da yapıştırıp sürükleyerek sekiz fotoğrafa kadar</li>
         <li>Bir gün süren hikayeler</li>
         <li>Karedeki kişileri etiketle</li>
         <li>Paylaşmadan önce yerleşik fotoğraf düzenleyici</li>
@@ -87,6 +88,7 @@ Aethernet 2 Temmuz 2026'da açıldı. Sezon sonuna kadar 113 dünyadaki oyuncula
       <ul>
         <li>Her dünyadaki ve veri merkezindeki oyunculara yaz</li>
         <li>Sesli notlar, fotoğraflar ve grup sohbetleri</li>
+        <li>Bir fotoğrafı yapıştır ya da sürükle, göndermeden önce açıklama ekle</li>
         <li>Birebir ya da grup halinde sesli aramalar</li>
         <li>Uçtan uca şifreli</li>
       </ul>
@@ -104,8 +106,6 @@ Aethernet 2 Temmuz 2026'da açıldı. Sezon sonuna kadar 113 dünyadaki oyuncula
     </td>
   </tr>
 </table>
-
-Tek bir Aethernet hesabı seni tüm sosyal uygulamalara sokar ve her uygulama kendi görünen adını ve kullanıcı adını tutabilir.
 
 ## Birlikte izle, dinle ve oyna
 
@@ -168,11 +168,13 @@ Tek bir Aethernet hesabı seni tüm sosyal uygulamalara sokar ve her uygulama ke
 
 **Mola zamanı**<br>
 <img src="../media/readme/icons/games.png" width="36" alt="Oyunlar" title="Oyunlar" /> <img src="../media/readme/icons/doom.png" width="36" alt="Doom" title="Doom" /> <img src="../media/readme/icons/chess.png" width="36" alt="Satranç" title="Satranç" /> <img src="../media/readme/icons/tetris.png" width="36" alt="Tetris" title="Tetris" /> <img src="../media/readme/icons/wordrun.png" width="36" alt="Word Run" title="Word Run" /> <img src="../media/readme/icons/solitaire.png" width="36" alt="Solitaire" title="Solitaire" /> <img src="../media/readme/icons/2048.png" width="36" alt="2048" title="2048" /><br>
-<sub>Doom'un da aralarında olduğu elli dokuz oyunluk bir atari salonu · Ana Sayfa, Birlikte, Kitaplık ve Profil sekmeleri; en üstte canlı oynayan günün oyunu, günlük seri takvimi ve her oyun için boyanmış bir simge · yalnızca istersen katıldığın küresel ve arkadaş liderlik tabloları · üstüne arkadaşlarınla çevrimiçi Uno, Satranç, 8 Top Bilardo, Dört Kazan, Borda Ateşi, Şans Kartı, Krater ve Mini Golf · Doom ve Krater ile 8 Top Bilardo ve Krater odaları yatay oynanır</sub>
+<sub>Doom'un da aralarında olduğu elli dokuz oyunluk bir atari salonu; her biri tam ekran, giriş ekranı, duraklatma menüsü ve sonuç kartıyla · Doom, Moogle Savaşı ve Dilim yatay oynanır · herkes için aynı olan günlük bir tahta, seri takvimiyle · yalnızca istersen katıldığın küresel ve arkadaş liderlik tabloları · arkadaşlarınla çevrimiçi Uno, Satranç, 8 Top Bilardo, Dört Kazan, Borda Ateşi, Şans Kartı, Moogle Savaşı ve Mini Golf</sub>
 
 ## Cebindeki telefon gibi tasarlandı
 
-**Arayüzünün içinde yaşar.** İstediğin yere sürükle, boyutunu değiştir ya da saat, widget'lar, müzik ve aramalarla bir mini telefona küçült.
+**Arayüzünün içinde yaşar.** İstediğin yere sürükle, boyutunu değiştir ya da saat, widget'lar, müzik, aramalar ve isteğe bağlı bir FPS sayacıyla bir mini telefona küçült. İkinci bir monitörde duruyorsa Grup pozunda ve ara sahnelerde de ekranda kalmasını sağla.
+
+**Sunucu bilgi çubuğunda.** Telefon, oyunun sunucu bilgi çubuğunda okunmamış sayınla birlikte durur ve bir tıklamayla açılır. Ayarlar → Genel → Sunucu bilgi çubuğu bölümünden stilini seç ve etiketin adını değiştir.
 
 **Widget'lar ve Akıllı Yığınlar.** Çoğu uygulama için widget'lar; köşesinden boyutlandır, birini diğerinin üstüne bırakarak yığ.
 
@@ -184,7 +186,7 @@ Tek bir Aethernet hesabı seni tüm sosyal uygulamalara sokar ve her uygulama ke
 
 **Senin dilini konuşur.** Dokuz arayüz dili ve gönderilerde, profillerde ve mesajlarda tek dokunuşla çeviri.
 
-**Gizlilik temelden.** Mesajlar, fotoğraflar ve sesli notlar uçtan uca şifrelenir. Velvet tanışma mesajı düz metin olarak gönderilir. Şikayet edilen içerikleri insanlardan oluşan bir moderasyon ekibi inceler.
+**Gizlilik temelden.** Mesajlar, fotoğraflar ve sesli notlar uçtan uca şifrelenir. Velvet tanışma mesajı düz metin olarak gönderilir; bir mesajı çevirdiğinde de metni çevrilmek üzere Aethernet'e gönderilir. Şikayet edilen içerikleri insanlardan oluşan bir moderasyon ekibi inceler.
 
 <a id="install"></a>
 
@@ -198,25 +200,36 @@ https://aetherphone.net/repo.json
 
 **Enabled** kutusunu işaretle, **+** düğmesine tıkla, ardından **Save and Close** de. `/xlplugins` → **All Plugins** aç, **Aetherphone** diye arat ve kur. Telefonu eline almak için `/phone` yaz.
 
-Oyunun Çin sürümünde mi oynuyorsun? Telefon bunu algılar ve seni Rising Stones (石之家) profilinle giriş yaptırır.
+Sosyal uygulamalar ve diğer çevrimiçi özellikler ücretsiz bir Aethernet hesabı gerektirir; bu hesabı karakterin sahibi olduğunu kanıtlayarak oluşturursun. Çevrimdışı uygulamalar hesap olmadan da çalışır. Oyunun Çin sürümünde mi oynuyorsun? Telefon bunu algılar ve seni Rising Stones (石之家) profilinle giriş yaptırır.
 
 <details>
 <summary><strong>Komutlar</strong></summary>
 
 | Komut | Eylem |
 |---|---|
-| `/phone` | Telefonu aç/kapat |
-| `/aetherphone` | `/phone` için takma ad |
+| `/phone` | Telefonu aç/kapat (`/aetherphone` da çalışır) |
+| `/phone mini` | Tam telefon ile mini telefon arasında geçiş yap |
+| `/phone full` | Tam telefonu aç |
+| `/phone hide` | Telefonu kaldır |
+| `/phone open <app>` | Bir uygulamayı adıyla aç |
+| `/phone settings` | Ayarlar'ı aç |
+| `/phone photo` | Kamera'yı aç ve fotoğraf çek |
+| `/phone dnd` | Rahatsız etme modunu aç veya kapat |
+| `/phone mute` | Sessiz modu aç veya kapat |
+| `/phone music [play, pause, next, prev]` | Müzik çaları kontrol et; tek başına çalar ya da duraklatır |
+| `/phone tell [name]` | Hedefinle ya da `First Last World` ile bir Linkpearl özel mesajı aç |
+| `/phone call <contact>` | Bir kişiyi ara |
 | `/phone run <name>` | Bir kısayolu adıyla çalıştır, böylece bir hotbar makrosuna yerleştirilebilir |
 | `/phone market [item]` | Pazarı aç, bir eşya adı verirsen onu arar |
 | `/phone reset` | Telefonu ekranda yeniden ortala |
 | `/phone test` | Örnek bir bildirim gönder |
+| `/phone help` | Tüm komutları sohbette listele |
 
 </details>
 
 ## Topluluk ve katkıda bulunma
 
-Destek, hata bildirimleri ve öneriler **[Aetherphone Discord](https://discord.gg/3HbJCscMyS)** sunucusunda.
+Destek, hata bildirimleri ve öneriler **[Aetherphone Discord](https://discord.gg/3HbJCscMyS)** sunucusunda; telefonun Geri Bildirim uygulaması da oyunun içinden rapor gönderir.
 
 Aetherphone açık kaynaklıdır ve katkılara açıktır. Çevirmenlerin ne koda ne de derlemeye ihtiyacı var: çevirmen rehberi tarayıcıda işler.
 
@@ -228,7 +241,7 @@ Aetherphone yapay zeka kodlama araçlarıyla geliştirilir ve [Dalamud yapay zek
 
 **Gördüğün ya da duyduğun hiçbir şey yapay zeka ürünü değil.** Her simge, duvar kâğıdı, telefon kılıfı, ses, zil sesi ve yazı tipi ya özgündür, ya adı anılan sanatçılar tarafından çizilmiştir ya da lisanslı bir kaynaktan alınmıştır. İngilizce metinler elle yazılır; diğer sekiz dil, insanların gözden geçirdiği yapay zeka destekli çevirilerdir.
 
-**İçeriğin sana ait kalır.** Çeviri yalnızca çevirmesini istediğin metni ya da otomatik çeviriyi açtığın akışları ve sohbetleri gönderir. Aethernet'i hiçbir yapay zeka denetlemez ve gönderilerin ile mesajların asla yapay zeka modellerini eğitmek için kullanılmaz.
+**İçeriğin sana ait kalır.** Aethernet'i hiçbir yapay zeka denetlemez ve gönderilerini ya da mesajlarını asla yapay zeka modellerini eğitmek için kullanmayız.
 
 → [Yapay zeka kullanımı](../ai-usage.md) · [Üçüncü taraf bildirimleri](../../THIRD-PARTY-NOTICES.md)
 

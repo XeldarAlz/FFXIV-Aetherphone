@@ -1,50 +1,30 @@
 # Getting started
 
-This page takes you from `git clone` to a running development build of Aetherphone inside Final Fantasy XIV. Read it first, before any other doc: it covers prerequisites, what Dalamud and Dear ImGui are, building the solution, loading the result as a dev plugin, the chat commands, the edit-build-reload loop, where logs go, and how the repo is laid out. Everything here describes the client plugin only; the Aethernet backend is a separate ASP.NET service that lives in its own repository and is not covered by these docs.
+This page takes you from `git clone` to a development build of Aetherphone running inside Final Fantasy XIV. Read it first. It covers what to install, the three build flavors, loading a build in the game, the chat commands, the edit and reload loop, logs, and what to do when a step fails. It describes the client plugin only; the Aethernet online service lives in its own repository.
 
 ## Key files
 
 | Path | Role |
 |---|---|
-| `Aetherphone.sln` | Solution: the plugin project, the test project, and the vendored ManagedDoom engine the plugin references |
-| `Directory.Build.props` | Shared MSBuild settings, including the single `<Version>` that drives releases |
-| `src/Aetherphone/Aetherphone.csproj` | The plugin project, built on `Dalamud.NET.Sdk/15.0.0` |
-| `src/Aetherphone/Plugin.cs` | Plugin entry point: service wiring, window setup, command registration |
-| `src/Aetherphone/Core/AepConstants.cs` | Plugin name and the command strings (`/phone`, `/aetherphone`) |
-| `src/Aetherphone/Core/AepLog.cs` | Thin logging wrapper over Dalamud's `IPluginLog` |
-| `src/Aetherphone/Windows/PhoneWindow.cs` | The ImGui window that renders the whole phone |
-| `.github/workflows/ci.yml` | CI: guard checks (version sync plus style and structure seams), Release build, tests, plugin zip artifact |
-| `CONTRIBUTING.md` | PR expectations and the short version of this page |
+| Aetherphone.sln | The plugin, the tests, and the vendored ManagedDoom engine |
+| src/Aetherphone/Aetherphone.csproj | The plugin project: flavor names and the asset folders copied next to the dll |
+| Directory.Build.props | Settings every project shares: version, code style in the build, CI warnings as errors |
+| src/Aetherphone/Plugin.cs | The entry point Dalamud constructs |
+| src/Aetherphone/PhoneCommands.cs | What each chat command does |
+| src/Aetherphone/Core/Commands/PhoneCommandCatalog.cs | The player-facing command list behind help and the Commands page |
+| src/Aetherphone/Core/AepConstants.cs | The plugin name and command strings of each flavor |
 
 ## Prerequisites
 
-- **Windows** with **Final Fantasy XIV** installed. The plugin project targets Windows; the game is where you test.
-- **[XIVLauncher](https://goatcorp.github.io/)** with **Dalamud** enabled. XIVLauncher is the community launcher for FFXIV, and it injects Dalamud into the game at startup.
-- **.NET 10 SDK**. CI pins `dotnet-version: '10.0.x'` in `.github/workflows/ci.yml`, and the plugin and test projects set `<LangVersion>preview</LangVersion>`, so use a current SDK release.
+- **Final Fantasy XIV** and **[XIVLauncher](https://goatcorp.github.io/)** with Dalamud enabled. XIVLauncher is the community launcher that loads Dalamud into the game.
+- **The .NET 10 SDK.** The projects use the preview C# language version, so keep the SDK current.
+- **Windows** is the main platform. On macOS the build finds Dalamud where XIV on Mac keeps it. On Linux you set `DALAMUD_HOME` (see [Troubleshooting](#troubleshooting)).
 
-You do not need the backend to build or run the plugin. Apps that talk to Aethernet degrade to offline behavior when the service is unreachable.
+You do not need to run the backend. The build talks to an existing server, and the offline apps work without signing in.
 
-### What is Dalamud?
+**Dalamud** is the plugin framework XIVLauncher loads into the game. It gives plugins a C# API over chat, game data, the object table, textures, and rendering. Aetherphone's `Plugin` class implements `IDalamudPlugin`, and Dalamud fills its `[PluginService]` properties with game services. The project builds on the `Dalamud.NET.Sdk`, which references the Dalamud assemblies from your local install and packages the output.
 
-Dalamud is a community plugin framework that XIVLauncher injects into the running game process. It gives plugins a C# API over the game: chat, game data, the object table, and a rendering hook. A plugin is a class implementing `IDalamudPlugin` (here, `Plugin` in `src/Aetherphone/Plugin.cs`), and Dalamud fills in game services through `[PluginService]` properties:
-
-```csharp
-[PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
-[PluginService] internal static IPluginLog Log { get; private set; } = null!;
-```
-
-The project uses the `Dalamud.NET.Sdk` MSBuild SDK (see `src/Aetherphone/Aetherphone.csproj`), which supplies the Dalamud and ImGui assembly references and packages the build output into a plugin zip. On Windows it finds those assemblies where XIVLauncher keeps its current Dalamud build (`%AppData%\XIVLauncher\addon\Hooks\dev`), and on macOS where XIV on Mac keeps it (`~/Library/Application Support/XIV on Mac/dalamud/Hooks/dev`). A `DALAMUD_HOME` environment variable overrides that path on any OS, and on Linux the plugin csproj requires it.
-
-### What is Dear ImGui?
-
-Dear ImGui is an immediate mode GUI library. There is no retained widget tree and no event system to subscribe to: every frame, the game calls back into the plugin, and the plugin re-declares the entire UI from scratch as a sequence of draw calls. `PhoneWindow` (in `src/Aetherphone/Windows/PhoneWindow.cs`) extends Dalamud's `Window` class, and its `Draw()` override runs once per rendered frame.
-
-Practical consequences you will see everywhere in this codebase:
-
-- UI "widgets" are methods you call each frame, not objects you construct once. The reusable ones live in `src/Aetherphone/Windows/Components/`.
-- All state (which app is open, scroll positions, text being typed) lives in plain fields on services and views, because the UI itself remembers nothing between frames.
-- Draw code runs 60+ times per second, so it must avoid per-frame allocations. See [Conventions](conventions.md) before writing any.
-- The bindings come from the `Dalamud.Bindings.ImGui` namespace, shipped with Dalamud.
+**Dear ImGui** is an immediate mode UI library: nothing is kept between frames, and the plugin declares the whole phone again every frame. Widgets are methods you call each frame, not objects you keep, and draw code must not allocate per frame (see [Conventions](conventions.md)).
 
 ## Clone and build
 
@@ -54,128 +34,124 @@ cd FFXIV-Aetherphone
 dotnet build Aetherphone.sln -c Release
 ```
 
-The build needs the Dalamud assemblies described above. If XIVLauncher has run on your machine with Dalamud enabled, they are already in place and the build works out of the box.
+If XIVLauncher has started the game on this machine with Dalamud enabled, the Dalamud assemblies are in place and the build works as is. The build copies the asset folders (fonts, icons, sounds, wallpapers, translations, data files) next to the dll, so a changed asset reaches the game only after a rebuild.
 
-The output lands in `src/Aetherphone/bin/Release/`: the loadable `Aetherphone.dll` plus a packaged `Aetherphone/latest.zip` that the release pipeline ships. Asset and data folders (`Fonts`, `Icons`, `Emoji`, `Cases`, `Localization`, `Wallpapers`, `Sounds`, `Words`, `Hunts`, `Fishing`, plus the icon and emblem from `Images`) are copied next to the dll by the `<Content>` items in `src/Aetherphone/Aetherphone.csproj`, together with `THIRD-PARTY-NOTICES.md` and the license files it points to.
+## Release, Debug, and Beta
 
-### Release or Debug?
+The project builds three flavors. Each has its own internal name, so Dalamud treats them as three plugins with separate settings, and all three can be loaded at once.
 
-Build `Release` for the plugin end users get. It is the configuration that CONTRIBUTING.md, CI, and the release workflow all use, and (next section) it is the path you register with Dalamud.
+| Flavor | Build with | Dll to register | Command | Server |
+|---|---|---|---|---|
+| Release | `-c Release` | src/Aetherphone/bin/Release/Aetherphone.dll | `/phone` | Live |
+| Debug | `-c Debug` | src/Aetherphone/bin/Debug/AetherphoneDev.dll | `/phonedev` | Development |
+| Beta | `-c Release -p:AetherphoneBeta=true` | src/Aetherphone/bin/Release/AetherphoneBeta.dll | `/phonebeta` | Development |
 
-`Debug` builds a second plugin that installs alongside it. The output is `src/Aetherphone/bin/Debug/AetherphoneDev.dll`, Dalamud sees it as the separate plugin `AetherphoneDev`, it answers `/phonedev` and `/aetherphonedev`, and it keeps its own Dalamud config, so it never touches the settings of your normal install. It also talks to the development Aethernet instance instead of production.
+Each command also has a long alias: `/aetherphone`, `/aetherphonedev`, `/aetherphonebeta`.
 
-A third flavor, Beta, is a Release build with one extra property: `dotnet build Aetherphone.sln -c Release -p:AetherphoneBeta=true`. It defines `BETA`, names the output `AetherphoneBeta.dll` (next to the Release output), ships its own manifest (`src/Aetherphone/AetherphoneBeta.json`), and answers `/phonebeta` and `/aetherphonebeta`, so it installs beside the stable plugin the same way Debug does. Like Debug it defaults to the Aethernet test server; on both prerelease flavors, Settings > About has a Test server toggle to switch servers without a rebuild.
+**Release** is the plugin players get. It has the same internal name as the copy from the custom repository, so it shares that copy's settings and cannot load beside it. CI builds Release, so build it once before you open a pull request.
 
-Each flavor's dev plugin location is a fixed file path, so register the one you actually build. Build another one and the game silently keeps loading your previous plugin.
+**Debug** is the flavor for daily work. It loads beside your normal copy, keeps its own settings, and talks to the development server, so test accounts and posts never reach live players. `dotnet build` without `-c` builds Debug.
+
+**Beta** is what beta testers run: a Release build with the `BETA` symbol and its own manifest. Debug and Beta both show a Test server row in Settings, About, which switches between the live and development servers without a rebuild and signs you out. [Networking](networking.md) explains how a build picks its server.
 
 ## Load it in the game
 
-1. Launch the game through XIVLauncher.
-2. Type `/xlsettings` in chat to open Dalamud's settings.
-3. Open the **Experimental** tab and find **Dev Plugin Locations**.
-4. Add the full path to your built dll, ending in `src/Aetherphone/bin/Release/Aetherphone.dll`, and save. For a Debug build, use `src/Aetherphone/bin/Debug/AetherphoneDev.dll` instead, and for a Beta build `src/Aetherphone/bin/Release/AetherphoneBeta.dll`; the paths can be registered at once.
-5. Open the plugin installer with `/xlplugins`. Aetherphone now appears as a dev plugin; enable it.
-6. Type `/phone`. The phone opens. A Debug build answers `/phonedev` instead, and a Beta build `/phonebeta`.
+1. Start the game through XIVLauncher.
+2. Type `/xlsettings` and open the **Experimental** tab.
+3. Under **Dev Plugin Locations**, add the full path of the dll from the table above and save. You can register all three.
+4. Type `/xlplugins`, find the plugin among your installed plugins (marked as a dev plugin), and enable it. Debug is listed as Aetherphone Development and Beta as Aetherphone Beta.
+5. Type the flavor's command, for example `/phonedev`.
+
+The first open plays a boot animation while the fonts finish building, then a setup flow. Signing in is optional: choose **Set Up Later** on the Aethernet Account page and finish the remaining pages. The offline apps work without an account.
 
 ## Chat commands
 
-`Plugin.cs` registers two handlers in the constructor, using the strings from `src/Aetherphone/Core/AepConstants.cs`:
-
-```csharp
-CommandManager.AddHandler(AepConstants.PrimaryCommand, primaryCommand);
-CommandManager.AddHandler(AepConstants.AliasCommand, aliasCommand);
-```
-
-Both run the same `OnCommand` method, which dispatches on the argument:
+`/phone` alone opens or closes the phone. Everyday forms:
 
 | Command | Effect |
 |---|---|
-| `/phone` | Toggle the phone open or closed |
-| `/aetherphone` | Alias for `/phone`, same handler |
-| `/phone reset` | Recenter the phone window on screen |
-| `/phone market [item]` | Open the Market app, optionally searching for the item |
-| `/phone test` | Fire a sample notification (useful when testing notification UI) |
-| `/phone run <name>` | Run the named shortcut from the Shortcuts app; without a name it prints usage in chat |
-| `/phone videodebug` | Open the video debug window, a developer tool |
-| `/phone perfhud` | Toggle the frame-time HUD above the phone (average and worst frame, shell draw time), a developer tool; the setting is saved |
-| `/phone help` | List every player-facing command in chat (mini, full, hide, open, photo, dnd, mute, music, tell, call, and the ones above) |
+| `/phone mini` | Switch between the full and the mini phone |
+| `/phone open <app>` | Open an app by name |
+| `/phone settings` | Open Settings |
+| `/phone reset` | Move the phone back to the center of the screen |
+| `/phone test` | Send a sample notification |
+| `/phone help` | Print every player-facing command in chat |
 
-Any argument `OnCommand` does not recognize falls through to the plain toggle. `market` matches as a prefix, so `/phone marketboard` opens Market and searches for "board". The Settings app shows the everyday commands in-game (`src/Aetherphone/Apps/Settings/Pages/CommandsPage.cs`); today its list covers the toggle, alias, market, reset, and test entries. If you add a command, update that page too.
+On Debug and Beta builds, use `/phonedev` or `/phonebeta` instead of `/phone`.
+
+`/phone help` and the Settings, Commands page both read PhoneCommandCatalog, so they always list the same commands. In PhoneCommands.cs, the first word after the command is the verb, and it must match a known verb exactly (case does not matter). Anything else prints "Unknown command" and points to `/phone help`. So `/phone marketboard` is unknown, while `/phone market board` opens Market and searches for "board".
+
+Two developer tools stay out of the catalog: `/phone videodebug` opens the video decode panel, and `/phone perfhud` toggles a frame-time readout above the phone.
+
+To add a command, add a `case` to `PhoneCommands.Run`, add an entry with a localized description to PhoneCommandCatalog (see [Localization](localization.md)), and update the command list in README.md.
 
 ## The dev loop
 
 1. Edit code.
-2. `dotnet build Aetherphone.sln -c Release`. The game can stay running; the dll on disk is not locked.
-3. In game, open `/xlplugins`, find Aetherphone in the dev plugins list, and reload it (or disable and re-enable it).
-4. `/phone`, exercise your change, watch the log for errors.
+2. Build the flavor you registered. The game can keep running.
+3. Reload the plugin in `/xlplugins`, or turn on the dev plugin's automatic reloading toggle there so Dalamud reloads it whenever the dll changes.
+4. Open the phone and try your change.
 
-Reloading calls `Plugin.Dispose()`, which unhooks every event handler and command before the new build constructs a fresh `Plugin`. If your change adds a hook or a window, mirror it in `Dispose` (and in `TearDownPartialConstruction`, which runs when the constructor throws) or reloads will leak the old registration.
+A reload calls `Plugin.Dispose()`, then constructs a fresh `Plugin`. Anything the constructor registers (an event handler, a command, a window) must be released in `Dispose` and in `TearDownPartialConstruction`, which runs when the constructor throws. A missed release doubles up on the next reload.
 
 ## Logs
 
-- `/xllog` in game opens Dalamud's log console. Filter it to Aetherphone to see only this plugin.
-- Dalamud also writes the same stream to `dalamud.log` inside the `XIVLauncher` folder under `%AppData%`.
-- In code, log through `Plugin.Log` (Dalamud's `IPluginLog`) or the shorthand wrapper `AepLog` in `src/Aetherphone/Core/AepLog.cs`:
-
-```csharp
-internal static class AepLog
-{
-    public static void Verbose(string message) => Plugin.Log?.Verbose(message);
-
-    public static void Debug(string message) => Plugin.Log?.Debug(message);
-
-    public static void Info(string message) => Plugin.Log?.Information(message);
-
-    public static void Warning(string message) => Plugin.Log?.Warning(message);
-
-    public static void Error(string message) => Plugin.Log?.Error(message);
-}
-```
-
-Abridged: every level except `Verbose` also has an `(Exception, string)` overload in the real file. Every method forwards through `Plugin.Log?.`, so a call made before Dalamud has filled `Plugin.Log` is a no-op instead of a crash.
-
-If the plugin fails to load at all, the cause is in `/xllog`: the `Plugin` constructor wraps its setup in a try/catch that tears down partial construction and rethrows, so Dalamud reports the original exception.
+- `/xllog` opens Dalamud's log window; filter it to Aetherphone.
+- The same log goes to dalamud.log in %AppData%\XIVLauncher.
+- In code, use `AepLog`: `AepLog.Warning("[market] price fetch failed")`, or `AepLog.Error(exception, "...")` to include the exception. A bracketed tag at the start makes lines easy to filter.
 
 ## Repo tour
 
 | Path | Contents |
 |---|---|
-| `src/Aetherphone/Core/` | The device platform: app framework and navigation (`Core/Apps/`), shell and home screen (`Core/Shell/`, `Core/Home/`), notifications, theming, localization, networking (`Core/Aethernet/`, `Core/Net/`), crypto, media, game-data readers |
-| `src/Aetherphone/Apps/` | The phone apps, one folder each (Message, Chirper, Settings, Market, Games, ...) |
-| `src/Aetherphone/Windows/` | `PhoneWindow.cs`, the auxiliary and pop-out windows (update chip, photo, Linkpearl pop-outs, hunt map chip, video windows), plus the reusable widget library in `Components/` and `Widgets/` |
-| `src/Aetherphone/Fonts/`, `Emoji/`, `Icons/`, `Images/`, `Sounds/`, `Wallpapers/`, `Cases/`, `Localization/`, `Words/`, `Hunts/`, `Fishing/` | Bundled assets and data files, copied to the output folder at build time (from `Images/`, only the icon and emblem) |
-| `src/Aetherphone.Tests/` | xUnit tests, run with `dotnet test` and in CI |
-| `src/ManagedDoom/` | Vendored ManagedDoom engine behind the Doom game: its own project in the solution that keeps its own layout and style (it opts out of the build-time code style, analyzers and warnings-as-errors, and the CI namespace guard skips it) |
-| `tools/` | Asset generators: `emoji-generator`, `icon-font`, `icon-generator`, `sound-generator`, `wallpaper-generator`, `readme-media` (README images and clips), and `build-word-banks.ps1` (the word lists in `Words/`) |
-| `docs/` | These docs |
+| src/Aetherphone/Core/ | The device platform: app framework, shell, services, networking, game data |
+| src/Aetherphone/Apps/ | The phone's apps, one folder each |
+| src/Aetherphone/Windows/ | The phone window, pop-out windows, the UI component library in Components/, and the home screen widget plumbing in Widgets/ |
+| src/Aetherphone.Tests/ | The xUnit tests, run with `dotnet test` |
+| src/ManagedDoom/ | The vendored engine behind the Doom game, kept in its own style |
+| tools/ | Generators for icons, emoji, sounds, wallpapers, word lists, and README media |
 
-Prefer an existing `Components/` widget over hand-rolling one-off UI; that is the single strongest style expectation in `CONTRIBUTING.md`.
+The asset folders sit beside Core/ in src/Aetherphone/. [Architecture](architecture.md) explains how the pieces fit together.
 
 ## How CI relates to your local build
 
-`.github/workflows/ci.yml` runs on every push and pull request to `master` and `dev`, in two jobs:
+CI builds Release, runs the tests, and first runs fast guard checks over the source. It also treats every warning as an error, while a local build only prints them so work in progress compiles. If your Release build has no warnings and `dotnet test` passes, only the guards and the pull request title check can still fail; [Testing and release](testing-and-release.md) lists them.
 
-1. **Guards**: fast grep checks that need no compiler, one workflow step each (the list in `ci.yml` is the source of truth). Version sync (`<Version>` in `Directory.Build.props` must match `AssemblyVersion` and `TestingAssemblyVersion` in `repo.json`), the UI scale seam (only `UiScale.cs` may read `ImGuiHelpers.GlobalScale`), no em dashes in any tracked file (the Discord announce workflow is exempt because it carries the character to strip it), no `async void`, no LINQ outside the files the step allowlists, the clock format seam (only `TimeText.cs` may hand-format a time pattern), layering (`Core` and `Windows` may not import `Aetherphone.Apps`, except the composition roots `AppRegistry` and `WidgetCatalog`), no underscore-prefixed fields, no byte order marks, and namespace matches folder (everything under `Windows/Components` declares the one flat `Aetherphone.Windows.Components` namespace; ManagedDoom is skipped). Any of them fails fast, before any compilation.
-2. **Build (Windows)**: downloads the latest Dalamud dev build from `goatcorp.github.io/dalamud-distrib` into the standard `XIVLauncher\addon\Hooks\dev` path (recreating what XIVLauncher provides on your machine), then runs `dotnet restore Aetherphone.sln --locked-mode`, `dotnet build --configuration Release`, and `dotnet test`. It uploads the test results when the suite fails, and always uploads the plugin zip (`bin/Release/Aetherphone/latest.zip`) so a reviewer can load the build; a missing zip fails the job.
+## Troubleshooting
 
-CI also builds with warnings as errors and your local build does not. `Directory.Build.props` sets `TreatWarningsAsErrors` only when `GITHUB_ACTIONS` is `true`, so any compiler, analyzer, or code style warning that a local build merely prints fails CI (ManagedDoom opts out in its own csproj).
+### "Dalamud installation not found"
 
-So CI is your local build with the Dalamud dependency fetched explicitly, plus the guard checks and warnings as errors. If `dotnet build -c Release` and `dotnet test` pass locally without warnings, the extra ways CI can fail are the guards above and the locked restore (see Gotchas). The release pipeline (`.github/workflows/release.yml`) is separate and covered in [Testing and release](testing-and-release.md).
+The build stops with `Dalamud.NET.Sdk: Dalamud installation not found at <path>` when the expected folder does not exist. The SDK looks in %AppData%\XIVLauncher\addon\Hooks\dev on Windows and in XIV on Mac's dalamud/Hooks/dev folder on macOS. A `DALAMUD_HOME` environment variable overrides both.
+
+To fix it, start the game once through XIVLauncher with Dalamud enabled, which downloads Dalamud there, or set `DALAMUD_HOME` to a folder that contains Dalamud.dll. On Linux, Aetherphone.csproj reads the path only from `DALAMUD_HOME`; if it is unset, you get missing Dalamud types instead of this message.
+
+### Two copies of Aetherphone
+
+If you play with Aetherphone from the custom repository, disable that copy in `/xlplugins` before you enable the Release dev build. Both are named Aetherphone, so Dalamud will not load the second one, and they share one settings file. Enable your normal copy again afterwards. Debug and Beta load beside it without this step.
+
+### My change does not show
+
+- Check that the dll you built is the one you registered. A Debug build does not replace the Release dll, so the game keeps your earlier build without any error.
+- Reload the plugin, or turn on automatic reloading.
+- Rebuild after changing an asset.
+
+### The plugin does not load
+
+Open `/xllog`. The constructor cleans up what it built and rethrows, so the log shows the original exception.
+
+### A SixLabors license error
+
+The image library reads its license from sixlabors.lic at the repo root. Keep that file in place and unchanged.
 
 ## Gotchas
 
-- **Debug and Release are two different plugins.** Release writes `bin/Release/Aetherphone.dll`, Debug writes `bin/Debug/AetherphoneDev.dll` (and a Beta build is a third, `AetherphoneBeta.dll`). Dalamud loads whichever path you registered, so building the other configuration leaves the game on your previous build with no error anywhere.
-- **NuGet restore is locked.** `Directory.Build.props` sets `RestorePackagesWithLockFile`, and CI restores with `--locked-mode`. If you add or bump a `PackageReference`, run `dotnet restore` locally so `packages.lock.json` updates and gets committed, or CI fails at the restore step.
-- **Version lives in three places.** Bumping `<Version>` in `Directory.Build.props` without updating `AssemblyVersion` and `TestingAssemblyVersion` in `repo.json` fails the CI guards job before the build even starts.
-- **Warnings pass locally and fail in CI.** CI sets `TreatWarningsAsErrors` through `Directory.Build.props`; a local build leaves warnings as warnings so work in progress still compiles. Read the warning list before you push.
-- **Unknown command arguments are silent.** `OnCommand` in `Plugin.cs` treats anything that is not `test`, `reset`, `videodebug`, `perfhud`, `market` (matched as a prefix), or `run` as a plain toggle, so a typo like `/phone rset` opens or closes the phone instead of erroring.
-- **Every hook needs a matching unhook.** The dev loop reloads the plugin in-process; anything registered in the `Plugin` constructor (events, commands, windows, the DTR (server info bar) entry) must be released in `Dispose`, or the second load doubles it up.
+- **Restore is locked.** The plugin and ManagedDoom restore from a committed packages.lock.json, and CI restores in locked mode. After you add or bump a package there, run `dotnet restore` and commit the updated lock file.
+- **Leave the version alone.** CI checks the version in Directory.Build.props against repo.json, and only a release bumps it.
 
 ## Related docs
 
-- [Architecture](architecture.md): the next read, covering plugin boot, services, the frame loop, and the shell.
-- [Creating an app](creating-an-app.md): step-by-step tutorial for adding a phone app.
-- [UI toolkit](ui-toolkit.md): the `Windows/Components/` widget library.
-- [Game integration](game-integration.md): Dalamud services and the framework thread in depth.
-- [Testing and release](testing-and-release.md): the test project, CI workflows, and the release pipeline.
-- [Conventions](conventions.md): code style and performance rules to follow before your first PR.
+- [Architecture](architecture.md): the next read, covering boot, threads, the frame loop, and the shell.
+- [Creating an app](creating-an-app.md): build a small phone app end to end.
+- [Conventions](conventions.md): the code style and performance rules a review checks.
+- [Testing and release](testing-and-release.md): tests, CI, and the release pipeline.
+- [State and persistence](state-and-persistence.md): where settings live and how to reset them.

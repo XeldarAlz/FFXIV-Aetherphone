@@ -1,61 +1,61 @@
 # Assets and media
 
-This page maps every media pipeline in the client: fonts and the icon font, emoji, app icons, brand images, sounds, wallpapers, and device cases. For each one it explains where the files live, which code loads them, and what you have to do to add a new asset. Read it before you touch anything under src/Aetherphone/Fonts, Emoji, Icons, Images, Sounds, Wallpapers, or Cases, or before you run the generator tools. Everything on this page ships inside the plugin; the Aethernet backend lives in a separate repository. Avatar frames are the exception: the backend serves them at runtime (see [Art assets](ART-ASSET-SPEC.md#avatar-frames)).
-
-Two terms you will see throughout:
-
-- **Dear ImGui** is the immediate mode UI library Dalamud exposes. Nothing is retained between frames; every texture and every glyph is drawn again each frame, so assets are loaded once into GPU textures and then referenced every frame.
-- **Texture wrap**: a GPU texture handle. Emoji and case skins load through Dalamud's `ITextureProvider.GetFromFile(path)`, which loads an image file and caches it by path. App icons, wallpapers and the brand mark decode off the main thread with ImageSharp and upload their own textures (`CreateFromRawAsync`) so each can be sized to the draw.
-
-All bundled assets ship inside the plugin output folder. `src/Aetherphone/Aetherphone.csproj` copies each asset folder to the build output with `CopyToOutputDirectory`, and loaders find them at runtime via `Plugin.PluginInterface.AssemblyLocation.DirectoryName`. Consequence: after adding or editing a bundled asset you must rebuild before the running plugin can see it.
-
-The csproj ships a few data folders the same way: `Words/` (word game dictionaries, see [Games framework](games-framework.md)), `Localization/` (the language catalogs, see [Localization](localization.md)), `Hunts/` (hunt mob, zone, lore and reward tables loaded in `PhoneServices`) and `Fishing/` (`TimedFish.txt`, read by `FishingCatalog`). License texts ship too: `THIRD-PARTY-NOTICES.md`, `LICENSE_ManagedDoom.txt` and `AlphaChannel-LICENSE` are linked into the output root, and `Fonts/Inter-OFL.txt` sits next to the fonts, so all of them land in the release zip.
+This page maps every bundled asset pipeline for engineers: fonts and the font atlas, emoji, app icons, brand images, sounds, wallpapers and phone cases. For each one it says where the files live, how they reach the build output, what loads them, and how to add one or land one an artist delivered. Read it before you touch an asset folder under src/Aetherphone or run a generator under tools/. Artists work from the [Art guide](art-guide.md) instead. Avatar frames are not bundled (Aethernet serves them at runtime), so they appear only in the landing table.
 
 ## Key files
 
 | Path | Role |
 |---|---|
-| src/Aetherphone/Fonts/ | Inter TTFs (four weights), the OFL license text, and `TablerIcons.ttf` (the generated icon font subset) |
-| src/Aetherphone/Core/FontService.cs | Font atlas owner: Inter weights x size tiers, the shared Noto CJK fonts, the icon font, learned glyphs |
-| src/Aetherphone/Core/Localization/GlyphPlan.cs | Native and shared glyph ranges, plus the game's chat symbol block |
-| src/Aetherphone/Core/IconPlan.cs | Icon codepoint bounds, the Tabler block, and every FontAwesome icon the source draws |
-| src/Aetherphone/Windows/Components/Primitives/PhoneIcons.cs | Generated constants for the Tabler glyphs; `PhoneIcon.Draw` draws them |
-| tools/icon-font/ | Builds `TablerIcons.ttf` and `PhoneIcons.cs` from Tabler Icons |
-| src/Aetherphone/Windows/Components/Primitives/TextStyles.cs | The named text style ladder built on the font tiers |
-| src/Aetherphone/Emoji/ | Twemoji PNGs (one per emoji sequence) plus catalog.json |
-| src/Aetherphone/Core/Emoji/EmojiCatalog.cs | Parses catalog.json, resolves shortcodes to image files |
-| src/Aetherphone/Core/Emoji/EmojiImages.cs | Draws an emoji PNG through the texture provider |
-| src/Aetherphone/Core/Emoji/EmojiScanner.cs | Finds `:shortcode:` spans in message text |
-| tools/emoji-generator/ | Downloads Twemoji images and rebuilds catalog.json |
-| src/Aetherphone/Icons/ | Painted app icons: `<id>.png` finished tile plus `<id>.fg.png` symbol, one pair per app id |
-| src/Aetherphone/Windows/Components/Chrome/AppIconTile.cs | Draws a painted icon cut to the squircle in the chosen appearance |
-| src/Aetherphone/Windows/Components/Chrome/AppIconCache.cs | Decodes and bakes icon textures off the main thread |
-| src/Aetherphone/Core/Media/IconBake.cs | Builds the Dark, Tinted and Clear appearances from the symbol file |
-| src/Aetherphone/Windows/Components/Chrome/AppIconArt.cs | Fallback art on the accent tile for ids without a painted pair |
-| tools/icon-generator/ | Generates the painted icon set from Phosphor glyphs |
-| src/Aetherphone/Images/ | Installer icon and brand emblem, both loaded at runtime by `BrandMark` |
-| src/Aetherphone/Windows/Components/Chrome/BrandMark.cs | Draws the emblem and the blurred ambient stage on boot, hero and tour screens |
-| src/Aetherphone/Sounds/ | Bundled ringtones, notification, interface and game sounds, with its own README |
-| tools/sound-generator/ | Rebuilds every bundled sound: synthesis, pinned downloads, trim and loudness |
-| src/Aetherphone/Core/Notifications/SoundLibrary.cs | Discovers bundled plus user-imported sound files per kind |
-| src/Aetherphone/Wallpapers/ | Built-in wallpapers, shipped as Light/Dark pairs |
-| src/Aetherphone/Core/Wallpapers/WallpaperLibrary.cs | Discovery, custom imports, brightness analysis, theme darkness |
-| src/Aetherphone/Cases/ | Art case PNGs plus the _template folder |
-| src/Aetherphone/Windows/Components/Chrome/PhoneCaseTextures.cs | Resolves case skin and thumbnail textures |
-| src/Aetherphone/Windows/Components/Chrome/CaseArt.cs | Nine-slices a case skin around the phone body, upright or rotated |
-| docs/ART-ASSET-SPEC.md | Where artists work (aetherphone.net) and how delivered art lands here |
+| src/Aetherphone/Aetherphone.csproj | The Content items that copy each asset folder to the build output |
+| src/Aetherphone/Core/FontService.cs | Owns the font atlas and its four kinds of font handle |
+| src/Aetherphone/Core/IconPlan.cs | The Tabler codepoint block and every FontAwesome icon the source draws |
+| src/Aetherphone/Core/Emoji/EmojiCatalog.cs | Loads Emoji/catalog.json and resolves shortcodes to image files |
+| src/Aetherphone/Windows/Components/Chrome/AppIconCache.cs | Finds painted icon pairs, swaps in seasonal pairs, bakes icon textures |
+| src/Aetherphone/Core/Media/TextureSizes.cs | The 32 to 512 px ladder that icons and the emblem decode into |
+| src/Aetherphone/Core/Notifications/UiSound.cs | The catalog that wires interface, game and casino clips to events |
+| src/Aetherphone/Core/Notifications/SoundLibrary.cs | Lists bundled and imported ringtones and notification sounds |
+| src/Aetherphone/Core/Wallpapers/WallpaperLibrary.cs | Wallpaper discovery, imports, the texture ladder and brightness |
+| src/Aetherphone/Core/Theme/ThemeCatalog.cs | The phone case catalog |
+| src/Aetherphone/Windows/Components/Chrome/CaseArt.cs | Nine-slices a case skin around the phone |
+| tools/ | One generator per pipeline, each with its own README |
 
-## Fonts
+## How a bundled asset ships
 
-The UI renders with the Inter family. `FontService` (src/Aetherphone/Core/FontService.cs) owns a Dalamud `IFontAtlas`, the texture that holds every rasterized glyph. It builds three kinds of font handle:
+Every bundled asset is a file in a folder under src/Aetherphone. A Content item in Aetherphone.csproj copies that folder into the build output, and each loader resolves its files at runtime from the folder of the loaded assembly (`Plugin.PluginInterface.AssemblyLocation`). A new or edited file therefore reaches a running plugin only after a rebuild.
 
-- **Text handles**, one per combination of weight and size tier:
-  - **Weights**: `FontWeight` (Regular, Medium, SemiBold, Bold) maps to the four TTFs listed in `FontService.WeightFiles`.
-  - **Size tiers**: `FontService.SizeMultipliers` defines twelve fixed multipliers of the Dalamud default font size, from 0.60 to 1.90. `Push(scale, weight)` snaps any requested scale to the nearest tier with `NearestSize`, so text is never rasterized at arbitrary sizes.
-- **Shared handles**: two Noto Sans CJK fonts (Regular, and Medium for the heavier weights) that rasterize the glyphs too numerous to bake per weight and size. See [Glyph ranges and learned glyphs](#glyph-ranges-and-learned-glyphs).
-- **Icon handles**: FontAwesome with the Tabler icon font merged on top, one per entry in `IconSizeMultipliers`. See [Icon font](#icon-font).
+```mermaid
+flowchart LR
+    A[Generator or delivered file] --> B[Folder under src/Aetherphone]
+    B --> C[Code change if the pipeline needs one]
+    C --> D[Build]
+    D --> E[Content item copies to output]
+    E --> F[Loader finds the file by name]
+    F --> G[Texture or sound cached]
+    G --> H[Drawn or played]
+```
 
-You rarely call `Push` with a raw number. `TextStyles` (src/Aetherphone/Windows/Components/Primitives/TextStyles.cs) names the ladder (`TextStyles.Body`, `TextStyles.Title1`, and so on), and each `TextStyle` carries a `Scale` and a `FontWeight` that map onto the tiers through the same `NearestSize` snap:
+| Pipeline | Folder and Content pattern | Loaded by | Built by |
+|---|---|---|---|
+| Fonts | Fonts/: every `.ttf`, plus the two license texts named one by one | `FontService` | tools/icon-font, for the Tabler subset only |
+| Emoji | Emoji/: every `.png` plus catalog.json | `EmojiCatalog`, `EmojiImages` | tools/emoji-generator |
+| App icons | Icons/: every `.png` | `AppIconCache` | tools/icon-generator, or delivered art |
+| Brand images | Images/: Icon.png and Emblem.png, by name | `BrandMark` | Made by hand |
+| Sounds | Sounds/: every `.mp3` and `.wav` in any subfolder | `SoundLibrary`, `UiSoundCatalog` | tools/sound-generator |
+| Wallpapers | Wallpapers/: png, jpg, jpeg and bmp | `WallpaperLibrary` | tools/wallpaper-generator, or delivered art |
+| Cases | Cases/: top-level `.png` only, so _template never ships | `PhoneCaseTextures` | Delivered art |
+
+The same project file ships the data folders (Words, Hunts, Fishing, Localization; see [Games framework](games-framework.md) and [Localization](localization.md)) and the license texts. THIRD-PARTY-NOTICES.md, LICENSE_ManagedDoom.txt and AlphaChannel-LICENSE are linked into the output root. Fonts/Inter-OFL.txt and Fonts/PirataOne-OFL.txt are named in the Fonts item, and Words/SCOWL-Copyright.txt ships through the Words glob. A new third-party asset needs its license text in that set and its credit in THIRD-PARTY-NOTICES.md.
+
+## Fonts and the atlas
+
+Text renders in Inter, in four weights. `FontService` owns Dalamud's font atlas (the texture that holds every rasterized glyph) and builds four kinds of font handle:
+
+- **Text handles**: one per weight and size tier. A requested scale snaps to the nearest tier, so text is never rasterized at arbitrary sizes. Noto Sans CJK is merged under each to fill what Inter lacks.
+- **Shared handles**: two Noto Sans CJK fonts (Regular and Medium) baked once at the largest size for scripts too big to bake per tier. Their glyphs are copied into every text font after each build.
+- **Icon handles**: FontAwesome with the Tabler subset merged on top, at a few sizes.
+- **Display handle**: Pirata One at one size, Latin only, built only while the Halloween theme is on. `NightWordmark` draws the seasonal wordmarks and blackletter user names with it, and falls back to the normal style for text outside that range.
+
+Draw sites never pass raw sizes. `TextStyles` names the ladder, and each style snaps to a tier:
 
 ```csharp
 using (Plugin.Fonts.Push(TextStyles.Body.Scale, TextStyles.Body.Weight))
@@ -64,55 +64,26 @@ using (Plugin.Fonts.Push(TextStyles.Body.Scale, TextStyles.Body.Weight))
 }
 ```
 
-Text zoom works without rebuilding the atlas: every text handle is baked at `MaxZoom` (1.5x) and drawn scaled down by setting `ImFont.Scale` to `renderScale = zoom * phoneZoom / MaxZoom` in `ApplyRenderScale`. Two inputs feed that product: `SetZoom` carries the text zoom setting, and `SetPhoneZoom` carries the phone size factor of whichever window is drawing. The `Plugin` constructor seeds it with `PhoneSizeCatalog.ZoomFor(Cfg.PhoneWidth)`, `PhoneWindow.PreDraw` sets it every frame from the clamped portrait width, the landscape width or the minimized zoom, and the Message and Linkpearl pop-out windows set their own. Both route through `ApplyZoom`, which recomputes `renderScale` and calls `ApplyRenderScale`; neither touches `ImFont.Scale` directly.
+Every text handle is baked at the largest zoom and drawn scaled down, so changing the text zoom setting or the phone size never rebuilds the atlas. Which scripts each language bakes up front is planned in src/Aetherphone/Core/Localization/GlyphPlan.cs.
 
-### Glyph ranges and learned glyphs
+### Learned glyphs
 
-A glyph range tells ImGui which Unicode codepoints to rasterize into the atlas. Baking everything at every weight and size would be enormous, so `FontService` splits the work between the text handles and the two shared handles.
-
-The text handles bake only the native ranges. `GlyphPlan.Native(language)` (src/Aetherphone/Core/Localization/GlyphPlan.cs) combines:
-
-- `BaseRanges`: Basic Latin, Latin-1 and Latin Extended-A, general punctuation, math operators, and the geometric shapes, symbols and dingbats blocks.
-- The characters of every UI language's and spoken language's native name, so the language pickers always render.
-- `LanguageInfo.ExtraGlyphRanges` for the current language, defined in src/Aetherphone/Core/Localization/Language.cs: Cyrillic for Russian and kana for Japanese. Chinese and the Latin-script languages add nothing natively.
-
-`BuildTextHandle` loads the Inter file over those ranges and merges `DalamudAsset.NotoSansCjkRegular` under it with the same ranges: Inter supplies what it covers, Noto fills the rest.
-
-Everything else lives in the shared handles. `ComposeSharedRanges` builds their range from three sources, leaving out anything the native ranges already cover:
-
-- `GlyphPlan.SharedBase`: scripts other players write in that no UI language bakes natively, such as Latin Extended-B and Additional, combining marks, Greek, Cyrillic, currency, letterlike symbols, arrows, CJK punctuation, kana, and halfwidth and fullwidth forms.
-- `Loc.CatalogGlyphs`: every character the current language's JSON catalog uses, so Chinese and Japanese UI text is baked up front and never waits for a rebuild.
-- The learned set: characters user text has needed so far (below).
-
-Each shared handle rasterizes once at the largest tier size times `MaxZoom`, and `MergeGameSymbols` adds the game's chat symbols (`GlyphPlan.GameSymbols`, U+E020 to U+E0E9: boxed numbers and letters, arrows, quality marks) from the Axis game font. After the atlas builds, `SpreadSharedGlyphs` copies the shared glyphs into every text font with `CopyGlyphsAcrossFonts`: Noto Regular into the Regular weight, Noto Medium into Medium, SemiBold and Bold. That copy is registered with `RegisterPostBuild` because Dalamud adds the merged game glyphs after the ordinary post-build callbacks.
-
-No language bakes the whole Han block. Anything outside the native and shared sets is learned on demand:
-
-1. Draw sites that show user text call `FontService.NoticeText(text)` before drawing. `Typography`, `RichText.Build`, `SoftWrap`, `EmojiText` and the field widgets do it for you; `ChatComposer` and other bespoke draw sites call it directly.
-2. `NoticeText` skips ASCII, surrogates, the private use block and anything already covered, and adds the rest to one learned set shared by every weight and size, capped at `LearnedGlyphCap` (2000).
-3. The next `Push` or `PushIcon` calls `MaybeRebuildLearned`. Once no new character has arrived for `LearnRebuildDebounceMs` (600 ms), it recomposes the shared and icon ranges, persists the learned sets, rebuilds the atlas asynchronously with `BuildFontsAsync`, and bumps `FontService.Generation` so cached text layouts invalidate.
-4. The learned glyphs persist in `Configuration.FontGlyphCache` (learned icons in `Configuration.IconGlyphCache`), so a returning user does not see tofu (the hollow box shown for a missing glyph) again on the same conversations. `SeedLearned` reloads them at startup and drops anything the shared base already covers.
-
-`Generation` also moves when a `Build` lands: `Push` and `PushIcon` check once per frame whether every handle reports `Available` and bump `Generation` the first time they all do, so text measured under Dalamud's fallback font while the atlas was still building is laid out again.
+No language bakes the whole Han block, and players write in every script. A draw site that shows user text calls `Plugin.Fonts.NoticeText(text)` before drawing. Each uncovered character joins one learned set shared by every weight and size; once new characters stop arriving for a moment, the atlas rebuilds in the background and `FontService.Generation` moves, so cached text layouts measure again. The learned set persists in the config, so a returning user does not see tofu (the hollow box drawn for a missing glyph). `Typography`, `RichText`, `SoftWrap`, `EmojiText` and the field widgets call `NoticeText` for you.
 
 ### Icon font
 
-Icons are glyphs in the icon handles. `FontService.BuildIconHandle` adds Dalamud's FontAwesome Free Solid and merges src/Aetherphone/Fonts/TablerIcons.ttf on top at each size in `IconSizeMultipliers`. When the Tabler file is missing or fails to merge, the handle keeps FontAwesome alone and logs a warning.
+src/Aetherphone/Fonts/TablerIcons.ttf is a subset of Tabler Icons that tools/icon-font builds together with the `PhoneIcons` constants. The script remaps every glyph into a private block starting at U+E600, because Tabler's own codepoints collide with FontAwesome, and `FontService` never asks FontAwesome for that block, because the first font in a merge wins. Draw a Tabler glyph with `PhoneIcon.Draw(drawList, center, PhoneIcons.Home, color, boxHeight)`; FontAwesome icons go through the widgets that take a `FontAwesomeIcon`.
 
-- `TablerIcons.ttf` is a subset of [Tabler Icons](https://tabler.io/icons) built by tools/icon-font/generate-icon-font.py, together with `PhoneIcons` (src/Aetherphone/Windows/Components/Primitives/PhoneIcons.cs), one string constant per glyph. Tabler's own codepoints collide with FontAwesome, so the script remaps every glyph into the block from `IconPlan.FirstTablerCodepoint` (U+E600) to `IconPlan.LastTablerCodepoint`; tools/icon-font/README.md explains why.
-- Draw a Tabler glyph with `PhoneIcon.Draw(drawList, center, PhoneIcons.Home, color, boxHeight)`, where `boxHeight` is Tabler's 24 unit design box in pixels. FontAwesome glyphs go through `AppSkin.Icon`, `IconTile` and the other widgets that take a `FontAwesomeIcon`.
-- `PushIcon(pixelHeight, glyph)` picks the smallest icon size at least `pixelHeight` tall (or the largest) and notices the codepoint. When that handle is not ready or lacks the glyph, it falls back to Dalamud's own icon font for that draw.
-- Each font gets its own range. Tabler is asked for exactly its block (`TablerRanges`). FontAwesome is asked for every codepoint in `IconPlan.FontAwesome` plus any learned icons, never the Tabler block: the first font in a merge wins, and FontAwesome 7 has glyphs inside that block (U+E678, U+E67A, U+E682), so asking it for the block would replace `HeartFilled`, `PinFilled` and `PhotoFilled` with its own icons. `NoticeIcon` learns an uncovered codepoint inside `[IconPlan.FirstIconCodepoint, IconPlan.LastIconCodepoint]`, capped at `LearnedIconCap` (512), and that triggers the same debounced atlas rebuild as text. A learned icon means a missing declaration: `IconPlan.FontAwesome` lists every `FontAwesomeIcon` the source draws so a fresh install never rebuilds for an icon.
-- `IconFontCoverageTests` (src/Aetherphone.Tests/IconFontCoverageTests.cs) enforces the contract in CI: every `PhoneIcons` constant has a glyph in the TTF, the TTF's lowest and highest codepoints equal `IconPlan.FirstTablerCodepoint` and `LastTablerCodepoint`, the FontAwesome list is sorted and distinct (it is binary searched), every `FontAwesomeIcon` member named in the source is declared and sits outside the Tabler block, and the FontAwesome range never reaches into the block.
+Every FontAwesome icon the source draws must be listed in `IconPlan.FontAwesomeCodepoints`. An unlisted one is learned on its first draw and costs a full atlas rebuild. `IconFontCoverageTests` checks the list, the bounds of the Tabler block, and that every `PhoneIcons` constant has a glyph in the TTF.
 
-### To add an icon glyph
+To add an icon glyph:
 
-1. Tabler glyph: add it to `OUTLINE` or `FILLED` in tools/icon-font/generate-icon-font.py and run the script (see tools/icon-font/README.md). It rewrites both `TablerIcons.ttf` and `PhoneIcons.cs`; never edit `PhoneIcons.cs` by hand. Set `IconPlan.LastTablerCodepoint` to the last codepoint the run prints.
-2. FontAwesome glyph: add its codepoint to `IconPlan.FontAwesomeCodepoints`, keeping the list sorted. If you forget, `IconFontCoverageTests` names the icon.
+1. Tabler: add it to `OUTLINE` or `FILLED` in tools/icon-font/generate-icon-font.py and run the script (see tools/icon-font/README.md). Never edit PhoneIcons.cs by hand. Set `IconPlan.LastTablerCodepoint` to the last codepoint the run prints.
+2. FontAwesome: add its codepoint to `IconPlan.FontAwesomeCodepoints`, keeping the list sorted.
 
-### Atlas rebuild suppression
+### Rebuilds and adding a font
 
-Creating a font handle normally triggers an atlas rebuild. `FontService` creates dozens of handles (every weight at every tier, the two shared fonts and every icon size), so both `Build` and `OnLanguageChanged` wrap the churn in `atlas.SuppressAutoRebuild()`:
+Creating or disposing a font handle normally triggers a full atlas rebuild. `FontService` creates dozens, so it wraps the churn in one suppression scope, and any code that creates or disposes several handles must do the same:
 
 ```csharp
 using (atlas.SuppressAutoRebuild())
@@ -122,157 +93,118 @@ using (atlas.SuppressAutoRebuild())
 }
 ```
 
-Follow the same pattern in any code that creates or disposes several handles: without the guard, every handle triggers its own full rebuild and the cost grows quadratically with handle count. `OnLanguageChanged` rebuilds only when the native or shared ranges actually change, and then shows the loading screen (`LoadingScreen.Show`) because the rebuild takes visible time.
-
-### To add or change a font
-
-1. Drop the TTF into src/Aetherphone/Fonts/. The csproj glob `Fonts\*.ttf` copies it to output.
-2. Point the matching `FontService.WeightFiles` entry at the new file name. Adding a fifth weight means extending both the `FontWeight` enum and `WeightFiles`; their order is the array index contract. `SharedSourceFor` decides which shared Noto font a weight copies from.
-3. Ship the license text next to it (the Inter license is src/Aetherphone/Fonts/Inter-OFL.txt, which the csproj copies by name) and record attribution in THIRD-PARTY-NOTICES.md at the repo root.
-4. Rebuild and check `FontService.Ready` turns true (the loading screen waits on it).
+To add or replace a font, drop the TTF into src/Aetherphone/Fonts/ (the glob ships it) and point the matching entry of `FontService.WeightFiles` at it, or build a handle of its own as the display font does. Name its license text in the Fonts Content item and credit it in THIRD-PARTY-NOTICES.md. Rebuild and check that the loading screen clears, since it waits on `FontService.Ready`.
 
 ## Emoji
 
-Emoji are not font glyphs. They are individual Twemoji PNG images (72x72, one file per emoji sequence, roughly 3,500 of them) in src/Aetherphone/Emoji/, plus a `catalog.json` describing them. The pieces:
+Emoji are images, not glyphs: one 72 x 72 Twemoji PNG per emoji sequence in src/Aetherphone/Emoji/, plus catalog.json with each emoji's shortcodes, group, label, search tags and skin tones. Messages store emoji as `:shortcode:` text. The rich text layout turns each shortcode into an inline image drawn through Dalamud's texture provider, and the emoji picker and the suggestions popup read the same catalog. A catalog entry whose PNG is missing draws nothing.
 
-- **EmojiCatalog** (src/Aetherphone/Core/Emoji/EmojiCatalog.cs) loads catalog.json once at plugin boot (`EmojiCatalog.Load()` in src/Aetherphone/Plugin.cs). Each entry carries `file`, `short` (shortcode aliases), `group`, `order`, `label`, `tags`, and skin-tone variants under `tones`; the loader never reads `order`, so display ordering comes from each entry's position in the catalog array. `TryResolve` maps a shortcode like `smile` to its image file name.
-- **EmojiScanner** finds `:shortcode:` spans in a string. Messages store emoji as shortcode text, never as image references.
-- **RichText** (src/Aetherphone/Windows/Components/Primitives/RichText.cs) turns those spans into `RichTextRunKind.Emoji` runs during layout, and **EmojiRender** draws each one inline at 1.2x the font size.
-- **EmojiImages** resolves `<file>.png` inside the Emoji folder and draws it through the texture provider. A missing file makes `TryDraw` return false and nothing is drawn.
-- **EmojiPicker** (src/Aetherphone/Windows/Components/Media/EmojiPicker.cs) browses the catalog by group, searches `label` plus `tags` plus shortcodes, and inserts `:shortcode:` into the active composer.
-- **EmojiSuggestions** (src/Aetherphone/Windows/Components/Media/EmojiSuggestions.cs) is the popup that appears while you type `:` plus two or more letters at the end of a draft, ranked by `EmojiAutocomplete`; picking a row completes the shortcode. `ChatComposer`, Linkpearl's `GameEmojiComposer`, and `EmojiComposer` (captions, comments and chirps) all use it.
-
-File names follow Twemoji's codepoint convention (`1f600.png`, `1f1e6-1f1e8.png` for flag pairs; the FE0F variation selector is stripped except inside ZWJ joins).
-
-### The generator, and when to re-run it
-
-tools/emoji-generator/ (`npm install`, then `npm run build`, which runs `generate-emoji.mjs`) downloads the Twemoji image set pinned by `TWEMOJI_VERSION` in the script and rebuilds catalog.json from emojibase-data. Both outputs are committed, so normal builds need no network access.
-
-Re-run it when:
-
-- You bump `TWEMOJI_VERSION` or the emojibase-data dependency (new Unicode emoji).
-- catalog.json is missing entries or shortcodes changed upstream.
-
-Existing PNGs are skipped on re-runs, so a rerun with unchanged versions only refreshes catalog.json. If Twemoji redraws an existing emoji, delete that PNG first so the script re-downloads it.
-
-### To add emoji
-
-Do not hand-add PNGs. Update `TWEMOJI_VERSION` in tools/emoji-generator/generate-emoji.mjs (the emojibase-data version lives in the tool's package.json), run the generator, and commit the new PNGs plus catalog.json together. The catalog and the image set must stay in lockstep because `EmojiCatalog` trusts `file` names blindly.
+To add emoji, bump the Twemoji or emojibase-data version in tools/emoji-generator, run it, and commit the new PNGs and catalog.json together. Never hand-add PNGs: `EmojiCatalog` trusts file names without checking them. The generator skips PNGs that already exist, so delete one to pick up an upstream redraw (tools/emoji-generator/README.md).
 
 ## App icons
 
-Home-screen and in-app icons live in src/Aetherphone/Icons/ as painted pairs named after the app's registered id. `<id>.png` is the finished 512 px tile, opaque and painted to the square edges; `<id>.fg.png` is the symbol alone on transparency, in the same position and size. The plugin cuts the squircle, draws the shadow and lit edge, and builds the other appearances at runtime, so neither file carries corners or effects.
+An app icon is a pair of files named after the app's id. `<id>.png` is the finished 512 px tile, opaque and painted to the square edges. `<id>.fg.png` is the symbol alone on transparency, in the same position. The plugin cuts the squircle, draws the shadow and lit edge, and bakes the Dark, Tinted and Clear appearances from the symbol file (`IconBake`), so neither file carries corners or effects. `AppIconCache` treats an id as painted only when both files exist, decodes off the main thread into the `TextureSizes` ladder, and drops textures that have not been drawn for a while.
 
-Callers draw through `AppIconTile` (src/Aetherphone/Windows/Components/Chrome/AppIconTile.cs), which resolves in order:
+`AppIconTile` resolves an id in this order:
 
-1. `AppIconTile.TryDraw` asks `AppIconCache` (src/Aetherphone/Windows/Components/Chrome/AppIconCache.cs) whether both files exist. If they do, it draws the tile in `Configuration.IconAppearance`: Default is the finished file, while Dark, Tinted and Clear are baked from the symbol file by `IconBake` (src/Aetherphone/Core/Media/IconBake.cs). The cache decodes off the main thread into the `TextureSizes` ladder (32 to 512 px) and never blocks a frame.
-2. If either file is missing, the caller draws the accent tile and `AppIconArt` paints the stencil through `AppIconTextures` or its own procedural art.
-3. If both miss, the tile falls back to the app's `Glyph` letter.
+1. **Seasonal pair.** While `SeasonalTheme.Halloween` is on, `<id>.halloween.png` and `<id>.halloween.fg.png` replace the usual pair when both exist. Six apps have one.
+2. **Painted pair**, drawn in the player's icon appearance.
+3. **Fallback**: the caller draws the accent tile with stencil or procedural art from `AppIconArt`, and last the app's letter glyph.
 
-`AppIconTile.TryDrawGlyph` serves the in-app logo sites (Velvet's top bar, the Aethergram logo, the Coin wallet) with the symbol file as a tinted mask.
+`AppIconTile.TryDrawGlyph` draws the symbol file alone as a tinted mask for in-app logos, widgets and headers. The folder is not exactly one pair per app: four pairs ship for ids with no app today (phone, contacts, findpeople, kupoai), and rolladeck.png is a partner mark with no symbol file.
 
-Artists author icons from the [icon spec](https://aetherphone.net/icon-spec/) and check them with the [icon checker](https://aetherphone.net/icon-checker/). [Art assets](ART-ASSET-SPEC.md) covers the handoff.
+To add or land an icon:
 
-### To add or change an app icon
-
-1. Generated path: add the id to the `map` in tools/icon-generator/generate-painted-icons.mjs (`icon("<phosphor-name>", "<family>", "<Hue>")`, with the hue the id has in `AppAccents`), run `npm install`, then `node generate-painted-icons.mjs <id>` inside tools/icon-generator/. It writes both files. See tools/icon-generator/README.md.
-2. Hand-painted path: the artist follows the icon spec and passes the icon checker; drop both files into src/Aetherphone/Icons/. The names must match `IPhoneApp.Id` exactly.
-3. Rebuild. The csproj glob `Icons\*.png` copies the folder; there is no registration step.
+1. **Generated**: add the id to the `map` in tools/icon-generator/generate-painted-icons.mjs with the hue of its accent and run the generator for that id (tools/icon-generator/README.md).
+2. **Delivered**: drop both files into src/Aetherphone/Icons/ under the exact app id (`IPhoneApp.Id`), or `<id>.halloween` for a seasonal pair.
+3. Rebuild. There is no registration step. A brand-new id also needs its app and an accent entry ([Creating an app](creating-an-app.md), [Accent colors](design-accents.md)).
 
 ## Brand images
 
-src/Aetherphone/Images/ holds the brand art. The csproj ships `Icon.png` and `Emblem.png` by name, and `BrandMark` (src/Aetherphone/Windows/Components/Chrome/BrandMark.cs) loads both from `<plugin output>/Images` at runtime:
-
-- `Icon.png` is the plugin's installer icon (src/Aetherphone/Aetherphone.json points `IconUrl` at its GitHub raw URL for the plugin repository listing). `BrandMark.DrawStage` also blurs and saturates it into the ambient backdrop behind the boot screen, setup and coachmark tours.
-- `Emblem.png` is the transparent emblem `BrandMark.TryDraw` draws on the boot screen, the onboarding hero, setup and coachmark cards.
-
-Both decode off the main thread with ImageSharp: the emblem into the `TextureSizes` ladder so it stays sharp at any drawn size, the icon once as a small blurred copy. Other UI imagery is either drawn procedurally, loaded from the asset pipelines on this page, or fetched at runtime (user photos, remote media).
+src/Aetherphone/Images/Icon.png is the plugin's installer icon (the manifest points `IconUrl` at its raw GitHub URL), and `BrandMark` also blurs it into the ambient backdrop behind the boot screen, setup and tours. Images/Emblem.png is the transparent emblem drawn on the boot screen and onboarding cards, decoded into the `TextureSizes` ladder so it stays sharp. Both are the project's marks ([Trademark policy](../TRADEMARK.md)), not contribution slots.
 
 ## Sounds
 
-Bundled audio lives in src/Aetherphone/Sounds/, and src/Aetherphone/Sounds/README.md is the authoritative checklist for editing it. Every bundled clip is rebuilt by `tools/sound-generator/generate-sounds.py` (see its README): it synthesizes the original clips, downloads the third-party ones from pinned sources, and trims, fades and loudness-normalizes everything. `Ui/` and `Games/` hold the interface and mini-game clips wired by name in `UiSoundCatalog` (src/Aetherphone/Core/Notifications/UiSound.cs). The two picker folders are kind-specific:
+Bundled audio lives in five folders under src/Aetherphone/Sounds/, split between two systems:
 
-- `Ringtones/` plays on incoming calls, looping until answered or missed.
-- `Notifications/` plays once per notification, including per-app sound overrides.
+- **Picker libraries.** Ringtones/ and Notifications/ hold the MP3s that Settings lists. `SoundLibrary`, one per kind, lists the bundled folder plus the files a player imported into the plugin config folder, and saves the choice as a file-name token, so a file name is a persisted value.
+- **Event catalog.** Ui/, Games/ and Casino/ hold WAVs wired by path in `UiSoundCatalog`. Each entry carries a gain, a minimum repeat interval and a channel; the Game channel (mini-games and Gamba) follows the Game Sounds toggle. The seasonal `halloween_*` clips live in Ui/ too.
 
-`SoundKind` (src/Aetherphone/Core/Notifications/SoundKind.cs) names the two kinds, and `PhoneServices` (src/Aetherphone/Core/PhoneServices.cs) builds one `SoundLibrary` per kind, each with two roots:
+Playback goes through `SoundEffectPlayer`, which picks a decoder by file extension. WAV and MP3 use managed decoders that also work under Wine; anything else falls back to Windows Media Foundation, which is why bundled audio is only `.wav` and `.mp3`. [Notifications](notifications.md) covers when notification sounds play.
 
-- Bundled: `<plugin output>/Sounds/Ringtones` or `.../Notifications`.
-- User: `<plugin config dir>/Sounds/Ringtones` or `.../Notifications` (`PluginInterface.ConfigDirectory`, the plugin's own folder), filled by the Settings "Import from PC" flow. `SoundService.AddUserFile` is a one-line forward to `SoundLibrary.AddUserFile`, which copies the picked file in. Imported files are per-user and never bundled.
-
-`SoundLibrary.Refresh` lists `*.mp3` and `*.wav` from both roots, each root sorted by file name with bundled files first; a user file that reuses a bundled name appears once in the list but shadows the bundled file at playback (`TryResolvePath` checks the user root first). A Silent option is appended. Saved choices are tokens from `SoundTokens`: `file:<name>.mp3` or `silent`. When a saved token no longer resolves, `Resolve` falls back to the first bundled file alphabetically. Fresh installs default to `SoundLibrary.BundledRingtoneToken` (`Signal.mp3`) and `SoundLibrary.BundledNotificationToken` (`Chime.mp3`), so those constants must be renamed together with the files. Removed bundled files stay listed in `RetiredSounds` (src/Aetherphone/Core/Notifications/RetiredSounds.cs) with a replacement, and `Configuration.MigrateRetiredSounds` rewrites saved choices, per-app overrides included, on load. Display names are derived from file names by `SoundLibrary.PrettyFileName` (`soft_bell.mp3` shows as "soft bell"). Playback goes through `SoundEffectPlayer`, which dispatches by file extension: `.wav` opens with NAudio's `WaveFileReader` and `.mp3` with NLayer's managed decoder, both Wine-safe; any other extension (or a file the managed reader rejects) falls back to `MediaFoundationReader` (Windows Media Foundation). Stick to .mp3 and .wav so playback stays on the managed decoders; src/Aetherphone/Sounds/README.md covers the details.
-
-### To add a bundled sound
-
-1. Add the file to `RINGTONES` or `NOTIFICATIONS` in tools/sound-generator/generate-sounds.py and run the generator, which writes it into src/Aetherphone/Sounds/Ringtones/ or src/Aetherphone/Sounds/Notifications/ depending on which picker should list it. Keep ringtones seamless; they loop.
-2. Name it for display: underscores and hyphens become spaces.
-3. Confirm you have distribution rights and add attribution to THIRD-PARTY-NOTICES.md if required.
-4. Rebuild; the csproj glob `Sounds\**\*.mp3;Sounds\**\*.wav` ships it and `SoundLibrary` discovers it with no code change, unless you renamed a default token file.
+Every clip is written by tools/sound-generator/generate-sounds.py, which synthesizes, downloads from pinned sources, and masters the whole set. Its README owns the loudness targets and the steps to add a sound: an event clip needs a generator entry, a `UiSound` member and a catalog line, while a ringtone or notification sound needs only the generator entry, because Settings lists the folder. src/Aetherphone/Sounds/README.md owns the folder checklist: formats, the seasonal clips, default files, retiring a sound, imports, the tests that guard the catalog, and landing a designer's original file.
 
 ## Wallpapers
 
-Built-in wallpapers are the image files in src/Aetherphone/Wallpapers/, shipped as Light/Dark pairs (`BloomLight.jpg` and `BloomDark.jpg`, and so on). `WallpaperLibrary.DiscoverBuiltIns` (src/Aetherphone/Core/Wallpapers/WallpaperLibrary.cs) lists `*.png`, `*.jpg`, `*.jpeg`, and `*.bmp` and uses the file name without extension as the wallpaper id, so the pairing is a naming convention, not code: the user picks one wallpaper for Light appearance and one for Dark in Settings, stored as `Configuration.LightWallpaperId` and `Configuration.DarkWallpaperId` (defaults `BuiltInWallpapers.DefaultLightId` and `DefaultDarkId`, Bloom). Removed pairs stay listed in `BuiltInWallpapers` (src/Aetherphone/Core/Wallpapers/BuiltInWallpapers.cs) with a replacement, and `Configuration.MigrateRetiredWallpapers` rewrites saved ids, Looks included, on load.
+Built-in wallpapers are image files in src/Aetherphone/Wallpapers/, shipped as pairs named `<Name>Light.jpg` and `<Name>Dark.jpg`. `WallpaperLibrary` uses the file name without extension as the id, so the pairing is a naming convention, not code. Players pick a Light and a Dark wallpaper separately, and in Auto mode the Dark one crossfades in at night. A wallpaper a player imports is copied into the plugin config folder with a crop.
 
-Users can also import their own: `WallpaperLibrary.AddCustom` copies the picked image into `<plugin config dir>/Wallpapers/` under a generated `custom-` id and stores a `WallpaperCrop` (zoom plus center) in `Configuration.CustomWallpapers`.
+Textures are sized to the draw. The library decodes a 640, 1280 or 2560 px copy, or the full file, by the drawn size, because Dalamud's sampler has no mipmaps and should never shrink an image more than about 2:1. It also bakes a small blurred copy that the dock, widgets and folders sample as liquid glass, and scores each image's brightness to set the strength of the home screen scrim behind icon labels.
 
-Textures are sized to the draw, not the file. `WallpaperLibrary.TryGetTexture(path, drawnExtent, ...)` picks a level from a 640, 1280, 2560 and native ladder by the larger drawn dimension and decodes that level on demand (`ImageProcessor.DecodeToTextureAsync` with a `maxDimension`), serving the nearest resident level while a better one loads, so Dalamud's mip-less sampler never minifies past about 2:1. Each wallpaper also bakes one 320 px wide blurred and saturated copy (`TryGetBlurred`); `WallpaperRenderer.Draw` records that copy's screen mapping in `WallpaperBackdrop` every frame the home screen paints, and `Material.LiquidGlass` samples it through any squircle to draw the dock, widgets, folders and home sheets as glass.
+To add or land a pair, drop both files into the folder (generated pairs come from a palette in tools/wallpaper-generator), rebuild, then check both cards in Settings > Appearance > Wallpaper and the scrim over the brighter file. To remove or rename a pair, add both ids to `BuiltInWallpapers` with replacements so saved settings and Looks migrate; `RetiredWallpaperTests` checks the migration.
 
-### Theme darkness and the light/dark crossfade
+## Phone cases
 
-`WallpaperLibrary.ThemeDarkness` is a 0-to-1 value the whole device themes against:
+A case is the chassis art around the screen. A `Color` case is a flat procedural tint (Titanium, the default). An `Art` case is a painted PNG skin that `CaseArt` draws under everything else. `CaseArt` nine-slices the skin: the 250 px margin and the corners keep their size while the middle row and column stretch to the phone's aspect, and camera landscape mode draws the same slices rotated. Slicing works in fractions of the 1500 x 2755 template, so a smaller canvas with the same aspect works too (two shipped skins are 1115 x 2048), while a skin with another aspect loads but stretches its corners and margin.
 
-- `ThemeMode.Light` targets 0, `ThemeMode.Dark` targets 1.
-- In Auto mode the target is `Darkness`, which follows the local clock: day from 07:00, night from 19:00 (`DayStartHour`, `NightStartHour`), stepped through a spring in `StepDayNight` so the switch glides instead of snapping.
+`ThemeCatalog` lists every case. `PhoneCaseTextures` loads `<id>.png` from Cases/ for the skin and `<id>.thumb.png` for the Settings picker, and falls back to the skin when the thumb is missing.
 
-`DeviceChrome.DrawWallpaper` (src/Aetherphone/Windows/Components/Chrome/DeviceChrome.cs) passes `ThemeDarkness` to `WallpaperRenderer.Draw`, which draws the light wallpaper and crossfades the dark one on top at that alpha. `ThemeProvider.Select` (src/Aetherphone/Core/Theme/ThemeProvider.cs) flips the whole UI palette to the dark theme when Auto-mode `Darkness` crosses 0.5.
+### Worked example: landing a delivered case
 
-Wallpaper luminance is a separate coupling, for legibility rather than theme choice: `WallpaperLibrary.MeasureBrightness` downsamples each loaded wallpaper to 24x24 and scores its luma. `HomeBrightness` blends the light and dark wallpapers' scores by `ThemeDarkness`, and `WallpaperLegibility.Strength` (src/Aetherphone/Windows/Components/Chrome/WallpaperLegibility.cs) turns that into the strength of the home-screen scrim (`DeviceChrome.DrawHomeScrim`), so bright wallpapers get a stronger darkening layer behind icon labels.
+An artist delivers NightBloom.png and NightBloom.thumb.png that pass the case checker, the metal color #2E3A59, and a credit name with a link.
 
-Artists author wallpapers from the [wallpaper spec](https://aetherphone.net/wallpaper-spec/) and check a pair with the [wallpaper checker](https://aetherphone.net/wallpaper-checker/), which previews it under the real status bar, labels, scrim and glass dock.
+1. Drop both files into src/Aetherphone/Cases/.
+2. Add one line to the `BuiltInCases` array in ThemeCatalog.cs. The tint is the metal color in 0 to 1 sRGB: it fills the body before the art loads and while cases crossfade, and it tints the glass and the hardware keys.
 
-### To add a built-in wallpaper
+```csharp
+PhoneCase.Art("NightBloom", PhoneCaseCategory.ArtistSeries, new Vector4(0.180f, 0.227f, 0.349f, 1f),
+    "Artist Name", "https://example.com"),
+```
 
-1. Add a Light/Dark pair to src/Aetherphone/Wallpapers/, named `<Name>Light.<ext>` and `<Name>Dark.<ext>` to match the existing convention. Ids are the file name stems, so choose them as final; to remove a pair, add its ids to `BuiltInWallpapers` with a replacement. The set (Bloom, Crystal, Current, Ember, Frost, Grove, Prism, Sunset) is rendered by tools/wallpaper-generator/generate-wallpapers.py; add a palette entry there rather than hand-painting a sibling.
-2. Rebuild. The csproj glob ships them and discovery lists them in the Settings wallpaper picker automatically; there are no per-wallpaper localization keys.
-3. Check both appearance cards in Settings > Appearance > Wallpaper, and check the home screen scrim on the brighter of the pair.
+3. Add the display name: a key in the `Catalogs` class of L.cs, an arm in `CatalogLabels.PhoneCase`, and the same key in all nine language JSONs ([Localization](localization.md)).
 
-## Device cases
+```csharp
+public static readonly LocString CaseNightBloom = new("catalog.case.nightbloom", "Night Bloom");
+```
 
-A phone case is the chassis art around the screen. `PhoneCaseKind` (src/Aetherphone/Core/Theme/PhoneCase.cs) has two kinds:
+```csharp
+"NightBloom" => Loc.T(L.Catalogs.CaseNightBloom),
+```
 
-- `Color`: a flat tint, drawn procedurally (the default `Titanium`, the only shipped one).
-- `Art`: a painted PNG skin, drawn under everything by `CaseArt` (src/Aetherphone/Windows/Components/Chrome/CaseArt.cs), which nine-slices the skin on its 1500 x 2755 canvas: the 250 px overflow margin and the corners keep their proportion while only the middle row and column stretch to the phone's aspect, and in landscape camera mode it draws the same nine slices rotated. 58 art cases ship alongside `Titanium`.
+4. Rebuild, then check Settings > Appearance > Case, the "Design by" credit and its link, the minimize animation, and camera landscape mode.
 
-The catalog is `ThemeCatalog.BuiltInCases` (src/Aetherphone/Core/Theme/ThemeCatalog.cs), exposed as `ThemeCatalog.Cases`; each entry is `PhoneCase.Color(id, tint)` or `PhoneCase.Art(id, category, tint, artistName, artistUrl)`. Every case carries a `PhoneCaseCategory` (`Colors`, `Gradients`, or `ArtistSeries`), and art cases record artist attribution (`ArtistName`, optionally `ArtistUrl`). The `Art` factory sets `TextureId` to the case id, and `PhoneCaseTextures` (src/Aetherphone/Windows/Components/Chrome/PhoneCaseTextures.cs) keys on `TextureId`, not `CaseId`: it resolves `Cases/<TextureId>.png` for the skin and `Cases/<TextureId>.thumb.png` for the Settings picker, falling back to the skin when the thumb is missing.
+### The case template folder
 
-Artists author the artwork itself (canvas size, the 38 px metal band, the 250 px overflow margin, superellipse corners, alpha bleed, size budgets) from the [case spec](https://aetherphone.net/case-spec/) and check it with the [case checker](https://aetherphone.net/case-checker/); do not work from this page for case art. src/Aetherphone/Cases/_template/ carries the engineering materials: `ArtCaseTemplate.svg` (the guide template), `generate-template.ps1` (regenerates it from its own hardcoded copies of the `Core/Theme/ChassisMetrics.cs` fractions, the `DeviceChrome` key placements and the `HardwareButton` key shares; the script reads no code, so they agree only by hand and nothing enforces it), and `generate-case.ps1` (produces conforming reference cases).
+src/Aetherphone/Cases/_template holds the guide SVG and two PowerShell scripts. The guide script keeps its own copies of the case geometry, so a change to the canvas, corners, band, glass or hardware keys means updating it and rerunning it, and forces artists to re-export their cases. Its README lists which source files it copies and has the run lines.
 
-### To add a case
+## Landing delivered art
 
-1. Take `<CaseId>.png` and `<CaseId>.thumb.png` that pass the case checker and drop both into src/Aetherphone/Cases/. `CaseId` is PascalCase ASCII.
-2. Add one line to `ThemeCatalog.BuiltInCases`: `PhoneCase.Art("<CaseId>", <category>, <dominant metal colour>, "<artist name>")`, plus the artist URL when there is one. Pick the `PhoneCaseCategory` the case belongs to; every existing entry passes one. The tint fills the minimized phone and the pre-load frame, and it colors the procedural hardware buttons, so pick the case's main body tone.
-3. Add the display name: a `catalog.case.<caseid>` entry in `L.cs` (see `L.Catalogs.CaseSilkie`), a matching arm in `CatalogLabels.PhoneCase` (src/Aetherphone/Core/Localization/CatalogLabels.cs), and the key in all nine JSON files under src/Aetherphone/Localization/.
-4. Rebuild and check the Settings > Appearance > Case picker, the minimize animation, and camera-mode landscape rotation.
+| Delivered | Lands in | Code change | Reaches players |
+|---|---|---|---|
+| Icon pair | Icons/ under the app id | None for an existing app | Next plugin release |
+| Seasonal icon pair | Icons/ as `<id>.halloween` | None | Next plugin release |
+| Wallpaper pair | Wallpapers/ | None | Next plugin release |
+| Case and thumb | Cases/ | Catalog line, L.cs key, label arm, nine JSONs | Next plugin release |
+| Sound | Through tools/sound-generator | Generator entry, plus catalog wiring for event clips | Next plugin release |
+| Avatar frame | Uploaded to Aethernet by maintainers | None | Without a release |
+| Theme | Nothing ships | None | Players build it as a Look |
+
+The website's spec and checker pages mirror some plugin constants (geometry, app ids and hues); maintainers update them when those change.
 
 ## Gotchas
 
-- **Font handle churn without `SuppressAutoRebuild` is quadratic.** Each handle created or disposed outside `atlas.SuppressAutoRebuild()` triggers its own full atlas rebuild; `FontService` manages dozens of text, shared and icon handles, so an unguarded rebuild storm freezes the UI. Both `FontService.Build` and `FontService.OnLanguageChanged` show the required pattern.
-- **Learned glyphs have a hard cap.** `FontService.NoticeText` stops learning once the set holds `LearnedGlyphCap` (2000) codepoints, and it never learns characters that were not passed to it in the first place. `Typography`, `RichText`, `SoftWrap`, `EmojiText` and the field widgets call it for you; a bespoke `AddText` or `ImGui.Text` of user text must call it itself, or non-Latin text shows missing-glyph boxes that no rebuild ever fixes.
-- **An undeclared FontAwesome icon costs a rebuild.** Drawing a `FontAwesomeIcon` missing from `IconPlan.FontAwesome` makes `NoticeIcon` learn it and rebuild the whole atlas on first draw. `IconFontCoverageTests` fails CI before that ships; add the codepoint rather than silencing the test.
-- **A painted icon needs both files.** `AppIconCache.IsPainted` requires `<id>.png` and `<id>.fg.png`. With one missing, the id drops to the stencil path, where `AppIconTextures.TryDraw` multiplies the whole PNG by the caller's ink tint, so a full-colour file comes out as a flat smear.
-- **Tinted and Clear read the symbol's brightness.** `IconBake` uses luminance times alpha of `<id>.fg.png` as the mask, so a coloured symbol (Calendar, Notes) renders at about half strength in those two appearances. Keep foreground symbols white unless the design accepts that.
-- **The emoji generator skips existing PNGs.** Re-running with the same pinned versions only rewrites catalog.json. If upstream Twemoji redrew an image, delete the local PNG or the stale art ships forever.
-- **catalog.json and the PNG set must move together.** `EmojiCatalog` resolves `file` names against the folder with no validation pass; a catalog entry without its PNG draws nothing (`EmojiImages.TryDraw` returns false).
-- **Sound default tokens are file names.** `SoundLibrary.BundledRingtoneToken` and `BundledNotificationToken` embed `Signal.mp3` and `Chime.mp3`. Renaming those files without updating the constants silently shifts every fresh install to the alphabetically first file.
-- **Wallpaper and case ids are persisted config values.** A built-in wallpaper's id is its file name stem, and `CaseId` is both the saved setting and the localization key suffix. Renaming either after release resets or breaks every user who selected it (`ThemeCatalog.IndexOf` and `WallpaperLibrary.Resolve` both fall back to the first entry on a miss).
-- **Icon, emoji and case lookups are cached in static dictionaries.** `AppIconCache` remembers per id whether both painted files exist, misses included, and `AppIconTextures`, `EmojiImages` and `PhoneCaseTextures` cache resolved paths and misses too, so art requested while missing is never re-checked until reload. Rebuild and reload after adding assets.
-- **Assets load from the build output, not the repo.** Every loader resolves against `AssemblyLocation.DirectoryName`. Editing a file under src/Aetherphone/ does nothing for a running dev plugin until you rebuild so the csproj copies it.
+- **A painted icon needs both files.** With one missing, the id falls to the stencil path, which tints the whole PNG, so a full-color tile comes out as a flat smear.
+- **A full icon generator run overwrites hand-painted icons.** `npm run build` repaints every id in the `map`; take an id out once its pair is hand-painted.
+- **Tinted and Clear read the symbol's brightness.** `IconBake` masks with luminance times alpha of the symbol file, so a colored symbol renders at partial strength in those appearances. Keep symbols white.
+- **Ids are permanent.** Icon ids, wallpaper file names and case ids are saved in every config, so a rename resets everyone who picked one. Retire through `BuiltInWallpapers` or RetiredSounds.cs instead of renaming.
+- **Lookups are cached, misses too.** `AppIconCache`, `PhoneCaseTextures` and the emoji and stencil lookups remember missing files; rebuild and reload the plugin after adding assets.
+- **Bespoke text must notice its glyphs.** A custom `AddText` of user text that skips `NoticeText` shows tofu that no rebuild fixes.
+- **generate-case.ps1 writes into the shipped folder.** Without `-OutDir` it writes to src/Aetherphone/Cases/, where the build picks the file up; pass `-OutDir` for test cases.
 
 ## Related docs
 
-- [UI toolkit](ui-toolkit.md): Typography, TextStyles usage, and the widget library that consumes these assets.
-- [Localization](localization.md): L.cs, the nine language JSONs, and how case names get translated.
-- [Notifications](notifications.md): where notification sounds and per-app sound overrides fire.
-- [State and persistence](state-and-persistence.md): the plugin config directory that holds imported sounds and custom wallpapers, and the config fields that keep learned glyphs.
-- [Architecture](architecture.md): plugin boot order, including font and emoji initialization.
-- [Art assets](ART-ASSET-SPEC.md): where artists work on aetherphone.net, the handoff for each asset, and the constants the website copies.
+- [Art guide](art-guide.md): what artists deliver, the specs and checkers, rights and the AI rule.
+- [UI toolkit](ui-toolkit.md): typography, text styles and the widgets that draw these assets.
+- [Accent colors](design-accents.md): the accent ring and the hue each icon tile uses.
+- [Localization](localization.md): L.cs, the nine language JSONs, and case names.
+- [State and persistence](state-and-persistence.md): the config folder that holds imports and learned glyphs.
+- [Testing and release](testing-and-release.md): how landed assets reach players in a release.

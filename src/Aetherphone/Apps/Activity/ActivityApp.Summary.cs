@@ -7,6 +7,7 @@ using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
+using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 
@@ -455,8 +456,7 @@ internal sealed partial class ActivityApp
             ActivityArt.Medallion(drawList, new Vector2(centerX, cellMin.Y + medallion), medallion,
                 ActivityArt.AwardTint(award), ActivityArt.AwardIcon(award), earned);
             var nameTop = cellMin.Y + medallion * 2f + AwardNameGap * scale;
-            Typography.DrawCentered(drawList, new Vector2(centerX, nameTop + nameHeight * 0.5f),
-                Typography.FitText(Loc.T(AwardNames[index]), textWidth, TextStyles.FootnoteEmphasized),
+            WidgetText.Centered(drawList, centerX, nameTop, textWidth, Loc.T(AwardNames[index]),
                 earned ? ui.TitleInk : ui.MutedInk, TextStyles.FootnoteEmphasized);
             Typography.DrawCentered(drawList, new Vector2(centerX, nameTop + nameHeight + subHeight * 0.5f),
                 Typography.FitText(digest.AwardSubs[index], textWidth, TextStyles.Footnote),

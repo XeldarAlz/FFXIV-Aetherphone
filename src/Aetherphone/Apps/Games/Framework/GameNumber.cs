@@ -4,6 +4,7 @@ namespace Aetherphone.Apps.Games.Framework;
 
 internal static class GameNumber
 {
+    private const int CacheLimit = 512;
     private static readonly Dictionary<int, string> Cache = new();
     private static readonly Dictionary<int, string> SignedCache = new();
     private static LanguageInfo? signedLanguage;
@@ -13,6 +14,11 @@ internal static class GameNumber
         if (Cache.TryGetValue(value, out var label))
         {
             return label;
+        }
+
+        if (Cache.Count >= CacheLimit)
+        {
+            Cache.Clear();
         }
 
         label = value.ToString();
@@ -36,6 +42,11 @@ internal static class GameNumber
         if (SignedCache.TryGetValue(value, out var label))
         {
             return label;
+        }
+
+        if (SignedCache.Count >= CacheLimit)
+        {
+            SignedCache.Clear();
         }
 
         label = Loc.T(L.Stage.Plus, Label(value));

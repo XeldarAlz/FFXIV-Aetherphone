@@ -163,8 +163,8 @@ internal sealed partial class HousingApp
         for (var index = 0; index < plotBuffer.Count; index++)
         {
             var plot = plotBuffer[index];
-            var subtitle = string.Concat(HousingDistricts.ShortDisplayName(plot.Key.DistrictId), " · ",
-                HousingFormat.SizeLabel(plot.Size), " · ", HousingFormat.Price(plot.Price));
+            var subtitle = string.Concat(HousingFormat.Price(plot.Price), " · ", HousingFormat.SizeLabel(plot.Size),
+                " · ", HousingDistricts.ShortDisplayName(plot.Key.DistrictId));
             plotRows.Add(new HousingPlotRow(plot, Loc.T(L.Housing.PlotAndWard, plot.Key.Plot, plot.Key.Ward),
                 subtitle, plot.Entries is { } entries ? HousingText.Count(entries) : "--"));
         }

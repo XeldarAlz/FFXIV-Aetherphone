@@ -27,6 +27,23 @@ public sealed class TimedFishDataTests
         Assert.True(fish.IsBigFish);
         Assert.Equal(TimedFishFlags.BigFish | TimedFishFlags.Folklore | TimedFishFlags.AmbitiousLure, fish.Flags);
         Assert.Equal(2.4f, fish.Patch);
+        Assert.Equal(0, fish.Expansion);
+    }
+
+    [Theory]
+    [InlineData(2.0f, 0, "2.0")]
+    [InlineData(3.55f, 1, "3.55")]
+    [InlineData(6.4f, 4, "6.4")]
+    [InlineData(7.2f, 5, "7.2")]
+    [InlineData(0f, 0, "")]
+    public void APatchNamesItsExpansionAndReadsAsSearchText(float patch, int expansion, string text)
+    {
+        Assert.True(TimedFishParser.TryParseLine("8752|58|1080|360|7,8|2|2599,4978|5031x3|600|WH|BLA|2.4",
+            out var parsed));
+        var fish = parsed with { Patch = patch };
+
+        Assert.Equal(expansion, fish.Expansion);
+        Assert.Equal(text, FishingCatalog.PatchText(patch));
     }
 
     [Theory]

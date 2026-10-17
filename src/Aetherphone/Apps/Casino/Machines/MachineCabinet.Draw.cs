@@ -19,7 +19,6 @@ internal sealed partial class MachineCabinet
     private const float MeterBarHeight = 5f;
     private const float CardWidth = 92f;
     private const float CardHeight = 128f;
-    private const float CardMinHeight = 36f;
     private const float IntroPad = 10f;
     private const float IntroTitleShare = 0.3f;
     private const float IntroCaptionShare = 0.2f;
@@ -516,48 +515,42 @@ internal sealed partial class MachineCabinet
             return;
         }
 
-        drawList.AddRectFilled(window.Min, window.Max, ImGui.GetColorU32(Veil), 12f * scale);
-        var pad = 10f * scale;
-        var inner = window.Inset(pad);
-        var heading = Loc.T(L.Machines.GambleHeading);
-        var headingStyle = MachineText.Fit(heading, inner.Width, TextStyles.Title3);
-        var headingHeight = Typography.LineHeight(TextStyles.Title3);
-        Typography.DrawCentered(drawList, new Vector2(inner.Center.X, inner.Min.Y + headingHeight * 0.5f), heading,
-            StageInks.Strong, headingStyle);
+        var panel = MachineGambleLayout.PanelOf(glass, window);
+        drawList.AddRectFilled(panel.Min, panel.Max, ImGui.GetColorU32(Veil), 12f * scale);
+        var layout = MachineGambleLayout.Compute(panel, Typography.LineHeight(TextStyles.Title3),
+            Typography.LineHeight(TextStyles.Title1), Typography.LineHeight(TextStyles.Footnote),
+            Button.LargeHeight * scale, scale);
+        var revealed = gamble.CardShown && gamble.Card >= 0;
+        var verdict = gamble.Won ? L.Machines.GambleWon : L.Machines.GambleLost;
+        var heading = Loc.T(revealed ? verdict : L.Machines.GambleHeading);
+        var headingStyle = MachineText.Fit(heading, layout.Heading.Width, TextStyles.Title3);
+        Typography.DrawCentered(drawList, layout.Heading.Center, heading,
+            revealed && gamble.Won ? CasinoColors.Money : StageInks.Strong, headingStyle);
         var amount = gambleStake.Get(L.Machines.GambleAmount, gamble.Amount);
-        var amountStyle = MachineText.Fit(amount, inner.Width, TextStyles.Title1, MachineText.DisplayShrink);
-        var amountHeight = Typography.LineHeight(TextStyles.Title1);
-        var amountCenterY = inner.Min.Y + headingHeight + amountHeight * 0.5f;
+        var amountStyle = MachineText.Fit(amount, layout.Amount.Width, TextStyles.Title1, MachineText.DisplayShrink);
         var lost = gamble.Phase == GamblePhase.Closing && !gamble.Won;
-        Typography.DrawCentered(drawList, new Vector2(inner.Center.X, amountCenterY), amount,
+        Typography.DrawCentered(drawList, layout.Amount.Center, amount,
             lost ? StageInks.Strong with { W = 0.6f } : CasinoColors.Money, amountStyle);
-        var ladderTop = amountCenterY + amountHeight * 0.5f + Metrics.Space.Xs * scale;
-        var ladderHeight = Typography.LineHeight(TextStyles.Footnote) + 8f * scale;
-        DrawGambleLadder(drawList, new Rect(new Vector2(inner.Min.X, ladderTop),
-            new Vector2(inner.Max.X, ladderTop + ladderHeight)), scale);
-        var buttons = MachineGambleLayout.Compute(inner, Button.LargeHeight * scale, scale);
-        var cardTop = ladderTop + ladderHeight + Metrics.Space.Xs * scale;
-        var cardArea = new Rect(new Vector2(inner.Min.X, cardTop),
-            new Vector2(inner.Max.X, MathF.Max(cardTop, buttons.Red.Min.Y - Metrics.Space.Xs * scale)));
-        if (cardArea.Height >= CardMinHeight * scale)
+        DrawGambleLadder(drawList, layout.Ladder, scale);
+        if (layout.HasCard)
         {
-            DrawCard(drawList, cardArea, scale);
+            DrawCard(drawList, layout.Card, scale);
         }
 
         var choosing = gamble.Phase == GamblePhase.Choosing && !play.RoundInFlight;
-        if (Button.Draw(drawList, buttons.Red, Loc.T(L.Machines.Red), ui.Ink, ButtonStyle.Prominent, ButtonRole.Destructive,
+        if (Button.Draw(drawList, layout.Red, Loc.T(L.Machines.Red), ui.Ink, ButtonStyle.Prominent, ButtonRole.Destructive,
                 enabled: choosing, id: "casino.machines.red") && gamble.Pick(play, SlotsRules.GambleRed))
         {
             CasinoSfx.Play(UiSound.ChipSlide);
         }
 
-        if (Button.Draw(drawList, buttons.Black, Loc.T(L.Machines.Black), ui.Ink, ButtonStyle.Prominent, enabled: choosing,
+        if (Button.Draw(drawList, layout.Black, Loc.T(L.Machines.Black), ui.Ink, ButtonStyle.Prominent, enabled: choosing,
                 id: "casino.machines.black") && gamble.Pick(play, SlotsRules.GambleBlack))
         {
             CasinoSfx.Play(UiSound.ChipSlide);
         }
 
-        if (Button.Draw(drawList, buttons.Collect, Loc.T(L.Machines.Collect), ui.Ink, ButtonStyle.Gray, enabled: choosing,
+        if (Button.Draw(drawList, layout.Collect, Loc.T(L.Machines.Collect), ui.Ink, ButtonStyle.Gray, enabled: choosing,
                 id: "casino.machines.collect"))
         {
             gamble.Collect();
@@ -610,16 +603,5 @@ internal sealed partial class MachineCabinet
         var suitSymbol = redCard ? 5 : 4;
         SlotsSymbolArt.Draw(drawList, suitSymbol, center, MathF.Min(halfWidth, height * 0.5f) * 0.6f, 1f);
         Squircle.Stroke(drawList, min, max, rounding, ImGui.GetColorU32(suitInk), 2f * scale);
-        var verdict = gamble.Won ? L.Machines.GambleWon : L.Machines.GambleLost;
-        var text = Loc.T(verdict);
-        var style = MachineText.Fit(text, area.Width - NotePad * 2f * scale, TextStyles.Headline);
-        var verdictY = MathF.Min(max.Y + Typography.LineHeight(TextStyles.Headline) * 0.6f,
-            area.Max.Y - Typography.LineHeight(TextStyles.Headline) * 0.5f);
-        var textSize = Typography.Measure(text, style);
-        var plate = new Vector2(textSize.X * 0.5f + NotePad * scale, textSize.Y * 0.5f);
-        var plateCenter = new Vector2(center.X, verdictY);
-        Squircle.Fill(drawList, plateCenter - plate, plateCenter + plate, plate.Y, ImGui.GetColorU32(Veil));
-        Typography.DrawCentered(drawList, plateCenter, text, gamble.Won ? CasinoColors.Money : StageInks.Strong,
-            style);
     }
 }

@@ -241,6 +241,11 @@ internal sealed partial class MessagePopoutWindow : Window
 
         var resizable = !collapsed && collapseSpring.Value <= 0f;
         Flags = resizable ? PopoutFlags : PopoutFlags | ImGuiWindowFlags.NoResize;
+        if (Plugin.DragDrop.IsDragging || UiInteract.PointerOverGestureSurface)
+        {
+            Flags |= ImGuiWindowFlags.NoMove;
+        }
+
         SizeConstraints = new WindowSizeConstraints
         {
             MinimumSize = new Vector2(MinWidth, resizable ? MinHeight : MathF.Min(MinHeight, HeightFor(zoom))),

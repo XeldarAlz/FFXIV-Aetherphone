@@ -56,6 +56,53 @@ public sealed class CasinoRoomSessionTests
     }
 
     [Fact]
+    public void AReactionIsSentOnlyWhileAttachedAndOnlyFromTheSet()
+    {
+        var session = Session(out var sent);
+        Assert.False(session.React(1));
+
+        session.Enter(Room);
+        Assert.False(session.React(1));
+        session.Receive(Attached(epoch: 1, seq: 5), Now);
+
+        Assert.False(session.React(-1));
+        Assert.False(session.React(CasinoRoomSession.ReactionKinds));
+        Assert.True(session.React(3));
+        var reacted = sent[^1];
+        Assert.Equal(SignalType.CasinoReact, reacted.Type);
+        Assert.Equal(Room, reacted.Casino!.RoomId);
+        Assert.Equal(3, reacted.Reaction);
+    }
+
+    [Fact]
+    public void AReceivedReactionShowsForItsSenderUntilItAgesAndTheRoomForgetsItOnLeave()
+    {
+        var session = Session(out _);
+        session.Enter(Room);
+        session.Receive(Attached(epoch: 1, seq: 5), Now);
+
+        session.Receive(new CasinoSignal(SignalType.CasinoReaction, null, new CasinoPayload { RoomId = Room },
+            "mira", 2), Now);
+        session.Receive(new CasinoSignal(SignalType.CasinoReaction, null, new CasinoPayload { RoomId = "elsewhere" },
+            "ciri", 1), Now);
+        session.AbsorbReaction("rhan", CasinoRoomSession.ReactionKinds, 0);
+
+        var nowTick = Environment.TickCount64;
+        Assert.True(session.TryReactionOf("mira", nowTick, 2_600, out var reaction, out _));
+        Assert.Equal(2, reaction);
+        Assert.False(session.TryReactionOf("ciri", nowTick, 2_600, out _, out _));
+        Assert.False(session.TryReactionOf("rhan", nowTick, 2_600, out _, out _));
+        Assert.False(session.TryReactionOf("mira", nowTick + 10_000, 2_600, out _, out _));
+
+        session.AbsorbReaction("mira", 4, nowTick);
+        Assert.True(session.TryReactionOf("mira", nowTick, 2_600, out reaction, out _));
+        Assert.Equal(4, reaction);
+
+        session.Leave();
+        Assert.False(session.TryReactionOf("mira", nowTick, 2_600, out _, out _));
+    }
+
+    [Fact]
     public void AttachingBaselinesTheEpochAndSeq()
     {
         var session = Session(out _);

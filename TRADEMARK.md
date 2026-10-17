@@ -1,10 +1,10 @@
 # Aetherphone Trademark and Naming Policy
 
-**Last updated:** 2 October 2026
+**Last updated:** 16 October 2026
 
 The Aetherphone client is free software under the AGPL-3.0-or-later ([LICENSE.md](LICENSE.md)), and you are free to fork it, change it, and distribute your version. That licence covers the code. It does not cover the name.
 
-"Aetherphone" and "Aethernet", the phone logo and plugin icon, the app icons, and the visual identity built from them are the project's marks. They tell a player which build they are installing and who stands behind it, and they are not licensed with the source.
+"Aetherphone" and "Aethernet", the phone logo and plugin icon, the app icons, and the visual identity built from them are the project's marks. They tell a player which build they are installing and who stands behind it, and they are not licensed with the source. The app icons are painted from Phosphor Icons glyphs, which stay available to everyone under their own MIT licence (see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)); the marks are the finished icons, not the glyphs they start from.
 
 ## Forks do not use the official servers
 

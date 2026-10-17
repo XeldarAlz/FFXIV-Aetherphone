@@ -24,10 +24,10 @@ Conventional commits with a scope and a lowercase summary, one concern per PR:
 
 ```
 feat(account): link Patreon and wear the member badge automatically
-fix(net): cap the rate-limit pause at 30 seconds
+fix(jobs): count a level 50 beastmaster as capped
 ```
 
-Types in use: feat, fix, docs, refactor, chore, plus perf, style, ci, test, and revert as needed (see docs/conventions.md). Update README.md when user-visible behavior changes.
+Types in use: feat, fix, docs, refactor, chore, plus perf, style, ci, test, revert, and deps as needed (see docs/conventions.md). Update README.md when user-visible behavior changes.
 
 ## Top style rules
 
@@ -40,7 +40,7 @@ Types in use: feat, fix, docs, refactor, chore, plus perf, style, ci, test, and 
 - Zero async void; await every awaitable; fire-and-forget from draw code uses an explicit discard: `_ = Task.Run(...)`.
 - All text through TextStyles and Typography; spacing through Metrics tokens times UiScale.Current; text wraps and never overflows.
 - All clock text through TimeText.Clock (src/Aetherphone/Core/Localization/TimeText.cs); never hand-format "HH:mm".
-- Motion uses Spring (critically damped, no overshoot); bouncy easing is games-only.
+- Motion uses Spring (critically damped, no overshoot); bouncy easing (Easing.EaseOutBack) only in the mini-games and the casino cabinets.
 - One pannable ChipRail for chip rows, never a wrapping chip wall; prefer free input over preset chips.
 
 ## Quick traps
@@ -48,4 +48,4 @@ Types in use: feat, fix, docs, refactor, chore, plus perf, style, ci, test, and 
 - Toggle.Draw returns the new value, not "clicked"; assign it back every frame.
 - Typography.Draw without an ImDrawListPtr moves the ImGui cursor; pass the draw list in bespoke drawing.
 - English never loads en.json at runtime; fix English text in L.cs (and mirror en.json).
-- Resolve Loc.T at draw time, never in constructors, or the text freezes in the old language.
+- Resolve Loc.T at draw time, never in constructors, or the text freezes in the previous language.

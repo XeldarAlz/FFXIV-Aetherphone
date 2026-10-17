@@ -76,6 +76,7 @@ internal sealed partial class CasinoApp
     {
         var book = CasinoBookRules.IsBook(row.GameKind);
         casinoTables.EnsureDoorFresh(row.TableId);
+        casinoTables.AttendTable(row.TableId);
         if (book)
         {
             casinoTables.EnsureLedgerFresh(row.TableId);

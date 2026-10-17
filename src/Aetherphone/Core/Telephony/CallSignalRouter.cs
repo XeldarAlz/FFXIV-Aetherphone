@@ -47,7 +47,8 @@ internal sealed class CallSignalRouter : IDisposable
     {
         if (message.Type.StartsWith(SignalType.CasinoPrefix, StringComparison.Ordinal))
         {
-            signals.PublishCasino(new CasinoSignal(message.Type, message.Reason, message.Casino));
+            signals.PublishCasino(new CasinoSignal(message.Type, message.Reason, message.Casino, message.UserId,
+                message.Reaction));
             return;
         }
 

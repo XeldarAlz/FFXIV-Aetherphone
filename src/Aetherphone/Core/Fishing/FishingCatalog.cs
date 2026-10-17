@@ -1,3 +1,4 @@
+using System.Globalization;
 using Aetherphone.Core.Runtime;
 using Dalamud.Plugin.Services;
 using Lumina.Excel.Sheets;
@@ -45,6 +46,7 @@ internal sealed class FishingCatalog
     private readonly Dictionary<byte, string> weatherNames = new();
     private readonly Dictionary<byte, uint> weatherIcons = new();
     private readonly Dictionary<uint, string> oceanSpotNames = new();
+    private readonly string?[] expansionNames = new string?[TimedFish.ExpansionSlots];
     private readonly object gate = new();
     private Dictionary<uint, uint>? logRowsByItem;
     private FishEntry[] entries = Array.Empty<FishEntry>();
@@ -62,6 +64,28 @@ internal sealed class FishingCatalog
     public FishingCatalogState State => state;
 
     public FishEntry[] Entries => entries;
+
+    internal static string PatchText(float patch) =>
+        patch > 0f ? patch.ToString("0.0#", CultureInfo.InvariantCulture) : string.Empty;
+
+    public string ExpansionName(int expansion)
+    {
+        if (expansion < 0 || expansion >= expansionNames.Length)
+        {
+            return string.Empty;
+        }
+
+        if (expansionNames[expansion] is { } cached)
+        {
+            return cached;
+        }
+
+        var name = data.GetExcelSheet<ExVersion>().TryGetRow((uint)expansion, out var row)
+            ? row.Name.ExtractText()
+            : string.Empty;
+        expansionNames[expansion] = name;
+        return name;
+    }
 
     public void EnsureLoaded()
     {
@@ -362,7 +386,8 @@ internal sealed class FishingCatalog
         {
             Fish = fish,
             Name = name,
-            SearchKey = string.Concat(name, "\n", spotName, "\n", zoneName).ToLowerInvariant(),
+            SearchKey = string.Concat(name, "\n", spotName, "\n", zoneName, "\n", PatchText(fish.Patch))
+                .ToLowerInvariant(),
             IconId = item.Icon,
             SpotName = spotName,
             ZoneName = zoneName,

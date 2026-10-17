@@ -325,6 +325,13 @@ internal sealed class ChatComposer : IDisposable
                         && !suggestions.Showing;
         }
 
+        var bandMin = new Vector2(textLeft, pill.Min.Y);
+        var bandMax = new Vector2(textRight, pill.Max.Y);
+        if (ComposerFieldPress.PressedAroundInput(bandMin, bandMax))
+        {
+            focus = true;
+        }
+
         typing = EmojiSuggestions.FieldTyping();
 
         if (model.CanImage && editTargetId is null && model.Library is { } library && ImGui.IsItemActive()

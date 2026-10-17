@@ -4,27 +4,11 @@ This project bundles or depends on third-party software. Their licenses and
 required notices are reproduced below. This file is shipped inside every
 release archive alongside the components it covers.
 
+How AI is and is not used in Aetherphone, including for the content listed
+here, is described in the AI usage statement:
+https://github.com/XeldarAlz/FFXIV-Aetherphone/blob/dev/docs/ai-usage.md
+
 ---
-
-## AI-generated content
-
-**No asset inside the phone is AI-generated.** The icons, sounds, and fonts in
-the device UI come from licensed sources credited in the sections below, and
-each phone case is the work of a named human artist. The built-in wallpapers
-are original to Aetherphone, and so are most interface and game sounds,
-which are synthesized from code in `tools/sound-generator`.
-
-Phone case art is drawn by community artists and each case credits its artist
-by name in Settings. App icons are derived from Phosphor Icons (the Rolladeck
-partner mark aside, see below), in-app glyphs from Tabler Icons, emoji from
-Twemoji, the remaining audio from Google's Material sounds, the Android Open
-Source Project and CC0 sound packs. See the sections below for the licenses
-covering each.
-
-The plugin's eight translated language catalogs are AI-assisted with human
-review, and in-game terminology is verified against the game's own data rather
-than translated freely. Corrections from native speakers are always welcome:
-https://github.com/XeldarAlz/FFXIV-Aetherphone/blob/dev/docs/translating.md
 
 ## Inter font family
 
@@ -50,8 +34,8 @@ Chirper and Aethergram, is redistributed unmodified.
 
 ## Phosphor Icons
 
-The painted application icons under `src/Aetherphone/Icons/` (`<appid>.png`
-and `<appid>.fg.png`) are derived from
+The painted application icons under `src/Aetherphone/Icons/` (`<appid>.png`,
+`<appid>.fg.png` and their seasonal `.halloween` variants) are derived from
 [Phosphor Icons](https://phosphoricons.com) 2.1.1 fill glyphs (recolored,
 composed on a tile and rasterized to PNG); see `tools/icon-generator/` for
 the generator. The one file in that folder outside this pipeline is
@@ -66,7 +50,7 @@ in the Music app.
 ## Tabler Icons
 
 `src/Aetherphone/Fonts/TablerIcons.ttf` is a subset of the outline and filled
-[Tabler Icons](https://tabler.io/icons) webfonts, remapped into a private
+[Tabler Icons](https://tabler.io/icons) 3.46.0 webfonts, remapped into a private
 codepoint range; `tools/icon-font/generate-icon-font.py` builds it and lists
 every glyph it keeps. The legacy stencil generator in
 `tools/icon-generator/generate-app-icons.mjs` rasterizes Tabler outline icons
@@ -91,7 +75,7 @@ unmodified.
 
 The emoji metadata in `src/Aetherphone/Emoji/catalog.json` (labels, groups,
 search tags, shortcodes and skin-tone variants) is built from
-[emojibase-data](https://github.com/milesj/emojibase) by Miles Johnson,
+[emojibase-data](https://github.com/milesj/emojibase) 15.x by Miles Johnson,
 MIT License; full text reproduced in the MIT section below.
 
 ## Sounds
@@ -108,10 +92,13 @@ recordings.
 Most interface clips (taps, keyboard clicks, toggles, app and sheet
 transitions, Dynamic Island, lock, message sent and received, success,
 caution, blocked, coin, call connect and end, voice note record cues,
-pull-to-refresh, outgoing ringback) and the synthesized mini-game clips (hits,
+pull-to-refresh, outgoing ringback), the synthesized mini-game clips (hits,
 wood knocks, glass breaks, pops, jumps, lasers, explosions, chimes, power-ups,
-line clears, error knocks and the four Simon tones) are original to
-Aetherphone. They are synthesized from code in `tools/sound-generator` and
+line clears, error knocks and the four Simon tones), the Gamba clips under
+`Casino/` (reel and wheel ticks, chip slides, coin showers, win fanfares, the
+race horn and gallop) and the Halloween theme clips `Ui/halloween_*.wav`
+(knocks, chimes, owl hoots, bat flutters, whispers and the like) are original
+to Aetherphone. They are synthesized from code in `tools/sound-generator` and
 carry no third-party rights.
 
 ### Material Design sound resources
@@ -253,7 +240,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## SixLabors.ImageSharp
 
-`SixLabors.ImageSharp.dll` (version 4.1.x, by Six Labors and contributors) is
+`SixLabors.ImageSharp.dll` (version 4.1.3, by Six Labors and contributors) is
 redistributed in binary form.
 
 - Source: https://github.com/SixLabors/ImageSharp
@@ -293,13 +280,12 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 ## MIT-licensed libraries
 
 The following components are redistributed under the MIT License, reproduced
-once at the end of this section:
+once at the end of this section. Phosphor Icons, Tabler Icons, emojibase-data
+and the timed fish data, described in their own sections, are covered by the
+same text.
 
 | Component | Version | Copyright / project |
 | --- | --- | --- |
-| Phosphor Icons (rasterized) | 2.1.1 | 2023 Phosphor Icons (https://github.com/phosphor-icons/core) |
-| Tabler Icons webfont (subset) | 3.46.0 | 2020-2026 Paweł Kuna (https://github.com/tabler/tabler-icons) |
-| emojibase-data (catalog metadata) | 15.x | Miles Johnson (https://github.com/milesj/emojibase) |
 | NAudio.Core / NAudio.WinMM / NAudio.Wasapi | 2.3.0 | Mark Heath (https://github.com/naudio/NAudio) |
 | NetStone | 1.4.1 | 2024 goaaats, Koenari (https://github.com/xivapi/NetStone) |
 | Vortice.Direct3D11 / Vortice.DXGI / Vortice.D3DCompiler / Vortice.DirectX | 3.8.3 | Amer Koleci (https://github.com/amerkoleci/Vortice.Windows) |
@@ -314,8 +300,7 @@ once at the end of this section:
 | NEbml | 1.1.0.5 | Oleg Zee (https://github.com/OlegZee/NEbml) |
 | NLayer / NLayer.NAudioSupport | 2.0.1 | Mark Heath, Andrew Ward (https://github.com/naudio/NLayer) |
 | Net.Codecrete.QrCodeGenerator | 3.2.1 | Manuel Bleichenbacher and Project Nayuki (https://github.com/manuelbl/QrCodeGenerator) |
-| MeltySynth | 2.4.1 | 2021 Nobuaki Tanaka; 2017, 2018 Bernhard Schelling (TinySoundFont); 2014 Alex Veltsistas (C# Synth); 2012 Steve Folta (SFZero) (https://github.com/sinshu/meltysynth) |
-| FF14 Fish Tracker App fish data (derived) | 2026-10 | 2019 icykoneko (https://github.com/icykoneko/ff14-fish-tracker-app) |
+| MeltySynth (synthesizes the Doom soundtrack) | 2.4.1 | 2021 Nobuaki Tanaka; 2017, 2018 Bernhard Schelling (TinySoundFont); 2014 Alex Veltsistas (C# Synth); 2012 Steve Folta (SFZero) (https://github.com/sinshu/meltysynth) |
 
 ```
 MIT License
@@ -352,8 +337,12 @@ HtmlAgilityPack.CssSelectors project is published under the MIT License
 `src/Aetherphone/Fishing/TimedFish.txt` lists the catch conditions of timed and big
 fish (Eorzea hours, weather, previous weather, bait chain, Fisher's Intuition,
 hookset and tug) as game row ids. It is derived from the FF14 Fish Tracker App
-data under the MIT License listed above. Names, places, weather rates and map
-positions are read from the game's own data at runtime.
+data as of October 2026. Names, places, weather rates and map positions are
+read from the game's own data at runtime.
+
+- Copyright (c) 2019 icykoneko
+- Source: https://github.com/icykoneko/ff14-fish-tracker-app
+- License: MIT; full text reproduced in the MIT section above.
 
 ## Hunt data
 
@@ -371,8 +360,8 @@ These apps read live data from the services below while the plugin runs.
 Their data is fetched on demand and does not ship with the plugin, and no
 third-party credentials ship with it either.
 
-- Calendar: in-game event dates served through the Aetherphone backend, which
-  caches a community-maintained public events database.
+- Calendar: in-game event dates from a community-maintained public events
+  database, delivered through Aethernet.
 - Strats: raid cheatsheets converted from the MIT-licensed
   [WTFDIG](https://github.com/mczub/wtfdig) project and served from
   Aetherphone's own media host.
@@ -386,9 +375,12 @@ third-party credentials ship with it either.
 - Hunts: live hunt status from Faloop, as described above.
 - Collections: collectible data from [FFXIV Collect](https://ffxivcollect.com).
 - News: Lodestone news from [lodestonenews.com](https://lodestonenews.com).
-- Housing: plot listings from the Aetherphone housing service and, on the
-  Chinese client, from 艾欧泽亚售楼中心 (house.ffxiv.cyou).
+- Housing: plot listings from a housing data service run by a community
+  contributor (housing-api.yozoracho.dev) and, on the Chinese client, from
+  艾欧泽亚售楼中心 (house.ffxiv.cyou).
 - Character profiles: The Lodestone, read with NetStone.
+- Shortcuts: the icons of installed plugins, from the Dalamud plugin
+  distribution repository (https://github.com/goatcorp/PluginDistD17).
 
 ## Optional plugin integrations
 
@@ -414,16 +406,6 @@ and `DoomMusic.cs` are derived from the upstream `SilkSound.cs` and `SilkMusic.c
 - Copyright (C) 2019-2020 Nobuaki Tanaka
 - License: GNU General Public License, version 2 or (at your option) any later version; full text in
   `src/ManagedDoom/LICENSE_ManagedDoom.txt`, shipped as `LICENSE_ManagedDoom.txt` in every release archive.
-
-## MeltySynth
-
-The Doom soundtrack is synthesized with [MeltySynth](https://github.com/sinshu/meltysynth) 2.4.1
-(NuGet, redistributed as a compiled assembly).
-
-- Copyright (C) 2021 Nobuaki Tanaka
-- Copyright (C) 2017, 2018 Bernhard Schelling (TinySoundFont), based on SFZero, Copyright (C) 2012 Steve Folta
-- Copyright (C) 2014 Alex Veltsistas (C# Synth)
-- License: MIT; full text reproduced in the MIT section above.
 
 ## Doom game data and soundfont (downloaded on demand)
 

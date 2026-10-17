@@ -24,6 +24,10 @@ internal sealed class WinCelebration
     private const float ConfettiLife = 1.1f;
     private const float AmountRise = 26f;
     private const float AmountGap = 22f;
+    private const float AmountPlateAlpha = 0.6f;
+    private const float AmountPlatePaddingX = 14f;
+    private const float AmountPlatePaddingY = 4f;
+    private const float AnchoredBannerWidthShare = 0.9f;
     private const float SkipHintGap = 34f;
     private const int RingBursts = 3;
     private const int ShardCount = 18;
@@ -43,6 +47,7 @@ internal sealed class WinCelebration
     private RollingAmount count;
     private WinTierSpec spec = WinLadder.Spec(WinTier.None);
     private Vector2 origin;
+    private Rect? bannerArea;
     private long amount;
     private bool jackpot;
     private bool instant;
@@ -70,7 +75,8 @@ internal sealed class WinCelebration
         particles.Reseed(seed ^ FlourishSeed);
     }
 
-    public WinTier Celebrate(long stake, long payout, Vector2 at, bool instantMode, bool isJackpot = false)
+    public WinTier Celebrate(long stake, long payout, Vector2 at, bool instantMode, bool isJackpot = false,
+        Rect? bannerOver = null)
     {
         var tier = WinLadder.TierFor(stake, payout, isJackpot);
         if (tier == WinTier.None)
@@ -78,15 +84,17 @@ internal sealed class WinCelebration
             return tier;
         }
 
-        Start(tier, payout, at, instantMode, isJackpot);
+        Start(tier, payout, at, instantMode, isJackpot, bannerOver);
         return tier;
     }
 
-    public void Start(WinTier tier, long payout, Vector2 at, bool instantMode, bool isJackpot)
+    public void Start(WinTier tier, long payout, Vector2 at, bool instantMode, bool isJackpot,
+        Rect? bannerOver = null)
     {
         spec = WinLadder.Spec(tier);
         amount = payout;
         origin = at;
+        bannerArea = bannerOver;
         jackpot = isJackpot;
         instant = instantMode;
         elapsed = 0f;
@@ -196,7 +204,7 @@ internal sealed class WinCelebration
         var fade = Math.Clamp((total - elapsed) / TailSeconds, 0f, 1f);
         if (instant)
         {
-            DrawAmount(drawList, origin, 1f + 0.25f * MathF.Sin(MathF.PI * elapsed / total), 1f);
+            DrawAmount(drawList, origin, 1f + 0.25f * MathF.Sin(MathF.PI * elapsed / total), 1f, false);
             return;
         }
 
@@ -216,18 +224,21 @@ internal sealed class WinCelebration
         if (!spec.Banner)
         {
             DrawAmount(drawList, origin - new Vector2(0f, AmountRise * scale * MathF.Min(1f, elapsed * 3f)),
-                count.PopScale, fade);
+                count.PopScale, fade, false);
             return;
         }
 
-        var bannerCenter = new Vector2(layout.Safe.Center.X,
-            layout.Safe.Min.Y + layout.Safe.Height * BannerHeightShare);
         var style = spec.Tier >= WinTier.Big ? TextStyles.Title1 : TextStyles.Title3;
+        var drop = GameBanner.HalfHeight(style) + AmountGap * scale;
+        var bannerCenter = bannerArea is { } area
+            ? new Vector2(area.Center.X, area.Center.Y - drop * 0.5f)
+            : new Vector2(layout.Safe.Center.X, layout.Safe.Min.Y + layout.Safe.Height * BannerHeightShare);
+        var bannerWidth = bannerArea is { } over ? over.Width * AnchoredBannerWidthShare : layout.Safe.Width * 0.8f;
         var progress = MathF.Min(0.99f, elapsed / total);
-        var banner = Typography.FitText(Loc.T(WinLadder.Banner(spec.Tier, jackpot)), layout.Safe.Width * 0.8f, style);
+        var banner = Typography.FitText(Loc.T(WinLadder.Banner(spec.Tier, jackpot)), bannerWidth, style);
         GameBanner.Draw(drawList, bannerCenter, banner, CasinoColors.Money, PhoneTheme.Default, progress, style);
-        var amountCenter = bannerCenter + new Vector2(0f, GameBanner.HalfHeight(style) + AmountGap * scale);
-        DrawAmount(drawList, amountCenter, count.PopScale, fade);
+        var amountCenter = bannerCenter + new Vector2(0f, drop);
+        DrawAmount(drawList, amountCenter, count.PopScale, fade, bannerArea.HasValue);
         if (spec.FullCard && elapsed >= WinLadder.SkipAfterSeconds && !skipped)
         {
             var hint = Typography.FitText(Loc.T(L.Strip.TapToSkip), layout.Safe.Width, TextStyles.Footnote);
@@ -236,7 +247,7 @@ internal sealed class WinCelebration
         }
     }
 
-    private void DrawAmount(ImDrawListPtr drawList, Vector2 center, float pop, float alpha)
+    private void DrawAmount(ImDrawListPtr drawList, Vector2 center, float pop, float alpha, bool plated)
     {
         var text = NumberText.Signed(count.Display);
         var style = TextStyles.Title2;
@@ -246,6 +257,15 @@ internal sealed class WinCelebration
         var glyph = lineHeight * CurrencyGlyph.GlyphFraction;
         var width = size.X + CurrencyGlyph.Reserve(lineHeight);
         var left = center.X - width * 0.5f;
+        if (plated)
+        {
+            var scale = UiScale.Current;
+            var half = new Vector2(width * 0.5f + AmountPlatePaddingX * scale,
+                MathF.Max(size.Y, lineHeight) * 0.5f + AmountPlatePaddingY * scale);
+            drawList.AddRectFilled(center - half, center + half,
+                ImGui.GetColorU32(new Vector4(0f, 0f, 0f, AmountPlateAlpha * alpha)), half.Y);
+        }
+
         CurrencyGlyph.Draw(drawList, CurrencyKind.Chips, new Vector2(left + glyph * 0.5f, center.Y), glyph, alpha);
         Typography.Draw(drawList, new Vector2(left + CurrencyGlyph.Reserve(lineHeight), center.Y - size.Y * 0.5f), text,
             CasinoColors.Money with { W = alpha }, textScale, style.Weight);

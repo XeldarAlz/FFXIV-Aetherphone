@@ -42,7 +42,6 @@ internal readonly record struct ClassJobFacts(
     uint CategoryId,
     byte UiPriority,
     byte StartingLevel,
-    bool IsLimited,
     uint UnlockQuestId);
 
 internal readonly record struct JobSlot(int FactIndex, JobRole Role, bool Locked);

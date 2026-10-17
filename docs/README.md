@@ -1,130 +1,111 @@
 # Aetherphone documentation
 
-Welcome. Aetherphone is an open-source plugin for Dalamud, the community plugin framework that runs inside Final Fantasy XIV. It renders a complete smartphone in game: a home screen, dozens of apps, notifications, messaging, mini-games, and more, all drawn with Dear ImGui, an immediate mode UI library that redraws every visible pixel every frame. The plugin is written in C# on .NET 10, and this folder is its documentation: how the client is built, how it is structured, and how to extend it. Everything here covers the client plugin only. The online backend ("Aethernet") is a separate ASP.NET service in its own repository; these docs describe only what the client sends and expects.
+Aetherphone is an open-source plugin for Dalamud, the community plugin framework that runs inside Final Fantasy XIV. It draws a complete smartphone in game: a home screen, dozens of apps, notifications, messaging, mini-games, and more. The plugin is written in C# on .NET 10 and draws everything with Dear ImGui. This folder explains how the plugin is built, how it works, and how to add to it, for developers, artists, and translators.
 
-## Key files
+These docs cover the client plugin only. The online service behind accounts, chat, and other social features (Aethernet) lives in a separate repository. Where a doc and the code disagree, the code wins, and a fix to the doc is welcome.
 
-| Path | Role |
-| --- | --- |
-| src/Aetherphone/Plugin.cs | Plugin entry point; constructs and owns everything |
-| src/Aetherphone/Windows/PhoneWindow.cs | The main ImGui window the phone renders in (pop-outs and overlays have their own windows under Windows/) |
-| src/Aetherphone/Core/Apps/IPhoneApp.cs | The contract every phone app implements |
-| src/Aetherphone/Core/Apps/AppRegistry.cs | Builds the list of every app at boot |
-| src/Aetherphone/Core/Localization/L.cs | Source of truth for every user-visible string |
-| CONTRIBUTING.md | Build command and pull request checklist, at the repo root |
+## Start here
 
-## Reading order for new contributors
+Pick the line that fits you.
 
-If you have never written a Dalamud plugin or used Dear ImGui, read these four in order:
+- **I want to write code.** Read [Getting started](getting-started.md) to build the plugin and load it in game, then [Architecture](architecture.md) for the big picture, [Conventions](conventions.md) for the rules reviewers check, and [Creating your own app](creating-an-app.md) to build something end to end.
+- **I make art.** Read the [Art guide](art-guide.md). It needs no code and covers app icons, wallpapers, phone cases, frames, and sounds, from the spec to how your work reaches players.
+- **I want to translate.** Read the [Translator guide](translating.md). You can do everything in the browser.
+- **I maintain releases.** Read [Testing, CI, and releases](testing-and-release.md).
+- **I play the game and want to know what the plugin does with my data.** Read the [project README](../README.md), the [privacy policy](../PRIVACY.md), and the [terms](../TERMS.md).
 
-1. [Getting started](getting-started.md): build the plugin and load it in game first, so the code every later doc references is something you can open, run, and poke at.
-2. [Architecture overview](architecture.md): the map of layers, services, threads, and the frame loop that every other doc assumes you have seen.
-3. [Conventions and code style](conventions.md): the rules reviewers will hold your first pull request to, cheaper to learn before you write code than after.
-4. [Creating your own app](creating-an-app.md): a hands-on tutorial that exercises everything above end to end by building a small app.
+## Words you will see everywhere
 
-After those four, read the rest on demand: each doc opens by saying when you need it.
-
-## Vocabulary
-
-Terms that recur across every doc, defined once here:
-
-- **Dalamud**: the community plugin framework injected into Final Fantasy XIV. It loads plugin assemblies, provides game services through dependency injection, and hosts the UI layer.
-- **Dear ImGui**: the immediate mode UI library Dalamud exposes. There is no retained widget tree; your draw code runs every frame and redraws everything. Stop calling a draw function and the thing disappears.
-- **Draw list**: an ImGui command buffer (from `ImGui.GetWindowDrawList()`) that components paint shapes and text onto directly. Most Aetherphone UI is drawn this way rather than with stock ImGui widgets.
-- **Shell**: the phone's operating layer in src/Aetherphone/Core/Shell. It draws the device body, the home screen or active app, chrome, and overlays, in that order, every frame.
-- **App**: a plain C# class implementing `IPhoneApp` (src/Aetherphone/Core/Apps/IPhoneApp.cs) that the shell asks to draw itself while open. One folder per app under src/Aetherphone/Apps.
-- **Aethernet**: the online backend, a separate ASP.NET service in its own repository. These docs describe only its client-visible contract.
-- **Lumina**: Dalamud's reader for the game's static data sheets (items, jobs, weather). Covered in [game integration](game-integration.md).
-- **FFXIVClientStructs**: community-maintained struct layouts for reading live game memory in `unsafe` code. Also covered in [game integration](game-integration.md).
-
-## How each doc is structured
-
-Every doc opens with one paragraph saying what it covers and when to read it, then a "Key files" table mapping the paths you will open most. Docs end with "Gotchas" (real traps verified in code, worth skimming even if you skip the middle) and "Related docs" links. When any doc and the code disagree, the code wins.
-
-Two docs keep their own format without the standard sections: [accent colors](design-accents.md), a short design rationale, and [AI usage](ai-usage.md), a policy statement. Art specs for artists live on the website, not in this doc set. Even [the translator guide](translating.md), a step-by-step walkthrough for contributors who are not engineers, follows the standard shape.
-
-`readme/` and `media/` are not part of this doc set. `readme/` holds the eight translations of the user-facing project README, which follow the README's shape rather than the one described above; the English README stays at the repo root because GitHub renders only that one. `media/` holds the images and clips the README shows, rendered by tools/readme-media.
+- **Dalamud**: the plugin framework injected into the game. It loads plugins, gives them game services, and hosts their windows.
+- **Dear ImGui**: the UI library Dalamud provides. It is "immediate mode": your draw code runs every frame and redraws everything, so there is no widget tree to keep in sync. Stop calling a draw function and the thing disappears.
+- **Draw list**: a buffer you paint shapes and text onto directly. Most Aetherphone UI is painted this way rather than built from stock ImGui widgets.
+- **Shell**: the phone's operating layer. Every frame it draws the device, the home screen or the open app, the system chrome, and overlays, in that order.
+- **App**: a C# class that implements `IPhoneApp` and draws itself while it is open. Each app has a folder under src/Aetherphone/Apps.
+- **Aethernet**: the online service. The docs describe only what the plugin sends to it and how the plugin reacts to its answers.
+- **Lumina**: Dalamud's reader for the game's data sheets (items, jobs, weather).
+- **FFXIVClientStructs**: community-maintained layouts for reading the live game's memory.
 
 ## All docs
 
-### Orientation
+### Getting going
 
 | Doc | What it covers |
 | --- | --- |
-| [Getting started](getting-started.md) | From `git clone` to a running dev build in game: prerequisites, build, dev plugin loading, chat commands, logs, repo tour |
-| [Architecture overview](architecture.md) | The big picture: plugin boot, service composition, threads, the shell layer, and how a frame reaches an app's `Draw` |
-| [Conventions and code style](conventions.md) | Naming, formatting, performance rules, copy rules, localization lockstep, and git conventions |
+| [Getting started](getting-started.md) | Clone, build, and load the plugin; the Release, Debug, and Beta builds; chat commands; logs; troubleshooting |
+| [Architecture](architecture.md) | How the plugin starts, how its services fit together, which thread does what, and how a frame reaches an app |
+| [Conventions](conventions.md) | Code style, performance rules, and git conventions |
 
 ### Building apps
 
 | Doc | What it covers |
 | --- | --- |
-| [Creating your own app](creating-an-app.md) | Step-by-step tutorial: folder, class, registration, icon, accent color, localized name, plus a recipe for adding a Settings page |
-| [App framework](app-framework.md) | The `IPhoneApp` contract in full: lifecycle, navigation, theming, badges, sharing, home placement, polling, home widgets, Control Center tiles |
-| [UI toolkit](ui-toolkit.md) | The widget library in src/Aetherphone/Windows/Components: typography, spacing tokens, input, popups, scrolling, common widgets |
-| [Accent colors](design-accents.md) | The generated accent ring: the white-glyph contrast rule, hue spacing, per-app assignment, brand exceptions, and derived palettes |
-| [Gamba](casino.md) | The casino app: the chip economy it mirrors, the stores, the stage kit (frame, celebration ladder, bet composer and ceiling), playback, rules mirrors and vectors, practice and gil tables, the venue layer, the lobby, and how to add a game |
-| [Mini-games framework](games-framework.md) | The Games app: the hub's four tabs, the stage kit every game runs on (session flow, HUD, backdrops, camera, effects, physics, world pieces), scoring and the daily challenge, the opt-in global leaderboard, and the online rooms |
+| [Creating your own app](creating-an-app.md) | A step-by-step tutorial, plus how to add a Settings page |
+| [App framework](app-framework.md) | The app contract: lifecycle, navigation inside an app, theming, badges, sharing, home placement |
+| [Widgets and Control Center](widgets-and-control-center.md) | Home screen widgets and Control Center tiles, and how to add each |
+| [UI toolkit](ui-toolkit.md) | Which component to use for what, text, spacing, input, popups, scrolling, and the UI design rules |
+| [Accent colors](design-accents.md) | Why every app color passes a white-glyph contrast rule, and how colors are assigned |
 
-### Platform services
+### How the phone works
 
 | Doc | What it covers |
 | --- | --- |
-| [State and persistence](state-and-persistence.md) | Where data lives: the shared config object, migrations, per-character stores, media on disk |
-| [Notifications](notifications.md) | The full pipeline: posting, the notification center, banners, sounds, channels, deep links, badges |
-| [Localization](localization.md) | Nine languages: `L.cs` as source of truth, the JSON catalogs, runtime lookup, plurals, copy rules |
-| [Messaging and chat](messaging-and-chat.md) | The shared chat stack: transcript, composer, message model, pagination, read receipts, and the apps that consume it |
-| [Networking and the Aethernet backend](networking.md) | The client side of everything online: HTTP, sessions, the websocket, voice calls, rate limits, end-to-end encryption, media |
-| [Game integration](game-integration.md) | Reading and acting on the live game safely: Dalamud services, the threading rule, Excel sheets, ClientStructs |
-| [Assets and media](assets-and-media.md) | Every asset pipeline: fonts, emoji, icons, images, sounds, wallpapers, cases, and how to add to each |
+| [State and persistence](state-and-persistence.md) | Where data lives, settings and their migrations, per-character data, and how to reset it |
+| [Notifications](notifications.md) | Posting a notification, banners, sounds, channels, badges, and what happens on tap |
+| [Localization](localization.md) | The nine languages, how strings are defined and looked up, plurals, and the copy rules |
+| [Game integration](game-integration.md) | Reading and acting on the game safely, and what the plugin never does in game |
+| [Networking](networking.md) | How the plugin talks to Aethernet: requests, errors, sign-in, the live connection, calls, encryption, uploads |
+| [Messaging and chat](messaging-and-chat.md) | The shared chat screens and stores behind ChocoChat, Velvet, Aethergram messages, and Yellow Pages |
+| [Linkpearl](linkpearl.md) | The in-game chat app and its pop-out windows |
+| [Media and video](media-and-video.md) | Video, watch-along parties, Music and Jam, Community Radio, and the players the plugin downloads |
+| [Assets and media files](assets-and-media.md) | Every asset pipeline for engineers: fonts, emoji, icons, images, sounds, wallpapers, cases |
+
+### Games
+
+| Doc | What it covers |
+| --- | --- |
+| [Games framework](games-framework.md) | How the Games app and its stage kit work, scoring, the daily challenge, the leaderboard, online rooms |
+| [Building a game](building-a-game.md) | A step-by-step tutorial for a new mini-game |
+| [Gamba](casino.md) | How the casino app works on the client and how to add a game to it |
 
 ### Shipping
 
 | Doc | What it covers |
 | --- | --- |
-| [Testing, CI, and releases](testing-and-release.md) | The test project, the pull request workflows, the tag-and-release pipeline, the changelog system, and the Discord hooks (announcements, the pull request forum, the staff role sync) |
+| [Testing, CI, and releases](testing-and-release.md) | Running the tests, what CI checks, the release pipeline, the changelog, and the repo's automation |
 
-### Reference
+### For artists, translators, and everyone
 
 | Doc | What it covers |
 | --- | --- |
-| [Art assets](ART-ASSET-SPEC.md) | Where artists work (the spec and checker pages on aetherphone.net), how delivered icons, wallpapers, cases and frames land in the repo, and which plugin constants the website copies |
-| [Translator guide](translating.md) | For translators with no code background: editing one language JSON and opening a pull request entirely in the browser |
-| [AI usage](ai-usage.md) | How Aetherphone is built with AI tools, the declared level, contributor rules, and where the content inside the phone comes from |
+| [Art guide](art-guide.md) | For artists: what you can make, the specs and checkers, how to deliver, rights, and seasonal art |
+| [Translator guide](translating.md) | For translators: edit one language file and open a pull request from the browser |
+| [AI usage](ai-usage.md) | How Aetherphone uses AI tools, the rules for contributors, and where the content inside the phone comes from |
+
+The `readme/` folder holds the eight translations of the project README, and `media/` holds the images the README shows. Neither is part of this doc set.
 
 ## Find it fast
 
-Common first questions, each with the doc and section that answers it:
+| Question | Where to look |
+| --- | --- |
+| How do I build the plugin and load it in game? | [Getting started](getting-started.md) |
+| My change does not show up in game. | [Getting started](getting-started.md), the Troubleshooting section |
+| How do I make a new app? | [Creating your own app](creating-an-app.md) |
+| How do I add a setting that survives a restart? | [State and persistence](state-and-persistence.md) |
+| How do I add or change text the player sees? | [Localization](localization.md). Never hardcode English. |
+| Which thread may touch game data? | [Game integration](game-integration.md), before your first game access |
+| How do I post a notification and open my app on tap? | [Notifications](notifications.md) |
+| How do I move between screens inside an app? | [App framework](app-framework.md) |
+| Is there already a component for this button or row? | [UI toolkit](ui-toolkit.md) |
+| How do I add a widget or a Control Center tile? | [Widgets and Control Center](widgets-and-control-center.md) |
+| How do I call a new server endpoint? | [Networking](networking.md) |
+| How do I run the tests? | [Testing, CI, and releases](testing-and-release.md) |
+| I want to make an icon or a wallpaper. | [Art guide](art-guide.md) |
+| I want to fix a translation but I do not write code. | [Translator guide](translating.md) |
 
-1. **How do I build the plugin and load it in game?** [Getting started: clone and build](getting-started.md#clone-and-build), then [load it in the game](getting-started.md#load-it-in-the-game).
-2. **Why does my change not show up in game?** Usually the Release versus Debug trap: [getting started: Release or Debug?](getting-started.md#release-or-debug)
-3. **How do I create a whole new app?** [Creating your own app](creating-an-app.md), start to finish.
-4. **How do I add a setting that survives restarts?** [State and persistence: the Dalamud config model](state-and-persistence.md#the-dalamud-config-model).
-5. **Where do notification sounds live?** Behavior in [notifications: sounds](notifications.md#sounds); the files and how to add one in [assets and media: sounds](assets-and-media.md#sounds).
-6. **How do I add or change user-visible text?** [Localization: worked example, adding one string](localization.md#worked-example-adding-one-string). Never hardcode English.
-7. **Which thread am I allowed to touch game data from?** [Game integration: the golden threading rule](game-integration.md#the-golden-threading-rule). Read this before your first `Plugin.ClientState` access.
-8. **How do I post a notification and route the tap back into my app?** [Notifications: posting a notification](notifications.md#posting-a-notification) and [deep links](notifications.md#deep-links-what-happens-on-tap).
-9. **How do I move between screens inside one app?** [App framework: ViewRouter, the in-app layer](app-framework.md#viewrouter-the-in-app-layer).
-10. **Is there already a widget for this button, toggle, or chip row?** Almost certainly: [UI toolkit: which widget do I reach for](ui-toolkit.md#which-widget-do-i-reach-for).
-11. **How do I run the tests?** [Testing, CI, and releases: running the tests](testing-and-release.md#running-the-tests).
-12. **How do I point my build at a dev backend instead of production?** [Networking: dev vs prod endpoints](networking.md#dev-vs-prod-endpoints).
-13. **How do I add a page to the Settings app?** [Creating your own app: add a Settings page](creating-an-app.md#add-a-settings-page). A common good first issue.
-14. **How do I add a home screen widget or a Control Center tile?** [App framework: home widgets](app-framework.md#home-widgets) and [Control Center tiles](app-framework.md#control-center-tiles).
-15. **How do voice calls work?** [Networking: calls](networking.md#calls) covers the lifecycle, audio pipeline, and UI entry points.
-16. **I want to fix a translation but I do not write code.** [Translator guide](translating.md): edit one JSON file and open the pull request from the browser.
+## How these docs are written
+
+Each engineering doc opens with what it covers and when to read it, lists the few files you will open first, explains how the thing works, and ends with real traps under "Gotchas" and links to related docs. The docs explain ideas; the code is the reference for names and numbers. They never describe how the server enforces its rules, only what the plugin sends and how it reacts.
 
 ## Contributing and questions
 
-Read [CONTRIBUTING.md](../CONTRIBUTING.md) at the repo root for the pull request process, the build command CI uses, and the checklist your PR is reviewed against. For questions, bug reports, and feature ideas, open a thread on [GitHub issues](https://github.com/XeldarAlz/FFXIV-Aetherphone/issues); search existing issues first.
-
-## Gotchas
-
-- Dev plugin loading points at a fixed dll path. Release builds `bin/Release/Aetherphone.dll`, Debug builds the side-by-side `bin/Debug/AetherphoneDev.dll` (`/phonedev`, its own config, development Aethernet instance). A third side-by-side variant, Beta, is a Release build with `-p:AetherphoneBeta=true`: AetherphoneBeta.dll, opened with `/phonebeta`, its own config, on the development Aethernet instance by default. Build the configuration you did not register and the game silently keeps loading your previous plugin.
-- Bundled assets and data (Fonts, Emoji, Icons, Sounds, Wallpapers, Cases, Localization, Words, Hunts, Fishing, the Icon.png and Emblem.png images, and the license files that ship beside them) are copied to the build output by `<Content>` items in src/Aetherphone/Aetherphone.csproj. Editing an asset file does nothing in game until you rebuild.
-- These docs cover the client only. The Aethernet backend lives in a separate repository, so server behavior can change without any commit here; where a doc and the code disagree, the code wins.
-
-## Related docs
-
-- [Getting started](getting-started.md), the first doc to read
-- [CONTRIBUTING.md](../CONTRIBUTING.md) at the repo root
-- [Project README](../README.md) for the user-facing overview
+[CONTRIBUTING.md](../CONTRIBUTING.md) at the repo root has the build command CI uses and the checklist a pull request is reviewed against. For questions, bug reports, and ideas, open a [GitHub issue](https://github.com/XeldarAlz/FFXIV-Aetherphone/issues) (search existing issues first) or ask on the Discord server linked from the [project README](../README.md). Report security problems privately, as the [security policy](../.github/SECURITY.md) describes, and see the [code of conduct](../.github/CODE_OF_CONDUCT.md) for how everyone is expected to behave.

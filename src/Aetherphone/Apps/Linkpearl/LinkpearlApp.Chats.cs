@@ -503,7 +503,7 @@ internal sealed partial class LinkpearlApp
             inbox.MarkRead(row);
         }
 
-        notifications.RemoveGroup(row.Key);
+        notifications.RemoveGroup(ChatNotifier.AppId, row.Key);
     }
 
     private static string Title(InboxRow row) => row.Tab is { } tab ? tab.Name : NameMask.Display(row.Title);

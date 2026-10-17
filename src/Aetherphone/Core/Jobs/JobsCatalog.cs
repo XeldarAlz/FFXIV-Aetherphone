@@ -28,7 +28,7 @@ internal static class JobsCatalog
             }
 
             rows.Add(new ClassJobFacts(job.RowId, job.ClassJobParent.RowId, job.ExpArrayIndex, job.JobType, job.Role,
-                categoryId, job.UIPriority, job.StartingLevel, job.IsLimitedJob, job.UnlockQuest.RowId));
+                categoryId, job.UIPriority, job.StartingLevel, job.UnlockQuest.RowId));
         }
 
         facts = rows.ToArray();

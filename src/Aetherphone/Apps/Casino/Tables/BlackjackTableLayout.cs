@@ -32,6 +32,7 @@ internal sealed class BlackjackTableLayout
     public const float RailRingGap = 4f;
     public const float RailPlateGap = 7f;
     public const float RailPlateHeight = 32f;
+    public const float RailGutter = 2f;
     public const float RailArcLift = 12f;
     public const float SpotRadiusMax = 28f;
     public const float SpotRadiusMin = 18f;
@@ -82,6 +83,8 @@ internal sealed class BlackjackTableLayout
     public const float CompactTotalOverlap = 8f;
 
     private const float FitTolerance = 0.0001f;
+    private const float Leftward = -1f;
+    private const float Rightward = 1f;
 
     private readonly struct Tier
     {
@@ -287,7 +290,47 @@ internal sealed class BlackjackTableLayout
         return new Rect(new Vector2(puck.X - half, top), new Vector2(puck.X + half, top + RailPlateHeight * Scale));
     }
 
-    public float RailPlateWidth => MathF.Min(ColumnWidth - 2f * Scale, (ColumnWidth - PuckRadius - Scale) * 2f);
+    public Rect RailPlateRect(int slot, bool leftEmpty, bool rightEmpty)
+    {
+        var plate = RailPlateRect(slot);
+        var gutter = RailGutter * Scale;
+        var first = slot <= 0;
+        var last = slot >= RailCount - 1;
+        var left = first
+            ? FeltEdgeRoom(plate.Min.X - Felt.Min.X, rightEmpty)
+            : NeighbourLend(plate, slot - 1, leftEmpty, Leftward);
+        var right = last
+            ? FeltEdgeRoom(Felt.Max.X - plate.Max.X, leftEmpty)
+            : NeighbourLend(plate, slot + 1, rightEmpty, Rightward);
+        if (!first && !last)
+        {
+            left = MathF.Min(left, right);
+            right = left;
+        }
+
+        var spare = ColumnWidth * 2f - gutter * 2f - plate.Width;
+        if (left + right > spare)
+        {
+            var trim = spare / (left + right);
+            left *= trim;
+            right *= trim;
+        }
+
+        return new Rect(new Vector2(plate.Min.X - left, plate.Min.Y), new Vector2(plate.Max.X + right, plate.Max.Y));
+    }
+
+    public float RailPlateWidth =>
+        MathF.Min(ColumnWidth - RailGutter * Scale, (ColumnWidth - PuckRadius - Scale) * 2f);
+
+    public float RailPlateReach => ColumnWidth * 0.5f - RailGutter * Scale;
+
+    public float RailPlateTextWidth => RailPlateTextWidthFor(RailPlateWidth);
+
+    public float RailPlateTextWidthFor(float plateWidth) => plateWidth - Stage.StageText.TightPadX * 2f * Scale;
+
+    public float RailBetPlateWidth => ColumnWidth - RailGutter * Scale;
+
+    public float RailHandWidth(int handCount) => ColumnWidth / (handCount > 0 ? handCount : 1);
 
     public float SideStakeFloor => Seated ? HeroTop + RaisePixels : HeroTop;
 
@@ -437,6 +480,35 @@ internal sealed class BlackjackTableLayout
     }
 
     private float RailHandHalf() => PlayingCards.HeightFor(tier.RailCardWidth * Scale) * 0.5f;
+
+    private float FeltEdgeRoom(float distance, bool innerNeighbourEmpty) =>
+        innerNeighbourEmpty ? MathF.Max(0f, distance - RailGutter * Scale) : 0f;
+
+    private float NeighbourLend(in Rect plate, int neighbourSlot, bool neighbourEmpty, float direction)
+    {
+        if (!neighbourEmpty)
+        {
+            return 0f;
+        }
+
+        var neighbour = RailPuckCenter(neighbourSlot);
+        var bound = neighbour.X - direction * (SitHalfChord(neighbour, plate.Min.Y) + RailGutter * Scale);
+        var edge = direction > 0f ? plate.Max.X : plate.Min.X;
+        return Math.Clamp((bound - edge) * direction, 0f, RailPlateReach);
+    }
+
+    private float SitHalfChord(Vector2 neighbour, float plateTop)
+    {
+        var radius = SpotRadius;
+        var dip = neighbour.Y + radius - plateTop;
+        if (dip <= 0f)
+        {
+            return 0f;
+        }
+
+        var rise = Math.Clamp(radius - dip, 0f, radius);
+        return MathF.Sqrt(radius * radius - rise * rise);
+    }
 
     private bool Roomy(float available)
     {

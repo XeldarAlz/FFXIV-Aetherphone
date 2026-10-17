@@ -417,7 +417,8 @@ internal sealed partial class MessageApp
             if (item.LastMessageSenderId.Length > 0 && item.LastMessageSenderId == store.MyUserId)
             {
                 PhoneIcon.Draw(drawList, new Vector2(previewLeft + PreviewGlyph * 0.5f * scale, subCenterY),
-                    PhoneIcons.Check, ink.MutedInk, PreviewGlyph * scale);
+                    item.LastMessageSeen ? PhoneIcons.Checks : PhoneIcons.Check,
+                    item.LastMessageSeen ? Core.Theme.ChatInk.SeenTick : ink.MutedInk, PreviewGlyph * scale);
                 previewLeft += PreviewGlyph * scale + PreviewGlyphGap * scale;
             }
 

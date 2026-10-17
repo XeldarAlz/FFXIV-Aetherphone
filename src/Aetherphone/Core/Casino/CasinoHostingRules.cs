@@ -178,6 +178,8 @@ internal static class CasinoHostingRules
 
     public const int BookTouchSeconds = 60;
 
+    public const int TradeClosedTableHours = 12;
+
     public static readonly int[] TurnSeconds = { 15, 20, 30, 45 };
 
     public static bool IsTurnSeconds(int seconds)

@@ -31,7 +31,7 @@ internal sealed class StreamSuggestionNotifier : IDisposable
         Interlocked.Exchange(ref attentionStampedAtTick, Environment.TickCount64);
     }
 
-    public void ClearShellNotices() => notifications.RemoveGroup(GroupKey);
+    public void ClearShellNotices() => notifications.RemoveGroup(AppId, GroupKey);
 
     internal static bool Watching(long stampedAtTick, long nowTick)
     {

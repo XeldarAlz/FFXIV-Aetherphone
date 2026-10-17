@@ -80,6 +80,8 @@ internal sealed class CasinoStage
 
     public CasinoBetsLog Bets => bets;
 
+    public int SettledRounds { get; private set; }
+
     public CasinoFloorStore? Feed { get; set; }
 
     public CasinoStageLayout Layout => layout;
@@ -125,6 +127,7 @@ internal sealed class CasinoStage
     {
         bets.Record(record);
         cappedLeft = record.Capped ? CappedSeconds : 0f;
+        SettledRounds++;
     }
 
     public CasinoStageFrame Begin(Rect full, Rect content, in CasinoStageSpec next, long balanceValue,

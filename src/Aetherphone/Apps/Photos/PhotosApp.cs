@@ -6,6 +6,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Net;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Sharing;
 using Aetherphone.Core.Theme;
@@ -22,6 +23,10 @@ internal sealed partial class PhotosApp : IPhoneApp
     private const int MaxColumns = 5;
     private const long ThumbnailBudgetBytes = 48L * 1024 * 1024;
     private const long FullImageBudgetBytes = 96L * 1024 * 1024;
+    private const int MaxConcurrentDecodes = 3;
+    private const int ThumbLoad = 0;
+    private const int FullLoad = 1;
+    private const int CoverLoad = 2;
 
     public string Id => "photos";
     public Vector4 Accent => AppAccents.For(Id);
@@ -37,8 +42,9 @@ internal sealed partial class PhotosApp : IPhoneApp
     private readonly AppSkin ui = new(AppPalettes.PhotosThemed(PhoneTheme.Default));
     private readonly TextureLedger thumbnails = new(ThumbnailBudgetBytes);
     private readonly TextureLedger fullImages = new(FullImageBudgetBytes);
-    private readonly ConcurrentDictionary<string, byte> loading = new();
+    private readonly ConcurrentDictionary<(string Path, int Kind), byte> loading = new();
     private readonly ConcurrentDictionary<string, byte> failed = new();
+    private readonly RequestThrottle decodeSlots = new(MaxConcurrentDecodes, TimeSpan.Zero);
     private readonly CancellationTokenSource cancellation = new();
     private readonly ViewRouter<PhotoView> router;
     private readonly RouterDraw<PhotoView> drawView;
@@ -568,12 +574,12 @@ internal sealed partial class PhotosApp : IPhoneApp
             return wrap;
         }
 
-        if (failed.ContainsKey(path) || !loading.TryAdd("thumb:" + path, 0))
+        if (failed.ContainsKey(path) || !loading.TryAdd((path, ThumbLoad), 0))
         {
             return null;
         }
 
-        _ = LoadThumbnailAsync(path);
+        QueueLoad(path, ThumbLoad);
         return null;
     }
 
@@ -584,20 +590,28 @@ internal sealed partial class PhotosApp : IPhoneApp
             return wrap;
         }
 
-        if (failed.ContainsKey(path) || !loading.TryAdd("full:" + path, 0))
+        if (failed.ContainsKey(path) || !loading.TryAdd((path, FullLoad), 0))
         {
             return null;
         }
 
-        _ = LoadFullAsync(path);
+        QueueLoad(path, FullLoad);
         return null;
     }
+
+    private void QueueLoad(string path, int kind) => _ = Task.Run(() => kind switch
+    {
+        ThumbLoad => LoadThumbnailAsync(path),
+        FullLoad => LoadFullAsync(path),
+        _ => LoadCoverAsync(path),
+    });
 
     private async Task LoadThumbnailAsync(string path)
     {
         try
         {
             var token = cancellation.Token;
+            using var slot = await decodeSlots.EnterAsync(token).ConfigureAwait(false);
             var bytes = await library.ThumbnailBytesAsync(path, token).ConfigureAwait(false);
             var wrap = await ImageProcessor.DecodeToTextureAsync(Plugin.TextureProvider, bytes, "thumb:" + path,
                 ImageProcessor.MaxDecodePixels, token).ConfigureAwait(false);
@@ -616,7 +630,7 @@ internal sealed partial class PhotosApp : IPhoneApp
         }
         finally
         {
-            loading.TryRemove("thumb:" + path, out _);
+            loading.TryRemove((path, ThumbLoad), out _);
         }
     }
 
@@ -643,7 +657,7 @@ internal sealed partial class PhotosApp : IPhoneApp
         }
         finally
         {
-            loading.TryRemove("full:" + path, out _);
+            loading.TryRemove((path, FullLoad), out _);
         }
     }
 

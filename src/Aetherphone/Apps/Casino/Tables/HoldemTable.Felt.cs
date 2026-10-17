@@ -763,19 +763,47 @@ internal sealed partial class HoldemTable
         }
     }
 
-    private void DrawReaction(ImDrawListPtr drawList, float scale)
+    private void DrawReactions(ImDrawListPtr drawList, CasinoHoldemRoomStateDto board, string me, float scale)
     {
-        if (reaction < 0 || mySeat < 0 || reactionClock >= ReactionSeconds)
+        if (reaction >= 0 && mySeat >= 0)
+        {
+            DrawReactionBubble(drawList, mySeat, reaction, reactionClock, scale);
+        }
+
+        var seats = board.Seats;
+        if (seats is null)
         {
             return;
         }
 
-        var alpha = Math.Clamp((ReactionSeconds - reactionClock) / 0.4f, 0f, 1f)
-            * Math.Clamp(reactionClock / 0.15f, 0f, 1f);
-        var center = layout.SeatCenter(mySeat);
-        var rise = reactionClock * 8f * scale;
+        var room = rooms.Room;
+        var nowTick = Environment.TickCount64;
+        for (var index = 0; index < seats.Length; index++)
+        {
+            var seat = seats[index];
+            if (seat.State == HoldemSeatStates.Empty || seat.UserId.Length == 0
+                || string.Equals(seat.UserId, me, StringComparison.Ordinal)
+                || !room.TryReactionOf(seat.UserId, nowTick, ReactionMilliseconds, out var glyph, out var age))
+            {
+                continue;
+            }
+
+            DrawReactionBubble(drawList, seat.SeatIndex, glyph, age / 1000f, scale);
+        }
+    }
+
+    private void DrawReactionBubble(ImDrawListPtr drawList, int seatIndex, int glyph, float clock, float scale)
+    {
+        if (clock >= ReactionSeconds || glyph < 0 || glyph >= ReactionGlyphs.Length)
+        {
+            return;
+        }
+
+        var alpha = Math.Clamp((ReactionSeconds - clock) / 0.4f, 0f, 1f) * Math.Clamp(clock / 0.15f, 0f, 1f);
+        var center = layout.SeatCenter(seatIndex);
+        var rise = clock * 8f * scale;
         HoldemArt.DrawBubble(drawList,
-            new Vector2(center.X, center.Y - layout.PuckFor(mySeat) - TagLift * scale - rise), ReactionGlyphs[reaction],
+            new Vector2(center.X, center.Y - layout.PuckFor(seatIndex) - TagLift * scale - rise), ReactionGlyphs[glyph],
             alpha, scale);
     }
 }

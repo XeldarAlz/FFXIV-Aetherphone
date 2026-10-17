@@ -6,7 +6,10 @@ internal static class JobsRoster
     public const uint MagicCategoryId = 31;
     public const uint LandCategoryId = 32;
     public const uint HandCategoryId = 33;
-    public const int LimitedJobCap = 80;
+    public const uint BlueMageId = 36;
+    public const uint BeastmasterId = 43;
+    private const int BlueMageCap = 80;
+    private const int BeastmasterCap = 50;
 
     public static int BucketFor(byte jobType, byte role, uint classJobCategoryId)
     {
@@ -148,8 +151,17 @@ internal static class JobsRoster
             : leftFacts.Id.CompareTo(rightFacts.Id);
     }
 
-    public static int CapFor(bool isLimited, int maxLevel) =>
-        isLimited ? Math.Min(LimitedJobCap, Math.Max(maxLevel, 1)) : Math.Max(maxLevel, 1);
+    public static int CapFor(uint classJobId, int maxLevel)
+    {
+        var expansionCap = Math.Max(maxLevel, 1);
+        // Limited job caps mirror the client's PlayerState.GetCurrentClassJobMaxLevel, which hardcodes them by id.
+        return classJobId switch
+        {
+            BlueMageId => Math.Min(BlueMageCap, expansionCap),
+            BeastmasterId => Math.Min(BeastmasterCap, expansionCap),
+            _ => expansionCap,
+        };
+    }
 
     public static float Fraction(long experience, long needed, bool capped)
     {

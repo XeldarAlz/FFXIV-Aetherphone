@@ -5,14 +5,14 @@ namespace Aetherphone.Tests;
 
 public sealed class JobsRosterTests
 {
-    private static readonly ClassJobFacts Gladiator = new(1, 1, 1, 0, 1, 30, 10, 1, false, 0);
-    private static readonly ClassJobFacts Paladin = new(19, 1, 1, 1, 1, 30, 11, 30, false, 65000);
-    private static readonly ClassJobFacts Arcanist = new(26, 26, 15, 0, 3, 31, 40, 1, false, 0);
-    private static readonly ClassJobFacts Summoner = new(27, 26, 15, 5, 3, 31, 41, 30, false, 65001);
-    private static readonly ClassJobFacts Scholar = new(28, 26, 15, 6, 4, 31, 22, 30, false, 65002);
-    private static readonly ClassJobFacts DarkKnight = new(32, 32, 19, 1, 1, 30, 12, 30, false, 65003);
-    private static readonly ClassJobFacts Carpenter = new(8, 8, 2, 0, 0, 33, 60, 1, false, 0);
-    private static readonly ClassJobFacts BlueMage = new(36, 36, 25, 0, 3, 31, 45, 1, true, 0);
+    private static readonly ClassJobFacts Gladiator = new(1, 1, 1, 0, 1, 30, 10, 1, 0);
+    private static readonly ClassJobFacts Paladin = new(19, 1, 1, 1, 1, 30, 11, 30, 65000);
+    private static readonly ClassJobFacts Arcanist = new(26, 26, 15, 0, 3, 31, 40, 1, 0);
+    private static readonly ClassJobFacts Summoner = new(27, 26, 15, 5, 3, 31, 41, 30, 65001);
+    private static readonly ClassJobFacts Scholar = new(28, 26, 15, 6, 4, 31, 22, 30, 65002);
+    private static readonly ClassJobFacts DarkKnight = new(32, 32, 19, 1, 1, 30, 12, 30, 65003);
+    private static readonly ClassJobFacts Carpenter = new(8, 8, 2, 0, 0, 33, 60, 1, 0);
+    private static readonly ClassJobFacts BlueMage = new(36, 36, 25, 0, 3, 31, 45, 1, 0);
 
     private static readonly ClassJobFacts[] All =
     {
@@ -98,9 +98,26 @@ public sealed class JobsRosterTests
     [Fact]
     public void LimitedJobsCapBelowTheExpansionCap()
     {
-        Assert.Equal(JobsRoster.LimitedJobCap, JobsRoster.CapFor(true, 100));
-        Assert.Equal(70, JobsRoster.CapFor(true, 70));
-        Assert.Equal(100, JobsRoster.CapFor(false, 100));
+        Assert.Equal(80, JobsRoster.CapFor(JobsRoster.BlueMageId, 100));
+        Assert.Equal(50, JobsRoster.CapFor(JobsRoster.BeastmasterId, 100));
+        Assert.Equal(70, JobsRoster.CapFor(JobsRoster.BlueMageId, 70));
+        Assert.Equal(100, JobsRoster.CapFor(DarkKnight.Id, 100));
+    }
+
+    [Fact]
+    public void ACappedBeastmasterCountsAsCapped()
+    {
+        ReadOnlySpan<int> levels = [100, 80, 50];
+        ReadOnlySpan<int> caps =
+        [
+            JobsRoster.CapFor(DarkKnight.Id, 100),
+            JobsRoster.CapFor(JobsRoster.BlueMageId, 100),
+            JobsRoster.CapFor(JobsRoster.BeastmasterId, 100),
+        ];
+        var summary = JobsRoster.Summarize(levels, caps);
+        Assert.Equal(3, summary.CappedCount);
+        Assert.Equal(230, summary.LevelsEarned);
+        Assert.Equal(230, summary.LevelsPossible);
     }
 
     [Fact]

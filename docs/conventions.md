@@ -1,37 +1,28 @@
-# Conventions and code style
+# Conventions
 
-This page is the rulebook for code, copy, and commits in the Aetherphone client repo. Read it before your first PR, and skim it again whenever a review comment surprises you. It covers the client plugin only; the Aethernet backend lives in a separate repository with its own conventions. Everything below is written against the code as it exists today, and where the code and the ideal disagree, both are stated.
+This page is the rulebook for code and commits in the Aetherphone client repo. Read it before your first pull request, and come back when a review comment surprises you. Most of these rules are enforced by the build or by CI; the rest are what a reviewer checks. Design rules for screens live in [UI toolkit](ui-toolkit.md), and the rules for user-visible text live in [Localization](localization.md).
 
 ## Key files
 
 | Path | Role |
 | --- | --- |
 | .editorconfig | Formatting, naming, and code-style rules, enforced in the build |
+| Directory.Build.props | Turns on code style and analyzers in the build, and warnings as errors in CI |
 | .github/workflows/ci.yml | The guard checks and the build every pull request must pass |
-| CONTRIBUTING.md | Build command, PR checklist, project layout |
-| Directory.Build.props | The version number (CI checks it against repo.json), build-time code style and analyzers, CI warnings-as-errors, lock-file restore |
-| src/Aetherphone/Windows/Components/Primitives/TextStyles.cs | The typography ladder: every text size and weight in the UI |
-| src/Aetherphone/Windows/Components/Primitives/Typography.cs | Text drawing, measuring, wrapping, and fitting helpers |
-| src/Aetherphone/Windows/Components/Primitives/Metrics.cs | Spacing, radius, size, and stroke tokens |
-| src/Aetherphone/Windows/Components/Layout/ChipRail.cs | The one approved way to show a row of filter chips |
-| src/Aetherphone/Core/Animation/Spring.cs | The motion primitive: critically damped, cannot overshoot |
-| src/Aetherphone/Core/Animation/Motion.cs | The one table of smooth times and press scales that every UI spring reads |
-| src/Aetherphone/Core/Localization/L.cs | Source of truth for every user-visible string |
-| src/Aetherphone/Core/Localization/TimeText.cs | The single seam for clock and time formatting |
-| src/Aetherphone/Core/Localization/LocAudit.cs | Debug-build audit that reports missing translation keys |
-| docs/ai-usage.md | AI involvement level to declare in a PR, and asset provenance rules |
+| .github/workflows/label-pull-request.yml | The pull request title check |
+| docs/ai-usage.md | The AI involvement levels and the asset provenance rules |
 
 ## Philosophy
 
 Three principles decide most reviews:
 
-- **YAGNI** (you aren't gonna need it). Implement things when you actually need them, never because you foresee needing them. No configuration points nobody configures, no interfaces with one implementation "for later". CONTRIBUTING.md states it as: no heavy abstractions "for later".
-- **DRY** (don't repeat yourself), via small shared utilities. When the same drawing or string logic appears twice, it moves into src/Aetherphone/Windows/Components/ or a small static helper like UiText.Truncate or TimeText.Ago, not into a base class.
-- **Self-documenting code.** Names and structure carry the meaning. The C# under src/Aetherphone is kept comment-free as a rule, though a couple of hundred comment lines survive across several dozen files, concentrated in the radio decoders (src/Aetherphone/Core/Radio), the online games, and the Housing data provider. Do not add to them. Explanatory prose lives in build files and docs; Directory.Build.props and the CI workflows carry comments freely. The allowance, per CONTRIBUTING.md: a comment may explain *why* something is done when the code cannot, or the source of a magic constant. It never narrates *what* the code does.
+- **YAGNI** (you aren't gonna need it). Build what the change needs now, never what you expect to need later. No settings nobody asked for, no interface with one implementation "for later".
+- **DRY** (don't repeat yourself). When the same drawing or string logic appears twice, move it into src/Aetherphone/Windows/Components/ or a small static helper such as `TimeText.Ago`, not into a base class.
+- **Self-documenting code.** Names and structure carry the meaning, so the C# has no comments. The one allowance is a comment that explains why, when the code cannot, or names the source of a magic constant. It never narrates what the code does. A few older comments remain in the tree; do not copy them.
 
 ## Naming
 
-No abbreviations, anywhere, including loop variables.
+No abbreviations anywhere, including loop variables.
 
 | Write | Not |
 | --- | --- |
@@ -40,201 +31,144 @@ No abbreviations, anywhere, including loop variables.
 | minuteOfDay, hourOfDay | min, hr |
 | conversationIndex, groupIndex | ci, gi |
 
-Real examples: src/Aetherphone/Core/Localization/LocAudit.cs iterates with groupIndex, fieldIndex, and entryIndex; src/Aetherphone/Core/Localization/TimeText.cs takes hourOfDay and minuteOfHour. Locals named drawList outnumber the older dl several times over, and a few legacy single-letter loops survive: src/Aetherphone/Windows/Components/Primitives/ProgressRing.cs and src/Aetherphone/Core/Video/ScreenPainter.cs, plus x and y coordinate loops in src/Aetherphone/Core/Media/PhotoEditor.cs, ArtworkCache.cs, and several game renderers (Snake, CapMan, Hop). Do not add to the legacy side.
+src/Aetherphone/Core/Localization/LocAudit.cs is a good model: its loops run on groupIndex, fieldIndex, and entryIndex. A few single-letter loops survive in older drawing code; do not add to them.
 
-Other naming norms you can see throughout the tree:
-
-- Types and members are PascalCase, locals and parameters are camelCase, standard C#. The build checks the type, member, constant, interface, and parameter cases (see Formatting).
-- Fields never carry a leading underscore. Name the field for what it holds. A CI guard fails any private or protected field that starts with `_`.
-- Bespoke drawing code for a specific app lives in a type named `*Renderer` (for example src/Aetherphone/Apps/Games/Chess/ChessRenderer.cs).
-- Localization keys are dotted camelCase strings like `common.saveToGallery` (see src/Aetherphone/Core/Localization/L.cs).
+- Types and members are PascalCase; locals and parameters are camelCase. The build checks types, members, constants, interfaces, and parameters.
+- Fields never start with an underscore. Name the field for what it holds. CI fails any private or protected field that starts with `_`.
+- Bespoke drawing code for one app lives in a type named `*Renderer`, for example src/Aetherphone/Apps/Games/Chess/ChessRenderer.cs.
 
 ## Formatting
 
-The .editorconfig is enforced by the compiler. Directory.Build.props turns on `EnforceCodeStyleInBuild` and the .NET analyzers, so every rule the config marks `warning` shows up as a build warning, and CI builds with `TreatWarningsAsErrors`, so any one of them fails a pull request. Local builds stay warn-only so a work in progress still compiles; clear every warning before you push. The vendored src/ManagedDoom project opts out of the build enforcement in its own csproj. What the config sets:
+The .editorconfig is enforced by the compiler: Directory.Build.props turns on code style and the .NET analyzers in the build, so every rule the config marks as a warning becomes a build warning, and CI fails on any warning. These are build warnings:
 
-| Setting | Value |
-| --- | --- |
-| Encoding and endings | UTF-8 without a byte order mark, LF line endings, final newline, trailing whitespace trimmed (kept in .md) |
-| Indentation | 4 spaces for code, 2 spaces for yml and yaml. On json the config contradicts itself: one section sets 2, a trailing catch-all re-matches json at 4, and the last match wins. The repo's JSON is mostly 2-space in practice; the plugin manifests in src/Aetherphone are the exception |
-| Namespaces | File-scoped (`namespace Aetherphone.Core.Apps;`), warning |
-| Braces | Opening brace on its own line, everywhere; `else`, `catch`, `finally` start a new line. Braces are required on every `if`, `else`, and loop body, even a single line (`csharp_prefer_braces`, warning) |
-| Accessibility modifiers | Required on every member except interface members: `private static`, `private const`, never a bare `static` (warning) |
-| readonly fields | A private field assigned only in its declaration or constructor must be `readonly` (warning) |
-| Sealing | An internal type with no subclass must be `sealed` (CA1852, warning) |
-| Naming | PascalCase types, methods, properties, events, and constants; I-prefixed interfaces; camelCase parameters (IDE1006, warning). Private field casing is deliberately unchecked; the leading underscore is a CI guard instead |
-| var | Preferred everywhere (built-in types, apparent types, and elsewhere), warning |
-| Modifier order | public, private, protected, internal, new, abstract, virtual, sealed, override, static, readonly, extern, unsafe, volatile, async (warning) |
-| Unused parameters | An editor suggestion on non-public methods only (IDE0060 is suggestion level and never fails a build) |
+- File-scoped namespaces.
+- Braces on every `if`, `else`, and loop body, even a one-line body.
+- An accessibility modifier on every member except interface members, even `private`.
+- `readonly` on any field assigned only at declaration or in the constructor, and `sealed` on any internal class with no subclass.
+- `var` everywhere, and the modifier order the config lists.
+- The naming rules above.
 
-A handful of analyzers (CA1822, IDE0060, CA1068, CA2016, CA2101, CA1859) are set to suggestion: visible in an editor, never a build gate. The reason for each sits next to it in .editorconfig.
+The rest of the config is editor formatting that the build does not check: UTF-8, LF line endings, a final newline, 4-space indentation (2 for YAML), and opening braces on their own line. An editor that reads .editorconfig applies it for you, and CI separately rejects a byte order mark in C# files.
 
-House rules the config cannot express, confirmed against src/Aetherphone/Core and src/Aetherphone/Windows/Components:
+A few analyzers are set to suggestion level, so an editor shows them but the build never fails on them; .editorconfig gives the reason next to each.
 
-- **Attributes go on their own line** directly above the type, method, or multi-line member they decorate (`[Serializable]` above `internal sealed class Configuration` in src/Aetherphone/Configuration.cs). There are zero inline attributes on a type or a method in the tree. The exception, and it is the dominant style rather than a lapse, is a single short marker on a one-line auto-property or field: `[JsonPropertyName("id")] public uint Id { get; set; }` through the DTO model files, and `[PluginService]` through src/Aetherphone/Plugin.cs. Splitting those doubles the length of a serialization contract for nothing, so leave them inline.
-- **Early returns over nesting.** Guard clauses first, then the flat happy path. See Languages.Resolve in src/Aetherphone/Core/Localization/Language.cs.
-- **A blank line after a closing brace** before the next statement in the same block. .editorconfig raises IDE2003 for it, yet the tree still has blocks followed directly by a statement (src/Aetherphone/Apps/Hunts/HuntsApp.Now.cs among them), so do not count on the build to catch it.
+House rules the config cannot express:
 
-All of it together, in project style:
+- **Attributes go on their own line** above the type, method, or multi-line member. The exception is a single short marker on a one-line property or field, such as `[JsonPropertyName("id")]` on a DTO property or `[PluginService]` in Plugin.cs; leave those inline.
+- **Early returns over nesting.** Guard clauses first, then the flat happy path.
+- **A blank line after a closing brace** before the next statement in the same block. The build does not catch this one: .editorconfig raises its analyzer (IDE2003), but that analyzer is experimental and reports nothing unless a separate option turns it on, so reviewers check it.
+
+All of it together, in a real method from src/Aetherphone/PhoneCommands.cs:
 
 ```csharp
-internal static class UnreadTally
+private IPhoneApp? FindApp(string query)
 {
-    private const int BadgeCap = 99;
-
-    public static int Count(IReadOnlyList<ConversationSummary> conversations)
+    IPhoneApp? best = null;
+    var bestScore = 0;
+    for (var index = 0; index < apps.Count; index++)
     {
-        if (conversations.Count == 0)
+        var app = apps[index];
+        if (!app.IsAvailable)
         {
-            return 0;
+            continue;
         }
 
-        var total = 0;
-        for (var conversationIndex = 0; conversationIndex < conversations.Count; conversationIndex++)
+        var score = Math.Max(SpotlightMatch.Score(app.DisplayName, query),
+            SpotlightMatch.Score(app.Id, query) / 2);
+        if (score > bestScore)
         {
-            total += conversations[conversationIndex].UnreadCount;
+            best = app;
+            bestScore = score;
         }
-
-        return Math.Min(total, BadgeCap);
     }
+
+    return best;
 }
 ```
 
-### Structure rules CI enforces
+### Structure rules
 
-The Guards job in .github/workflows/ci.yml greps the tree before anything compiles. Besides the copy and performance guards described further down (em dashes, `async void`, LINQ, the UI scale seam, the clock seam) and the version sync check in [Testing and release](testing-and-release.md), four of its checks are about structure:
+CI checks these with fast source scans before anything compiles; [Testing and release](testing-and-release.md) lists every guard.
 
-- **Layering.** Code under src/Aetherphone/Core and src/Aetherphone/Windows never imports `Aetherphone.Apps`. The two composition roots, Core/Apps/AppRegistry.cs and Windows/Widgets/WidgetCatalog.cs, are the only exceptions. When Core or the toolkit needs something an app provides, invert it onto an interface in Core or move the shared piece down.
-- **No underscore-prefixed fields.** A `private` or `protected` field starting with `_` fails, in the plugin and the test project.
-- **No byte order mark.** A .cs file saved as UTF-8 with a BOM fails.
-- **The namespace matches the folder.** Every file under src declares a file-scoped namespace equal to its folder path (`src/Aetherphone/Core/Apps/` is `Aetherphone.Core.Apps`). Windows/Components is the deliberate exception: its subfolders (Primitives, Layout, Chat, Fields, and the rest) group files by kind, and every file there declares the one flat `Aetherphone.Windows.Components` namespace. src/ManagedDoom is exempt.
+- **Layering.** Code under Core and Windows never imports `Aetherphone.Apps`; only the two composition roots may. [Architecture](architecture.md) explains the rule and where new code goes instead.
+- **The namespace matches the folder.** src/Aetherphone/Core/Apps/ is `Aetherphone.Core.Apps`. Windows/Components is the one exception: its subfolders group files by kind, and every file there declares the flat `Aetherphone.Windows.Components` namespace.
+- **No underscore-prefixed fields** and **no byte order marks** in C# files.
+- **Two seams.** Draw code scales through `UiScale.Current`, and only UiScale.cs reads Dalamud's `ImGuiHelpers.GlobalScale`. Clock text goes through `TimeText.Clock`, and only TimeText.cs may write a pattern such as "HH:mm". [UI toolkit](ui-toolkit.md) explains both.
+- **The vendored src/ManagedDoom** keeps its own style and is exempt from the code-style build and the namespace check.
 
 ## Types and data
 
-The codebase leans data-oriented: plain data in flat structures, transformed by static helpers, over deep object-oriented hierarchies. Interfaces exist for real seams: the contracts features plug into (IPhoneApp in src/Aetherphone/Core/Apps/IPhoneApp.cs for apps, IHomeWidget for home widgets, IMiniGame for games), and the inversions the layering guard requires, where Core or the toolkit needs something an app provides (the ISpotlight* sources, the IChatTranscript* hooks). Do not add one with a single implementation and no such reason.
+The codebase leans data-oriented: plain data in flat structures, transformed by static helpers, rather than deep class hierarchies. Interfaces exist for real seams: the contracts features plug into (`IPhoneApp` for apps, `IHomeWidget` for home widgets, `IMiniGame` for games) and the inversions the layering rule requires. Do not add one with a single implementation and no such reason.
 
-- **`sealed` liberally.** `internal sealed class` is the default class declaration; the tree has hundreds of them. Unsealed classes are the exception, not the rule.
-- **`const` and `readonly` wherever possible.** Metrics is nothing but consts; TextStyles is nothing but `public static readonly` values of a `readonly record struct`.
-- **Structs over classes for small data.** The tree has well over a hundred `readonly struct` and `readonly record struct` declarations (TextStyle in TextStyles.cs, SweepTier inside Typography.cs).
-- **`ref struct` where it fits.** A ref struct can only live on the stack, so it never allocates on the garbage-collected heap. Examples: InputShield in src/Aetherphone/Core/Animation/InputShield.cs, ChatSearchModel in src/Aetherphone/Windows/Components/Chat/ChatSearchController.cs, ChatTranscriptModel in src/Aetherphone/Windows/Components/Chat/ChatTranscript.cs.
-- **Compact representations.** Glyph ranges are `ushort[]`, PluralKind is `enum : byte` (both in src/Aetherphone/Core/Localization/Language.cs). Pick the smallest type that holds the data.
-- **Static data tables over runtime lookups.** App accents come from AppAccents.For(id) (src/Aetherphone/Core/Apps/AppAccents.cs); the changelog is a readonly array in src/Aetherphone/Core/Changelog/ChangelogData.cs.
+- **`sealed` by default.** `internal sealed class` is the normal class declaration.
+- **`const` and `readonly` wherever possible**, including `static readonly` arrays for fixed tables.
+- **Structs for small data.** Small values are a `readonly struct` or a `readonly record struct`.
+- **`ref struct` where it fits.** A ref struct lives only on the stack, so it never allocates on the heap. `InputShield` (src/Aetherphone/Core/Animation/InputShield.cs) is one, used as a `using` scope.
+- **The smallest type that holds the data**, for example an `enum : byte` such as `PluralKind`.
+- **Static tables over runtime lookups.** App accents come from `AppAccents.For(id)`, and the changelog is a readonly array.
 
 ## Performance
 
-Aetherphone draws with Dear ImGui, an immediate mode UI library: nothing is retained between frames, the entire phone UI is rebuilt and redrawn every frame, up to your monitor's refresh rate, inside the game's render loop. Any code reachable from a `Draw` method is a hot path. That drives every rule here.
+Dear ImGui rebuilds the whole phone every frame, up to the monitor's refresh rate, inside the game's render loop. Any code reachable from a `Draw` method is a hot path, and an allocation there becomes garbage collector pressure and, eventually, a visible stutter in game.
 
-- **No LINQ in per-frame or hot paths.** LINQ extension methods (Where, Select, Any, First and friends) allocate iterators and delegates every call. The ban is structural rather than advisory: `Aetherphone.csproj` carries `<Using Remove="System.Linq" />`, so `System.Linq` is not in scope anywhere in the plugin and LINQ cannot be reached without adding a `using System.Linq;` line to the file. Only cold-path files carry one, and the "Verify no new LINQ" guard in .github/workflows/ci.yml holds the list (today VelvetFilterSelection.cs, VelvetNotInterestedArchive.cs, and SongPlayer.cs). It fails a pull request that adds the using anywhere else under src/Aetherphone. Write a `for` loop instead. The removal covers the plugin project only: the test project keeps the implicit `System.Linq` using, and the vendored ManagedDoom port is outside the guard.
-- **`for` over `foreach` on indexable collections.** `for` with a named index avoids enumerator allocation on non-array collections and is the dominant pattern. `foreach` remains where there is no indexer, mostly dictionary and set iteration (src/Aetherphone/Apps/Calendar/CalendarEventMerger.cs).
-- **Watch allocations in draw code.** Anything allocated per frame becomes garbage-collector pressure and eventually a visible stutter in-game. The pattern to copy: compute once, cache, invalidate on a real change. Typography.cs keeps FitCache, WrapCache, and FitScaleCache, sweeps out entries left unused for a frame once a cache grows large, and clears all three when the font atlas generation changes; ChipRail.Draw takes `ReadOnlySpan<string>` so callers can pass stack or pooled data without allocating.
-- **Reflection only in rarely-executed paths.** Reflection is slow and allocation-heavy. The plugin uses it in a handful of cold paths: LocAudit.CollectKeys (compiled only in debug builds, runs once at plugin boot), the Activator.CreateInstance call that creates the Media Foundation transform when an AAC radio stream starts (src/Aetherphone/Core/Radio/AacStreamDecoder.cs), the delegate inspection that maps a chat command to its owning plugin while the Shortcuts catalog is built (src/Aetherphone/Core/Shortcuts/PluginCatalog.cs), and the `AssemblyInformationalVersionAttribute` reads in src/Aetherphone/Core/Updates/InstallSource.cs (once at boot) and src/Aetherphone/Core/Platform/SupportInfo.cs. None of it runs per frame; the only use reachable from a Draw method is the one-shot Copy Support Info click in Settings, About. Keep it that way.
-- **Always await awaitables in async contexts.** There are zero `async void` methods in the tree. ImGui draw code cannot await (a frame cannot pause), so work is pushed off the frame with an explicit discard, `_ = Task.Run(...)`, and inside those async bodies every awaitable is awaited.
+- **No LINQ in the plugin.** LINQ allocates iterators and delegates on every call. The plugin project removes the implicit `System.Linq` using, so LINQ does not compile without adding the using to a file, and a CI guard allows that in only a few cold-path files. Write a `for` loop. The test project keeps LINQ.
+- **`for` over `foreach`.** A `foreach` over an interface such as `IReadOnlyList<T>` boxes its enumerator and allocates on every pass; a `for` loop over the indexer does not. `foreach` stays where there is no indexer, mostly dictionaries and sets.
+- **Compute once, cache, invalidate on a real change.** Typography caches fitted and wrapped text and clears the caches when the font atlas changes. Draw helpers such as `ChipRail.Draw` take `ReadOnlySpan` parameters so callers can pass stack, pooled, or cached data.
+- **Cache delegates.** Turning an instance method into a delegate, or writing a lambda that captures state, allocates a new delegate each time. SettingsApp stores `drawPage = DrawPage` once in its constructor and passes the field to its router every frame.
+- **Reflection only on cold paths.** Today it appears only in places such as a debug-only localization audit and building the Shortcuts plugin list, never per frame. Keep it that way.
+- **Await every awaitable, and no `async void`.** Draw code cannot await, because a frame cannot pause, so it starts work with an explicit discard, `_ = Task.Run(...)`, and every awaitable inside that task is awaited. CI rejects `async void`.
 
-## UI conventions in brief
+## UI design rules
 
-Full detail with examples lives in [UI toolkit](ui-toolkit.md); this is the checklist form.
-
-- **All text goes through the typography ladder.** Pick a TextStyle from TextStyles (Hero and LargeTitle down to Caption2, plus a few purpose styles such as StatusDigits and WidgetDisplay) and draw with the Typography helpers. Never hand-pick a font scale for a screen.
-- **Metrics tokens over pixel literals.** Spacing, radii, and control sizes come from Metrics.Space, Metrics.Radius, Metrics.Size, and Metrics.Stroke. Every pixel value, token or not, is multiplied by `UiScale.Current` so the phone scales with both Dalamud's global UI scale and the user's chosen phone size. Never read `ImGuiHelpers.GlobalScale` directly: `UiScale.cs` is the only place allowed to, and CI fails the build on any other use.
-- **Text wraps, it never overflows.** Use Typography.Wrapped, Typography.DrawWrappedLeft, or Typography.FitText. Clipped or overlapping text is a bug, always.
-- **A box that holds text is sized from Typography, not from a height constant.** `UiScale.Current` carries the UI scale only; the Text Size setting (`Configuration.TextZoom`) lives in the fonts, so `Typography.LineHeight` and `Typography.Measure` grow with it and a `Metrics` height does not. Chrome (padding, glyph tiles, radii) comes from Metrics times `UiScale.Current`; the card or tile around a label and a value takes `MathF.Max(designHeight * scale, padding + glyph + Typography.LineHeight(label) + Typography.LineHeight(value))`, the way `ActivityArt.TileHeight`, `ActivityArt.StateHeight` and `CoinApp.Shop.ItemCellHeight` do. A tile that fits at 90% text size and clips at 100% has this bug.
-- **A centered card is a measured stack, not a pile of hardcoded offsets.** Measure each line, add Metrics.Space gaps between them, and size the card from the total. A card with a fixed height and rows placed at `center.Y + 26f` drifts the moment a line is missing, a badge appears, or a translation is taller, and the last row lands under the button. GameOverlay (src/Aetherphone/Apps/Games/Framework/GameOverlay.cs) is the reference.
-- **A top highlight follows the corner curve.** Draw the inner sheen on a card, pill, or tile with Material.Sheen, never a straight `AddLine` inset by the corner radius. A squircle corner starts curving well before the radius, so a straight hairline stops short of the real edge on both sides and reads as a floating line across the top. Material.Sheen starts and ends exactly where the shape's top edge sits at that depth and fades into both corners.
-- **One pannable chip rail, never a chip wall.** A row of filter chips is a single horizontally draggable ChipRail. Chips never wrap to a second line.
-- **Free input over preset chips.** When the user enters a value, let them enter any value. TimeOfDayField (src/Aetherphone/Windows/Components/Fields/TimeOfDayField.cs) steps hours and minutes across the whole day rather than offering a handful of preset times.
-- **Critically damped motion, no bounce.** All UI motion runs through Spring (src/Aetherphone/Core/Animation/Spring.cs), whose Step clamps at the target so it cannot overshoot. Every smooth time and press scale comes from Motion (src/Aetherphone/Core/Animation/Motion.cs); never redeclare one in a component. Draw with the raw spring value: no easing curve sits on top of a spring (Easing.Lerp, Clamp01 and Segment are linear helpers and stay). Bouncy easing (Easing.EaseOutBack) lives only in games: the mini-games under src/Aetherphone/Apps/Games/ and the casino cabinets under src/Aetherphone/Apps/Casino/Cabinets/.
-- **All clock text goes through the single clock seam.** TimeText.Clock (src/Aetherphone/Core/Localization/TimeText.cs) formats every clock string and honors the user's 12/24-hour preference via TimeText.Use24Hour. There are dozens of call sites and zero hand-rolled `"HH:mm"` format strings outside TimeText itself. Keep it that way.
-
-### Materials and controls (the two-layer rule)
-
-The phone follows the iOS split between a navigation layer and a content layer, and every control comes from one kit. The materials themselves, with examples, are in [UI toolkit: materials and the two-layer rule](ui-toolkit.md#materials-and-the-two-layer-rule).
-
-- **Glass belongs to the navigation layer only.** Nav bar buttons, the bottom tab bar, floating toolbars, sheets, menus, popovers, toasts, the home dock and Control Center are glass (Material.LiquidGlass, Material.ThemedGlass, GlassCircle). Anything that scrolls with the content (cards, rows, buttons, fields, chips, heroes) is a fill, never glass, and glass never sits on glass.
-- **In-app glass refracts the app's own backdrop.** AppSkin.Backdrop records its gradient through WallpaperBackdrop.RecordAppGround, and the shell records the theme background for every other app, so glass inside an app lifts the colour behind it instead of darkening the bottom of the gradient into a black block.
-- **Content fills come from one ladder.** Surfaces.Fill(ink, FillLevel) derives Primary, Secondary, Tertiary and Quaternary fills from the screen's title ink, so the same call is right in dark and light themes. Never hand-pick a white-alpha fill for a control.
-- **Every labelled button is a Button.** Styles are Prominent (solid accent, white label, sheen and halo), Tinted (accent at 20 percent), Gray (Fill.Secondary) and Plain; ButtonRole.Destructive swaps the accent for the danger colour. Sizes are Small 28, Regular 34 and Large 44, all capsules, and the label style follows the height. Every button shares the hover lift and press sink from MotionButton. The AppSkin pill helpers (PillButton, AccentPill, ActionPill, GhostButton, DangerPillButton) forward to it; never write a new pill painter, and never use a stock ImGui.Button.
-- **Round icon buttons in content are a RoundButton.** Gray or Tinted circles with the same motion. GlassCircle is the navigation-layer version.
-- **Search and text fields are filled capsules.** SearchBar.Surface paints a 36 tall capsule on Fill.Tertiary behind GlassField.Search or GlassField.Text. A field never renders without a background.
-- **Buttons in a tinted app use that app's accent.** Pass the app's ControlInk (`ui.Ink`), not a PhoneTheme, so a button never falls back to the system accent.
-
-### Grouped lists (settings and any list of rows)
-
-The settings tree is the reference implementation of these three rules; follow them anywhere you build a card of rows.
-
-- **A row shows a value only when it deviates.** The right-hand string in SettingsRow.Link, AppLink, and Disclosure is for state worth acting on: the chosen language, an unread count, a feature that is off. A row never restates its own purpose ("Slash commands", "What's new") or repeats what the page below it already shows. When there is nothing to report, pass `string.Empty`.
-- **One card per group of switches, never one card per switch.** Related switches share a GroupCard with hairlines between them. Reach for a SettingsSection.Header only where a page genuinely turns a corner, and never as a label for a single row.
-- **A footer has to earn its place.** Explaining what one control does is the hint icon's job: pass `hint` to SettingsRow.Bool or SettingsRow.Switch, or the optional third argument of SettingsSection.Header for a whole section. SettingsSection.Hint stays for destructive warnings, loading and empty states, and sign-in prompts.
-
-### List anatomy (which container a list of rows gets)
-
-Every list on the phone uses one of two shared anatomies; a floating card is reserved for content that is genuinely a card.
-
-- **Feed content gets edge-to-edge cells.** Posts, conversations, call logs, articles, activity, search results: FeedCell inside AppSurface.BeginEdgeToEdge. The cell and its trailing hairline span the full screen width, content sits a single 16px inset in (FeedCell.PadX), hover is the flat HoverWash, the whole cell taps. Chirper is the reference implementation. Section headers over cell lists come from ListSection.Header (`ListSection.Label` takes the AppSkin overload; Velvet uses VSectionHeader.Overline with an inset).
-- **A photo feed goes full bleed.** In Aethergram, Velvet and anywhere else the image is the post, the media spans the entire cell width with no rounding, while the header, action row and caption keep the 16px inset. Pass `0f` rounding to the carousel and size the media off the full cell width, not the inset width.
-- **A cell whose interior is all controls opts out of the whole-cell tap.** Pass `interactive: false` to FeedCell.Begin so the cell paints and separates without claiming the press. Post cards, queue rows with inline buttons, and the Discover person card do this.
-- **Settings and detail lists get grouped inset cards.** GroupCard (theme or AppSkin overload) plus row painters in the SettingsRow style. Fixed row heights, left-inset hairlines, the three grouped-list rules above. Velvet's Me page is the Velvet-side example, and it keeps VRow.Draw rather than VRow.Cell.
-- **Floating cards are for card-shaped content only.** Sanctioned: Venues listings (hero imagery), the Notifications stack, Health metric cards, AppStore hero content, the Calendar month grid, the Photos grid, Skywatcher, Games and Casino table art, Camera, and Calculator. A card that survives inside an edge-to-edge surface is inset by FeedCell.PadX so it lines up with the cells around it: ChocoChat's my-number card, Muster's pinned muster, and the Games online host cards. Do not add new floating-card row lists.
-
-### Sheets, dialogs, menus, and toasts
-
-- **A destructive or choice flow is a bottom sheet.** Post and row overflow actions use an ActionSheet (style via ActionSheetStyle.From). A single destructive confirm goes through ConfirmService.Ask with `Sheet = true`, which the shell renders as an action sheet with the title and message in the header band.
-- **An irreversible, monetary, or consent confirm stays an alert.** Account deletion, purchases, vault wipes, NSFW and external-link gates keep the centered ConfirmDialog (`Sheet` unset). Every `Alert(...)` stays an alert.
-- **Pickers stay menus.** Sort, scope, quality, channel, and filter pickers, and any menu with inline edit or delete affordances, remain DropdownMenu.
-- **Transient feedback is a toast.** ShellToast.Show for anything raised from shared components or app code; it renders as the bottom pill in whichever host (phone, popout, minimized) the pointer was in. Per-app ScreenToast instances remain for app-styled toasts (Chirper).
-- **Sharing between apps is the ShareSheet; a titled content panel is a SheetSurface.** Sending something to a *person* is a different feature and does not belong in the ShareSheet: it needs the app's own recipient list, its own send state, and usually multiple sends in one visit. Aethergram's Send to screen is the reference. An app still declares `AcceptedShares` so the system sheet can route into it.
-- **A popover is not a menu.** PopoverSurface hosts editors and readouts that a label list cannot express: the Jobs color editor (preset swatches plus a hex field), the Jobs category name editor, the Housing map legend, and the Housing ward grid. Leave those bespoke. Reach for DropdownMenu only when the content really is a list of labeled choices.
+Typography, spacing tokens, scaling, motion, materials, list anatomy, sheets, and toasts all follow the design rules in [UI toolkit](ui-toolkit.md).
 
 ## Copy rules
 
-These apply to UI strings, docs, changelogs, and commit messages alike.
+Two rules engineers break most often; [Localization](localization.md) holds the full set.
 
-- **No em dashes, anywhere.** Not in UI copy, not in the nine locale JSONs, not in docs, not in changelog bullets. Use a comma, colon, or parentheses. CI enforces this repo-wide: the "Verify no em dashes" guard in .github/workflows/ci.yml fails any pull request whose tracked files contain one. The single exemption is .github/workflows/announce-commits.yml, which carries the character on purpose so it can substitute stray dashes out of commit subjects before posting to Discord.
-- **Changelog bullets carry one idea each.** The changelog ships inside the plugin: entries are LocString arrays in the Changelog section of src/Aetherphone/Core/Localization/L.cs, listed in src/Aetherphone/Core/Changelog/ChangelogData.cs, and translated in all nine locale JSONs.
-- **Credit contributors in the changelog.** The pattern is a trailing clause: "..., contributed by Ehno". See the 0.9.9.5 entries in L.cs.
-- **Use in-app names.** Copy refers to apps and features by their on-screen names (Photos, Jobs, Camera), not internal identifiers.
-- **Name games for what they do.** Mini-game names describe the game: Sweeper, Pairs, Gem Swap (`games.*` keys in L.cs). No lore-flavored prefixes.
+- **No em dashes, anywhere.** Not in UI strings, the locale JSONs, docs, changelog bullets, or commit messages. Use a comma, colon, or parentheses. A CI guard fails any pull request that adds one.
+- **Use the on-screen names.** Copy calls apps and features by the names players see (Photos, Jobs, Camera), never by internal ids.
 
-## Localization lockstep
-
-Every new, renamed, or deleted user-visible string changes src/Aetherphone/Core/Localization/L.cs plus all nine JSON files in src/Aetherphone/Localization/ in the same commit. Full procedure: [Localization](localization.md).
+Every new, renamed, or deleted user-visible string changes src/Aetherphone/Core/Localization/L.cs and all nine JSON files under src/Aetherphone/Localization/ in the same commit. The test suite fails when they drift.
 
 ## Git conventions
 
-Open pull requests against `dev`, the default branch. `master` is the release branch: it only moves when a maintainer cuts a release (see [Testing and release](testing-and-release.md)), so never target it.
+Open pull requests against `dev`, the default branch. `master` moves only when a maintainer cuts a release ([Testing and release](testing-and-release.md)).
 
-This repo uses conventional-commit style for hand-written commits: a type, a scope in parentheses, a colon, then a lowercase summary. Workflow-generated commits are the exception and keep their own fixed subjects: release.yml's "Release vX.Y.Z.W: bump repo.json" and Dependabot's `ci:` and `deps:` bumps. Merge commits keep their default subjects. Older history also carries "Update issue template versions for vX.Y.Z.W" commits from a workflow that now normally finds nothing to change.
+Hand-written commits use conventional commit style: a type, a scope in parentheses, a colon, and a lowercase summary.
 
+```text
+feat(emoji): suggest emoji while typing a :shortcode in every composer
+fix(jobs): count a level 50 beastmaster as capped
+perf(ui): draw progress rings as one path instead of a line per segment
+docs(changelog): fold the 1.3.0.0 notes into one bullet per change
+chore(release): bump version to 1.3.0.0
 ```
-feat(account): link Patreon and wear the member badge automatically
-fix(net): cap the rate-limit pause at 30 seconds
-docs(changelog): note the 1.0.0.5 Casino and Coin reopen for the Chinese game version
-chore(release): bump version to 1.0.0.5
-refactor(sounds): make all ringtones and notification sounds file-based
-ci: stop pinging the role in commit announcements
-```
 
-- Types in active use: `feat`, `fix`, `docs`, `refactor`, and `chore`, plus `perf`, `style`, `ci`, `test`, and `revert` as needed. Scope is the app or subsystem you touched (`velvet`, `settings`, `ui`, `net`, `release`).
-- The summary is a lowercase sentence fragment, no trailing period, and describes the user-visible outcome, not the diff.
-- **The pull request title follows the same shape, and CI checks it.** .github/workflows/label-pull-request.yml fails a pull request whose title is not `type(scope): lowercase summary`, then sets the labels so nobody picks them by hand: the type selects `enhancement`, `bug`, `documentation`, `refactor`, `performance`, `chore`, `tests`, `ci` or `dependencies`; the changed paths add `app: <name>` per app folder (more than eight collapse to `area: apps`), `area: core`, `area: shell`, `area: assets`, `tests`, `ci` and `documentation`; a pull request that only edits the locale JSONs gets `translation`. Renaming the pull request moves the type label with it, and labels outside that set (`good first issue`, `help wanted`) are never touched. Dependabot is skipped because it labels its own pull requests through dependabot.yml. The auto-generated GitHub release notes group merged pull requests by these labels through .github/release.yml.
-- **One concern per PR.** Keep the diff focused (CONTRIBUTING.md). A fix and a refactor are two PRs.
-- **No AI attribution.** Do not add AI co-author trailers or generated-with footers to commits or PR bodies. Commit messages carry substantive content only. This is the going-forward policy, not a description of history: a few dozen commits merged before mid-August 2026 still carry AI Co-authored-by trailers. Do not copy them. A Co-authored-by trailer that credits a human contributor, as GitHub adds when it squash-merges a contributor's pull request, is fine.
-- **Declare your AI involvement level in the PR description** when you went past autocomplete, using the six level names in [AI usage](ai-usage.md). That doc is the disclosure seam; this rule is only about keeping commit messages free of boilerplate.
-- **Update the README when user-visible behavior changes**: commands, layout, settings (CONTRIBUTING.md). The README has eight translations under docs/readme/ (README.fr.md and friends); update at least README.md at the repo root.
-- Release versioning is not part of a feature PR: the version lives in Directory.Build.props and CI fails if it drifts from repo.json (.github/workflows/ci.yml). See [Testing and release](testing-and-release.md).
+- **Types:** `feat`, `fix`, `docs`, `refactor`, `perf`, `style`, `chore`, `ci`, `test`, `revert`, and `deps` for dependency bumps. The title check accepts exactly these.
+- **Scope:** the app or subsystem you touched (`velvet`, `settings`, `ui`, `net`). The check accepts a title without one, but use one whenever the change has a clear home.
+- **Summary:** a lowercase sentence fragment with no trailing period that describes the user-visible outcome, not the diff.
+- **The pull request title follows the same shape, and CI checks it.** label-pull-request.yml fails a title that does not match, then sets the labels from the type and the paths you changed, so you never pick them by hand.
+- **One concern per pull request.** A fix and a refactor are two pull requests.
+- **No AI attribution.** No AI co-author trailers or generated-with footers in commits or pull request bodies. A co-author trailer that credits a person is fine.
+- **Declare your AI involvement level** in the pull request description when you went past autocomplete, using the level names in [AI usage](ai-usage.md). That declaration is the disclosure; commit messages stay free of it.
+- **Update the root README.md when user-visible behavior changes**: commands, layout, settings. Its eight translations live under docs/readme/.
+- **Leave the version alone.** It changes only in a release, and CI fails if Directory.Build.props and repo.json disagree.
+
+Workflow commits, such as release bumps and Dependabot updates, keep their own fixed subjects.
 
 ## Gotchas
 
-- **A warning on your machine is an error in CI.** Local builds only print code-style and analyzer warnings; CI builds with `TreatWarningsAsErrors`. Build Release and clear the warning list before you push.
-- **Typography.Draw without a draw list moves the ImGui cursor**; inside bespoke drawing, always pass the `ImDrawListPtr` overload. Full story: [UI toolkit](ui-toolkit.md).
-- **Toggle.Draw returns the new value, not "was clicked"**; assign it back every frame instead of treating it as a click event. Full story: [UI toolkit](ui-toolkit.md).
-- **Fixing English text only in en.json changes nothing in-game.** English resolves from the source strings in L.cs (Loc gives English an empty catalog in src/Aetherphone/Core/Localization/Loc.cs). Fix the text in L.cs and mirror it in en.json.
-- **Text resolved at construction freezes its language**; store the LocString and call `Loc.T` in your Draw path. Full story: [Localization](localization.md).
-- **Lockstep is enforced by the test suite, not the compiler.** LocalizationParityTests (src/Aetherphone.Tests/LocalizationParityTests.cs) fails CI whenever a key declared in L.cs is missing from any of the nine catalogs, or a catalog carries a key L.cs no longer declares. For a faster local signal, LocAudit (wrapped in `#if DEBUG`, runs once at boot) reports missing keys in the Dalamud log on a debug build after you touch L.cs.
+- **A warning on your machine is an error in CI.** Local builds only print code-style and analyzer warnings. Build Release and clear the warning list before you push.
+- **`.Any()` or `.Where()` does not compile in the plugin.** That is the LINQ removal, not a missing package. Write the loop; adding `using System.Linq;` fails the CI guard.
+- **Fixing English text only in en.json changes nothing in game.** English comes from the source strings in L.cs. Fix it there and mirror en.json.
+- **Text resolved in a constructor freezes its language.** Store the `LocString` and call `Loc.T` in the draw path.
+- **A debug build reports missing translations early.** LocAudit runs once at boot in debug builds and logs missing keys, before the test suite would catch them.
 
 ## Related docs
 
-- [Getting started](getting-started.md): prerequisites, build, loading the dev plugin
-- [UI toolkit](ui-toolkit.md): the Components library, typography, metrics, input handling
-- [Localization](localization.md): L.cs, the nine catalogs, and copy in depth
-- [Testing and release](testing-and-release.md): CI, versioning, and the changelog pipeline
-- [Creating an app](creating-an-app.md): these rules applied end to end in a tutorial
+- [Getting started](getting-started.md): build, load, and reload the plugin.
+- [Architecture](architecture.md): the layering rule and where new code goes.
+- [UI toolkit](ui-toolkit.md): the widget library and the UI design rules.
+- [Localization](localization.md): L.cs, the nine catalogs, and the copy rules.
+- [Testing and release](testing-and-release.md): CI guards, versioning, and the changelog.

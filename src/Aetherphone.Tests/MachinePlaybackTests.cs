@@ -213,9 +213,13 @@ public sealed class MachinePlaybackTests
     public void TheGambleLadderOnlyOffersSmallBirdWins()
     {
         var ladder = new GambleLadder();
-        ladder.Offer("round1", 1_000, 25_000);
+        ladder.Offer(SlotsRules.BirdId, "round1", 1_000, 25_000);
         Assert.False(ladder.Offered);
-        ladder.Offer("round1", 1_000, 4_000);
+        ladder.Offer(SlotsRules.CascadeId, "round1", 1_000, 4_000);
+        Assert.False(ladder.Offered);
+        ladder.Offer(SlotsRules.MoogleId, "round1", 1_000, 4_000);
+        Assert.False(ladder.Offered);
+        ladder.Offer(SlotsRules.BirdId, "round1", 1_000, 4_000);
         Assert.True(ladder.Offered);
         Assert.Equal(8_000, ladder.RungAmount(1));
         Assert.Equal(128_000, ladder.RungAmount(5));

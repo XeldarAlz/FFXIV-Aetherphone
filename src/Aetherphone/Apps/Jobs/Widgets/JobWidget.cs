@@ -309,7 +309,7 @@ internal sealed unsafe class JobWidget : IHomeWidget
         var expArrayIndex = gameData.JobExpArrayIndex(classJobId);
         var levels = playerState->ClassJobLevels;
         level = expArrayIndex >= 0 && expArrayIndex < levels.Length ? levels[expArrayIndex] : 0;
-        maxLevel = playerState->MaxLevel > 0 && level >= playerState->MaxLevel;
+        maxLevel = playerState->MaxLevel > 0 && level >= JobsRoster.CapFor(classJobId, playerState->MaxLevel);
         var needed = maxLevel ? 0L : (long)playerState->GetCurrentClassJobNeededExp();
         var current = maxLevel ? 0L : (long)playerState->GetCurrentClassJobExp();
         experience = needed > 0 ? Math.Clamp(current / (float)needed, 0f, 1f) : maxLevel ? 1f : 0f;

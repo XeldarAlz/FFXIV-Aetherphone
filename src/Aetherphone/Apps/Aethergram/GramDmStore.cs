@@ -382,6 +382,8 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
         };
     }
 
+    protected override string NotificationAppId => "aethergram";
+
     protected override string ThreadKeyOf(GramThreadDto thread) => thread.OtherUserId;
 
     protected override long ThreadLastMessageAtOf(GramThreadDto thread) => thread.LastMessageAtUnix;
@@ -396,7 +398,7 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
         var preview = thread.LastMessageKind == PostShareKind
             ? Loc.T(L.Aethergram.SharedPost)
             : ChatText.ListPreview(thread.LastMessagePreview);
-        return new PhoneNotification("aethergram", name, preview, DateTime.Now,
+        return new PhoneNotification(NotificationAppId, name, preview, DateTime.Now,
             AppPalettes.Aethergram.Accent, thread.OtherUserId);
     }
 

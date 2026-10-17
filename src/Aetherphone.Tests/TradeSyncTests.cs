@@ -259,4 +259,24 @@ public sealed class TradeSyncTests
         Assert.Equal(Mira, tracker.Observe(Closed(1_060_000), 48)!.Value.PartnerName);
         Assert.Equal(Ciri, tracker.Observe(Closed(1_150_000), 64)!.Value.PartnerName);
     }
+
+    [Fact]
+    public void TradesFollowTheTableForTwelveHoursAfterTheHostWasLastAtIt()
+    {
+        const long atTable = 1_000;
+        Assert.False(CasinoTradeSync.HostedRecently(0, 5_000));
+        Assert.True(CasinoTradeSync.HostedRecently(atTable, atTable));
+        Assert.True(CasinoTradeSync.HostedRecently(atTable, atTable + CasinoTradeSync.HostedWindowMilliseconds));
+        Assert.False(CasinoTradeSync.HostedRecently(atTable, atTable + CasinoTradeSync.HostedWindowMilliseconds + 1));
+        Assert.Equal(12 * 60 * 60 * 1_000L, CasinoTradeSync.HostedWindowMilliseconds);
+    }
+
+    [Fact]
+    public void SigningOutKeepsTheTableAndOnlyAnotherCharacterForgetsIt()
+    {
+        Assert.False(CasinoTradeSync.ForgetsTable("host", string.Empty));
+        Assert.False(CasinoTradeSync.ForgetsTable("host", "host"));
+        Assert.True(CasinoTradeSync.ForgetsTable("host", "alt"));
+        Assert.True(CasinoTradeSync.ForgetsTable(string.Empty, "host"));
+    }
 }

@@ -22,6 +22,12 @@ internal sealed class CasinoTradeSync : IDisposable
 {
     public const long RecordedShownMilliseconds = 8_000;
 
+    public const long HostedWindowMilliseconds = CasinoHostingRules.TradeClosedTableHours * 3_600_000L;
+
+    private const long HostingCheckMilliseconds = 1_000;
+
+    private const long TableMemorySaveMilliseconds = 5 * 60_000L;
+
     private static readonly int[] RetryDelaysMilliseconds = { 2_000, 5_000, 10_000 };
 
     private readonly Configuration configuration;
@@ -42,6 +48,11 @@ internal sealed class CasinoTradeSync : IDisposable
     private volatile bool undoing;
     private bool sending;
     private bool tracking;
+    private long hostingCheckedAtTick;
+    private long atTableAtUnixMs;
+    private long savedAtUnixMs;
+    private string atTableId = string.Empty;
+    private string atTableAccountId = string.Empty;
     private string accountId = string.Empty;
 
     public CasinoTradeSync(Configuration configuration, AethernetSession session, CasinoClient casino,
@@ -54,6 +65,10 @@ internal sealed class CasinoTradeSync : IDisposable
         this.venue = venue;
         this.notifications = notifications;
         this.accent = accent;
+        atTableId = configuration.CasinoTradeTableId;
+        atTableAccountId = configuration.CasinoTradeTableAccountId;
+        atTableAtUnixMs = configuration.CasinoTradeTableAtUnixMs;
+        savedAtUnixMs = atTableAtUnixMs;
         Plugin.Framework.Update += OnFrameworkUpdate;
     }
 
@@ -90,6 +105,17 @@ internal sealed class CasinoTradeSync : IDisposable
     public CasinoStakeOutcome? TakeUndoOutcome()
     {
         return Interlocked.Exchange(ref undoOutcome, null);
+    }
+
+    public void ForgetTable(string tableId)
+    {
+        if (tableId.Length == 0 || !string.Equals(atTableId, tableId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        AepLog.Info($"[TradeSync] Table {tableId} is closed, trade sync no longer follows it");
+        ClearTable();
     }
 
     public void Undo()
@@ -133,18 +159,47 @@ internal sealed class CasinoTradeSync : IDisposable
         }
 
         Send();
-        if (!configuration.CasinoHostTradeSync)
+        var nowTick = Environment.TickCount64;
+        var nowUnixMs = NowUnixMs();
+        if (!configuration.CasinoHostTradeSync || !Hosting(nowTick, nowUnixMs))
         {
             StopTracking();
             return;
         }
 
         tracking = true;
-        var completion = tracker.Observe(reader.Sample(), Environment.TickCount64);
+        var completion = tracker.Observe(reader.Sample(), nowTick);
         if (completion is { } done)
         {
-            Completed(done);
+            Completed(done, nowTick, nowUnixMs);
         }
+    }
+
+    private bool Hosting(long nowTick, long nowUnixMs)
+    {
+        if (nowTick - hostingCheckedAtTick >= HostingCheckMilliseconds)
+        {
+            hostingCheckedAtTick = nowTick;
+            NoteTable(nowTick, nowUnixMs);
+        }
+
+        return HostedRecently(atTableAtUnixMs, nowUnixMs);
+    }
+
+    internal static bool HostedRecently(long atTableAtUnixMs, long nowUnixMs)
+    {
+        return atTableAtUnixMs != 0 && nowUnixMs - atTableAtUnixMs <= HostedWindowMilliseconds;
+    }
+
+    internal static bool ForgetsTable(string atTableAccountId, string signedInAccountId)
+    {
+        return signedInAccountId.Length > 0
+            && !string.Equals(atTableAccountId, signedInAccountId, StringComparison.Ordinal);
+    }
+
+    private static long NowUnixMs()
+    {
+        return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
     }
 
     private void StopTracking()
@@ -161,6 +216,12 @@ internal sealed class CasinoTradeSync : IDisposable
     private void SwitchAccount(string account)
     {
         accountId = account;
+        if (ForgetsTable(atTableAccountId, account))
+        {
+            hostingCheckedAtTick = 0;
+            ClearTable();
+        }
+
         tracker.Reset();
         if (pending.Count > 0)
         {
@@ -171,17 +232,21 @@ internal sealed class CasinoTradeSync : IDisposable
         recorded = null;
     }
 
-    private void Completed(in TradeCompletion completion)
+    private void Completed(in TradeCompletion completion, long nowTick, long nowUnixMs)
     {
         var amount = Math.Abs(completion.Net);
+        var hint = HintTableId(nowTick, nowUnixMs);
         if (completion.PartnerName.Length == 0)
         {
             AepLog.Info($"[TradeSync] A trade of {amount} gil completed without a partner name, not recorded");
-            NotifyFailure(amount);
+            if (hint.Length > 0)
+            {
+                NotifyFailure(amount);
+            }
+
             return;
         }
 
-        var hint = HintTableId();
         pending.Enqueue(new CasinoLedgerTradeRequest(Guid.NewGuid().ToString("N"), completion.PartnerName,
             completion.PartnerWorld, completion.Received, completion.Sent, hint));
         AepLog.Info($"[TradeSync] Trade completed: received {completion.Received} gil, sent {completion.Sent} gil, "
@@ -290,15 +355,76 @@ internal sealed class CasinoTradeSync : IDisposable
         return name.Length > 0 ? name : request.PartnerName;
     }
 
-    private string HintTableId()
+    private string HintTableId(long nowTick, long nowUnixMs)
     {
-        var view = venue.View;
-        if (view is not null && view.Gil && OwnsGil(view.RoomId))
+        var live = NoteTable(nowTick, nowUnixMs);
+        if (live.Length > 0)
         {
-            return view.RoomId;
+            return live;
         }
 
-        var attended = tables.AttendedTableId(Environment.TickCount64);
+        return HostedRecently(atTableAtUnixMs, nowUnixMs) ? atTableId : string.Empty;
+    }
+
+    private string NoteTable(long nowTick, long nowUnixMs)
+    {
+        var live = LiveTableId(nowTick);
+        if (live.Length > 0)
+        {
+            RememberTable(live, nowUnixMs);
+        }
+
+        return live;
+    }
+
+    private void RememberTable(string tableId, long nowUnixMs)
+    {
+        var changed = !string.Equals(atTableId, tableId, StringComparison.Ordinal)
+            || !string.Equals(atTableAccountId, accountId, StringComparison.Ordinal);
+        atTableId = tableId;
+        atTableAtUnixMs = nowUnixMs;
+        atTableAccountId = accountId;
+        if (changed)
+        {
+            AepLog.Info($"[TradeSync] Following gil table {tableId}");
+        }
+
+        if (changed || nowUnixMs - savedAtUnixMs >= TableMemorySaveMilliseconds)
+        {
+            SaveTable();
+        }
+    }
+
+    private void ClearTable()
+    {
+        var stored = atTableId.Length > 0 || atTableAccountId.Length > 0 || atTableAtUnixMs != 0;
+        atTableId = string.Empty;
+        atTableAccountId = string.Empty;
+        atTableAtUnixMs = 0;
+        if (stored)
+        {
+            SaveTable();
+        }
+    }
+
+    private void SaveTable()
+    {
+        savedAtUnixMs = atTableAtUnixMs;
+        configuration.CasinoTradeTableId = atTableId;
+        configuration.CasinoTradeTableAccountId = atTableAccountId;
+        configuration.CasinoTradeTableAtUnixMs = atTableAtUnixMs;
+        configuration.Save();
+    }
+
+    private string LiveTableId(long nowTick)
+    {
+        var roomId = venue.Rooms.Room.RoomId;
+        if (OwnsGil(roomId))
+        {
+            return roomId;
+        }
+
+        var attended = tables.AttendedTableId(nowTick);
         return OwnsGil(attended) ? attended : string.Empty;
     }
 

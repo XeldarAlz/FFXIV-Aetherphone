@@ -3,6 +3,7 @@ using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;
+using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 
@@ -171,7 +172,12 @@ internal sealed partial class SkywatcherApp
         var card = new Rect(origin, origin + new Vector2(width, height));
         WeatherCard.Panel(drawList, card, palette, sky.Density, scale);
         WeatherCard.Header(drawList, card, FontAwesomeIcon.CalendarAlt, Loc.T(L.Skywatcher.Forecast), palette, scale);
-        var labelWidth = 62f * scale;
+        var labelWidth = 0f;
+        for (var index = 0; index < forecast.Count; index++)
+        {
+            labelWidth = MathF.Max(labelWidth, Typography.Measure(hourLabels[index], TextStyles.BodyEmphasized).X);
+        }
+
         var barWidth = 80f * scale;
         var glyphX = card.Min.X + padding + labelWidth + 12f * scale;
         var nameX = glyphX + 22f * scale;
@@ -190,17 +196,14 @@ internal sealed partial class SkywatcherApp
             }
 
             var labelStyle = window.IsCurrent ? TextStyles.BodyEmphasized : TextStyles.Body;
-            var label = Typography.FitText(hourLabels[index], labelWidth, labelStyle);
             var labelHeight = Typography.LineHeight(labelStyle);
-            Typography.Draw(drawList, new Vector2(card.Min.X + padding, centerY - labelHeight * 0.5f), label,
-                palette.Ink, labelStyle);
+            Typography.Draw(drawList, new Vector2(card.Min.X + padding, centerY - labelHeight * 0.5f),
+                hourLabels[index], palette.Ink, labelStyle);
             var kind = WeatherSky.Classify(window.Weather.EnglishKey);
             var isDay = IsDayWindow(window);
             WeatherCard.Glyph(drawList, kind, new Vector2(glyphX, centerY), 12f * scale, isDay, behind);
-            var name = Typography.FitText(window.Weather.Name, MathF.Max(1f, barMinX - 10f * scale - nameX),
-                TextStyles.Body);
-            Typography.Draw(drawList, new Vector2(nameX, centerY - Typography.LineHeight(TextStyles.Body) * 0.5f),
-                name, palette.Ink, TextStyles.Body);
+            WidgetText.Draw(drawList, new Vector2(nameX, centerY - Typography.LineHeight(TextStyles.Body) * 0.5f),
+                window.Weather.Name, palette.Ink, TextStyles.Body, barMinX - 10f * scale - nameX);
             DrawDayBar(drawList, new Rect(new Vector2(barMinX, centerY - 2.5f * scale),
                 new Vector2(card.Max.X - padding, centerY + 2.5f * scale)), window, kind, isDay,
                 window.IsCurrent ? nowBell : -1f, palette, scale);
@@ -282,16 +285,28 @@ internal sealed partial class SkywatcherApp
         var amplitude = area.Height * 0.45f;
         drawList.AddLine(new Vector2(area.Min.X, horizonY), new Vector2(area.Max.X, horizonY),
             ImGui.GetColorU32(palette.Ink with { W = 0.22f }), 1f * scale);
+        var lit = ImGui.GetColorU32(palette.Ink with { W = 0.55f });
+        var dim = ImGui.GetColorU32(palette.Ink with { W = 0.18f });
         var previous = SunPoint(area, horizonY, amplitude, 0f);
+        var runAbove = false;
+        drawList.PathLineTo(previous);
         for (var segment = 1; segment <= SunArcSegments; segment++)
         {
             var bell = BellsPerDay * segment / (float)SunArcSegments;
             var point = SunPoint(area, horizonY, amplitude, bell);
             var above = point.Y <= horizonY && previous.Y <= horizonY;
-            drawList.AddLine(previous, point, ImGui.GetColorU32(palette.Ink with { W = above ? 0.55f : 0.18f }),
-                (above ? 1.6f : 1.2f) * scale);
+            if (segment > 1 && above != runAbove)
+            {
+                drawList.PathStroke(runAbove ? lit : dim, ImDrawFlags.None, (runAbove ? 1.6f : 1.2f) * scale);
+                drawList.PathLineTo(previous);
+            }
+
+            runAbove = above;
+            drawList.PathLineTo(point);
             previous = point;
         }
+
+        drawList.PathStroke(runAbove ? lit : dim, ImDrawFlags.None, (runAbove ? 1.6f : 1.2f) * scale);
 
         var now = EorzeaTime.Now();
         var sun = SunPoint(area, horizonY, amplitude, now.Hour + now.Minute / 60f);

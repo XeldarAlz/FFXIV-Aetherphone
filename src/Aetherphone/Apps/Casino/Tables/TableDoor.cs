@@ -114,6 +114,7 @@ internal sealed partial class TableDoor
         var scale = UiScale.Current;
         ConsumeOutcomes();
         tables.EnsureDoorFresh(roomId);
+        tables.AttendTable(roomId);
         var door = tables.DoorFor(roomId);
         var card = tables.CardFor(roomId);
         SeedName(card);

@@ -171,6 +171,7 @@ internal sealed partial class CasinoApp
         if (owner)
         {
             casinoTables.EnsureDoorFresh(pinned.TableId);
+            casinoTables.AttendTable(pinned.TableId);
         }
 
         var door = owner ? casinoTables.DoorFor(pinned.TableId) : null;

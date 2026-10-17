@@ -395,20 +395,13 @@ internal sealed class GameComposer
 
     private void FocusOnFieldPress(Vector2 fieldMin, Vector2 fieldMax, Vector2 emojiCenter, float emojiRadius)
     {
-        if (!UiInteract.Hover(fieldMin, fieldMax) || ImGui.IsMouseHoveringRect(ImGui.GetItemRectMin(),
-                ImGui.GetItemRectMax()))
-        {
-            return;
-        }
-
         var emojiOffset = ImGui.GetMousePos() - emojiCenter;
         if (emojiRadius > 0f && emojiOffset.LengthSquared() <= emojiRadius * emojiRadius)
         {
             return;
         }
 
-        ImGui.SetMouseCursor(ImGuiMouseCursor.TextInput);
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (ComposerFieldPress.PressedAroundInput(fieldMin, fieldMax))
         {
             focus = true;
         }

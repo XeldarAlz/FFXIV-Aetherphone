@@ -28,9 +28,11 @@ internal sealed record PhoneNotification(
 
     public bool Muted { get; init; }
 
-    public string StackKey => string.IsNullOrEmpty(GroupKey) ? AppId : GroupKey;
+    public string StackKey { get; } = string.IsNullOrEmpty(GroupKey) ? AppId : StackKeyOf(AppId, GroupKey);
 
     public string SettingsKey => string.IsNullOrEmpty(ChannelId) ? AppId : ChannelId;
+
+    public static string StackKeyOf(string appId, string groupKey) => string.Concat(appId, ":", groupKey);
 
     private static string FlattenLineBreaks(string body)
     {

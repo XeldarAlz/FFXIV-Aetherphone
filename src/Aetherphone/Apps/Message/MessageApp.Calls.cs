@@ -246,7 +246,7 @@ internal sealed partial class MessageApp
         var top = row.Bounds.Center.Y - (titleHeight + RowLineGap * scale + subHeight) * 0.5f;
         var width = MathF.Max(1f, right - row.TextLeft);
         var hovering = UiInteract.Hover(new Vector2(row.TextLeft, top), new Vector2(right, top + titleHeight));
-        Marquee.DrawLeft(drawList, new MarqueeId("messageapp.calls.title.", entry.UserId + entry.TimestampUnix), title,
+        Marquee.DrawLeft(drawList, new MarqueeId("messageapp.calls.title.", entry.UserId, entry.TimestampUnix), title,
             row.TextLeft, top, width, RowTitleStyle, missed ? ink.Danger : ink.TitleInk, hovering);
         var directionGlyph = entry.Direction switch
         {

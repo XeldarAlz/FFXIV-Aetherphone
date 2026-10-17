@@ -470,6 +470,8 @@ internal sealed class AdInquiryStore : ChatThreadStoreBase<AdInquiryMessageDto, 
         return decorated ?? items;
     }
 
+    protected override string NotificationAppId => YellowPagesStore.AppId;
+
     protected override string ThreadKeyOf(AdInquiryDto thread) => thread.Id;
 
     protected override long ThreadLastMessageAtOf(AdInquiryDto thread) => thread.LastMessageAtUnix;
@@ -483,7 +485,7 @@ internal sealed class AdInquiryStore : ChatThreadStoreBase<AdInquiryMessageDto, 
         var name = SocialIdentity.Name(thread.OtherName, thread.OtherHandle);
         var preview = PreviewFor(thread, thread.LastBody);
         var body = thread.AdTitle.Length > 0 ? $"{thread.AdTitle} · {preview}" : preview;
-        return new PhoneNotification(YellowPagesStore.AppId, name, body, DateTime.Now,
+        return new PhoneNotification(NotificationAppId, name, body, DateTime.Now,
             AppPalettes.YellowPages.Accent, thread.Id)
         {
             ActorId = thread.OtherUserId,

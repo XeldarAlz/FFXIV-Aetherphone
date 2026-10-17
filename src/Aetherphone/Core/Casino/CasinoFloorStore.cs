@@ -93,6 +93,9 @@ internal sealed class CasinoFloorStore : IDisposable
 
     public CasinoFeedDto? Feed(string tab) => Volatile.Read(ref feeds[FeedSlot(tab)]);
 
+    public bool FeedPending(string tab) =>
+        session.IsSignedIn && chips.HasFeature(CasinoFeatures.Feed) && Feed(tab) is null;
+
     public string AccountId => session.CurrentUser?.Id ?? string.Empty;
 
     public CasinoMissionClaimDto? TakeMissionClaim() => Interlocked.Exchange(ref missionClaim, null);

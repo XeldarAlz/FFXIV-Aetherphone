@@ -30,6 +30,7 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
     private volatile GameScoreRankDto[] myRanks = Array.Empty<GameScoreRankDto>();
     private volatile bool myRanksLoaded;
     private volatile bool loadingMyRanks;
+    private volatile bool myRanksFailed;
     private volatile bool savingParticipation;
     private volatile bool requestedParticipation;
     private volatile LeaderboardSupport support;
@@ -73,6 +74,8 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
     public bool MyRanksLoaded => myRanksLoaded;
 
     public bool LoadingMyRanks => loadingMyRanks;
+
+    public bool MyRanksFailed => myRanksFailed;
 
     public bool OptedIn => UploadsAllowed(session.IsSignedIn, session.CurrentUser);
 
@@ -322,6 +325,7 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
         {
             var reply = await scores.MyRanksAsync(token, reported => failure = reported).ConfigureAwait(false);
             support = SupportAfter(support, reply is not null, failure);
+            myRanksFailed = reply is null;
             if (reply is null)
             {
                 Bump();
@@ -560,6 +564,7 @@ internal sealed class LeaderboardStore : IScoreSink, IRankSource, IDisposable
 
         myRanks = Array.Empty<GameScoreRankDto>();
         myRanksLoaded = false;
+        myRanksFailed = false;
         Interlocked.Exchange(ref myRanksLoadedAtTick, 0);
         Interlocked.Exchange(ref myRanksAttemptedAtTick, 0);
     }

@@ -61,7 +61,7 @@ Aethernet opened on 2 July 2026. By the end of the season, players on 113 worlds
         <li>For You and Latest timelines, with a Following filter</li>
         <li>Rechirps, quotes, replies and hashtags</li>
         <li>Photos, GIFs and thirteen reactions</li>
-        <li>Paste an image with Ctrl+V or drag one in from File Explorer (GIFs keep their animation when copied or dragged as a file)</li>
+        <li>Paste an image with Ctrl+V or drag one in from File Explorer</li>
         <li>Chirps in other languages translated with one tap</li>
       </ul>
     </td>
@@ -162,21 +162,19 @@ Aethernet opened on 2 July 2026. By the end of the season, players on 113 worlds
 <img src="docs/media/readme/icons/muster.png" width="36" alt="Muster" title="Muster" /> <img src="docs/media/readme/icons/yellowpages.png" width="36" alt="Yellow Pages" title="Yellow Pages" /> <img src="docs/media/readme/icons/announcements.png" width="36" alt="Announcements" title="Announcements" /> <img src="docs/media/readme/icons/polls.png" width="36" alt="Polls" title="Polls" /> <img src="docs/media/readme/icons/coin.png" width="36" alt="Aether Coin" title="Aether Coin" /><br>
 <sub>Muster meetups · Yellow Pages classifieds · Announcements · Polls · Aether Coin badges and frames</sub>
 
-Aether Coin's product buttons keep their rounded edges and glow visible when highlighted.
-
 **Everyday utilities**<br>
 <img src="docs/media/readme/icons/camera.png" width="36" alt="Camera" title="Camera" /> <img src="docs/media/readme/icons/photos.png" width="36" alt="Photos" title="Photos" /> <img src="docs/media/readme/icons/notes.png" width="36" alt="Notes" title="Notes" /> <img src="docs/media/readme/icons/calendar.png" width="36" alt="Calendar" title="Calendar" /> <img src="docs/media/readme/icons/clock.png" width="36" alt="Clock" title="Clock" /> <img src="docs/media/readme/icons/skywatcher.png" width="36" alt="Skywatcher" title="Skywatcher" /> <img src="docs/media/readme/icons/wallet.png" width="36" alt="Wallet" title="Wallet" /> <img src="docs/media/readme/icons/health.png" width="36" alt="Health" title="Health" /> <img src="docs/media/readme/icons/shortcuts.png" width="36" alt="Shortcuts" title="Shortcuts" /> <img src="docs/media/readme/icons/news.png" width="36" alt="News" title="News" /><br>
 <sub>Camera · Photos with a photo editor · Notes · Calendar · Clock with Eorzea time · Skywatcher weather · Wallet · Health · Shortcuts · Lodestone News · Calculator · Activity rings</sub>
 
 **Downtime**<br>
 <img src="docs/media/readme/icons/games.png" width="36" alt="Games" title="Games" /> <img src="docs/media/readme/icons/doom.png" width="36" alt="Doom" title="Doom" /> <img src="docs/media/readme/icons/chess.png" width="36" alt="Chess" title="Chess" /> <img src="docs/media/readme/icons/tetris.png" width="36" alt="Tetris" title="Tetris" /> <img src="docs/media/readme/icons/wordrun.png" width="36" alt="Word Run" title="Word Run" /> <img src="docs/media/readme/icons/solitaire.png" width="36" alt="Solitaire" title="Solitaire" /> <img src="docs/media/readme/icons/2048.png" width="36" alt="2048" title="2048" /><br>
-<sub>An arcade of fifty-nine games, Doom among them, each full screen with an intro, a countdown, a pause menu and a result card · Home, Together, Library and Profile tabs, with today's game playing live up top, a daily streak calendar and a painted icon for every game · Doom and Moogle War play sideways, and so do 8-Ball Pool and Moogle War rooms · a daily board that is the same for everyone · global and friends leaderboards you join only if you choose to, all time and this week · plus Uno, Chess, 8-Ball Pool, Connect Four, Broadside, Lucky Draw, Moogle War and Mini Golf online with friends</sub>
+<sub>An arcade of fifty-nine games, Doom among them, each full screen with an intro, a pause menu and a result card · Doom, Moogle War and Slice play sideways · a daily board that is the same for everyone, with a streak calendar · global and friends leaderboards you join only if you choose to · Uno, Chess, 8-Ball Pool, Connect Four, Broadside, Lucky Draw, Moogle War and Mini Golf online with friends</sub>
 
 ## Built like the phone in your pocket
 
-**Lives in your HUD.** Drag it anywhere, resize it, or shrink it to a mini phone with the clock, widgets, music, calls and an optional FPS counter. The counter uses larger, brighter text, with a compact fallback for large text settings. Keep it on screen through Group Pose and cutscenes if it lives on a second monitor.
+**Lives in your HUD.** Drag it anywhere, resize it, or shrink it to a mini phone with the clock, widgets, music, calls and an optional FPS counter. Keep it on screen through Group Pose and cutscenes if it lives on a second monitor.
 
-**In the server info bar.** The phone sits in the game's server info bar with your unread count, and a click opens it. Settings → General → Server info bar picks Icon + text (the default), Text or Icon, and lets you rename the label. If the icon doesn't show in Umbra, pick a style with text.
+**In the server info bar.** The phone sits in the game's server info bar with your unread count, and a click opens it. Settings → General → Server info bar picks its style and renames the label.
 
 **Widgets and Smart Stacks.** Widgets for most apps, resized from the corner and stacked by dropping one onto another.
 
@@ -188,7 +186,7 @@ Aether Coin's product buttons keep their rounded edges and glow visible when hig
 
 **Speaks your language.** Nine interface languages and one-tap translation on posts, profiles and messages.
 
-**Private by design.** Messages, photos and voice notes are end-to-end encrypted. A Velvet intro is sent as plain text. A human moderation team reviews reported content.
+**Private by design.** Messages, photos and voice notes are end-to-end encrypted. A Velvet intro is sent as plain text, and translating a message sends its text to Aethernet to be translated. A human moderation team reviews reported content.
 
 ## Install
 
@@ -200,16 +198,15 @@ https://aetherphone.net/repo.json
 
 Tick **Enabled**, click **+**, then **Save and Close**. Open `/xlplugins` → **All Plugins**, search for **Aetherphone**, and install. Type `/phone` to pick it up.
 
-Playing the Chinese client? The phone detects it and signs you in through your Rising Stones (石之家) profile instead.
+The social apps and other online features need a free Aethernet account, which you make by proving you own your character; the offline apps work without one. Playing the Chinese client? The phone detects it and signs you in through your Rising Stones (石之家) profile instead.
 
 <details>
 <summary><strong>Commands</strong></summary>
 
 | Command | Action |
 |---|---|
-| `/phone` | Toggle the phone |
-| `/aetherphone` | Alias for `/phone` |
-| `/phone mini` | Switch between the full and mini phone; brings the mini phone up when the phone is hidden |
+| `/phone` | Toggle the phone (`/aetherphone` works too) |
+| `/phone mini` | Switch between the full and mini phone |
 | `/phone full` | Bring up the full phone |
 | `/phone hide` | Put the phone away |
 | `/phone open <app>` | Open an app by name |
@@ -230,7 +227,7 @@ Playing the Chinese client? The phone detects it and signs you in through your R
 
 ## Community and contributing
 
-Support, bug reports and suggestions live on the **[Aetherphone Discord](https://discord.gg/3HbJCscMyS)**.
+Support, bug reports and suggestions live on the **[Aetherphone Discord](https://discord.gg/3HbJCscMyS)**, and the phone's Feedback app sends a report from inside the game.
 
 Aetherphone is open source and contributions are welcome. Translators need no code and no build: the translator guide works in a browser.
 
@@ -242,7 +239,7 @@ Aetherphone is built with AI coding tools and declares the **Copilot** level of 
 
 **Nothing you see or hear is AI-generated.** Every icon, wallpaper, phone case, sound, ringtone and font is original, drawn by credited artists, or taken from a licensed source. English text is written by hand, and the other eight languages are AI-assisted translations reviewed by people.
 
-**Your content stays yours.** Translate sends only the text you ask it to translate, or the feeds and chats you turn auto-translate on for. No AI moderates Aethernet, and your posts and messages are never used to train AI models.
+**Your content stays yours.** No AI moderates Aethernet, and we never use your posts or messages to train AI models.
 
 → [AI usage](docs/ai-usage.md) · [Third-party notices](THIRD-PARTY-NOTICES.md)
 

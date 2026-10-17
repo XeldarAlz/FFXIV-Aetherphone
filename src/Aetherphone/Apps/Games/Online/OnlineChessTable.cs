@@ -392,18 +392,8 @@ internal sealed class OnlineChessTable
         return string.Empty;
     }
 
-    private static string ClockText(long milliseconds)
-    {
-        if (milliseconds < 0)
-        {
-            milliseconds = 0;
-        }
-
-        var totalSeconds = milliseconds / 1000;
-        var minutes = totalSeconds / 60;
-        var seconds = totalSeconds % 60;
-        return string.Concat(minutes.ToString(Loc.Culture), ":", seconds.ToString("D2", Loc.Culture));
-    }
+    private static string ClockText(long milliseconds) =>
+        TimeText.MinutesSeconds((int)(Math.Max(0L, milliseconds) / 1000));
 
     private static int KingSquare(int[] squares, bool black)
     {

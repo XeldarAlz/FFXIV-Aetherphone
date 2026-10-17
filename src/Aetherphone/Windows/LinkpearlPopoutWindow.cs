@@ -801,7 +801,7 @@ internal sealed partial class LinkpearlPopoutWindow : Window
             inbox.MarkRead(row);
         }
 
-        notifications.RemoveGroup(Key);
+        notifications.RemoveGroup(ChatNotifier.AppId, Key);
     }
 
     private void OpenThread(InboxRow row)

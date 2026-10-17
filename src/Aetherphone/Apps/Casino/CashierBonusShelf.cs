@@ -2,8 +2,10 @@ using Aetherphone.Apps.Casino.Stage;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Casino;
+using Aetherphone.Core.Coins;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Casino;
@@ -28,10 +30,39 @@ internal sealed class CashierBonusShelf
     private readonly Vector2[] claimCenters = new Vector2[CasinoBonusKinds.All.Length];
     private Vector2 showerOrigin;
     private string refusal = string.Empty;
+    private int seenRounds;
+    private int autoClaimDay = -1;
+    private bool autoClaiming;
 
     public CashierBonusShelf(CasinoStore store)
     {
         this.store = store;
+    }
+
+    public void ClaimStreakAfterRounds(int settledRounds)
+    {
+        if (settledRounds == seenRounds)
+        {
+            return;
+        }
+
+        seenRounds = settledRounds;
+        var today = CoinDay.Index(DateTime.UtcNow);
+        if (!AutoClaimsStreak(store.HasFeature(CasinoFeatures.Bonus) ? store.BonusFor(CasinoBonusKinds.Streak) : null,
+                autoClaimDay, today) || store.ClaimingBonus.Length > 0)
+        {
+            return;
+        }
+
+        autoClaimDay = today;
+        autoClaiming = true;
+        refusal = string.Empty;
+        store.ClaimBonus(CasinoBonusKinds.Streak);
+    }
+
+    internal static bool AutoClaimsStreak(CasinoBonusDto? streak, int claimedDay, int today)
+    {
+        return streak is { Ready: true, Eligible: true } && claimedDay != today;
     }
 
     public void Claim(string kind, Vector2 origin)
@@ -90,7 +121,14 @@ internal sealed class CashierBonusShelf
     {
         if (store.TakeBonusFailure())
         {
-            refusal = Loc.T(CasinoReasons.MessageFor(CasinoReasons.Unreachable));
+            if (autoClaiming)
+            {
+                autoClaiming = false;
+            }
+            else
+            {
+                refusal = Loc.T(CasinoReasons.MessageFor(CasinoReasons.Unreachable));
+            }
         }
 
         var result = store.TakeBonusResult();
@@ -99,9 +137,27 @@ internal sealed class CashierBonusShelf
             return;
         }
 
+        var automatic = autoClaiming && string.Equals(result.Kind, CasinoBonusKinds.Streak, StringComparison.Ordinal);
+        if (automatic)
+        {
+            autoClaiming = false;
+        }
+
         if (!result.Granted)
         {
-            refusal = Loc.T(CasinoReasons.MessageFor(result.Reason.Length > 0 ? result.Reason : CasinoReasons.Unreachable));
+            if (!automatic)
+            {
+                refusal = Loc.T(CasinoReasons.MessageFor(result.Reason.Length > 0 ? result.Reason
+                    : CasinoReasons.Unreachable));
+            }
+
+            return;
+        }
+
+        if (automatic)
+        {
+            UiFeedback.Play(UiSound.CasinoChips);
+            ShellToast.Show(Loc.T(L.Strip.StreakLanded, NumberText.Compact(result.Amount)));
             return;
         }
 

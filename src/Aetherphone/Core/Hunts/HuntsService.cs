@@ -964,7 +964,7 @@ internal sealed class HuntsService : IDisposable
             return;
         }
 
-        notifications.RemoveGroup(NotificationGroupKeyFor(key));
+        notifications.RemoveGroup(AppId, NotificationGroupKeyFor(key));
     }
 
     private void OnNotificationSettingsChanged()
@@ -991,7 +991,7 @@ internal sealed class HuntsService : IDisposable
 
         for (var index = 0; index < nowMuted.Count; index++)
         {
-            notifications.RemoveGroup(NotificationGroupKeyFor(nowMuted[index]));
+            notifications.RemoveGroup(AppId, NotificationGroupKeyFor(nowMuted[index]));
         }
     }
 
@@ -1033,7 +1033,7 @@ internal sealed class HuntsService : IDisposable
 
         for (var index = 0; index < cleared.Length; index++)
         {
-            notifications.RemoveGroup(NotificationGroupKeyFor(cleared[index]));
+            notifications.RemoveGroup(AppId, NotificationGroupKeyFor(cleared[index]));
         }
     }
 

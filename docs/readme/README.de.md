@@ -61,6 +61,7 @@ Aethernet ging am 2. Juli 2026 an den Start. Bis zum Ende der Saison haben Spiel
         <li>Timelines „Für dich“ und „Neueste“, mit Filter „Folge ich“</li>
         <li>Rechirps, Zitate, Antworten und Hashtags</li>
         <li>Fotos, GIFs und dreizehn Reaktionen</li>
+        <li>Füge ein Bild mit Strg+V ein oder zieh eins aus dem Datei-Explorer hinein</li>
         <li>Chirps in anderen Sprachen mit einem Tipp übersetzt</li>
       </ul>
     </td>
@@ -69,7 +70,7 @@ Aethernet ging am 2. Juli 2026 an den Start. Bis zum Ende der Saison haben Spiel
       <h3><img src="../media/readme/icons/aethergram.png" width="28" align="top" alt="" /> Aethergram</h3>
       <em>Im Spiel geknipst. Auf Aethergram geteilt.</em>
       <ul>
-        <li>Bis zu acht Fotos direkt aus deiner Galerie</li>
+        <li>Bis zu acht Fotos direkt aus deiner Galerie, oder eingefügt und hineingezogen</li>
         <li>Storys, die einen Tag lang bleiben</li>
         <li>Markiere die Leute im Bild</li>
         <li>Ein eingebauter Fotoeditor vor dem Teilen</li>
@@ -87,6 +88,7 @@ Aethernet ging am 2. Juli 2026 an den Start. Bis zum Ende der Saison haben Spiel
       <ul>
         <li>Schreib Spielern auf jeder Welt und in jedem Datenzentrum</li>
         <li>Sprachnachrichten, Fotos und Gruppenchats</li>
+        <li>Füge ein Foto ein oder zieh es hinein und gib ihm vor dem Senden eine Bildunterschrift</li>
         <li>Sprachanrufe, zu zweit oder in der Gruppe</li>
         <li>Ende-zu-Ende-verschlüsselt</li>
       </ul>
@@ -104,8 +106,6 @@ Aethernet ging am 2. Juli 2026 an den Start. Bis zum Ende der Saison haben Spiel
     </td>
   </tr>
 </table>
-
-Ein einziges Aethernet-Konto meldet dich bei jeder sozialen App an, und jede App kann ihren eigenen Anzeigenamen und Benutzernamen behalten.
 
 ## Gemeinsam schauen, hören und spielen
 
@@ -168,11 +168,13 @@ Ein einziges Aethernet-Konto meldet dich bei jeder sozialen App an, und jede App
 
 **Für die Pause zwischendurch**<br>
 <img src="../media/readme/icons/games.png" width="36" alt="Spiele" title="Spiele" /> <img src="../media/readme/icons/doom.png" width="36" alt="Doom" title="Doom" /> <img src="../media/readme/icons/chess.png" width="36" alt="Schach" title="Schach" /> <img src="../media/readme/icons/tetris.png" width="36" alt="Tetris" title="Tetris" /> <img src="../media/readme/icons/wordrun.png" width="36" alt="Word Run" title="Word Run" /> <img src="../media/readme/icons/solitaire.png" width="36" alt="Solitär" title="Solitär" /> <img src="../media/readme/icons/2048.png" width="36" alt="2048" title="2048" /><br>
-<sub>Eine Arcade mit neunundfünfzig Spielen, Doom inklusive · Tabs Start, Zusammen, Bibliothek und Profil, mit dem Spiel des Tages live ganz oben, einem Kalender der Tagesserie und einem gemalten Symbol für jedes Spiel · weltweite und Freundes-Bestenlisten, denen du nur beitrittst, wenn du willst · dazu Uno, Schach, 8-Ball-Pool, Vier gewinnt, Breitseite, Glückszug, Krater und Minigolf online mit Freunden · Doom und Krater sowie die Räume für 8-Ball-Pool und Krater laufen im Querformat</sub>
+<sub>Eine Arcade mit neunundfünfzig Spielen, Doom inklusive, jedes im Vollbild mit Intro, Pausenmenü und Ergebniskarte · Doom, Mogry-Krieg und Schnitt laufen im Querformat · eine Tagesherausforderung, die für alle gleich ist, mit einem Kalender für deine Serie · weltweite und Freundes-Bestenlisten, denen du nur beitrittst, wenn du willst · Uno, Schach, 8-Ball Pool, Vier gewinnt, Breitseite, Glückszug, Mogry-Krieg und Minigolf online mit Freunden</sub>
 
 ## Gebaut wie das Handy in deiner Tasche
 
-**Wohnt in deinem HUD.** Zieh es überallhin, ändere seine Größe oder verkleinere es zu einem Mini-Handy mit Uhr, Widgets, Musik und Anrufen.
+**Wohnt in deinem HUD.** Zieh es überallhin, ändere seine Größe oder verkleinere es zu einem Mini-Handy mit Uhr, Widgets, Musik, Anrufen und einem optionalen FPS-Zähler. Lass es in der Gruppenpose und in Zwischensequenzen auf dem Bildschirm, wenn es auf einem zweiten Monitor wohnt.
+
+**In der Server-Infoleiste.** Das Handy sitzt mit der Zahl deiner ungelesenen Benachrichtigungen in der Server-Infoleiste des Spiels, und ein Klick öffnet es. Unter Einstellungen → Allgemein → Server-Infoleiste wählst du den Stil und benennst die Beschriftung um.
 
 **Widgets und Smart Stacks.** Widgets für die meisten Apps, in der Größe über die Ecke veränderbar und gestapelt, indem du eins auf ein anderes ziehst.
 
@@ -184,7 +186,7 @@ Ein einziges Aethernet-Konto meldet dich bei jeder sozialen App an, und jede App
 
 **Spricht deine Sprache.** Neun Oberflächensprachen und Übersetzung mit einem Tipp bei Beiträgen, Profilen und Nachrichten.
 
-**Privatsphäre von Grund auf.** Nachrichten, Fotos und Sprachnachrichten sind Ende-zu-Ende-verschlüsselt. Eine Velvet-Vorstellung wird als Klartext gesendet. Ein Moderationsteam aus Menschen prüft gemeldete Inhalte.
+**Privatsphäre von Grund auf.** Nachrichten, Fotos und Sprachnachrichten sind Ende-zu-Ende-verschlüsselt. Eine Velvet-Vorstellung wird als Klartext gesendet, und wenn du eine Nachricht übersetzt, geht ihr Text zur Übersetzung an Aethernet. Ein Moderationsteam aus Menschen prüft gemeldete Inhalte.
 
 <a id="install"></a>
 
@@ -198,25 +200,36 @@ https://aetherphone.net/repo.json
 
 Setze den Haken bei **Enabled**, klicke auf **+** und dann auf **Save and Close**. Öffne `/xlplugins` → **All Plugins**, suche nach **Aetherphone** und installiere es. Mit `/phone` nimmst du es in die Hand.
 
-Du spielst den chinesischen Client? Das Handy erkennt ihn und meldet dich stattdessen über dein Rising-Stones-Profil (石之家) an.
+Die sozialen Apps und andere Online-Funktionen brauchen ein kostenloses Aethernet-Konto, das du anlegst, indem du nachweist, dass dir dein Charakter gehört; die Offline-Apps funktionieren auch ohne. Du spielst den chinesischen Client? Das Handy erkennt ihn und meldet dich stattdessen über dein Rising-Stones-Profil (石之家) an.
 
 <details>
 <summary><strong>Befehle</strong></summary>
 
 | Befehl | Aktion |
 |---|---|
-| `/phone` | Das Handy ein- oder ausblenden |
-| `/aetherphone` | Alias für `/phone` |
+| `/phone` | Das Handy ein- oder ausblenden (`/aetherphone` geht auch) |
+| `/phone mini` | Zwischen dem Handy in voller Größe und dem Mini-Handy wechseln |
+| `/phone full` | Das Handy in voller Größe aufrufen |
+| `/phone hide` | Das Handy wegstecken |
+| `/phone open <app>` | Eine App per Name öffnen |
+| `/phone settings` | Die Einstellungen öffnen |
+| `/phone photo` | Die Kamera öffnen und ein Foto machen |
+| `/phone dnd` | Nicht stören ein- oder ausschalten |
+| `/phone mute` | Lautlos ein- oder ausschalten |
+| `/phone music [play, pause, next, prev]` | Den Musikplayer steuern; ohne Zusatz startet oder pausiert er die Wiedergabe |
+| `/phone tell [name]` | Ein Linkpearl-Flüstern mit deinem Ziel öffnen oder mit `First Last World` |
+| `/phone call <contact>` | Einen Kontakt anrufen |
 | `/phone run <name>` | Einen Kurzbefehl per Name ausführen, damit er auf einem Hotbar-Makro liegen kann |
 | `/phone market [item]` | Das Marktbrett öffnen und nach einem Gegenstand suchen, wenn du einen nennst |
 | `/phone reset` | Das Handy wieder auf dem Bildschirm zentrieren |
 | `/phone test` | Eine Beispielbenachrichtigung senden |
+| `/phone help` | Alle Befehle im Chat auflisten |
 
 </details>
 
 ## Community und Mitwirken
 
-Support, Fehlerberichte und Vorschläge laufen über den **[Aetherphone-Discord](https://discord.gg/3HbJCscMyS)**.
+Support, Fehlerberichte und Vorschläge laufen über den **[Aetherphone-Discord](https://discord.gg/3HbJCscMyS)**, und die Feedback-App des Handys schickt einen Bericht direkt aus dem Spiel.
 
 Aetherphone ist Open Source, und Beiträge sind willkommen. Übersetzer brauchen weder Code noch Build: Der Übersetzungsleitfaden funktioniert im Browser.
 
@@ -228,7 +241,7 @@ Aetherphone wird mit KI-Programmierwerkzeugen entwickelt und erklärt die Stufe 
 
 **Nichts, was du siehst oder hörst, ist KI-generiert.** Jedes Symbol, jedes Hintergrundbild, jede Handyhülle, jeder Sound, jeder Klingelton und jede Schrift ist eigenständig erstellt, stammt von genannten Künstlern oder aus einer lizenzierten Quelle. Englische Texte werden von Hand geschrieben, die anderen acht Sprachen sind KI-gestützte Übersetzungen, die von Menschen geprüft werden.
 
-**Deine Inhalte bleiben deine.** Die Übersetzung sendet nur den Text, den du übersetzen lässt, oder die Feeds und Chats, für die du die automatische Übersetzung einschaltest. Keine KI moderiert Aethernet, und deine Beiträge und Nachrichten werden nie zum Training von KI-Modellen verwendet.
+**Deine Inhalte bleiben deine.** Keine KI moderiert Aethernet, und wir verwenden deine Beiträge und Nachrichten nie zum Training von KI-Modellen.
 
 → [KI-Nutzung](../ai-usage.md) · [Hinweise zu Drittanbietern](../../THIRD-PARTY-NOTICES.md)
 

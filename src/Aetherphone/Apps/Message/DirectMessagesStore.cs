@@ -230,6 +230,8 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
 
     protected override bool ShouldRevealForReport(ChatMessageDto message) => message.Kind != SystemMessageKind;
 
+    protected override string NotificationAppId => "message";
+
     protected override string ThreadKeyOf(ConversationDto thread) => thread.Id;
 
     protected override long ThreadLastMessageAtOf(ConversationDto thread) => thread.LastMessageAtUnix;
@@ -242,7 +244,7 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
 
     protected override PhoneNotification BuildInboxNotification(ConversationDto thread)
     {
-        return new PhoneNotification("message", DisplayTitle(thread), PreviewText(thread), DateTime.Now,
+        return new PhoneNotification(NotificationAppId, DisplayTitle(thread), PreviewText(thread), DateTime.Now,
             AppPalettes.Message.Accent, thread.Id);
     }
 
@@ -253,8 +255,8 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
             return null;
         }
 
-        return new PhoneNotification("message", DisplayTitle(thread), Loc.T(L.Message.AddedToGroup), DateTime.Now,
-            AppPalettes.Message.Accent, thread.Id);
+        return new PhoneNotification(NotificationAppId, DisplayTitle(thread), Loc.T(L.Message.AddedToGroup),
+            DateTime.Now, AppPalettes.Message.Accent, thread.Id);
     }
 
     protected override bool IsInboxPreviewReady(ConversationDto thread)

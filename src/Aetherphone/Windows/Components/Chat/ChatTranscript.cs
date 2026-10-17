@@ -266,7 +266,6 @@ internal sealed class ChatTranscript
     private static readonly Vector4 ReactionChipStroke = new(1f, 1f, 1f, 0.14f);
     private static readonly Vector4 ReactionCountInk = new(0.94f, 0.94f, 0.97f, 1f);
     private static readonly TextStyle ReactionCountStyle = TextStyles.FootnoteEmphasized;
-    private static readonly Vector4 SeenTickColor = new(0.45f, 0.83f, 1f, 1f);
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
 
     private const float FlashSeconds = 1.6f;
@@ -1925,7 +1924,8 @@ internal sealed class ChatTranscript
         var aspect = message.MediaWidth > 0 && message.MediaHeight > 0
             ? (float)message.MediaHeight / message.MediaWidth
             : 1f;
-        var imageWidth = available * 0.62f;
+        var frameWidth = available * 0.62f;
+        var imageWidth = frameWidth;
         var imageHeight = imageWidth * aspect;
         var maxHeight = 280f * scale;
         if (imageHeight > maxHeight)
@@ -1934,11 +1934,12 @@ internal sealed class ChatTranscript
             imageWidth = imageHeight / aspect;
         }
 
-        var header = TakeSenderHeader(message, imageWidth - 8f * scale, scale);
+        var imageInset = (frameWidth - imageWidth) * 0.5f;
+        var header = TakeSenderHeader(message, frameWidth - 8f * scale, scale);
         var headerBlock = header.Height > 0f ? header.Height + 2f * scale : 0f;
         var caption = message.Body ?? string.Empty;
         var stamp = MeasureStamp(message, mine, scale);
-        var captionLayout = caption.Length > 0 ? LinkText.LayoutFor(caption, imageWidth / CaptionTextScale) : null;
+        var captionLayout = caption.Length > 0 ? LinkText.LayoutFor(caption, frameWidth / CaptionTextScale) : null;
         var captionTextHeight = captionLayout is not null
             ? captionLayout.Size.Y * CaptionTextScale
             : Typography.Measure(caption, CaptionTextScale).Y;
@@ -1946,7 +1947,7 @@ internal sealed class ChatTranscript
         var stampRowHeight = caption.Length > 0 ? stamp.Height + 3f * scale : 0f;
         var forwardLabel = MeasureForwardLabel(message, scale);
         var forwardBlock = forwardLabel.Y > 0f ? forwardLabel.Y + 4f * scale : 0f;
-        var bubbleWidth = imageWidth + padding * 2f;
+        var bubbleWidth = frameWidth + padding * 2f;
         var bubbleHeight = imageHeight + padding * 2f + captionHeight + stampRowHeight + forwardBlock + headerBlock;
         var start = ImGui.GetCursorScreenPos();
         var offsetX = mine ? available - bubbleWidth : 0f;
@@ -1968,7 +1969,8 @@ internal sealed class ChatTranscript
                 mine, model, scale);
         }
 
-        var imageMin = scaledMin + new Vector2(padding * fx.Pop, (padding + headerBlock + forwardBlock) * fx.Pop);
+        var imageMin = scaledMin
+                       + new Vector2((padding + imageInset) * fx.Pop, (padding + headerBlock + forwardBlock) * fx.Pop);
         var imageMax = imageMin + new Vector2(imageWidth * fx.Pop, imageHeight * fx.Pop);
         var rounding = 10f * scale * fx.Pop;
         var texture = model.Media?.Texture(message.Id);
@@ -2005,15 +2007,16 @@ internal sealed class ChatTranscript
         {
             var ink = BubbleInk(mine, model);
             var captionTop = imageMax.Y + 4f * scale * fx.Pop;
-            var captionMaxWidth = imageMax.X - imageMin.X;
+            var captionLeft = scaledMin.X + padding * fx.Pop;
+            var captionMaxWidth = frameWidth * fx.Pop;
             if (captionLayout is not null)
             {
-                LinkText.Draw(drawList, captionLayout, new Vector2(imageMin.X, captionTop), CaptionTextScale * fx.Pop,
+                LinkText.Draw(drawList, captionLayout, new Vector2(captionLeft, captionTop), CaptionTextScale * fx.Pop,
                     ink, mine ? ink : model.Accent, fx.Alpha, entrance >= 1f);
             }
             else
             {
-                Marquee.DrawLeftAuto(new MarqueeId("chattranscript.caption.", message.Id), caption, imageMin.X,
+                Marquee.DrawLeftAuto(new MarqueeId("chattranscript.caption.", message.Id), caption, captionLeft,
                     captionTop, captionMaxWidth, new TextStyle(CaptionTextScale * fx.Pop, FontWeight.Regular),
                     Palette.WithAlpha(ink, fx.Alpha));
             }
@@ -2027,7 +2030,8 @@ internal sealed class ChatTranscript
         {
             var stampPad = new Vector2(7f * scale, 3f * scale);
             var pillMax = bubbleMin
-                          + new Vector2(padding + imageWidth, padding + headerBlock + forwardBlock + imageHeight)
+                          + new Vector2(padding + imageInset + imageWidth,
+                              padding + headerBlock + forwardBlock + imageHeight)
                           - new Vector2(6f * scale, 6f * scale);
             var pillMin = pillMax - new Vector2(stamp.Width + stampPad.X * 2f, stamp.Height + stampPad.Y * 2f);
             Squircle.Fill(drawList, fx.Apply(pillMin), fx.Apply(pillMax),
@@ -2272,7 +2276,7 @@ internal sealed class ChatTranscript
         }
 
         var tickCenter = new Vector2(bottomRight.X - stamp.TickWidth * 0.5f, bottomRight.Y - stamp.Height * 0.5f);
-        var tickColor = stamp.Seen ? SeenTickColor : timeColor;
+        var tickColor = stamp.Seen ? ChatInk.SeenTick : timeColor;
         PhoneIcon.Draw(drawList, fx.Apply(tickCenter), stamp.TickGlyph,
             Palette.WithAlpha(tickColor, tickColor.W * fx.Alpha), stamp.TickWidth * fx.Pop);
     }

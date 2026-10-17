@@ -1,6 +1,7 @@
 using System.Globalization;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Home;
+using Aetherphone.Core.Jobs;
 using Aetherphone.Core.Runtime;
 using Aetherphone.Core.Wallet;
 using Dalamud.Game.DutyState;
@@ -224,7 +225,7 @@ internal sealed unsafe class ActivityTracker : IDisposable
             return false;
         }
 
-        var maxLevel = playerState->MaxLevel > 0 && level >= playerState->MaxLevel;
+        var maxLevel = playerState->MaxLevel > 0 && level >= JobsRoster.CapFor(jobId, playerState->MaxLevel);
         long exp = maxLevel ? 0 : playerState->GetCurrentClassJobExp();
         long neededExp = maxLevel ? 0 : playerState->GetCurrentClassJobNeededExp();
         if (hasJobBaseline && jobId == baselineJobId && level == baselineLevel)

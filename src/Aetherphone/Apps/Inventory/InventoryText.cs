@@ -53,6 +53,32 @@ internal sealed class InventoryText
         Version++;
     }
 
+    public void RefreshAges(InventoryCatalog catalog)
+    {
+        BuiltUtc = DateTime.UtcNow;
+        var sources = catalog.Sources;
+        for (var index = 0; index < sources.Count; index++)
+        {
+            SourceStatus[index] = Status(sources[index]);
+        }
+
+        var stale = StaleBySource(catalog);
+        var placements = catalog.Placements;
+        for (var index = 0; index < placements.Length; index++)
+        {
+            var placement = placements[index];
+            var source = sources[placement.SourceIndex];
+            if (source.IsCached)
+            {
+                PlacementDetail[index] = Join(Join(PlacementPrefix(source), PlacementPage[index]),
+                    stale[placement.SourceIndex]);
+            }
+        }
+
+        RetainersUpdated = RetainersAge(catalog);
+        Version++;
+    }
+
     public void BuildValue(InventoryCatalog catalog, InventoryValuation valuation, string scopeName, bool pricing)
     {
         ValueTotal = valuation.PricedCount > 0
@@ -229,6 +255,7 @@ internal sealed class InventoryText
         var detail = new string[placements.Length];
         var pages = new string[placements.Length];
         var quantity = new string[placements.Length];
+        var stale = StaleBySource(catalog);
         for (var index = 0; index < placements.Length; index++)
         {
             var placement = placements[index];
@@ -236,22 +263,42 @@ internal sealed class InventoryText
             var page = PageLabel(source.Kind, placement.Page);
             pages[index] = page;
             quantity[index] = Quantity(placement.Quantity);
-            var prefix = source.Kind switch
-            {
-                InventorySourceKind.Retainer => Loc.T(L.Inventory.SourceRetainer),
-                InventorySourceKind.FreeCompany => source.OwnerName.Length > 0
-                    ? Loc.T(L.Inventory.SourceFreeCompany)
-                    : string.Empty,
-                _ => string.Empty,
-            };
-            var stale = source.IsCached ? Loc.T(L.Inventory.Updated, TimeText.Ago(source.CapturedUtc)) : string.Empty;
-            detail[index] = Join(Join(prefix, page), stale);
+            detail[index] = Join(Join(PlacementPrefix(source), page), stale[placement.SourceIndex]);
         }
 
         PlacementDetail = detail;
         PlacementPage = pages;
         PlacementQuantity = quantity;
     }
+
+    private static string PlacementPrefix(InventorySourceEntry source) =>
+        source.Kind switch
+        {
+            InventorySourceKind.Retainer => Loc.T(L.Inventory.SourceRetainer),
+            InventorySourceKind.FreeCompany => source.OwnerName.Length > 0
+                ? Loc.T(L.Inventory.SourceFreeCompany)
+                : string.Empty,
+            _ => string.Empty,
+        };
+
+    private static string[] StaleBySource(InventoryCatalog catalog)
+    {
+        var sources = catalog.Sources;
+        var stale = new string[sources.Count];
+        for (var index = 0; index < sources.Count; index++)
+        {
+            stale[index] = sources[index].IsCached
+                ? Loc.T(L.Inventory.Updated, TimeText.Ago(sources[index].CapturedUtc))
+                : string.Empty;
+        }
+
+        return stale;
+    }
+
+    private static string RetainersAge(InventoryCatalog catalog) =>
+        catalog.RetainersCapturedUtc != default
+            ? Loc.T(L.Inventory.Updated, TimeText.Ago(catalog.RetainersCapturedUtc))
+            : string.Empty;
 
     private void BuildTidy(InventoryCatalog catalog)
     {
@@ -277,9 +324,7 @@ internal sealed class InventoryText
             ? Join(Loc.T(L.Inventory.GilOnYou, GilOnYou), Loc.T(L.Inventory.GilRetainers,
                 NumberText.Group(catalog.RetainerGil)))
             : Loc.T(L.Inventory.RetainerGilUnknown);
-        RetainersUpdated = catalog.RetainersCapturedUtc != default
-            ? Loc.T(L.Inventory.Updated, TimeText.Ago(catalog.RetainersCapturedUtc))
-            : string.Empty;
+        RetainersUpdated = RetainersAge(catalog);
         var sources = catalog.Sources;
         var gil = new string[sources.Count];
         for (var index = 0; index < sources.Count; index++)

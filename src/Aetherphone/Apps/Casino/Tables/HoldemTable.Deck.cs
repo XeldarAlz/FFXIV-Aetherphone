@@ -720,6 +720,7 @@ internal sealed partial class HoldemTable
             {
                 reaction = index;
                 reactionClock = 0f;
+                rooms.Room.React(index);
                 deckMode = HoldemDeckMode.Status;
                 CasinoSfx.Play(UiSound.ChipSlide);
             }

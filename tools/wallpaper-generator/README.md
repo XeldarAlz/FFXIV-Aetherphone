@@ -1,6 +1,6 @@
 # Wallpaper generator
 
-Renders the bundled abstract wallpapers in `src/Aetherphone/Wallpapers/`: soft colour fields built
+Renders the bundled abstract wallpapers in src/Aetherphone/Wallpapers/: soft colour fields built
 from a vertical base gradient, a few oversized blurred blobs, two soft light ribbons and a faint
 diagonal gloss band. Each name ships as a Light and a Dark variant so the day and
 night slots and the theme crossfade have a matching pair.
@@ -13,7 +13,7 @@ python generate-wallpapers.py
 ```
 
 Writes every pair into the plugin's wallpaper folder. Pass an output directory as the first argument
-and names as the following arguments to regenerate a subset:
+and names as the following arguments to regenerate a subset (the example runs from this folder):
 
 ```bash
 python generate-wallpapers.py ../../src/Aetherphone/Wallpapers Bloom Prism

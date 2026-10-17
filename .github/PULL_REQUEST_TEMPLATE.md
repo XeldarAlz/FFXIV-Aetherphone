@@ -1,7 +1,7 @@
 <!--
 Title: conventional commit style with a scope and a lowercase summary, e.g.
   feat(timers): add a retainer venture alarm
-  fix(net): cap the rate-limit pause at 30 seconds
+  fix(jobs): count a level 50 beastmaster as capped
 One concern per PR. If the title needs an "and", split the PR.
 Target dev, the default branch; master only moves when a release is cut.
 Labels are set for you from the title and the files you touched; leave them alone.
@@ -28,6 +28,7 @@ Exact steps a reviewer can repeat.
 - Release build: open the phone with /phone and exercise the screen you touched.
 - Debug build: loads side by side as AetherphoneDev, opens with /phonedev, and
   talks to the development Aethernet instance. Use it for anything backend-facing.
+- Beta build: loads side by side as AetherphoneBeta and opens with /phonebeta.
 - Messaging: send yourself a /tell and watch it land. Notifications: /phone test.
 - State: if you touched persistence, say what you did to verify old configs survive.
 -->
@@ -42,7 +43,7 @@ Exact steps a reviewer can repeat.
 Delete unless this changes anything shared with Aethernet: a request path, a DTO
 shape, or a realtime signal name. The backend lives in a separate repository and
 deploys independently, so say what has to be live on the server before this can
-merge, and how the client behaves against the old server in the meantime.
+merge, and how the client behaves against a server without the change in the meantime.
 -->
 
 ## AI involvement
@@ -71,7 +72,7 @@ Strings:
 
 Quality:
 
-- [ ] Verified in-game on the screens this touches, on the build variant that matters (`/phone` or `/phonedev`)
+- [ ] Verified in-game on the screens this touches, on the build variant that matters (`/phone`, `/phonedev`, or `/phonebeta`)
 - [ ] Draw-path code allocates nothing per frame and uses the shared `Windows/Components/` widgets, `TextStyles`, and `Metrics` tokens
 - [ ] README updated if this changes what a user sees or types; the relevant page under `docs/` still tells the truth
 - [ ] Commit messages and this PR body carry no AI attribution trailers

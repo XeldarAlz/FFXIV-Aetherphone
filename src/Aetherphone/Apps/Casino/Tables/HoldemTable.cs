@@ -31,6 +31,7 @@ internal sealed partial class HoldemTable : ICabinetIdle
     private const float ChipFlightSeconds = 0.55f;
     private const float PayoutDelaySeconds = 0.35f;
     private const float ReactionSeconds = 2.6f;
+    private const long ReactionMilliseconds = 2_600;
     private const float PeelSmoothing = 0.08f;
     private const long TimerWarnMilliseconds = 5_000;
     private const float SettledClock = 99f;
@@ -300,7 +301,7 @@ internal sealed partial class HoldemTable : ICabinetIdle
         DrawHero(drawList, board, mine, hero, delta, scale);
         DrawChipFlights(drawList, board, scale);
         DrawCardFlights(drawList, scale);
-        DrawReaction(drawList, scale);
+        DrawReactions(drawList, board, me, scale);
         DrawShelf(drawList, ui, board, mine, hero, scale);
         if (potsOpen)
         {

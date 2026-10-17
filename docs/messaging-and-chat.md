@@ -1,285 +1,209 @@
 # Messaging and chat
 
-This page explains the shared chat stack: the reusable components that turn a list of messages into a full thread screen (bubbles, composer, menus, search, pagination), the stores that feed them, and the apps that consume them. Read it before you touch any conversation surface, whether that is the Message app (ChocoChat) and its pop-out windows, Velvet, Aethergram DMs, Yellow Pages inquiries, or the in-game Linkpearl app, and before you build a new one. Everything here is client side; the Aethernet backend is a separate ASP.NET repository, and this doc only describes what the plugin sends and expects. The realtime and HTTP plumbing is covered in [networking.md](networking.md), and the notification side in [notifications.md](notifications.md).
+This page explains the shared chat stack behind every server-backed conversation in Aetherphone: ChocoChat (the Message app) and its pop-out windows, Velvet, Aethergram DMs, and Yellow Pages inquiries. Read it before you change one of those screens or build a new one. The in-game chat app has its own page, [Linkpearl](linkpearl.md); the HTTP client, the realtime socket and the cryptography live in [Networking](networking.md).
 
-Two terms you will see throughout: Dalamud is the plugin framework that loads Aetherphone inside Final Fantasy XIV, and Dear ImGui is the immediate mode UI library it exposes, meaning every screen is redrawn from scratch every frame. There is no retained widget tree; a "component" here is a class that draws itself when you call its `Draw` method each frame.
+The UI is Dear ImGui, an immediate mode library: every screen is redrawn each frame, and a "component" here is a class whose `Draw` method you call every frame. Keep work off that per-frame path.
 
 ## Key files
 
-| Path | Role |
+| Path | What it is |
 | --- | --- |
-| src/Aetherphone/Windows/Components/Chat/ChatThreadView.cs | Abstract base for a complete thread screen; wires all the pieces below together |
-| src/Aetherphone/Core/Message/ChatThreadStoreBase.cs | Abstract base for a chat store: polling, paging, sending, reactions, edits, media |
-| src/Aetherphone/Core/Aethernet/IdentifiedMerge.cs | `MergeById`: the id-keyed merge every page, refresh and push goes through |
-| src/Aetherphone/Core/Message/ViewingMark.cs | The "on screen right now" mark (4 second grace) that gates refreshes and notifications |
-| src/Aetherphone/Windows/Components/Chat/ChatTranscript.cs | Renders the scrolling bubble list; owns scroll, paging triggers, and read ticks |
-| src/Aetherphone/Windows/Components/Chat/ChatComposer.cs | Input bar: multiline draft, reply and edit bars, emoji picker and `:shortcode` suggestions, image, location, voice |
-| src/Aetherphone/Windows/Components/Chat/ChatMenuController.cs | Right-click message menu, the reaction strip, and the full emoji reaction sheet |
-| src/Aetherphone/Windows/Components/Chat/ReactionArt.cs | The quick reaction tokens and how a token resolves to emoji art |
-| src/Aetherphone/Windows/Components/Chat/ChatSearchController.cs | In-thread text search bar with match stepping |
-| src/Aetherphone/Windows/Components/Chat/ChatEntranceTracker.cs | Detects newly appended messages and drives their entrance animation |
-| src/Aetherphone/Windows/Components/Chat/ChatText.cs | Message kind constants, preview text, and token-to-kind resolution |
-| src/Aetherphone/Windows/Components/Chat/ChatActions.cs | Copy-message-to-clipboard helper |
-| src/Aetherphone/Windows/Components/Chat/ChatHeaderControls.cs | Encryption lock, search and translate toggles, and dismissible banners in thread headers |
-| src/Aetherphone/Windows/Components/Chat/TranslateLink.cs | Per-message translate activation and the one-time translation disclosure |
-| src/Aetherphone/Windows/Components/Primitives/LinkText.cs | Tappable URLs inside bubble text, opened behind a confirm |
-| src/Aetherphone/Core/Aethernet/Clients/ChatClient.cs | HTTP endpoints for Message app conversations |
-| src/Aetherphone/Core/Aethernet/Contracts/Dtos.cs | `ChatMessageDto`, `ConversationDto`, and their page records |
-| src/Aetherphone/Apps/Message/DirectMessagesStore.cs | The Message app's concrete store |
-| src/Aetherphone/Apps/Message/MessageThreadViewBase.cs | ChocoChat's thread view base, shared by the phone screen and the pop-out windows |
-| src/Aetherphone/Apps/Message/MessagePopouts.cs | The ChocoChat pop-out window pool: open, switch, persist, restore |
-| src/Aetherphone/Apps/Message/MessagePopoutWindow.cs | One floating ChocoChat window bound to one conversation |
-| src/Aetherphone/Core/GameChat/GameChannels.cs | The channel catalog: one row per game text channel |
-| src/Aetherphone/Core/GameChat/ChatCapture.cs | One IChatGui subscriber for every channel, payload preserving |
-| src/Aetherphone/Core/GameChat/ChatLog.cs | Capped buffers, one per conversation stream |
-| src/Aetherphone/Core/GameChat/ChatArchive.cs | Per-character history on disk with retention |
-| src/Aetherphone/Core/GameChat/ChatStreamView.cs | A tab's live view over several streams, rebuilt only when the stream set changes |
-| src/Aetherphone/Core/GameChat/ChatInbox.cs | The conversation list model, unread, read watermarks |
-| src/Aetherphone/Core/GameChat/ChatSend.cs | Sends through the real chat box: byte budget, pending sends, echo matching, split pacing |
-| src/Aetherphone/Core/GameChat/ChatNotifier.cs | Game chat alerts by tab policy, channel mutes and the conversation on screen |
-| src/Aetherphone/Core/GameChat/TabStore.cs | Player-made tabs: create, edit, reorder, pin, and the preset tabs |
-| src/Aetherphone/Windows/Components/Chat/GameChatThread.cs | The whole in-game thread screen, plus `GameChatTargets` |
-| src/Aetherphone/Windows/Components/Chat/GameComposer.cs | The game chat composer: channel picker, soft wrapped multiline field, part counter |
-| src/Aetherphone/Windows/Components/Chat/GameChatMenu.cs | Right-click menu for game chat lines and links, shared by the app and the pop-outs |
-| src/Aetherphone/Windows/Components/Chat/ChatRuns.cs | Per message cache that turns game chat payloads and emoji spans into styled runs |
-| src/Aetherphone/Apps/Linkpearl/InboxRowView.cs | Conversation row with hover quick actions (pin, mute, more) |
-| src/Aetherphone/Core/GameChat/TellPreferences.cs | Pinned and muted tells |
-| src/Aetherphone/Windows/LinkpearlPopouts.cs | The Linkpearl pop-out window pool: open, restore, persist, auto-pop tells |
-| src/Aetherphone/Windows/LinkpearlPopoutWindow.cs | One floating Linkpearl window holding up to six conversations as tabs |
-| src/Aetherphone/Windows/PopoutTabs.cs | Tab list maths for a grouped pop-out, plus migration from the one-key state |
-| src/Aetherphone/Core/GameChat/PopoutPresence.cs | Hides pop-outs in combat or a duty and brings them back |
-| src/Aetherphone/Core/GameChat/LinkpearlHotkey.cs | The chord that opens and cycles recent conversations |
-| src/Aetherphone/Core/GameChat/ChannelStyleStore.cs | Per channel colours and rules, with a no-override fast path |
-| src/Aetherphone/Core/GameChat/MessageSplitter.cs | Splits a message past the byte budget into paced parts |
-| src/Aetherphone/Windows/Components/Primitives/SoftWrapBuffer.cs | Maps the composer's wrapped display back onto the message the user typed |
-| src/Aetherphone/Core/GameChat/ChatDrafts.cs | Draft per conversation, and the record of what was sent |
-| src/Aetherphone/Core/Emoji/EmojiShortcodes.cs | Resolves :shortcode: spans for the game chat stack |
-| src/Aetherphone/Core/Game/PlayerActions.cs | Party invite, friend, blacklist, adventurer plate and target, for a chat line |
-| src/Aetherphone/Windows/Components/Chat/ChatLineView.cs | Log layout renderer: one line per message with the game's own colors |
-| src/Aetherphone/Windows/Components/Chat/ChatListChrome.cs | Shared list chrome (rows, headers, cards, setting rows) for ChocoChat and Linkpearl |
-| src/Aetherphone/Windows/Components/Chat/ChatThemes.cs | The nine chat themes shared by ChocoChat and Linkpearl, with their inks and bubble styles |
-| src/Aetherphone/Windows/Components/Chat/ChatWallpapers.cs | Colour and photo wallpapers behind a thread, global or per conversation |
-| src/Aetherphone/Windows/Components/Chat/ChatAppearancePickers.cs | The theme and wallpaper picker screens both chat apps push |
-| src/Aetherphone/Core/GameChat/GameLogColors.cs | Reads the game's own channel colours out of `UiConfig` for the import row |
-| src/Aetherphone/Core/GameChat/GameChatMode.cs | Reads the game chat box's current channel so a tab can follow it |
-| src/Aetherphone/Core/GameChat/NameMask.cs | Screenshot mode: stable pseudonyms for player names |
-| src/Aetherphone/Core/GameChat/PopoutPlacement.cs | Where a fresh pop-out lands: beside the phone or in a chosen corner |
-| src/Aetherphone/Windows/Components/Primitives/RunText.cs | Styled run layout with wrapping and hit testing |
+| src/Aetherphone/Core/Message/ChatThreadStoreBase.cs | Base store: polling, paging, sending, reactions, media, notifications |
+| src/Aetherphone/Windows/Components/Chat/ChatThreadView.cs | Base thread screen that wires all the pieces together |
+| src/Aetherphone/Windows/Components/Chat/ChatTranscript.cs | The bubble list: grouping, scroll, load-older trigger, read ticks |
+| src/Aetherphone/Windows/Components/Chat/ChatComposer.cs | The input bar: draft, reply and edit, emoji, image, location, voice |
+| src/Aetherphone/Windows/Components/Chat/ChatMenuController.cs | The message menu and reaction strip |
+| src/Aetherphone/Windows/Components/Chat/ChatText.cs | Message kinds, previews, token resolution |
+| src/Aetherphone/Core/Aethernet/IdentifiedMerge.cs | The id-keyed merge every page, refresh and push uses |
+| src/Aetherphone/Core/Message/ViewingMark.cs | The "on screen right now" mark |
+| src/Aetherphone/Core/Message/EncryptedSendPolicy.cs | When a plain text send must be held back |
+| src/Aetherphone/Apps/Message/DirectMessagesStore.cs | ChocoChat's store, the reference implementation |
+| src/Aetherphone/Apps/Message/MessageThreadViewBase.cs | ChocoChat's view, shared with its pop-outs |
+| src/Aetherphone/Windows/Components/Chat/ChatListChrome.cs | Inbox row, header and list styles shared by ChocoChat and Linkpearl |
 
-## Two stacks, one bubble language
+## Two stacks, one look
 
-There are two chat stacks in the codebase:
+The codebase has two chat stacks with one visual language.
 
-- The **server-backed stack**: `ChatThreadStoreBase` plus `ChatThreadView`. Messages live on the Aethernet backend, arrive as DTOs (data transfer objects, the wire-format records) over HTTP, and support replies, reactions, edits, media, and encryption. Four apps use it (Message, Velvet, Aethergram, Yellow Pages), plus the ChocoChat pop-out windows.
-- The **in-game stack**: the Linkpearl app renders real game chat captured through Dalamud's `IChatGui`. It has no server and no reactions, so it does not use `ChatThreadStoreBase` or `ChatThreadView`. It has its own screen, `GameChatThread`, which reuses `ChatTranscript` for the Bubbles layout and its own `ChatLineView` for the Log layout.
+- The **server-backed stack** is a store (`ChatThreadStoreBase`) plus a view (`ChatThreadView`). Messages live on the Aethernet server and arrive as DTOs (data transfer objects, the wire records), with replies, reactions, edits, media, translation and end-to-end encryption. This page covers it.
+- The **in-game stack** is [Linkpearl](linkpearl.md): real game chat, no server, no reactions. It reuses only the transcript, the entrance animation and the chat themes.
 
-Both stacks share `ChatEntranceTracker` for the pop-in animation and the same visual language.
+The Music app's `LiveChatTranscript` (radio and jam lobby chat) is a third, smaller surface. Check all three before you build another.
 
-A smaller third surface sits outside both stacks: `LiveChatTranscript` (src/Aetherphone/Apps/Music/Components/LiveChatTranscript.cs) draws the Music app's radio station chat and jam lobby chat. Check it and the two stacks before you build another chat surface.
+| App (app id) | Thread view | Store |
+| --- | --- | --- |
+| ChocoChat (`message`) | `ThreadView` in Apps/Message/MessageApp.Thread.cs | `DirectMessagesStore` |
+| ChocoChat pop-outs | `PopoutThreadView` in Apps/Message/MessagePopoutWindow.cs | One detached `DirectMessagesStore` per window |
+| Velvet (`velvet`) | `ThreadView` in Apps/Velvet/VelvetShell.Thread.cs | `VelvetStore` |
+| Aethergram (`aethergram`) | `ThreadView` in Apps/Aethergram/AethergramApp.Thread.cs | `GramDmStore` |
+| Yellow Pages (`yellowpages`) | `ThreadView` in Apps/YellowPages/YellowPagesApp.Thread.cs | `AdInquiryStore` in Core/YellowPages |
 
-Yellow Pages inquiries are the one vertical whose thread id is not the other user id: an inquiry is keyed per (ad, reader), so `AdInquiryStore` maps the inquiry id to the other user before it resolves the `ads:<pair>` key scope, and it refuses to send anything that is not sealed, because the server rejects plaintext inquiries. An inquiry lives only as long as its ad: when the owner deletes the ad, an admin or moderator removes it, or it expires, the server deletes its inquiry threads together with their messages, reactions and media.
+ChocoChat is the Message app's user-facing name; code and localization keys say `message` and `MessageApp`. `MessageThreadViewBase` holds what its phone screen and pop-outs share: the DTO mapping, saved drafts, the wallpaper, the composer layout and group sender avatars.
 
-## Who consumes the stack
+A ChocoChat pop-out is a desktop window bound to one conversation. Each window builds its own store with `tracksInbox: false`, so it never polls the inbox or raises a second notification; the phone's store keeps that job. Forwarding, message info, starring and reporting stay in the phone.
 
-| App | In-app name | App class | Thread view | Store |
-| --- | --- | --- | --- | --- |
-| Message (id `message`) | "ChocoChat" (`L.Apps.Message`) | src/Aetherphone/Apps/Message/MessageApp.cs | `ThreadView : MessageThreadViewBase` in src/Aetherphone/Apps/Message/MessageApp.Thread.cs | `DirectMessagesStore` |
-| ChocoChat pop-outs | "ChocoChat" | `MessagePopouts` in src/Aetherphone/Apps/Message/MessagePopouts.cs | `PopoutThreadView : MessageThreadViewBase` in src/Aetherphone/Apps/Message/MessagePopoutWindow.cs | One detached `DirectMessagesStore` per window |
-| Velvet (id `velvet`) | "Velvet" | src/Aetherphone/Apps/Velvet/VelvetShell.cs | `ThreadView : ChatThreadView<VelvetMessageDto, VelvetThreadDto>` in src/Aetherphone/Apps/Velvet/VelvetShell.Thread.cs | `VelvetStore` in src/Aetherphone/Apps/Velvet/VelvetStore.cs |
-| Aethergram (id `aethergram`) | "Aethergram" | src/Aetherphone/Apps/Aethergram/AethergramApp.cs | `ThreadView : ChatThreadView<GramMessageDto, GramThreadDto>` in src/Aetherphone/Apps/Aethergram/AethergramApp.Thread.cs | `GramDmStore` in src/Aetherphone/Apps/Aethergram/GramDmStore.cs |
-| Yellow Pages (id `yellowpages`) | "Yellow Pages" | src/Aetherphone/Apps/YellowPages/YellowPagesApp.cs | `ThreadView : ChatThreadView<AdInquiryMessageDto, AdInquiryDto>` in src/Aetherphone/Apps/YellowPages/YellowPagesApp.Thread.cs | `AdInquiryStore` in src/Aetherphone/Core/YellowPages/AdInquiryStore.cs |
-| Linkpearl (id `messages`) | "Linkpearl" (`L.Apps.Linkpearl`) | src/Aetherphone/Apps/Linkpearl/LinkpearlApp.cs | `GameChatThread` in src/Aetherphone/Windows/Components/Chat/ | `ChatLog`, `ChatInbox` and `TabStore` in src/Aetherphone/Core/GameChat/ |
+Yellow Pages inquiries are the one surface whose thread id is not the other person's id. An inquiry belongs to one ad and one reader, so `AdInquiryStore` maps it to the other user before it resolves the key scope. Inquiries are always sealed and live only as long as their ad.
 
-`MessageThreadViewBase` (src/Aetherphone/Apps/Message/MessageThreadViewBase.cs) is itself a `ChatThreadView<ChatMessageDto, ConversationDto>`. It holds everything the phone screen and the pop-out windows share: the DTO mapping, persisted drafts, the wallpaper backdrop, the `Plus` composer, the bubble style, and group sender avatars.
+## How a message flows
 
-The Message app (ChocoChat to users, the name every surface shows) is the WhatsApp-shaped one: four icon-only tabs with hover tooltips (Chats, Calls, Contacts, Settings) drawn by `MessageApp.cs`, a Chats header whose search button slides a `SearchField` in above a centered filter `ChipRail`, and one partial file per screen. Its list chrome (header band, person rows, action rows, grouped card rows) is the shared `ChatListChrome`; `MessageApp.Chrome.cs` only forwards to it. Its colors start from the neutral `AppPalettes.Message` chrome, recolored by a user-chosen chat theme (`ChatThemes`, the same nine themes Linkpearl uses, stored as `Configuration.MessageChatTheme`) that sets the accent, the sent bubbles, badges and buttons; the Settings tab hosts the theme and wallpaper pickers. Groups carry a photo and a description (`ConversationDto.AvatarUrl` and `Description`, edited through `PATCH /chats/{id}` with `UpdateConversationRequest`) and member roles (`ChatRoles`: member 0, owner 1, admin 2; `POST /chats/{id}/members/{userId}/role`). Owners and admins can rename, describe, re-photo, remove members, promote and demote; only the owner can remove an admin, and the owner's role cannot be changed. The group photo upload reuses the `avatar` media scope, so the server validates it exactly like a profile picture.
+The store is the only part that talks to the server. It holds the open thread's messages as an immutable array and replaces the whole array on every change. The view maps that array into transcript rows, and the composer sends through the store.
 
-Naming note: the Message app is ChocoChat everywhere users look (`L.Apps.Message`). In code and localization keys it stays `message` / `MessageApp`.
+```mermaid
+flowchart LR
+    Server[(Aethernet)]
+    Poll[View poll timer]
+    Ping[Realtime ping]
+    Store[Chat store]
+    Array[Immutable message array]
+    Map[MapTranscript]
+    Transcript[ChatTranscript]
+    Composer[ChatComposer]
+    Seal[Store send: seal, upload, post]
+    Poll --> Store
+    Ping --> Store
+    Store <-->|pages| Server
+    Store --> Array --> Map --> Transcript
+    Composer --> Seal --> Server
+    Seal -->|returned message| Array
+```
 
-Aethergram's `ThreadView` additionally implements `IChatTranscriptPostCards` and `IChatTranscriptStoryReplies`, the two optional transcript extensions for shared-post cards and story-reply context.
+Three things make the store fetch: the view's poll timer while the thread is on screen, a realtime ping, and a resume (the thread comes back after the view went undrawn for a few frames). A ping merges a pushed message into the array or requests a refresh; [Read state and receipts](#read-state-and-receipts) explains why it never fetches directly.
 
-### ChocoChat pop-outs
+Sends are not optimistic. The store appends the message the server returns, and the next refresh that carries the same id merges onto it. Only reactions update ahead of the server. When a text send fails, the view shows a toast with the reason and puts the text back into the draft.
 
-Any ChocoChat conversation can float in its own desktop window, apart from the phone. The thread's action sheet toggles it, and opening one pops the thread off the phone's router. `MessagePopouts` owns a fixed pool of `MessagePopouts.MaxWindows` (4) `MessagePopoutWindow` Dalamud windows, registered in the plugin's `WindowSystem` next to the phone, one conversation each; a request past the pool shows a toast instead. A window draws its own surface in the ChocoChat chat theme, a title strip (avatar, title, an Online subtitle when a DM partner is online, then collapse, open-in-phone and close buttons), and a `PopoutThreadView` below it. Clicking the title opens a switch menu over the inbox's conversations, and the chevron or a double-click on the bar collapses the window to its strip with a `Spring`, the same way the Linkpearl pop-outs do.
-
-- **Detached stores.** Each window builds its own `DirectMessagesStore` through `MessagePopoutServices.CreateDetachedStore`, which passes `tracksInbox: false`. A detached store never polls the inbox, so a pop-out never raises a second notification or a second badge; the phone's store keeps that job.
-- **Persistence.** `MessagePopouts.Persist` writes one `MessagePopoutState` per bound window (conversation id, title, position, expanded size, collapsed) to `Configuration.MessagePopouts`, and `Restore` rebinds them on load while ChocoChat is installed. Logging out closes every window. Drafts go through `Configuration.MessageDrafts`, the same dictionary the phone screen uses.
-- **Back to the phone.** The open-in-phone button invokes `MessagePopouts.OpenInPhone`, which the plugin wires to `DmLauncher.RequestConversation` followed by showing the phone on ChocoChat.
-- **What stays in the phone.** The pop-out's message menu offers reactions, reply, copy, translate, edit and delete; forwarding, message info, starring and reporting stay in the phone app. The image picker, the reactors list and the encryption screen replace the thread inside the window, and a tapped image opens in the shared photo window. Confirms render inside the window through its own `ConfirmHosts` id, as in the Linkpearl pop-outs.
-- **Closing.** `MessagePopoutWindow.Unbind` calls `OnAppClosed` on the view (saving the draft and stopping voice) before it disposes the view and the store.
+Copy-on-write is the contract between store and view. `ChatThreadView` re-runs your `MapTranscript` only when the array reference changes, which keeps the remap off the per-frame path. For inputs that live outside the array, override `TranscriptVersion` to return a counter that changes with them (ChocoChat returns its contact book version, so renamed contacts remap), or call `InvalidateTranscript()` once.
 
 ## Anatomy of a thread screen
 
-`ChatThreadView<TMessage, TThread>.Draw(Rect area, string threadId, bool activeLayer)` composes everything, top to bottom. Apps pass `depth == router.Depth` as `activeLayer`, so it is true only for the route on top of the router stack. A layer drawn underneath or sliding away during a transition only paints; only the active layer opens the thread, ticks it, and marks it viewed.
+`ChatThreadView.Draw(Rect area, string threadId, bool activeLayer)` composes the screen top to bottom. Pass `depth == router.Depth` as `activeLayer`: only the route on top of the router stack opens the thread, ticks it and marks it viewed, while a layer underneath or sliding away during a transition only paints.
 
-1. **Thread switch.** If `store.CurrentThreadId` differs from `threadId` it calls `store.OpenThread`, clears the composer targets, closes search, and stops voice playback. Hooks `OnThreadSwitchingFrom` / `OnThreadOpened` save and restore drafts: the base keeps them in memory per thread for the session, and ChocoChat overrides them to persist in `Configuration.MessageDrafts`. When the same thread comes back after the view went undrawn for more than `ResumeFrameGap` (3) frames, the view treats it as a resume and requests a thread refresh and a fresh thread detail.
-2. **Tick.** `TickThread` polls typing state and the open thread on the cadence passed to the constructor (`ThreadPollSeconds` is 3s for Message, 2.5s for Velvet, Aethergram and Yellow Pages), and sends a typing signal when the draft changes. When the store reports `RealtimePushActive`, the message poll stretches by `PushActivePollMultiplier` (3x) because pushes trigger refreshes instead, and the typing poll stops entirely: a pushed typing signal shows the bubble for six seconds (`PushedTypingWindow`).
-3. **Header.** `DrawHeader` is abstract; apps draw their own title row and its controls. `ChatHeaderControls` offers `DrawLock`, `DrawSearchToggle` and `DrawTranslateToggle` for that row, and Velvet uses them. Aethergram and Yellow Pages draw their own lock, search and translate icons, and ChocoChat puts search, translate and the encryption screen in the thread's action sheet behind its more button. The ChocoChat pop-out draws no header because its title strip takes that place.
-4. **Search bar.** When `ChatSearchController.Open`, a 44px bar is inserted under the header. Search is a case-insensitive substring scan over the already loaded transcript (it does not query the server), skips system and deleted messages, and steps between matches via `transcript.RequestScrollTo`.
-5. **Banners.** `DrawVaultBanner` shows at most one encryption banner: the locked vault (worded for whether a recovery code exists), save your recovery code, messages sealed to an older key, or the recovery-code nudge (which can also be snoozed), each opening the encryption screen. `DrawSyncBanner` then shows "May be out of date" with a retry countdown while polls back off (`store.SyncRetryIn`), and tapping it retries at once (`RetrySyncNow`). `DrawAboveTranscript` lets apps inject their own (the Message app shows a safety-number-changed banner).
-6. **Backdrop.** `PaintTranscriptBackdrop(listRect)` is a virtual hook that paints behind the bubble list; ChocoChat paints the chat wallpaper there through `ChatWallpapers.Paint` (a solid color or a library photo), resolved by `ChatWallpapers.Effective` from `Configuration.MessageChatWallpapers` with `MessageWallpaper` as the fallback, and `MessageWallpaperPattern` for the optional glyph pattern.
-7. **Transcript.** `ChatTranscript.Draw` renders the bubble list from a `ChatTranscriptModel`. The `Bubbles` field (a `ChatBubbleStyle`, supplied by the view's `BubbleStyle` property) overrides the outgoing and incoming fills and inks, the corner rounding, and whether the first bubble of a run gets a tail; a default style keeps the accent-on-wash look the other apps use.
-8. **Composer.** `ChatComposer.Draw` renders the input bar plus an accessory bar when replying or editing. Three layouts exist: `Bar` (Velvet: emoji inside the pill, image and location icons, round send), `Pill` (the camera-first pill of Aethergram and Yellow Pages), and `Plus` (ChocoChat: a leading plus button that opens an attach menu for photo and location, the text pill with the emoji button inside it, and a round send button that becomes the microphone while the draft is empty).
-9. **Message menu.** `ChatMenuController.Draw` renders the right-click menu over everything.
+1. **Thread switch.** A new `threadId` opens that thread in the store, clears the reply and edit targets, closes search, stops voice playback and swaps drafts.
+2. **Tick.** Polls the thread and the typing state and sends typing signals (see [Typing](#typing)).
+3. **Header.** `DrawHeader` is yours; `ChatHeaderControls` has lock, search and translate buttons.
+4. **Search.** Scans only the messages already loaded; it never queries the server.
+5. **Banners.** At most one encryption banner, then "May be out of date" with a retry while polls back off, then your `DrawAboveTranscript`.
+6. **Backdrop, transcript, composer, menu.** `PaintTranscriptBackdrop` is where ChocoChat paints its wallpaper; the message menu draws last, over everything.
 
-### ChatTranscript
+### The transcript
 
-`ChatTranscript` consumes a `ReadOnlySpan<TranscriptMessage>`. `TranscriptMessage` is a flat readonly struct (id, sender, body, kind, timestamps, reply snapshot, reactions, `TranscriptFlags` byte with `Encrypted`, `Placeholder`, `Unverified`, `Deleted`, `Forwarded`, `Edited`, `Starred`; ChocoChat sets `Starred` and the stamp draws a star for it). It draws:
+`ChatTranscript` draws a span of `TranscriptMessage`, a flat readonly struct with a flags byte (encrypted, placeholder, deleted, edited and so on). It draws day separators, sender grouping, one bubble renderer per kind, cards for token shares, tappable links that open behind a confirm, the translation footer, the typing bubble and follow-bottom scrolling. It reaches outside through small interfaces on its model (media, interactions, voice, paging, translation), which `ChatThreadView` implements for you. Optional ones add shared-post cards and story replies (Aethergram) and group sender avatars (ChocoChat).
 
-- day separator chips (`TimeText.DayLabel`) and sender grouping: consecutive messages from the same sender within `GroupWindowSeconds` (240s) are visually grouped, and in group threads the first bubble of a run carries the sender name. When the model supplies `IChatTranscriptSenders`, incoming runs in a group also get the sender's avatar in a gutter to the left (`SenderAvatarRadius`), with text, image and voice bubbles drawing the name inside the bubble the way WhatsApp does; card bubbles keep the name row above the run. Without that hook (Velvet, Aethergram, Yellow Pages) the name row stays above the run and nothing shifts,
-- one bubble renderer per kind: text, image, voice note, shared post, story reply, plus card bubbles for location, muster invite, and Yellow Pages ad tokens detected inside text bodies,
-- clickable links: text bodies, image captions and shared-post snippets lay out through `LinkText`, so a URL in a server-backed bubble is tappable and opens through `UrlActions.AskThenOpen`, a confirm that names the destination before the browser opens (game chat lines use `RunText` runs and `OnLinkClick` instead),
-- translated bodies: for an incoming, undeleted text message the transcript asks `IChatTranscriptTranslation.View` for the text to show and draws a small footer (`TranslationFooter`) whose action toggles between translation and original (see Translation below),
-- a typing indicator bubble driven by `model.OtherTyping`,
-- follow-bottom scrolling (`SyncFollow`), scroll-to-message with a highlight flash (`RequestScrollTo`), and the load-older trigger described below.
+### The composer
 
-Everything the transcript needs from the outside comes in through small interfaces on the model: `IChatTranscriptMedia` (image textures and clicks), `IChatTranscriptInteractions` (context menu, quote click, reaction click, plus a default `OnLinkClick` that only game chat overrides), `IChatTranscriptVoice` (playback state and toggle), `IChatTranscriptPaging` (older-page state), `IChatTranscriptTranslation` (per-message translation view and tap), and the optional `IChatTranscriptPostCards` / `IChatTranscriptStoryReplies` / `IChatTranscriptSenders` (group sender avatars; ChocoChat resolves them from the member list, falling back to the avatar snapshot on the message). `ChatThreadView` implements the first four plus translation itself.
+`ChatComposer` owns the draft and one reply or edit target. Its layouts are `Bar` (Velvet), `Pill` (Aethergram, Yellow Pages) and `Plus` (ChocoChat, with an attach menu); in each, an empty draft offers a voice note instead of send. Enter sends, Shift+Enter breaks the line, and `ChatThreadView.MessageMax` caps the text. The field is a soft-wrapping `SoftWrapEditor`, so never read the ImGui buffer as the message; [Linkpearl](linkpearl.md) explains that trap.
 
-### ChatComposer
+### The menu and translation
 
-`ChatComposer` owns the draft string and the reply/edit targets. `BeginReply` and `BeginEdit` are mutually exclusive and show an accessory bar above the input. The bar exposes emoji (an `EmojiPicker` panel), image (`OnPickImage`), location (`OnShareLocation`), and voice buttons; the send button becomes a microphone when the draft is empty and `CanVoice` is set, which starts a `VoiceNoteRecorder`. The text field is a `SoftWrapEditor`, the same soft wrapped multiline editor the Linkpearl composer uses: Enter submits, Shift+Enter starts a new line, and the field grows with the draft up to six lines before it scrolls. The `ChatComposerModel` callbacks (`OnSendText`, `OnEditText`, `OnSendVoice`) route back into the store through `ChatThreadView`. Text length is capped by `ChatThreadView.MessageMax` (1000, matching ChocoChat's server cap `ChatSocial.MessageMaxLength`). When a text send fails, the view shows a toast with the failure reason and puts the text back into the draft.
+Right-clicking a bubble opens a reaction strip (with a plus for the full emoji sheet) and the actions your `ChatMenuModel` allows. Edit, info and delete appear only on your own messages, translate and report only on other people's, and edit and translate only on plain text. The menu draws on ImGui's foreground draw list, above every widget.
 
-### ChatMenuController and ChatActions
-
-Right-clicking a bubble calls `ChatThreadView.OpenMessageMenu`, which records the mouse anchor and defers the open to the menu pass drawn at the end of the same frame (an opened-frame guard keeps the triggering click from instantly dismissing it). The menu renders a reaction strip of six quick tokens (`ReactionArt.Tokens`: `heart`, `laugh`, `wow`, `sad`, `:rage:`, `+1`) that ends in a plus button; the plus opens a full emoji sheet, so any emoji shortcode can be a reaction. Below the strip sit up to nine actions gated by `ChatMenuModel` capability flags: reply, forward, copy, translate, star, edit, info, delete, report. Edit, info and delete only appear on your own messages; translate and report only on other people's; edit and translate only on plain text (`kind == 0`). `ChatActions.CopyMessageText` copies the body (or a readable location summary) to the clipboard, refusing when an encrypted body is not yet decrypted.
-
-The menu draws on ImGui's foreground draw list, so each app must call `threadView.GateMenus()` at the top of its `Draw` before other input handling; all four consuming apps and the ChocoChat pop-out window do. `GateMenus` also gates the composer's attach menu (`ChatComposer.Gate`), which is a `DropdownMenu` anchored on the plus button of the `Plus` layout.
-
-### Translation
-
-When `TranslationService.Enabled` is true (the server reports translation as available), every server-backed thread can translate incoming text two ways. The message menu's Translate action (`ChatThreadView.TranslateMessage`) translates one message. A per-conversation toggle turns on auto-translate for the whole thread: Velvet draws it with `ChatHeaderControls.DrawTranslateToggle`, Aethergram and Yellow Pages draw their own header icon, and ChocoChat puts it in the thread's action sheet. The toggle is stored per conversation scope (the view's `LogTag` plus the thread id) in `Configuration.TranslatedConversations`. While it is on, `SweepTranslations` requests every incoming plain text message that is not deleted, not still sealed, not a token share and not already in the target language, and it reruns only when the message array or the toggle changes. Translations are keyed by `TranslationSurface.Dm` plus the message id. The first translation of any kind goes through `TranslateLink.WithDisclosure`, a one-time confirm explaining that Aethernet translates the chosen text and that encrypted messages are decrypted on the PC and sent as readable text (`Configuration.TranslationDisclosureSeen` remembers the answer).
-
-### ChatEntranceTracker
-
-Tracks how many lines have "settled" per thread key. When the line count grows and the tail id changes, the new lines animate in for `TransitionTiming.BubbleSeconds`; `Progress(index)` returns 0..1 for the bubble renderers. A count jump with an unchanged tail id (an older page arriving) is treated as history and skips the animation.
+When the server reports translation as available, incoming text can be translated per message from the menu, or for a whole conversation with a per-thread toggle. The first translation shows a one-time disclosure: Aethernet translates the chosen text, and an encrypted message is decrypted on the PC first.
 
 ## The message model
 
-Server-backed messages are `ChatMessageDto` records (src/Aetherphone/Core/Aethernet/Contracts/Dtos.cs). The important fields and behaviors:
+| Kind | Meaning |
+| --- | --- |
+| 0 | Text |
+| 1 | Image |
+| 2 | System row (for example "added to the group") |
+| 3 | Voice note |
+| 4 | Shared post |
+| 5 | Story reply |
 
-| Concept | Where | Notes |
-| --- | --- | --- |
-| Kinds | `Kind` int; constants in `ChatThreadStoreBase`, `ChatTranscript`, and `ChatText` | 0 text, 1 image, 2 system row, 3 voice note, 4 shared post, 5 story reply |
-| Derived kinds | `ChatText.EffectiveKind` | 6 location, 7 muster, 8 ad; these are kind 0 messages whose body is a token, resolved by `LocationShare.IsToken`, `MusterShare.IsToken`, `AdShare.IsToken` |
-| Replies | `ReplyToId` plus `ReplySenderId/Name`, `ReplyBody`, `ReplyKind` | The server snapshots the quoted message onto the reply; the composer's reply bar and the in-bubble quote use `ChatText.QuotePreview`; clicking the quote scrolls to the original |
-| Reactions | `Reactions: ReactionSummaryDto[]` | `SetReaction` applies an optimistic local update (`ApplyLocalReaction`) before the request; a reactor list screen loads via `LoadReactions` |
-| Edits | `EditedAtUnix`; `EditMessage` | Only own plain-text messages; the stamp shows an "edited" label (`L.Message.EditedAt`) |
-| Deletes | `Deleted`; `DeleteMessage` | The store tombstones locally (`Tombstone` strips the body, encryption fields, and reactions); the bubble renders a muted "deleted" row |
-| Forwarding | `Forwarded` on the send request and the DTO for text, `ForwardOfId` on the send request for plaintext attachments; `DirectMessagesStore.ForwardMessage` | Bubbles show a "forwarded" label; encrypted text is decrypted and re-encrypted for the target thread, encrypted media cannot be forwarded |
-| Voice notes | kind 3, `DurationSecs` | Recorded as WAV, uploaded via `MediaClient`; playback downloads, optionally decrypts, and caches bytes in `ChatThreadView`, played by `VoiceNotePlayer` |
-| Images | kind 1, `MediaWidth/Height` | `SendImageMessage` re-encodes stills to JPEG capped at `DmImageMaxDimension` (1280); a GIF uploads unchanged as `image/gif` and is refused over `GifMedia.MaxBytes` (4 MB). Then it uploads and creates the message with the media key. A pasted or dropped image waits in the composer's preview bar first, and the draft text goes with it as the caption |
-| Location | token in body | `LocationShare.Compose` produces `[aep.loc.v1:territory;map;x;y;world;ward;plot;room]` (8 semicolon-separated fields); the transcript renders a card and clicking it calls `LocationShare.OpenMap`, and a "Go there" pill inside the card travels through `TravelPlanner` when the share resolves to a reachable destination |
-| Starring | src/Aetherphone/Core/Message/StarredMessage.cs | Message app only; a local bookmark list in `Configuration.MessageStarredMessages`, not a server feature |
+Location, muster and ad shares are kind 0 messages whose body is a token; `ChatText.EffectiveKind` resolves them so menus and previews treat them as cards.
 
-Encryption is out of scope here (see [networking.md](networking.md)); the short version is that `EncVersion == EnvelopeCodec.VersionEnvelope` marks an end-to-end encrypted body, `DecorateMessages` swaps in decrypted text via `MessageCipher`, and the transcript shows placeholder styling until decryption succeeds.
+- **Replies** carry a server-made snapshot of the quoted message, so the quote renders even when the original is not loaded. Tapping it scrolls to the original.
+- **Edits and deletes.** Only your own plain text can be edited. A delete tombstones the message locally and the bubble shows a muted "deleted" row.
+- **Forwarding** seals encrypted text again for the target thread. Encrypted media cannot be forwarded.
+- **Media.** Stills are re-encoded to a capped JPEG; a GIF uploads unchanged up to `GifMedia.MaxBytes`. Voice notes record as WAV.
+- **Starring** is ChocoChat only and lives in local config.
 
-## History pagination
+## Paging
 
-Paging is cursor based. Every page endpoint returns items plus an opaque `NextCursor` (`ChatMessagePage`, `ConversationPage`); the client echoes it back as a `?cursor=` query parameter (`ChatClient.MessagesAsync`). `null` means no more pages. The server sets the page sizes (for ChocoChat, `ChatSocial.MessagePageSize` and `ConversationPageSize` in the backend: 60 messages and 100 conversations).
+Paging is cursor based. Each page carries its items plus an opaque cursor that the client sends back for the next page; a null cursor means nothing is older. The server decides page sizes, so never assume one.
 
-In `ChatThreadStoreBase`:
+- `OpenThread` fetches the newest page, `LoadOlder` fetches with the cursor, and `RefreshThread` fetches the newest page again.
+- All three merge through `IdentifiedMerge.MergeById`: items missing from the page are kept, incoming items win on the same id, and the result is sorted by time with the id as a tiebreaker. Merging instead of appending lets pages, refreshes and pushes arrive in any order.
+- A failed poll backs off exponentially, and the sync banner offers a retry. The thread list pages the same way through `LoadMoreThreads`.
 
-- `OpenThread` fetches the newest page and stores `olderCursor` / `hasMoreOlder`.
-- `LoadOlder` fetches with the cursor and merges into the live array with `IdentifiedMerge.MergeById` under `messagesLock`: existing items not present in the page are kept, incoming items win on id collision, then everything is re-sorted by `CreatedAt` with the id as tiebreaker. Merging (rather than appending) makes older pages, refreshes and pushed messages (`MergePushedMessage`) commute. Sends are not optimistic: the store appends the server-returned message once the request succeeds, and the next refresh that returns the same id merges onto it. Only reactions update ahead of the server.
-- `RefreshThread` re-fetches only the newest page and merges the same way, so a refresh never throws away older pages you already loaded.
-- Failed polls feed `NotePollResult`, which applies exponential backoff (up to roughly 40 seconds) shared by thread refresh, typing polls, and thread opens.
-- The thread list pages the same way through `LoadMoreThreads` and `threadListCursor`.
-
-Scroll restore lives in `ChatTranscript`:
-
-- `MaybeLoadOlder` fires when the user scrolls within `LoadOlderThreshold` (48 logical px) of the top, the store has more, and the view is not following the bottom. Before calling `LoadOlder` it records the anchor `olderAnchorFromBottom = ScrollMaxY - ScrollY`, the distance from the bottom.
-- While the anchor is active, `ApplyOlderRestore` pins `ScrollY = ScrollMaxY - anchor` every frame. Because the anchor is bottom-relative, prepending any number of messages leaves the viewport visually still.
-- The anchor releases after the message count grows, `OlderSettleFrames` (2) frames pass, and the scroll has actually landed on the restored value (a mouse wheel tick in the next `NewFrame` overwrites a pending `SetScrollY`, so the pin is re-applied until it sticks), or after an `OlderRestoreTimeout` (20s) safety timeout if the load fails.
-- A three-dot loading shimmer draws at the top while `LoadingOlder` is true.
+The transcript keeps the viewport still while an older page lands. When the user scrolls near the top, it records the distance from the bottom, then pins the scroll to that distance every frame until the new messages have arrived and the scroll has stuck. A mouse wheel tick can overwrite a pending scroll set, which is why it re-applies the pin rather than setting it once. A timeout releases the pin if the load fails.
 
 ## Read state and receipts
 
-- **Ticks.** Outgoing bubbles get a stamp with the clock time plus one check mark (`PhoneIcons.Check`); when the message's `ReadAtUnix` is set, it becomes a double check (`PhoneIcons.Checks`) tinted `SeenTickColor` (`MeasureStamp` / `DrawStamp` in ChatTranscript.cs). Incoming bubbles never show ticks. Read receipts are mutual: the server fills `ReadAtUnix` only when both the sender and the reader keep the Read receipts switch on in Settings > Privacy, so a single check can also mean receipts are off on either side.
-- **Presence.** ChocoChat's DM header subtitle shows "online" or "last seen" from `ConversationDto.Presence` and `LastSeenAtUnix` (`MessageThreadViewBase.PresenceText`, constants in src/Aetherphone/Core/Message/ChatPresence.cs), and a pop-out's title strip shows "online" the same way. Presence is mutual too: the server reports it as hidden unless both people keep the Last seen online switch on in Settings > Privacy.
-- **Per-member receipts.** The Message app's message info screen (src/Aetherphone/Apps/Message/MessageApp.MessageInfo.cs) shows group read state from `ConversationMemberDto.LastReadAtUnix`.
-- **Unread counts.** Come from the server per thread (`ConversationDto.UnreadCount`). `ComputeUnread` sums them, skipping muted threads and the thread on screen, and feeds the app icon badge. `NoteThreadViewed` also zeroes the on-screen thread's count in the local list (`WithUnreadCleared`, one record copy per store), so the row badge drops the moment you look at the thread instead of waiting for the next poll to confirm the read.
-- **Mark-read has two paths.** Fetching a conversation's newest message page (no cursor) is the implicit read acknowledgement (the server side of that watermark lives in the backend repo); `LoadOlder` pages never ack. `ChatClient.MarkReadAsync` posts an explicit ack to `/chats/{id}/read`; `DirectMessagesStore.ApplyPushedMessage` calls it when a realtime-pushed message lands on a thread being viewed, since merging the push locally fetches no page. The implicit path has a sharp consequence on the client: any background code path that fetches an open thread will silently mark it read. That is why `ChatThreadStoreBase.RequestThreadRefresh` only sets a pending flag: `ConsumePendingThreadRefresh` calls `RefreshThread` only when `NoteThreadViewed` was called for that thread within the last `ViewingMark.Grace` (4s), meaning the thread is actually on screen. The realtime ping handler (`DirectMessagesStore.OnChatPinged`) merges the pushed message or goes through `RequestThreadRefresh`, never straight to `RefreshThread`, for exactly this reason.
-- **Notification suppression.** `NoteThreadViewed` also clears the thread's notification group, and `RaiseInboxNotifications` skips threads being viewed within the grace window, muted threads, and the first (priming) inbox poll after sign-in. When a new message's encrypted preview cannot be decrypted yet (`IsInboxPreviewReady`), the banner waits: the inbox polls again 3 seconds later, and once 30 seconds have passed it notifies anyway. A thread that appears for the first time can raise an arrival notification through `BuildArrivalNotification`, which ChocoChat uses for "added to group".
+- **Ticks.** Your bubbles show one check, then a double check once the server reports the message read. In ChocoChat, receipts flow only when both people keep Read receipts on in Settings, Privacy, so one check can also mean receipts are off. ChocoChat's "online" and "last seen" follow the same mutual rule.
+- **Unread counts** come from the server per thread. The store sums them for the app badge, skipping muted threads and the thread on screen, and `NoteThreadViewed` zeroes the on-screen count locally so the row badge drops at once.
+- **Fetching the newest page marks the thread read**; older pages never do. For a pushed message merged without a fetch, ChocoChat posts an explicit read with `ChatClient.MarkReadAsync`, only while the thread is on screen.
+- **Notifications** skip the thread being viewed, muted threads and the first inbox poll after sign-in. If an encrypted preview cannot be decrypted yet, the banner waits briefly, then notifies anyway.
 
-The inbox itself polls every 60 seconds in the foreground and 120 in the background (`PollCadence` with `PhoneVisibility`). While the realtime socket is connected and the inbox is not on screen (`NoteInboxWatched` keeps a short lease while it is), the interval stretches to 15 minutes, because pushes drive the list instead. A realtime chat ping requests an immediate pass, and a reconnect schedules one at a random point within the next 20 seconds.
+That read rule has a sharp edge: background code that fetches an open thread silently marks it read. So a ping or timer calls `RequestThreadRefresh`, which only sets a pending flag, and the store consumes it only when `ViewingMark` says the thread was drawn within its short grace window. The view's own poll calls `RefreshThread` directly, which is safe only because it runs on the active layer right after `NoteThreadViewed`.
 
-## In-game chat: Linkpearl
+The inbox polls on a cadence that slows in the background and stretches while the realtime socket is up. Call `NoteInboxWatched` every frame your app (or a home widget showing its list) draws, to keep the list fresh. [Networking](networking.md) owns the cadence.
 
-Linkpearl mirrors real game chat, so its data never touches Aethernet. A conversation there is either a person you tell or a tab the player built out of channels; both are one row in one list and both open the same thread.
+## Typing
 
-- **The channel catalog.** `GameChannels` (src/Aetherphone/Core/GameChat/GameChannels.cs) is the single source of truth: one row per channel carrying its `XivChatType` values, send command, label, tint and category. Capture, the byte budget, the tints, the picker and localization all read that row, so adding a channel costs one entry. Battle and loot logs are deliberately absent, they are a log rather than a conversation.
-- **Capture.** `ChatCapture` subscribes once to `IChatGui.ChatMessage` and resolves the channel through the catalog. It reads `ITextProvider`, which covers plain text and auto-translate together, and keeps payload data as `ChatChunk` values for items, map links, players, statuses, quests, party finder listings and other plugins' Dalamud links. Mentions of the local player are flagged here.
-- **Streams.** `ChatLog` keys buffers by stream: a channel key for channels, or `tell:name@world` for one tell counterpart. That makes the `MaxLinesPerStream` cap and the history file per conversation rather than per channel. The log owns the sequence counter and has no Dalamud dependency.
-- **Views.** A tab reads several streams at once through `ChatStreamView`, which appends live lines in place and only rebuilds when the stream set changes or history is restored. `ChatInbox` builds the conversation list on the same principle, plus unread counts and read watermarks.
-- **Send.** `ChatSend` routes through the real chat box using the channel's command, measures the 500 byte cap against the actual prefix, and tracks pending sends. A sent line posts as a dimmed ghost and resolves when the game echoes it back; ten seconds without an echo becomes "Not delivered" with a retry.
-- **History.** `ChatArchive` writes one file per conversation under `GameChat/<contentId>`, where the folder name is the character's ContentId as 16-digit lowercase hex (`ToString("x16")`), capped and flushed at most every 30 seconds. Retention is Off, Session, 30 days or Forever, resolved per channel with a global default, and `Configuration.ArchiveTellsToDisk` is the master switch that forces everything off. Legacy `MessageArchive` tell files import once per character.
-- **Alerts and unread.** `ChatNotifier` honors the tab's `AlertPolicy`, per channel mutes, the global bell and the conversation on screen. `ChatInbox` counts unread by the same rule, so a channel that cannot notify you cannot badge you either.
-- **Rendering.** `GameChatThread` is the whole screen below the header. Every conversation has two layouts, Log and Bubbles. A tab stores its own (`ChatTab.Density`, seeded from `Configuration.LinkpearlDefaultDensity` when the tab is created, plus `TextScale` and `Timestamps` overrides) and a tell stores its own in `Configuration.LinkpearlTellLayouts` through `TellPreferences.Layout` (Bubbles until changed); `InboxRow.Density` is the effective value and `ChatInbox.SetDensity` writes to whichever store owns the row. The thread header's layout button and the pop-out settings panel both flip it with one tap; `GameChatThread.Density` lets a screen notice the change and re-open the same key with the new target, which `GameChatThread.Open` treats as a target swap rather than a fresh conversation. Log is `ChatLineView`: one line per message in the game's own channel colours, with the timestamp and the sender as a clickable name (no underline until hovered, like the game), and the whole line drawn at `Configuration.LinkpearlTextScale` unless the target carries its own `TextScale` (a tab's override). The colour alone says which channel a line came from, as in the game and Chat 2; `GameChannels.ShortCode` only labels lines in the history export. Bubbles is the shared `ChatTranscript` with the chat theme's bubble style and full sender names; in a tab (any conversation that is not a tell), `GameChatThread` acts as the transcript's `IChatTranscriptSenders` and draws each sender's Lodestone portrait (a monogram in screenshot mode). Around the transcript the thread adds its own search bar (Search in the conversation sheet), a jump-to-latest pill when new lines arrive while scrolled up, and a "Not delivered" strip above the composer whose Retry refills the composer with the failed text. Both layouts draw text through `RunText`, which lays out styled runs with wrapping and hit testing so every game link is tappable. `GameChatTargets.For(row)` turns an `InboxRow` into the `GameChatTarget` the thread opens, so the app screen and the pop-out windows open conversations the same way. A stream can hold `ChatLog.MaxLinesPerStream` (2000) lines, so the thread only draws a window over the tail: `WindowPageLines` (100) visible lines to start, growing by a page whenever the user scrolls within `LoadOlderThreshold` of the top. Bubbles get this through the transcript's `IChatTranscriptPaging` hook (the thread is its own synchronous pager); the Log layout grows the window in its own loop and keeps the viewport still by measuring where last frame's first line landed in content space, then shifting `ScrollY` by exactly that much in the same frame. Growth waits while the kinetic scroller is dragging, flinging, or rubber-banding, because `KineticScroller.SyncOffset` ignores external scroll changes in those states. `Reveal` (search hits, deep links) widens the window to include its target before either path draws.
-- **Read state.** A watermark per conversation, persisted in `Configuration.LinkpearlSeen`, advanced only while the conversation is actually on screen. `ChatInbox.IsViewing` is true for the conversation the app's thread screen noted this frame (`NoteViewing`, backed by the same `ViewingMark` the Aethernet chat stores use, so it lapses 4 seconds after drawing stops and a closed phone stops counting as viewing) and for any expanded pop-out that is hovered or focused (`SetAttended`); both the unread counter and `ChatNotifier` consult it. The thread screen follows the same clear-on-view contract as `ChatThreadView`: every frame it is on screen, `LinkpearlApp.NoteConversationViewed` notes the key, marks the row read if it has unread, and removes the row's notification group, so unread that accrued while the app was backgrounded clears on resume without a trip back to the list. A collapsed pop-out never counts as viewing, so unread keeps climbing behind the badge on its bar even while the pointer rests on it. There are no receipts because the game has none.
-- **Pin and mute.** Tabs pin through `TabStore.TogglePin` (capped at `MaxPinned`) and mute by setting `AlertPolicy.Off`; tells pin and mute through `TellPreferences` (`Configuration.LinkpearlPinnedTells` / `LinkpearlMutedTells`). `ChatInbox.TogglePinned` and `ToggleMuted` hide the difference. A muted row keeps counting `Unread` so the list can show a quiet dot, but it never adds to `TotalUnread` (the app badge) and never notifies; `InboxRow.HasBadge` is the one flag the row renderers read.
-- **The app shell.** `LinkpearlApp` draws bezel to bezel on `SceneChrome.AppAreaFrom` with the shared `ChatListChrome` (the same rows, headers and cards ChocoChat uses) and three bottom tabs: Chats, People and Settings. Its colours come from a chat theme (`ChatThemes`, stored in `Configuration.LinkpearlChatTheme`, defaulting to the green Leaf theme that matches the home tile) rather than a fixed palette, so the accent, sent bubbles, badges and chrome inks all follow the picked theme. `LinkpearlRoute` names every sub-screen (conversation, tab editor, tab info, a settings section, the theme and wallpaper pickers, and the friend, character and free company cards). `DrawView` paints `ui.Body(area)` before any screen, the way Aethergram and ChocoChat do, because the router's layers carry a transparent background and a push would otherwise show the outgoing screen through the incoming one.
-- **The Chats tab.** A header (title, new chat, more), a search field, a paused-notifications banner, a filter `ChipRail` (All, Tells, Tabs, Unread), then pinned rows and the rest by activity. `InboxRowView` reveals pin, mute and more buttons on hover and returns an `InboxRowAction`; right-click (or more) opens the same conversation action sheet (`OpenConversationSheet`) the thread header uses. New tabs come from the `SheetSurface` behind the plus button (preset tiles for Free Company, Linkshells, Party and Local drawn with the same `GameChatTiles` tile the row will show, then a card with Custom tab and Send a tell), skinned through `SheetSkin.From(palette, ink)` so the panel follows the chat theme, so nothing lives at the bottom of the list any more.
-- **The People tab.** Friends, the party and the free company as `FriendRow`s with a portrait, an online dot and a subtitle that wraps instead of truncating; a row opens the friend card. A Friends, Online and Lodestone chip rail sits directly under the header so it never moves when the search row reveals below it. The Lodestone scope pairs the name field with a World or Data Center dropdown pill (All worlds, then every data center followed by its worlds from `WorldGeography`, defaulting to the home data center) and a Character or Free Company segment underneath. The Lodestone returns results in its own order, so `LookupRanking` puts exact name matches first, then prefix matches, then the rest, before `LookupService` cuts the list to 30. NetStone's search entries carry only a name and an id, so a result row's portrait loads by id through `LodestoneService.AvatarById` (one Lodestone request, no name lookup) and only for rows currently on screen; a world-scoped search also seeds the name@world id index so later portraits for those characters skip the lookup. The character and free company cards are the Lodestone screens. A friend card's Lodestone profile row, the chat menu's Look up character, thread info on a non-friend and look-ups launched from outside the app all go through `LinkpearlApp.OpenLodestoneProfile(name, world)`, which pushes the character card with no id: `LookupService.CharacterDetail` then keys the request by `name@world` (`LookupKeys.CharacterDetail`), resolves the id through `LodestoneService.ResolveIdAsync` (the persisted id index, then an exact-name search) and fetches the page by that id, so two friends never share a cache entry and "No matches found" means the Lodestone has no character of that name on that world. A name without a world is looked up on the player's home world. Rows that already carry an id (search results, rosters) keep the id key.
-- **The Settings tab.** Grouped rows on `ChatListChrome` cards. The root shows Appearance (chat theme, wallpaper, default layout, text size, and the Log layout switches for timestamps, world names, game colours, grouped lines and collapsed duplicates), Notifications (pause), and Privacy (screenshot mode, which routes every player name through `NameMask`), then a Chat settings group whose rows push one `LinkpearlSettingsSection` each: Pop-outs (tabs, placement, opacity, fade, flash, tells), Behavior (hide in cutscenes and with the HUD), Composer (multiline, max lines, double-Enter send, draft autosave, split long messages with its indicator and interval, emoji shortcodes and picker, and the recently sent list), Channels (colours, rules, and an Import game colours row that reads `GameLogColors`), and History (retention, export through `ChatArchive.Export`). A tab can also follow the game chat box's current channel through `GameChatMode` (`GameChannels.FollowGameKey`).
-- **Themes and wallpapers.** `ChatThemes` and `ChatWallpapers` are shared with ChocoChat and picked through `ChatAppearancePickers`; the wallpaper is global (`LinkpearlWallpaper`) with per conversation overrides (`LinkpearlChatWallpapers`, resolved by `ChatWallpapers.Effective`) and an optional pattern, painted behind the transcript through `GameChatThread.Backdrop`.
-- **Pop-out windows.** `LinkpearlPopouts` (src/Aetherphone/Windows/LinkpearlPopouts.cs) owns a pool of `LinkpearlPopoutWindow` Dalamud windows, each holding one or more conversations as tabs, registered in the plugin's `WindowSystem` next to the phone. They draw their own glass surface in the app's chat theme (`ChatThemes.Body`, the theme accent tinting the strip, `SocialInk` for strokes and inks, the wallpaper painted behind the transcript at the window's opacity), a title strip that is the tab rail (one chip per conversation with its tile or portrait, name and unread pill; the active chip opens the switch menu, a plus chip adds a tab, and the right end holds settings, collapse, open-in-phone and close), and a `GameChatThread`, and they keep working while the phone is closed or minimized. The settings button (`LinkpearlPopoutWindow.Settings.cs`) swaps the thread for a panel of grouped cards drawn with the same `GroupCard` and `SettingsRow` kit as the phone's settings sections: this chat's layout as a Log or Bubbles segment, the pop-out text size, opacity and fade, and the Log switches while the chat is a log (Timestamps edits the tab's override when the tab editor set one, otherwise the global). The panel closes on tab switch, collapse and unbind, and its scroll child is pushed under its own id so it never shares scroll state with the Log layout's child. Placement is persisted in `Configuration.LinkpearlPopouts` and restored on load. Closing a window (the close button, the last tab closed, or Close all pop-outs) remembers its position and expanded size in `Configuration.LinkpearlPopoutLastPlacement`, and the next fresh window opens there through `PopoutPlacements.Recall` (clamped to the viewport, staggered per other open window). With nothing remembered, or after the placement setting changes (which clears the memory), a fresh window lands where `PopoutPlacements.Resolve` puts it (beside the phone by default, or the corner picked in `LinkpearlPopoutPlacement`, staggered per other open window), using the phone frame that `PhoneVisibility` probes each frame. Opacity and text size come from `LinkpearlPopoutOpacity` / `LinkpearlPopoutTextScale`. With `LinkpearlPopoutTells` on, a new tell pops out automatically when the phone is not visible, unless notifications are paused, Do Not Disturb is on, or the tell is muted; `LinkpearlPopoutTellsWhilePhoneOpen` lets it pop while the phone is open too, except when the phone's thread screen is already viewing that conversation (`ChatInbox.IsViewing`). By default the auto-opened tell becomes the active tab of the most recently active window (or a fresh window brought to the front); with `LinkpearlPopoutTellsInBackground` it joins as an unread tab through `AddTab(key, false)`, or opens a fresh window that skips `BringToFront` and instead raises itself to the display front on its first draw through `ImGuiP.BringWindowToDisplayFront` (visible above the phone, but no keyboard focus taken), so the tab and composer the player is typing in never change. A pop-out only marks its conversation read while it is hovered or focused, so an auto-opened window keeps its unread pill until the player looks at it. The context menu is the shared `GameChatMenu`; actions that need the phone hand off through the pool's `LookUpInPhone` and `OpenMarketInPhone` callbacks, which the plugin wires to `LinkpearlLauncher.RequestLookup` and `MarketLauncher.RequestItem`, both ending in the plugin's `ShowPhoneApp`. Confirms are the exception: a window reserves a `ConfirmHosts` id, wraps its draw in `ConfirmHosts.Enter`, and draws its own `ConfirmOverlay` over its frame, so opening a link from a pop-out asks in that window rather than on a phone the player may have minimized. The frame is shielded while the card is up, Escape cancels it, and collapsing, unbinding, or suppressing the window drops the request through `ConfirmService.CancelHost`. Each window sets `UiScale.SetPhone` and `Plugin.Fonts.SetPhoneZoom` in `PreDraw` like `PhoneWindow` does, and disables `DragScrollHost` so the transcript scrolls with the wheel like a desktop window.
-- **Grouping pop-outs as tabs.** A window holds up to six conversations: `LinkpearlPopoutState` carries `Keys` and `Active`, migrated lazily from the old single `Key` on restore, and `PopoutTabs` holds the pure list maths. The title strip is the tab rail: when the chips no longer fit, every chip but the active one shrinks to its tile with the name on hover. A collapsed window shows the stacked tab avatars, the joined names and one "N new" pill for the whole group. Only the active tab is attended, so background tabs keep accruing unread. One `GameChatThread` per window is re-targeted on switch rather than one per tab, because each thread owns a `ChatStreamView` that subscribes to the log and merges hundreds of entries. With `LinkpearlPopoutTabs` on (the default) a new conversation joins the most recently active window that has room and only opens a fresh window when every window is full; with it off every conversation gets its own window. Dragging a pop-out over another merges them, and the menu on the active chip can move a tab out into its own window.
-- **Getting out of the way.** `PopoutPresence` ticks on `Framework.Update` and calls `LinkpearlPopouts.SetSuppressed`, which hides a window without unbinding it (`OnClose` ignores a close that a gate caused, so placement, size and collapsed state survive). It reads `TerritoryIntendedUse` for the field operation exemption and debounces both directions, and a message arriving for a hidden conversation brings the windows back. `LinkpearlHotkey` opens the most recent conversation and walks the list on repeat presses, refusing to fire while a text field has focus.
-- **Channel styles.** `ChannelStyleStore` indexes `Configuration.LinkpearlChannelStyles` into an array sized by the channel catalog and answers from two branches when nothing is customized. Four inks per channel (sender and body, incoming and outgoing) are applied in `ChatLineView` and in `GameChatThread.Map`. Three rules ride along: never unread (which `ChatInbox` and `ChatNotifier` both consult, so a channel that cannot badge you cannot notify you either), hide outgoing (display only, capture and history keep the line), and hide from the game chat log. That last one calls `PreventOriginal` and is gated twice, by a master switch and a per channel flag, both off by default; the system and echo channels can never be hidden, and anything outside the catalog never reaches the check.
-- **Writing.** `GameComposer` measures its own height so `GameChatThread` can lay the transcript out against it, wrapping to `LinkpearlComposerMaxLines` before it scrolls, with Enter sending and Shift+Enter breaking the line (with `LinkpearlComposerMultiline` off the field is a plain one-line input; with `LinkpearlDoubleEnterSend` on, a send needs two Enter presses in quick succession). The multiline field is a `SoftWrapEditor` holding a soft wrapped copy of the draft, so `SoftWrapBuffer` remembers the breaks it inserted and merges every edit back onto the logical message, which is what keeps a wrap from reaching the wire as a line break. Typing a channel command and a space at the start of a draft (`/p `) switches the composer to that channel when the conversation offers it; any other draft starting with `/` is sent to the game as a command through `ChatSender.TrySend`. With `LinkpearlSplitLongMessages` on (the default), `MessageSplitter` cuts a message past `ChatSend.Budget` on whitespace, never mid word or mid rune, into at most `MessageSplitter.MaxParts` (5) parts, and `ChatSend.SendSplit` drains them from the framework tick at the configured interval rather than in one burst; with it off the thread calls `ChatSend.Send`. The field's byte limit follows the same switch: five parts' worth while splitting, one message's budget without. `ChatDrafts` keeps a draft per conversation key, which is what makes a pop-out tab switch restore the right one, and records sent messages so one that never arrived can be copied back out of settings.
-- **Emoji in game chat.** `EmojiShortcodes` mirrors `EmojiScanner`: a fast reject that allocates nothing when a line holds no colon, then spans and glyphs. `ChatRuns` splits plain text on those spans inside its per message cache, so a `TextRun` can be an emoji rather than a string and `RunText` gives it a square advance and hands it to `EmojiRender`. What travels the wire is still the shortcode text, because the game cannot carry emoji over its own chat.
-- **Collapsing a pop-out.** ImGui cannot collapse a window that has no title bar, so the window collapses itself down to its own title strip: the chevron button, or a double-click on the bar away from the title and the buttons, flips `collapsed`, and a `Spring` drives the height between the expanded size and `TitleHeight`. Three rules make it hold together. `SizeConstraints` is rebuilt every frame in `PreDraw` because a minimum height of `MinHeight` would otherwise clamp the forced collapsed size straight back up, and `NoResize` joins the flags while the window is collapsed or moving so the grip cannot fight the animation. The window keeps its own `expandedSize`, updated only while it is fully expanded and at rest, and `Snapshot` persists that rather than the live frame, so a collapsed window comes back at the size it had. The top edge always stays still: only the height changes, `Position` is left alone for the whole animation, and the bar sits where it already was no matter where on screen the window is parked. Collapsing also closes the switch menu, the chat menu and the composer's channel menu, because an open `DropdownMenu` blocks input through `Gate` every frame whether or not anything draws it, and a menu clamped into a 44px frame has nowhere to go. Settings collapses and expands every open pop-out at once next to Close all pop-outs.
+The view sends a typing signal from its tick only when the draft has changed, the trimmed draft is not empty, and the app's typing throttle has passed since the last signal. Each app passes that throttle and its thread poll interval to the `ChatThreadView` constructor. Clearing the draft sends nothing.
 
-## Adopting the stack for a new surface
+While the realtime socket is down, the view polls the other person's typing state on the thread poll cadence. While push is active that poll stops: a pushed signal whose type matches the store's `TypingSignalType`, for the open thread, turns the typing bubble on, and it expires a few seconds later.
 
-If your new surface talks to Aethernet, you write two subclasses and reuse everything else.
+## Encryption for store authors
 
-**1. The store.** Subclass `ChatThreadStoreBase<TMessage, TThread>`; both type parameters must implement `IIdentified` (an `Id` string). You implement the transport verbs and field accessors, and inherit polling, backoff, pagination, merge, optimistic reactions, tombstoning, media upload with optional encryption, inbox notifications, and report evidence collection:
+A store picks the key scope for each thread. Whenever the thread is encrypted, the base class seals everything that leaves the device in that scope: message text, edits, media bytes (before the upload) and captions. You supply four pieces.
+
+- `ScopeFor(threadId)`: the key scope string, built with the `ConversationKeyStore` helpers.
+- `HydrateKeysAsync`: loads this account's wrapped conversation keys.
+- `EnsureThreadKeysAsync`: returns the thread's `ChatKeyStatus` (whether it is known, whether this device can encrypt, the key generation, members without keys).
+- `DecorateMessages` and `DecorateThreadList`: swap decrypted text into messages and inbox previews; placeholders show until that succeeds.
+
+Sends wait for the key status. Before every send or edit the base resolves it, and `EncryptedSendPolicy.MustHoldPlaintext` holds back a plain text send when the status is not known yet, or when the thread is encrypted but this device cannot encrypt for it: sending in the clear there would be a silent downgrade. The composer mirrors this, showing "checking" while `KeyStatusPending` is true and blocking while `SendWouldDowngrade` is true. `AdInquiryStore` overrides `SendWouldDowngrade` so its composer stays blocked whenever it cannot seal. Keys, envelopes and recovery are in [Networking](networking.md).
+
+## Adopting the stack
+
+A surface that talks to Aethernet needs two subclasses and reuses everything else.
+
+**1. The store.** Subclass `ChatThreadStoreBase<TMessage, TThread>`; both types implement `IIdentified` (an `Id` string). You write the transport verbs and field accessors and inherit polling, backoff, paging, merging, reactions, tombstoning, sealed media upload, notifications and report evidence. Most overrides are one line, as in this excerpt from `DirectMessagesStore`:
 
 ```csharp
-internal sealed class SupportStore : ChatThreadStoreBase<ChatMessageDto, ConversationDto>
+protected override string ImageUploadScope => "chat-dm";
+protected override string VoiceUploadScope => "chat-voice";
+protected override string ReportTargetType => "chat_message";
+protected override string TypingSignalType => Core.Telephony.Contracts.SignalType.ChatTyping;
+
+protected override string ScopeFor(string threadId) => ConversationKeyStore.ChatScope(threadId);
+
+protected override Task HydrateKeysAsync(CancellationToken token) => keys.HydrateAsync(token);
+
+protected override Task<ChatKeyStatus> EnsureThreadKeysAsync(string threadId, CancellationToken token) =>
+    keys.EnsureChatKeysAsync(threadId, token);
+
+protected override async Task<MessagePage?> FetchMessagesPageAsync(string threadId, string? cursor,
+    CancellationToken token)
 {
-    protected override string ImageUploadScope => "support-image";
-
-    protected override async Task<MessagePage?> FetchMessagesPageAsync(
-        string threadId, string? cursor, CancellationToken token)
-    {
-        var page = await client.MessagesAsync(threadId, cursor, token).ConfigureAwait(false);
-        return page is null ? null : new MessagePage(page.Items, page.NextCursor);
-    }
-
-    protected override long MessageTimeOf(ChatMessageDto message) => message.CreatedAtUnix;
+    var page = await client.MessagesAsync(threadId, cursor, token).ConfigureAwait(false);
+    return page is null ? null : new MessagePage(page.Items, page.NextCursor);
 }
 ```
 
-That is a sketch of three of the base's more than thirty abstract members; `DirectMessagesStore` is the reference implementation and most overrides are one-line delegations like these.
+The first four lines name things the server must already know. A new upload scope, typing signal type, report target type or route needs a matching server change before it works. The server is a separate private repository, so open an issue or ask a maintainer before you build the client half.
 
-**2. The view.** Subclass `ChatThreadView<TMessage, TThread>`. You implement `MapTranscript` (DTO array to `TranscriptMessage[]`), `DrawHeader`, `BuildMenuModel` (which menu actions your surface offers), `BeginReply`, the field accessors (`KindOf`, `BodyOf`, `SenderIdOf`, ...), and the navigation pushes (`OpenImageView`, `OpenReactions`, `PushImagePickerScreen`, `PopScreen`) that route to your app's `ViewRouter`. You inherit the transcript, composer, search, menus, voice playback, the image viewer, the image picker grid, and the reactors screen; your routes just call back into `DrawImageViewer`, `DrawImagePicker`, and `DrawReactions`.
+**2. The view.** Subclass `ChatThreadView<TMessage, TThread>` and implement `MapTranscript` (your DTO array to `TranscriptMessage[]`), `DrawHeader`, `BuildMenuModel`, `BeginReply`, the field accessors, and the navigation pushes (`OpenImageView`, `OpenReactions`, `PushImagePickerScreen`, `PopScreen`) into your app's `ViewRouter`. You inherit the transcript, composer, search, menus, voice playback, image viewer, image picker and reactors screen; your routes call `DrawImageViewer`, `DrawImagePicker` and `DrawReactions`.
 
-**3. Per-frame wiring.** In your app's `Draw`, call `threadView.GateMenus()` before drawing routes, pass `depth == router.Depth` as the `activeLayer` argument, and call `threadView.OnAppClosed()` from the app's close hook so the draft is saved, search closes, and recording and playback stop. Message, Velvet, Aethergram and Yellow Pages all do, and a ChocoChat pop-out does it in `Unbind`. Pass your poll cadences to the base constructor.
+**3. Per-frame wiring.** In your app's `Draw`, call `threadView.GateMenus()` before drawing routes, pass `depth == router.Depth` as `activeLayer`, call your store's `NoteInboxWatched`, and call `threadView.OnAppClosed()` from the close hook so the draft is saved and recording and playback stop. YellowPagesApp.cs shows all four compactly.
 
-Copy-on-write is the contract between the two: the store publishes messages as an immutable `TMessage[]` snapshot and replaces the whole array on any change (`CopyOnWrite.Append`, cloned arrays in `ReplaceMessage` and `ApplyLocalReaction`). `ChatThreadView.BuildTranscript` re-runs `MapTranscript` only when the array reference changes, which is what keeps a full remap off the per-frame path. Two escape hatches cover inputs that live outside the array: override `TranscriptVersion` to return a counter that changes when they do (ChocoChat returns `Contacts.Version`, so a contact book change remaps the sender names it resolves through `ContactBook.NameFor`), or call `InvalidateTranscript()` to force one remap.
-
-If your surface is local-only like Linkpearl, skip both bases and compose `ChatTranscript` or `ChatLineView`, `ChatEntranceTracker`, and your own store instead. Linkpearl is the worked example.
+A local-only surface skips both bases and composes `ChatTranscript`, `ChatEntranceTracker` and its own store, as [Linkpearl](linkpearl.md) does. Unit tests in src/Aetherphone.Tests pin the parts without ImGui (ViewingMarkTests, IdentifiedMergeTests, EncryptedSendPolicyTests, SoftWrapBufferTests); run them when you touch those files.
 
 ## Gotchas
 
-- **Never mutate a message in place.** The transcript cache keys on the array reference (`BuildTranscript` in ChatThreadView.cs). If a store edits a `TMessage` inside the existing array instead of publishing a new array, the UI will never repaint that change. `TranscriptVersion` and `InvalidateTranscript()` exist for mapping inputs that live outside the array, never as a way around copy-on-write.
-- **Background fetches mark threads read.** Fetching the newest message page (no cursor) acks the thread as read; the explicit `ChatClient.MarkReadAsync` exists only for pushed messages that bypass the fetch. Route any background push- or timer-driven refresh through `RequestThreadRefresh`, which `ConsumePendingThreadRefresh` gates on `IsBeingViewed`, never straight to `RefreshThread`, or you will silently clear unread state and suppress notifications for threads the user never saw. The view's own poll is the one exception: `TickThread` calls `RefreshThread` directly, which is safe only because it runs on the active layer right after `NoteThreadViewed`. This regressed once and the gate in `ChatThreadStoreBase` is the fix; keep it.
-- **`GateMenus` is mandatory.** `ChatMenuController` draws on the foreground draw list, above every widget. Apps must call `threadView.GateMenus()` at the top of their `Draw` (see `MessageApp.Draw`); skip it and clicks leak through the open menu into the UI underneath.
-- **Two ids that read alike.** The server-backed Message app is app id `message`; the in-game Linkpearl app is app id `messages`. Notifications and gates use these keys (`PhoneNotification("message", ...)` vs `PhoneNotification("messages", ...)`), so grep for the exact string.
-- **Short threads never auto-load older pages.** `MaybeLoadOlder` bails when `ImGui.GetScrollMaxY() <= 0f`, so a first page that does not fill the viewport has no scrollbar and therefore no trigger. Do not assume every thread eventually pulls its full history.
-- **Layout caches sweep, they do not clear.** `RunText` and `RichTextCache` stamp each layout with the frame it was last used and, once past their threshold, drop only entries idle for more than a frame (at most one sweep per frame). The old clear-everything policy made any list longer than the cap re-wrap every row every frame, which is what dropped a 2000-line Linkpearl history from the high 80s to the low teens.
-- **Location, muster, and ad shares are kind 0.** They are plain text messages carrying a token; the transcript detects them per frame with `TryParse` and `ChatText.EffectiveKind` resolves them for menus and previews. If you add a token type, wire all three spots (bubble, `EffectiveKind`, `QuotePreview`/`ListPreview`) or it will render as raw text somewhere.
-- **The entrance tracker keys on the tail id.** `ChatEntranceTracker.Sync` animates only when the count grows and the tail id changed; prepended history is deliberately silent. Pass a stable tail id or older pages will pop like new messages.
-- **Wrapped newlines are not part of the message.** Both composers (`ChatComposer`, and `GameComposer` in multiline mode) type into a soft wrapped copy of the draft through `SoftWrapEditor`, so the ImGui buffer carries newlines the user never pressed. `SoftWrapBuffer` tracks the breaks it inserted and merges each edit back into the logical text, and only a Shift+Enter break survives into the sent text (and, for game chat, into `MessageSplitter`). Never read the widget buffer as the message, and never try to tell a soft break from a typed one by re-measuring the text: that guess is what once baked a wrap into the draft and sent one party message as five.
-- **Game chat history is a per channel promise.** Retention is resolved per channel, so a channel shared by two tabs has one history and one policy; editing Keep history in a tab writes through to its channels and reads back as Mixed when they disagree. `ChatArchive` drives the character switch order (flush, clear, switch, load), so nothing else should clear `ChatLog`.
+- **Never mutate a message in place.** The transcript cache keys on the array reference, so an edit inside the existing array never repaints. `TranscriptVersion` and `InvalidateTranscript()` are for inputs outside the array, not a way around copy-on-write.
+- **Background fetches mark threads read.** Route every push or timer refresh through `RequestThreadRefresh`, never straight to `RefreshThread`, or you clear unread state and swallow notifications for threads the user never saw.
+- **`GateMenus` is mandatory.** Call `threadView.GateMenus()` at the top of your app's `Draw`. Skip it and clicks leak through the open foreground menu into the widgets underneath.
+- **Two app ids that read alike.** ChocoChat is `message`; Linkpearl is `messages`. Notifications and install gates use these strings, so grep for the exact one.
+- **Short threads never load older pages on their own.** The trigger needs a scrollbar, so a first page that does not fill the viewport never pulls more.
+- **Token shares need three changes.** Wire a new token type into the bubble, `ChatText.EffectiveKind` and the previews (`QuotePreview`, `ListPreview`), or it shows as raw text somewhere.
+- **The entrance animation keys on the last message id.** `ChatEntranceTracker` animates only when the count grows and the last id changes, so prepended history stays still. An unstable last id makes older pages pop in like new ones.
 
 ## Related docs
 
-- [UI toolkit](ui-toolkit.md): Typography, AppSkin, UiInteract, and the widget conventions the chat components are built on
-- [App framework](app-framework.md): IPhoneApp, routing, and badges that host a thread screen
-- [Networking](networking.md): the Aethernet client, realtime signals, and the encryption envelope
-- [Notifications](notifications.md): how inbox notifications, groups, and deep links work
-- [State and persistence](state-and-persistence.md): Configuration, per-character data, and media storage
-- [Game integration](game-integration.md): IChatGui and the other Dalamud services Linkpearl relies on
+- [Linkpearl](linkpearl.md): the in-game chat app and its pop-out windows.
+- [Networking](networking.md): the Aethernet client, the realtime socket, polling cadence and encryption.
+- [App framework](app-framework.md): `IPhoneApp`, routing and badges that host a thread screen.
+- [UI toolkit](ui-toolkit.md): typography, skins and input conventions the chat components build on.
+- [Notifications](notifications.md): inbox notifications, groups and deep links.

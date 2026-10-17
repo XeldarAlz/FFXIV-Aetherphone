@@ -38,8 +38,8 @@ internal sealed class CasinoTablesStore : IDisposable
     private readonly object ledgerGate = new();
     private Dictionary<string, LedgerSlot> ledgerSlots = new(StringComparer.Ordinal);
     private int ledgerVersion;
-    private volatile string ledgerWatchedRoomId = string.Empty;
-    private long ledgerWatchedAtTick;
+    private volatile string attendedTableId = string.Empty;
+    private long attendedTableAtTick;
     private volatile CasinoTableRowDto? card;
     private readonly Action<int> cardStatusSink;
     private int fetchingCard;
@@ -520,17 +520,22 @@ internal sealed class CasinoTablesStore : IDisposable
 
     public int LedgerVersion => Volatile.Read(ref ledgerVersion);
 
-    public string AttendedTableId(long nowTick)
+    public void AttendTable(string tableId)
     {
-        var ledgerId = ledgerWatchedRoomId;
-        if (ledgerId.Length > 0 && Attended(Interlocked.Read(ref ledgerWatchedAtTick), nowTick))
+        if (tableId.Length == 0)
         {
-            return ledgerId;
+            return;
         }
 
-        var doorId = doorWatchedRoomId;
-        return doorId.Length > 0 && Attended(Interlocked.Read(ref doorWatchedAtTick), nowTick)
-            ? doorId
+        attendedTableId = tableId;
+        Interlocked.Exchange(ref attendedTableAtTick, Environment.TickCount64);
+    }
+
+    public string AttendedTableId(long nowTick)
+    {
+        var tableId = attendedTableId;
+        return tableId.Length > 0 && Attended(Interlocked.Read(ref attendedTableAtTick), nowTick)
+            ? tableId
             : string.Empty;
     }
 
@@ -583,8 +588,6 @@ internal sealed class CasinoTablesStore : IDisposable
         }
 
         var now = Environment.TickCount64;
-        ledgerWatchedRoomId = tableId;
-        Interlocked.Exchange(ref ledgerWatchedAtTick, now);
         lock (ledgerGate)
         {
             var slot = SlotFor(tableId);
@@ -1427,8 +1430,8 @@ internal sealed class CasinoTablesStore : IDisposable
             myLedgerLoaded = false;
         }
 
-        ledgerWatchedRoomId = string.Empty;
-        Interlocked.Exchange(ref ledgerWatchedAtTick, 0);
+        attendedTableId = string.Empty;
+        Interlocked.Exchange(ref attendedTableAtTick, 0);
         Interlocked.Exchange(ref myLedgerAttemptedAtTick, 0);
         Interlocked.Exchange(ref myLedgerLoadedAtTick, 0);
         lock (intentGate)

@@ -43,7 +43,13 @@ internal sealed record TimedFish(
     TimedFishFlags Flags,
     float Patch)
 {
+    public const int ExpansionSlots = 8;
+
+    private const int FirstPatchMajor = 2;
+
     public bool IsBigFish => (Flags & TimedFishFlags.BigFish) != 0;
+
+    public byte Expansion => (byte)Math.Clamp((int)Patch - FirstPatchMajor, 0, ExpansionSlots - 1);
 }
 
 internal static class TimedFishParser

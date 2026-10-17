@@ -205,7 +205,7 @@ internal sealed partial class WalletApp
             TextStyles.FootnoteEmphasized);
         lineTop += eyebrowHeight + WalletArt.LineGap * scale;
         Typography.Draw(drawList, new Vector2(textLeft, lineTop),
-            Typography.FitText(limited.Name, textWidth, TextStyles.Headline), ui.TitleInk, TextStyles.Headline);
+            Typography.FitTextMiddle(limited.Name, textWidth, TextStyles.Headline), ui.TitleInk, TextStyles.Headline);
         lineTop += titleHeight + WalletArt.LineGap * scale;
         Typography.Draw(drawList, new Vector2(textLeft, lineTop),
             Typography.FitText(WeeklyStatus(limited, done), textWidth, TextStyles.Subheadline),

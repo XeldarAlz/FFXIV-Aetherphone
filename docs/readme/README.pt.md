@@ -61,6 +61,7 @@ O Aethernet abriu em 2 de julho de 2026. Até o fim da temporada, jogadores de 1
         <li>Linhas do tempo Para você e Recentes, com um filtro Seguindo</li>
         <li>Rechirps, citações, respostas e hashtags</li>
         <li>Fotos, GIFs e treze reações</li>
+        <li>Cole uma imagem com Ctrl+V ou arraste uma do Explorador de Arquivos</li>
         <li>Chirps em outros idiomas traduzidos com um toque</li>
       </ul>
     </td>
@@ -69,7 +70,7 @@ O Aethernet abriu em 2 de julho de 2026. Até o fim da temporada, jogadores de 1
       <h3><img src="../media/readme/icons/aethergram.png" width="28" align="top" alt="" /> Aethergram</h3>
       <em>Clicado no jogo. Compartilhado no Aethergram.</em>
       <ul>
-        <li>Até oito fotos direto da sua galeria</li>
+        <li>Até oito fotos direto da sua galeria, ou coladas e arrastadas</li>
         <li>Stories que duram um dia</li>
         <li>Marque quem aparece na foto</li>
         <li>Um editor de fotos embutido antes de compartilhar</li>
@@ -87,6 +88,7 @@ O Aethernet abriu em 2 de julho de 2026. Até o fim da temporada, jogadores de 1
       <ul>
         <li>Mande mensagens para jogadores de qualquer mundo ou data center</li>
         <li>Notas de voz, fotos e conversas em grupo</li>
+        <li>Cole ou arraste uma foto e adicione uma legenda antes de enviar</li>
         <li>Chamadas de voz, a dois ou em grupo</li>
         <li>Criptografia de ponta a ponta</li>
       </ul>
@@ -104,8 +106,6 @@ O Aethernet abriu em 2 de julho de 2026. Até o fim da temporada, jogadores de 1
     </td>
   </tr>
 </table>
-
-Uma única conta do Aethernet faz seu login em todos os apps sociais, e cada app pode manter seu próprio nome de exibição e nome de usuário.
 
 ## Assista, ouça e jogue junto
 
@@ -168,23 +168,25 @@ Uma única conta do Aethernet faz seu login em todos os apps sociais, e cada app
 
 **Pra relaxar**<br>
 <img src="../media/readme/icons/games.png" width="36" alt="Jogos" title="Jogos" /> <img src="../media/readme/icons/doom.png" width="36" alt="Doom" title="Doom" /> <img src="../media/readme/icons/chess.png" width="36" alt="Xadrez" title="Xadrez" /> <img src="../media/readme/icons/tetris.png" width="36" alt="Tetris" title="Tetris" /> <img src="../media/readme/icons/wordrun.png" width="36" alt="Word Run" title="Word Run" /> <img src="../media/readme/icons/solitaire.png" width="36" alt="Solitaire" title="Solitaire" /> <img src="../media/readme/icons/2048.png" width="36" alt="2048" title="2048" /><br>
-<sub>Um fliperama com cinquenta e nove jogos, Doom entre eles · abas Início, Juntos, Biblioteca e Perfil, com o jogo do dia ao vivo no topo, um calendário de sequência diária e um ícone pintado para cada jogo · rankings globais e entre amigos dos quais você só participa se quiser · além de Uno, Xadrez, Sinuca bola 8, Lig 4, Bordada, Golpe de sorte, Cratera e Minigolfe online com amigos · Doom e Cratera, e as salas de Sinuca bola 8 e Cratera, são jogados na horizontal</sub>
+<sub>Um fliperama com cinquenta e nove jogos, Doom entre eles, cada um em tela cheia com uma introdução, um menu de pausa e um cartão de resultado · Doom, Guerra dos Moogles e Corte são jogados na horizontal · um desafio diário igual para todo mundo, com um calendário de sequência · rankings globais e entre amigos dos quais você só participa se quiser · Uno, Xadrez, Sinuca bola 8, Lig 4, Bordada, Golpe de sorte, Guerra dos Moogles e Minigolfe online com amigos</sub>
 
 ## Feito como o celular no seu bolso
 
-**Mora na sua HUD.** Arraste para onde quiser, redimensione ou reduza a um minicelular com relógio, widgets, música e chamadas.
+**Mora na sua HUD.** Arraste para onde quiser, redimensione ou reduza a um minicelular com relógio, widgets, música, chamadas e um contador de FPS opcional. Mantenha-o na tela durante o Group Pose e as cutscenes se ele estiver num segundo monitor.
+
+**Na barra de informações do servidor.** O celular fica na barra de informações do servidor do jogo com a contagem de notificações não lidas, e um clique o abre. Em Ajustes → Geral → Barra de informações do servidor você escolhe o estilo e renomeia o rótulo.
 
 **Widgets e Pilhas Inteligentes.** Widgets para a maioria dos apps, redimensionados pelo canto e empilhados ao soltar um sobre o outro.
 
 **Uma Ilha Dinâmica** para chamadas, reprodução, temporizadores, viagens, sessões de vídeo em grupo e encontros.
 
-**Spotlight e Central de Controle.** Puxe para baixo na Tela de Início para buscar apps, contatos, ajustes, notas e itens do mercado, ou toque no topo da tela para música, volume, brilho e Não Perturbe.
+**Spotlight e Central de Controle.** Puxe para baixo na Tela de Início para buscar apps, contatos, ajustes, notas e itens do mercado, ou toque no topo da tela para música, volume, brilho e Não perturbe.
 
 **Deixe do seu jeito.** Papéis de parede, cores de destaque, estilos de ícone, capas e o layout da Tela de Início, salvos como um Visual que acompanha cada personagem.
 
 **Fala a sua língua.** Nove idiomas de interface e tradução com um toque em posts, perfis e mensagens.
 
-**Privacidade desde a origem.** Mensagens, fotos e notas de voz têm criptografia de ponta a ponta. Uma apresentação do Velvet é enviada como texto simples. Uma equipe humana de moderação analisa o conteúdo denunciado.
+**Privacidade desde a origem.** Mensagens, fotos e notas de voz têm criptografia de ponta a ponta. Uma apresentação do Velvet é enviada como texto simples, e traduzir uma mensagem envia o texto dela ao Aethernet para ser traduzido. Uma equipe humana de moderação analisa o conteúdo denunciado.
 
 <a id="install"></a>
 
@@ -198,25 +200,36 @@ https://aetherphone.net/repo.json
 
 Marque **Enabled**, clique em **+** e depois em **Save and Close**. Abra `/xlplugins` → **All Plugins**, busque **Aetherphone** e instale. Digite `/phone` para pegar o celular.
 
-Joga no cliente chinês? O celular detecta isso e faz seu login pelo perfil do Rising Stones (石之家).
+Os apps sociais e outros recursos online precisam de uma conta gratuita do Aethernet, que você cria provando que o personagem é seu; os apps offline funcionam sem ela. Joga no cliente chinês? O celular detecta isso e faz seu login pelo perfil do Rising Stones (石之家).
 
 <details>
 <summary><strong>Comandos</strong></summary>
 
 | Comando | Ação |
 |---|---|
-| `/phone` | Mostrar ou ocultar o celular |
-| `/aetherphone` | Atalho para `/phone` |
+| `/phone` | Mostrar ou ocultar o celular (`/aetherphone` também funciona) |
+| `/phone mini` | Alternar entre o celular completo e o minicelular |
+| `/phone full` | Abrir o celular completo |
+| `/phone hide` | Guardar o celular |
+| `/phone open <app>` | Abrir um app pelo nome |
+| `/phone settings` | Abrir os Ajustes |
+| `/phone photo` | Abrir a Câmera e tirar uma foto |
+| `/phone dnd` | Ligar ou desligar o Não perturbe |
+| `/phone mute` | Ligar ou desligar o Modo silencioso |
+| `/phone music [play, pause, next, prev]` | Controlar o player de música; sozinho, ele toca ou pausa |
+| `/phone tell [name]` | Abrir um sussurro do Linkpearl com o seu alvo, ou com `First Last World` |
+| `/phone call <contact>` | Ligar para um contato |
 | `/phone run <name>` | Executar um atalho pelo nome, para que ele possa ficar numa macro da hotbar |
 | `/phone market [item]` | Abrir o mercado, buscando um item se você indicar um |
 | `/phone reset` | Recentralizar o celular na tela |
 | `/phone test` | Enviar uma notificação de exemplo |
+| `/phone help` | Listar todos os comandos no chat |
 
 </details>
 
 ## Comunidade e contribuições
 
-Suporte, relatos de bugs e sugestões ficam no **[Discord do Aetherphone](https://discord.gg/3HbJCscMyS)**.
+Suporte, relatos de bugs e sugestões ficam no **[Discord do Aetherphone](https://discord.gg/3HbJCscMyS)**, e o app Feedback do celular envia um relato de dentro do jogo.
 
 O Aetherphone é de código aberto e contribuições são bem-vindas. Tradutores não precisam de código nem de build: o guia do tradutor funciona no navegador.
 
@@ -228,7 +241,7 @@ O Aetherphone é desenvolvido com ferramentas de programação com IA e declara 
 
 **Nada do que você vê ou ouve é gerado por IA.** Todos os ícones, papéis de parede, capinhas, sons, toques e fontes são originais, desenhados por artistas creditados ou vêm de fontes licenciadas. O texto em inglês é escrito à mão, e os outros oito idiomas são traduções assistidas por IA revisadas por pessoas.
 
-**Seu conteúdo continua sendo seu.** A tradução envia apenas o texto que você pedir para traduzir, ou os feeds e conversas em que você ativar a tradução automática. Nenhuma IA modera o Aethernet, e seus posts e mensagens nunca são usados para treinar modelos de IA.
+**Seu conteúdo continua sendo seu.** Nenhuma IA modera o Aethernet, e nunca usamos seus posts ou mensagens para treinar modelos de IA.
 
 → [Uso de IA](../ai-usage.md) · [Avisos de terceiros](../../THIRD-PARTY-NOTICES.md)
 

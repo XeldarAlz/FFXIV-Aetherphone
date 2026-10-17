@@ -8,7 +8,7 @@ internal static class AudioDevices
     private const long RefreshMilliseconds = 3000;
     private static string[] inputs = Array.Empty<string>();
     private static string[] outputs = Array.Empty<string>();
-    private static long refreshedAt = long.MinValue;
+    private static long refreshedAt = long.MinValue / 2;
     private static int refreshing;
 
     public static string[] Inputs => Volatile.Read(ref inputs);

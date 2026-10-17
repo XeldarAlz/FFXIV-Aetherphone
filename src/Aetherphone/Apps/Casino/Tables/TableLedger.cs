@@ -150,6 +150,7 @@ internal sealed class TableLedger
         }
 
         tables.EnsureLedgerFresh(roomId);
+        tables.AttendTable(roomId);
         if (tables.TakeIntentFailure())
         {
             Toast(new CasinoStakeOutcome(false, CasinoReasons.Unreachable));

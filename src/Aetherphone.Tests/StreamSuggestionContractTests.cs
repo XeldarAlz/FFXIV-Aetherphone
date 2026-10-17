@@ -13,7 +13,7 @@ public sealed class StreamSuggestionContractTests
             "Nym suggested a video for the queue.", System.DateTime.Now, default,
             StreamSuggestionNotifier.GroupKey);
         Assert.Equal("aetherstream:suggestions", notification.GroupKey);
-        Assert.Equal("aetherstream:suggestions", notification.StackKey);
+        Assert.Equal(PhoneNotification.StackKeyOf("aetherstream", "aetherstream:suggestions"), notification.StackKey);
         Assert.Equal("aetherstream", notification.SettingsKey);
     }
 

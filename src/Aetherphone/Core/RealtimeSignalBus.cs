@@ -7,7 +7,8 @@ internal readonly record struct ContentRemovalSignal(string? App, string? Kind, 
 
 internal readonly record struct ChatSignal(string? ConversationId, ChatMessageDto? Message);
 
-internal readonly record struct CasinoSignal(string Type, string? Reason, CasinoPayload? Payload);
+internal readonly record struct CasinoSignal(string Type, string? Reason, CasinoPayload? Payload,
+    string? UserId = null, int? Reaction = null);
 
 internal readonly record struct GameSignal(string Type, string? Reason, GamePayload? Payload);
 

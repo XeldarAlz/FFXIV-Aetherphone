@@ -6,9 +6,7 @@ Only the latest release published to the custom Dalamud repo is supported. If yo
 
 ## Reporting a vulnerability
 
-Please report security issues privately via GitHub's private vulnerability reporting:
-
-https://github.com/XeldarAlz/FFXIV-Aetherphone/security/advisories/new
+Please report security issues privately by email to contact@aetherphone.net, with "Security" in the subject line.
 
 Please don't open a public issue or Discussion for anything that could let someone else exploit users of the plugin before a fix is out.
 

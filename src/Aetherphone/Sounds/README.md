@@ -1,64 +1,31 @@
 # Bundled sounds
 
-Every file in these folders is written by
-`tools/sound-generator/generate-sounds.py`. Edit the generator and re-run it
-instead of hand-editing clips, so trims, fades and loudness stay consistent.
+Every file in these folders is written by tools/sound-generator/generate-sounds.py. Edit the generator and re-run it rather than editing clips by hand, so trims, fades and loudness stay consistent. The one local input is Ui/shutter.wav, a recording the generator reads from this folder and re-masters in place.
 
-Ringtone and notification audio live in separate subfolders, and each picker in
-Settings only lists its own kind:
+## Folders
 
-- `Ringtones/` ships the **Ringtone** options (plays on incoming calls).
-- `Notifications/` ships the **Notification Sound** options (plays on
-  notifications, including per-app overrides).
-- `Ui/` ships the **Interface Sounds** clips (lock, app transitions, sheets,
-  taps, keyboard, toggles, send and receive, call cues and friends). This
-  folder is not a picker: the file names are wired to events in
-  `Core/Notifications/UiSound.cs` and never appear in Settings lists, and
-  `UiSoundCatalogTests` fails the build server if a wired name goes missing.
-  `ringback.wav` is the outgoing-call loop, and `alarm.wav` and `timer.wav`
-  are the Clock loops, all played by `SoundService`. The `halloween_*.wav`
-  clips are the seasonal Chirper and Aethergram sounds, played only while the
-  Halloween theme is on.
-- `Games/` ships the **Game Sounds** palette for the mini-games and the
-  Casino (hits, pops, chimes, cards, chips, Simon tones), wired through
-  the same catalog on the Game channel and gated by the Game Sounds toggle in
-  Settings.
+| Folder | What it holds | How it plays |
+|---|---|---|
+| Ringtones/ | The Ringtone options, 192 kbps stereo MP3 | Listed in Settings > Sounds > Ringtone; loops until the call is answered or missed |
+| Notifications/ | The Notification Sound options, 192 kbps stereo MP3 | Listed in Settings > Sounds > Notification Sound and the per-app overrides; plays once |
+| Ui/ | Interface clips (taps, keyboard, transitions, sheets, send and receive, call cues), mono 48 kHz 16-bit WAV | Wired to events in Core/Notifications/UiSound.cs; never listed in Settings |
+| Games/ | The mini-game palette (hits, pops, chimes, cards, Simon tones), same WAV format | Wired in UiSound.cs on the Game channel, muted by the Game Sounds toggle |
+| Casino/ | The Gamba cues (reels, wheel, chips, wins, race horn), same WAV format | Wired in UiSound.cs on the Game channel, muted by the Game Sounds toggle |
 
-Interface and game clips are mono 48 kHz 16-bit PCM WAV. Ringtones and
-notification sounds are 192 kbps stereo MP3. The generator normalizes each
-clip to a loudness target for its category; per-event gain lives in the
-catalog, not in the files. `UiSoundDecodeTests` checks that every wired clip
-reaches its onset within 30 ms and ends without a click. Sources and licenses
-are listed in `THIRD-PARTY-NOTICES.md`.
+A few Ui/ clips are loops that `SoundService` plays by name: ringback.wav for an outgoing call, and alarm.wav and timer.wav for the Clock app. The `halloween_*.wav` clips are the seasonal sounds of Chirper, Aethergram, Velvet and the treat hunt they share. Those apps ask for them only while the Halloween theme is on. With Seasonal Sounds off (Settings > Sounds), the usual sound plays in their place where one exists, and nothing plays otherwise.
 
-Every `.mp3` and `.wav` file in these folders ships with the plugin. The phone
-plays its own audio only. Game system sounds are never used, so these folders
-plus the user's imported files are the entire sound catalog: with no files in a
-folder the only option left in that picker is **Silent**.
+Per-event gain lives in the catalog in UiSound.cs, not in the files. `UiSoundCatalogTests` fails when a wired file is missing, and `UiSoundDecodeTests` checks that every wired clip reaches its onset within 30 ms and ends without a click. Sources and licenses are listed in THIRD-PARTY-NOTICES.md.
 
-Notes:
+## Rules
 
-- Fresh installs (and configs migrated off the old game sounds) default to
-  `Ringtones/Signal.mp3` for calls and `Notifications/Chime.mp3` for
-  notifications. Those two names live in `SoundLibrary.BundledRingtoneToken`
-  and `SoundLibrary.BundledNotificationToken`, so rename the files and the
-  constants together. Whenever a saved choice no longer resolves, the first
-  file in alphabetical order of its kind takes over.
-- Removing or renaming a bundled ringtone or notification sound: add the old
-  name and its replacement to `Core/Notifications/RetiredSounds.cs`, so saved
-  choices move to the replacement instead of the alphabetical fallback.
-- Playback is dispatched by file extension: `.mp3` and `.wav` play through
-  managed decoders (Wine-safe), everything else falls back to Windows Media
-  Foundation. A misnamed file (for example MP3 bytes named `.wav`) is
-  rejected by the managed reader and falls back to Media Foundation too, so
-  it plays on Windows but can fail under Wine.
-- A file's display name is its file name with `_`/`-` turned into spaces
-  (`soft_bell.mp3` shows as "soft bell").
-- Ringtones loop until the call is answered or missed, so keep them seamless.
-  Notification sounds play once.
-- Ship only audio you have the rights to distribute, and add attribution to
-  `THIRD-PARTY-NOTICES.md` when a file requires it.
-- Users can add their own files from Settings ("Import from PC"); importing on
-  the Ringtone page copies into the plugin config directory's
-  `Sounds/Ringtones` folder, importing on a notification sound page copies into
-  `Sounds/Notifications`. Imported files are not bundled.
+- Every `.mp3` and `.wav` in these folders ships. The phone plays only its own audio, never the game's system sounds, so these folders plus a player's imports are the whole catalog. A picker folder with no files leaves only **Silent**.
+- Fresh installs default to Ringtones/Signal.mp3 and Notifications/Chime.mp3. Both names live in `SoundLibrary.BundledRingtoneToken` and `SoundLibrary.BundledNotificationToken`, so rename a default file and its constant together. When a saved choice does not resolve to a file, the first bundled file of its kind in alphabetical order takes over.
+- To remove or rename a ringtone or notification sound, add the retired name and its replacement to Core/Notifications/RetiredSounds.cs, so saved choices move to the replacement instead of the alphabetical fallback.
+- Keep to `.mp3` and `.wav`. Both play through managed decoders that work under Wine; any other extension, or MP3 bytes in a file named `.wav`, falls back to Windows Media Foundation and can fail under Wine.
+- A file's display name is its file name with underscores and hyphens turned into spaces (soft_bell.mp3 shows as "soft bell").
+- Ship only audio you have the right to distribute, credit it in THIRD-PARTY-NOTICES.md when its license asks, and never ship AI-generated audio ([AI usage](../../../docs/ai-usage.md)).
+- Players can add their own ringtones and notification sounds with Import from PC. The file is copied into the plugin config folder's Sounds/Ringtones or Sounds/Notifications and is never bundled.
+
+## Delivering an original sound
+
+The generator has no input for a finished recording: it synthesizes clips or downloads them from pinned Material, AOSP and Kenney sources, and its only local file is the shutter. A sound designer delivers a lossless 48 kHz WAV as the [Art guide](../../../docs/art-guide.md) describes. To land it, commit the designer's master in a folder under tools/sound-generator and add a source kind to generate-sounds.py that reads it, next to the Material and AOSP kinds. Give the entry a loudness category, or list it in `RINGTONES` or `NOTIFICATIONS`, so it goes through the same trim, fade and loudness pass as every other clip. Never read a shipped MP3 back as a source, since each run would encode it again and lose quality. Then wire the file like any other sound and credit the designer.

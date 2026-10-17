@@ -117,7 +117,7 @@ internal sealed class FeedbackStore : IDisposable
         }
 
         configuration.Save();
-        notifications.RemoveGroup(FeedbackLauncher.GroupKey(feedbackId));
+        notifications.RemoveGroup(AppId, FeedbackLauncher.GroupKey(feedbackId));
     }
 
     public void NoteSent()

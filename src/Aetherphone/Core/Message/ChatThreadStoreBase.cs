@@ -162,6 +162,8 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
 
     protected readonly record struct ThreadListPage(TThread[] Items, string? NextCursor);
 
+    protected abstract string NotificationAppId { get; }
+
     protected abstract string ImageUploadScope { get; }
 
     protected abstract string VoiceUploadScope { get; }
@@ -453,7 +455,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     {
         viewing.Note(threadKey);
         ClearLocalUnread(threadKey);
-        notifications.RemoveGroup(threadKey);
+        notifications.RemoveGroup(NotificationAppId, threadKey);
     }
 
     private void ClearLocalUnread(string threadKey)

@@ -122,4 +122,17 @@ public sealed class CasinoCashierTests
         Assert.False(CasinoFeatures.Has(state, CasinoFeatures.GilTables));
         Assert.False(CasinoFeatures.Has(null, CasinoFeatures.Bonus));
     }
+
+    [Fact]
+    public void TheDailyStreakClaimsItselfOnceADayOnlyWhenItIsReady()
+    {
+        const int today = 20_000;
+        var ready = new CasinoBonusDto(CasinoBonusKinds.Streak, Ready: true, Amount: 4_000, Eligible: true);
+        Assert.True(CashierBonusShelf.AutoClaimsStreak(ready, -1, today));
+        Assert.True(CashierBonusShelf.AutoClaimsStreak(ready, today - 1, today));
+        Assert.False(CashierBonusShelf.AutoClaimsStreak(ready, today, today));
+        Assert.False(CashierBonusShelf.AutoClaimsStreak(ready with { Ready = false }, -1, today));
+        Assert.False(CashierBonusShelf.AutoClaimsStreak(ready with { Eligible = false }, -1, today));
+        Assert.False(CashierBonusShelf.AutoClaimsStreak(null, -1, today));
+    }
 }

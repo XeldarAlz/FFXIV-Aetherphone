@@ -39,6 +39,7 @@ internal sealed class VideoEngine : IDisposable
     private const long BufferingWatchdogMilliseconds = 30 * 1000;
     private const long HealthyPlaybackForgivesRestartsMilliseconds = 5 * 60 * 1000;
     private const long AudioReopenEscalationWindowMilliseconds = 60 * 1000;
+    private const long AudioDeviceStallMilliseconds = 5 * 1000;
     private const double StallPositionTolerance = 0.05;
     private const double StallEndGuardSeconds = 5.0;
     private const double AudioTrackEndGuardSeconds = 30.0;
@@ -135,7 +136,8 @@ internal sealed class VideoEngine : IDisposable
     internal bool IsStandby => standby;
     internal bool IsLoading => Volatile.Read(ref activeLoads) > 0;
     internal string? LastError { get; private set; }
-    internal string? RecoveryNotice => recoveryNotice;
+    internal string? RecoveryNotice => recoveryNotice
+        ?? (active && renderer is { PlaysWithoutSound: true } ? Loc.T(L.AetherStream.PlayingWithoutSound) : null);
 
     internal bool RecoveryExhausted =>
         recoveryExhaustedUrl is { } exhausted && string.Equals(renderer?.CurrentUrl, exhausted, StringComparison.Ordinal);
@@ -182,7 +184,7 @@ internal sealed class VideoEngine : IDisposable
 
         try
         {
-            if (!await Dependencies.EnsureReadyAsync(token).ConfigureAwait(false))
+            if (!await Dependencies.EnsureReadyAsync(token).ConfigureAwait(ConfigureAwaitOptions.ForceYielding))
             {
                 LastError = DependencyFailureText();
                 return PlayStart.Failed;
@@ -396,6 +398,17 @@ internal sealed class VideoEngine : IDisposable
 
         var endGuardSeconds = info.HasAudioPosition ? StallEndGuardSeconds : AudioTrackEndGuardSeconds;
         var nearEnd = info.DurationSeconds > 0d && info.PositionSeconds >= info.DurationSeconds - endGuardSeconds;
+        if (info.HasAudioPosition && !info.PausedForCache && !nearEnd && !player.PlaysWithoutSound
+            && !player.SawHttpForbidden && !player.SawStreamError
+            && now - stallProgressAtTicks >= AudioDeviceStallMilliseconds)
+        {
+            AepLog.Warning(
+                $"[Video] Playback stopped at {info.PositionSeconds:F1}s while the audio device stopped taking sound; playing without sound.");
+            stallProgressAtTicks = now;
+            player.PlayWithoutSound();
+            return;
+        }
+
         var positionWindow = info.CoreIdle ? BufferingWatchdogMilliseconds : StallWatchdogMilliseconds;
         var positionStalled = (player.SawHttpForbidden || player.SawStreamError)
             && now - stallProgressAtTicks >= positionWindow;
@@ -502,7 +515,7 @@ internal sealed class VideoEngine : IDisposable
         var token = lifetime.Token;
         try
         {
-            await playGate.WaitAsync(token).ConfigureAwait(false);
+            await playGate.WaitAsync(token).ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
             try
             {
                 if (renderer is not { } current || !string.Equals(current.CurrentUrl, stalledUrl, StringComparison.Ordinal))
@@ -625,7 +638,7 @@ internal sealed class VideoEngine : IDisposable
                 return;
             }
 
-            await playGate.WaitAsync(token).ConfigureAwait(false);
+            await playGate.WaitAsync(token).ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
             try
             {
                 DetachRenderer();

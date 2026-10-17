@@ -14,6 +14,8 @@ internal static class BlackjackTableArt
     public const float TimeBankPipRadius = 2.2f;
     public const float TimeBankPipStep = 2.8f;
     public const float TimeBankPipPad = 0.8f;
+    public const float OutcomeBadgePadX = 8f;
+    public const float BetPlatePadX = 5f;
 
     private const float ChipDiscStep = 4.2f;
     private const float TotalPillPadX = 7f;
@@ -81,10 +83,12 @@ internal static class BlackjackTableArt
             return;
         }
 
-        var padX = 8f * scale;
-        label = Typography.FitText(label, MathF.Max(1f, maxWidth - padX * 2f), TextStyles.FootnoteEmphasized);
-        var size = Typography.Measure(label, TextStyles.FootnoteEmphasized);
-        var half = new Vector2(size.X * 0.5f + padX, size.Y * 0.5f + 4f * scale);
+        var style = TextStyles.FootnoteEmphasized;
+        var fit = StageText.Squeeze(label, maxWidth, StageText.TightPadX * scale, OutcomeBadgePadX * scale, style,
+            StageTextRole.Caption);
+        var shown = StageText.Shown(label, fit, style.Weight);
+        var lineHeight = Typography.Measure(shown, fit.Scale, style.Weight).Y;
+        var half = new Vector2(fit.Width * 0.5f, lineHeight * 0.5f + 4f * scale);
         var bubble = BubblePop.For(entrance, scale, center);
         var min = bubble.Apply(center - half);
         var max = bubble.Apply(center + half);
@@ -94,8 +98,8 @@ internal static class BlackjackTableArt
         Squircle.Stroke(drawList, min, max, rounding,
             ImGui.GetColorU32(Palette.WithAlpha(tint, OutcomeBadgeStrokeAlpha * bubble.Alpha)),
             Metrics.Stroke.Hairline * scale);
-        Typography.DrawCentered(drawList, (min + max) * 0.5f, label, Palette.WithAlpha(ink, bubble.Alpha),
-            TextStyles.FootnoteEmphasized);
+        Typography.DrawCentered(drawList, (min + max) * 0.5f, shown, Palette.WithAlpha(ink, bubble.Alpha), fit.Scale,
+            style.Weight);
     }
 
     public static void DrawBetPlate(ImDrawListPtr drawList, Vector2 center, long amount, Vector4 ink, float entrance,
@@ -106,14 +110,14 @@ internal static class BlackjackTableArt
             return;
         }
 
-        var pad = 5f * scale;
+        var pad = BetPlatePadX * scale;
         var label = NumberText.Compact(amount);
         var size = Typography.Measure(label, TextStyles.FootnoteEmphasized);
         var discRadius = PlateDiscRadius * scale;
         var halfWidth = (discRadius * 2f + pad * 2.5f + size.X) * 0.5f;
         if (halfWidth * 2f > maxWidth)
         {
-            DrawBareBetPlate(drawList, center, label, size, ink, entrance, maxWidth, pad, scale);
+            DrawBareBetPlate(drawList, center, label, size.Y, ink, entrance, maxWidth, scale);
             return;
         }
 
@@ -140,20 +144,21 @@ internal static class BlackjackTableArt
             Palette.WithAlpha(ink, alpha), TextStyles.FootnoteEmphasized);
     }
 
-    private static void DrawBareBetPlate(ImDrawListPtr drawList, Vector2 center, string label, Vector2 size,
-        Vector4 ink, float entrance, float maxWidth, float pad, float scale)
+    private static void DrawBareBetPlate(ImDrawListPtr drawList, Vector2 center, string label, float lineHeight,
+        Vector4 ink, float entrance, float maxWidth, float scale)
     {
-        var shown = Typography.FitText(label, MathF.Max(1f, maxWidth - pad * 2f), TextStyles.FootnoteEmphasized);
-        var shownWidth = MathF.Min(size.X, MathF.Max(1f, maxWidth - pad * 2f));
-        var halfWidth = shownWidth * 0.5f + pad;
-        var halfHeight = MathF.Max(8.5f * scale, size.Y * 0.5f + 2.5f * scale);
+        var style = TextStyles.FootnoteEmphasized;
+        var fit = StageText.Squeeze(label, maxWidth, StageText.TightPadX * scale, BetPlatePadX * scale, style,
+            StageTextRole.Caption);
+        var halfWidth = fit.Width * 0.5f;
+        var halfHeight = MathF.Max(8.5f * scale, lineHeight * 0.5f + 2.5f * scale);
         var bubble = BubblePop.For(entrance, scale, center);
         var min = bubble.Apply(new Vector2(center.X - halfWidth, center.Y - halfHeight));
         var max = bubble.Apply(new Vector2(center.X + halfWidth, center.Y + halfHeight));
         Squircle.Fill(drawList, min, max, (max.Y - min.Y) * 0.5f,
             ImGui.GetColorU32(Palette.WithAlpha(PlateFill, bubble.Alpha)));
-        Typography.DrawCentered(drawList, (min + max) * 0.5f, shown, Palette.WithAlpha(ink, bubble.Alpha),
-            TextStyles.FootnoteEmphasized);
+        Typography.DrawCentered(drawList, (min + max) * 0.5f, StageText.Shown(label, fit, style.Weight),
+            Palette.WithAlpha(ink, bubble.Alpha), fit.Scale, style.Weight);
     }
 
     public static void DrawSideStake(ImDrawListPtr drawList, in Rect rect, string label, SideSpotResult result,
@@ -171,7 +176,7 @@ internal static class BlackjackTableArt
             Metrics.Stroke.Hairline * scale);
         var inner = MathF.Max(1f, rect.Width - SideStakePadX * 2f * scale);
         var style = TextStyles.FootnoteEmphasized;
-        var fit = Typography.FitScale(label, inner, style.Scale, TextStyles.Caption2.Scale, style.Weight);
+        var fit = StageText.FitScale(label, inner, style, StageTextRole.Caption);
         var ink = paid ? Stage.CasinoColors.Money : lost ? StageText.Muted : StageText.Strong;
         Typography.DrawCentered(drawList, rect.Center, Typography.FitText(label, inner, fit, style.Weight), ink, fit,
             style.Weight);

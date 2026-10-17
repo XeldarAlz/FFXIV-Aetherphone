@@ -218,12 +218,12 @@ internal sealed partial class PhotosApp
             return wrap;
         }
 
-        if (failed.ContainsKey(path) || !loading.TryAdd("cover:" + path, 0))
+        if (failed.ContainsKey(path) || !loading.TryAdd((path, CoverLoad), 0))
         {
             return null;
         }
 
-        _ = LoadCoverAsync(path);
+        QueueLoad(path, CoverLoad);
         return null;
     }
 
@@ -232,6 +232,7 @@ internal sealed partial class PhotosApp
         try
         {
             var token = cancellation.Token;
+            using var slot = await decodeSlots.EnterAsync(token).ConfigureAwait(false);
             var bytes = await File.ReadAllBytesAsync(path, token).ConfigureAwait(false);
             var wrap = await ImageProcessor.DecodeToTextureAsync(Plugin.TextureProvider, bytes, "cover:" + path,
                 ImageProcessor.MaxLocalDecodePixels, CoverMaxDimension, token).ConfigureAwait(false);
@@ -250,7 +251,7 @@ internal sealed partial class PhotosApp
         }
         finally
         {
-            loading.TryRemove("cover:" + path, out _);
+            loading.TryRemove((path, CoverLoad), out _);
         }
     }
 }

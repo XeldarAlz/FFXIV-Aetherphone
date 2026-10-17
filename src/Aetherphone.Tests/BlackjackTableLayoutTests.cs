@@ -13,6 +13,7 @@ public sealed class BlackjackTableLayoutTests
     private const float Epsilon = 0.01f;
     private const float PlateWidthAllowance = 72f;
     private const float TournamentFeltHeight = 330f;
+    private const float RoomyFeltHeight = 520f;
     private const float FloorSlack = 60f;
 
     private static readonly float[] Scales = { 0.75f, 1f, 1.5f };
@@ -348,6 +349,181 @@ public sealed class BlackjackTableLayoutTests
         var layout = Compute(1f, 272f, 489f, BlackjackRules.SeatCount, false);
         Assert.True(layout.Stagger > 0f);
         Assert.True(layout.RailPuckCenter(1).Y > layout.RailPuckCenter(0).Y);
+    }
+
+    public static TheoryData<float, float, int, bool> BorrowRails()
+    {
+        var data = new TheoryData<float, float, int, bool>();
+        for (var scaleIndex = 0; scaleIndex < FloorScales.Length; scaleIndex++)
+        {
+            data.Add(FloorScales[scaleIndex], 336f, BlackjackRules.SeatCount, false);
+            data.Add(FloorScales[scaleIndex], 272f, BlackjackRules.SeatCount - 1, true);
+        }
+
+        return data;
+    }
+
+    [Theory]
+    [MemberData(nameof(BorrowRails))]
+    public void AMiddleSeatBetweenEmptySeatsWidensItsPlateAroundThePuckWithinAColumnEachSide(float scale,
+        float width, int railCount, bool seated)
+    {
+        var layout = Compute(scale, width, RoomyFeltHeight, railCount, seated);
+        Assert.False(layout.Compact);
+        Assert.Equal(0f, layout.Stagger);
+        var slot = railCount / 2;
+        var puck = layout.RailPuckCenter(slot);
+        var basePlate = layout.RailPlateRect(slot);
+        var plate = layout.RailPlateRect(slot, true, true);
+        Assert.True(plate.Width > basePlate.Width + layout.ColumnWidth * 0.5f);
+        Assert.True(plate.Width <= layout.ColumnWidth * 2f - BlackjackTableLayout.RailGutter * 2f * scale + Epsilon);
+        Assert.Equal(puck.X, plate.Center.X, 3);
+        Assert.Equal(basePlate.Min.Y, plate.Min.Y, 3);
+        Assert.Equal(basePlate.Max.Y, plate.Max.Y, 3);
+        Assert.True(plate.Min.X >= puck.X - layout.ColumnWidth - Epsilon);
+        Assert.True(plate.Max.X <= puck.X + layout.ColumnWidth + Epsilon);
+        Assert.Equal(basePlate, layout.RailPlateRect(slot, false, false));
+        Assert.Equal(basePlate, layout.RailPlateRect(slot, true, false));
+        Assert.Equal(basePlate, layout.RailPlateRect(slot, false, true));
+        Assert.Equal(plate.Width - StageText.TightPadX * 2f * scale, layout.RailPlateTextWidthFor(plate.Width), 3);
+    }
+
+    [Theory]
+    [MemberData(nameof(Tables))]
+    public void PlatesBorrowingTheSameEmptySeatStopShortOfItsCentre(float scale, float width, float height,
+        int railCount, bool seated)
+    {
+        var layout = Compute(scale, width, height, railCount, seated);
+        for (var slot = 0; slot + 2 < railCount; slot++)
+        {
+            var between = layout.RailPuckCenter(slot + 1).X;
+            var left = layout.RailPlateRect(slot, true, true);
+            var right = layout.RailPlateRect(slot + 2, true, true);
+            Assert.True(left.Max.X < between);
+            Assert.True(right.Min.X > between);
+            Assert.False(Overlaps(left, right));
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(Tables))]
+    public void BorrowedPlatesNeverTouchAnEmptyNeighboursSitCircle(float scale, float width, float height,
+        int railCount, bool seated)
+    {
+        var layout = Compute(scale, width, height, railCount, seated);
+        for (var slot = 0; slot < railCount; slot++)
+        {
+            var plate = layout.RailPlateRect(slot, true, true);
+            for (var neighbour = slot - 1; neighbour <= slot + 1; neighbour += 2)
+            {
+                if (neighbour < 0 || neighbour >= railCount)
+                {
+                    continue;
+                }
+
+                Assert.True(DistanceToRect(layout.RailPuckCenter(neighbour), plate) >= layout.SpotRadius - Epsilon);
+            }
+        }
+    }
+
+    [Fact]
+    public void AStaggeredRailLendsLoweredSeatsTheFullReachAndRaisedSeatsNothing()
+    {
+        var layout = Compute(1f, 272f, 489f, BlackjackRules.SeatCount, false);
+        Assert.True(layout.Stagger > 0f);
+        var raised = layout.RailPuckCenter(2);
+        var lowered = layout.RailPuckCenter(3);
+        Assert.True(lowered.Y + layout.SpotRadius > raised.Y + layout.RailPlateTop);
+        Assert.Equal(layout.RailPlateRect(2), layout.RailPlateRect(2, true, true));
+        Assert.True(raised.Y + layout.SpotRadius <= lowered.Y + layout.RailPlateTop);
+        var borrowed = layout.RailPlateRect(3, true, true);
+        Assert.Equal(layout.RailPlateWidth + layout.RailPlateReach * 2f, borrowed.Width, 3);
+        Assert.Equal(lowered.X, borrowed.Center.X, 3);
+    }
+
+    [Theory]
+    [MemberData(nameof(ScaleData))]
+    public void ACompactRailBorrowsOnlyTheSliverOutsideTheSitCirclesChords(float scale)
+    {
+        const int railCount = BlackjackRules.SeatCount - 1;
+        var layout = Compute(scale, 272f, TournamentFeltHeight, railCount, true);
+        Assert.True(layout.Compact);
+        Assert.True(layout.RailPlateTop < layout.SpotRadius);
+        var fullReach = layout.RailPlateWidth + layout.RailPlateReach * 2f;
+        for (var slot = 0; slot < railCount; slot++)
+        {
+            var plate = layout.RailPlateRect(slot, true, true);
+            Assert.True(plate.Width > layout.RailPlateWidth);
+            Assert.True(plate.Width < fullReach);
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(Tables))]
+    public void BorrowedPlatesNeverLeaveTheFeltOrEscapeTheirWidthBounds(float scale, float width, float height,
+        int railCount, bool seated)
+    {
+        var layout = Compute(scale, width, height, railCount, seated);
+        var felt = layout.Felt;
+        var cap = layout.ColumnWidth * 2f - BlackjackTableLayout.RailGutter * 2f * scale;
+        for (var slot = 0; slot < railCount; slot++)
+        {
+            var plate = layout.RailPlateRect(slot, true, true);
+            Assert.True(plate.Min.X >= felt.Min.X - Epsilon);
+            Assert.True(plate.Max.X <= felt.Max.X + Epsilon);
+            Assert.True(plate.Width >= layout.RailPlateWidth - Epsilon);
+            Assert.True(plate.Width <= cap + Epsilon);
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(ScaleData))]
+    public void AnEndSeatOnAWideSevenSeatRailHugsTheFeltEdgeAndReachesInwardTheFullReach(float scale)
+    {
+        const int last = BlackjackRules.SeatCount - 1;
+        var layout = Compute(scale, 336f, RoomyFeltHeight, BlackjackRules.SeatCount, false);
+        Assert.Equal(0f, layout.Stagger);
+        var felt = layout.Felt;
+        var gutter = BlackjackTableLayout.RailGutter * scale;
+        var firstBase = layout.RailPlateRect(0);
+        var first = layout.RailPlateRect(0, false, true);
+        Assert.Equal(felt.Min.X + gutter, first.Min.X, 3);
+        Assert.Equal(firstBase.Max.X + layout.RailPlateReach, first.Max.X, 3);
+        Assert.True(first.Center.X > layout.RailPuckCenter(0).X);
+        var lastBase = layout.RailPlateRect(last);
+        var lastPlate = layout.RailPlateRect(last, true, false);
+        Assert.Equal(felt.Max.X - gutter, lastPlate.Max.X, 3);
+        Assert.Equal(lastBase.Min.X - layout.RailPlateReach, lastPlate.Min.X, 3);
+        Assert.Equal(first.Width, lastPlate.Width, 3);
+        Assert.Equal(firstBase, layout.RailPlateRect(0, false, false));
+        Assert.Equal(lastBase, layout.RailPlateRect(last, false, false));
+    }
+
+    [Theory]
+    [MemberData(nameof(ScaleData))]
+    public void AnEndSeatOnAStaggeredRailOnlyGainsTheFeltEdgeRoom(float scale)
+    {
+        const int last = BlackjackRules.SeatCount - 1;
+        var layout = Compute(scale, 272f, RoomyFeltHeight, BlackjackRules.SeatCount, false);
+        Assert.True(layout.Stagger > 0f);
+        var felt = layout.Felt;
+        var gutter = BlackjackTableLayout.RailGutter * scale;
+        var first = layout.RailPlateRect(0, false, true);
+        Assert.Equal(felt.Min.X + gutter, first.Min.X, 3);
+        Assert.Equal(layout.RailPlateRect(0).Max.X, first.Max.X, 3);
+        var lastPlate = layout.RailPlateRect(last, true, false);
+        Assert.Equal(felt.Max.X - gutter, lastPlate.Max.X, 3);
+        Assert.Equal(layout.RailPlateRect(last).Min.X, lastPlate.Min.X, 3);
+    }
+
+    [Theory]
+    [MemberData(nameof(ScaleData))]
+    public void ALoneRailSeatHasNoEmptyNeighbourSoItsPlateStaysAtTheBaseWidthOnItsPuck(float scale)
+    {
+        var layout = Compute(scale, 272f, 489f, 1, true);
+        var plate = layout.RailPlateRect(0, false, false);
+        Assert.Equal(layout.RailPlateRect(0), plate);
+        Assert.Equal(layout.RailPuckCenter(0).X, plate.Center.X, 3);
     }
 
     [Fact]
@@ -824,7 +1000,7 @@ public sealed class BlackjackTableLayoutTests
             && inner.Min.Y >= outer.Min.Y - Epsilon && inner.Max.Y <= outer.Max.Y + Epsilon;
     }
 
-    private static BlackjackTableLayout Compute(float scale, float width, float height, int railCount, bool seated)
+    internal static BlackjackTableLayout Compute(float scale, float width, float height, int railCount, bool seated)
     {
         var origin = new Vector2(40f, 120f);
         var felt = new Rect(origin, origin + new Vector2(width, height) * scale);
@@ -838,6 +1014,9 @@ public sealed class BlackjackTableLayoutTests
         var half = new Vector2(radius, radius);
         return new Rect(center - half, center + half);
     }
+
+    private static float DistanceToRect(Vector2 point, in Rect rect) =>
+        Vector2.Distance(point, Vector2.Clamp(point, rect.Min, rect.Max));
 
     private static bool Overlaps(in Rect first, in Rect second)
     {

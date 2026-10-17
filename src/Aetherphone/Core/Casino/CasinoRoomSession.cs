@@ -31,8 +31,14 @@ internal enum CasinoRoomApply
     Resync,
 }
 
+internal readonly record struct CasinoReactionEcho(string UserId, int Reaction, long AtTick);
+
 internal sealed class CasinoRoomSession
 {
+    public const int ReactionKinds = 6;
+
+    private const int ReactionEchoes = 8;
+
     private const long ResyncCooldownMilliseconds = 2_000;
 
     private const long SkewReanchorMilliseconds = 5_000;
@@ -47,6 +53,7 @@ internal sealed class CasinoRoomSession
 
     private volatile CasinoRoomState? state;
     private volatile CasinoRoomPrivate? privateState;
+    private volatile CasinoReactionEcho[] reactions = Array.Empty<CasinoReactionEcho>();
     private volatile string roomId = string.Empty;
     private volatile string closedReason = string.Empty;
     private volatile bool attached;
@@ -179,6 +186,52 @@ internal sealed class CasinoRoomSession
         }
     }
 
+    public bool React(int reaction)
+    {
+        if (reaction < 0 || reaction >= ReactionKinds)
+        {
+            return false;
+        }
+
+        lock (gate)
+        {
+            var current = roomId;
+            if (current.Length == 0 || !attached)
+            {
+                return false;
+            }
+
+            signals.TrySend(new CallControl
+            {
+                Type = SignalType.CasinoReact,
+                Casino = new CasinoPayload { RoomId = current },
+                Reaction = reaction,
+            });
+            return true;
+        }
+    }
+
+    public bool TryReactionOf(string userId, long nowTick, long maxAgeMilliseconds, out int reaction,
+        out long ageMilliseconds)
+    {
+        var held = reactions;
+        for (var index = 0; index < held.Length; index++)
+        {
+            if (!string.Equals(held[index].UserId, userId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            ageMilliseconds = nowTick - held[index].AtTick;
+            reaction = held[index].Reaction;
+            return ageMilliseconds >= 0 && ageMilliseconds <= maxAgeMilliseconds;
+        }
+
+        reaction = -1;
+        ageMilliseconds = 0;
+        return false;
+    }
+
     public void Claim()
     {
         lock (gate)
@@ -268,6 +321,9 @@ internal sealed class CasinoRoomSession
                 return;
             case SignalType.CasinoHandled:
                 handedOff = true;
+                return;
+            case SignalType.CasinoReaction:
+                AbsorbReaction(signal.UserId, signal.Reaction, Environment.TickCount64);
                 return;
             case SignalType.CasinoDeclined:
             case SignalType.CasinoEnded:
@@ -640,11 +696,46 @@ internal sealed class CasinoRoomSession
         }
     }
 
+    internal void AbsorbReaction(string? userId, int? reaction, long nowTick)
+    {
+        if (string.IsNullOrEmpty(userId) || reaction is not { } kind || kind < 0 || kind >= ReactionKinds)
+        {
+            return;
+        }
+
+        lock (gate)
+        {
+            var held = reactions;
+            var kept = 0;
+            for (var index = 0; index < held.Length; index++)
+            {
+                if (!string.Equals(held[index].UserId, userId, StringComparison.Ordinal))
+                {
+                    kept++;
+                }
+            }
+
+            var next = new CasinoReactionEcho[Math.Min(kept + 1, ReactionEchoes)];
+            next[0] = new CasinoReactionEcho(userId, kind, nowTick);
+            var count = 1;
+            for (var index = 0; index < held.Length && count < next.Length; index++)
+            {
+                if (!string.Equals(held[index].UserId, userId, StringComparison.Ordinal))
+                {
+                    next[count++] = held[index];
+                }
+            }
+
+            reactions = next;
+        }
+    }
+
     private void ClearRoom()
     {
         roomId = string.Empty;
         state = null;
         privateState = null;
+        reactions = Array.Empty<CasinoReactionEcho>();
         closedReason = string.Empty;
         attached = false;
         awaitingSnapshot = false;

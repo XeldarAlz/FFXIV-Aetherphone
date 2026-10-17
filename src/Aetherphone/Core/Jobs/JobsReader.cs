@@ -53,7 +53,7 @@ internal static unsafe class JobsReader
             var slot = slots[slotIndex];
             var row = facts[slot.FactIndex];
             var level = slot.Locked ? 0 : LevelAt(levels, row.ExpArrayIndex);
-            var cap = JobsRoster.CapFor(row.IsLimited, maxLevel);
+            var cap = JobsRoster.CapFor(row.Id, maxLevel);
             var capped = level >= cap;
             var current = slot.Locked ? 0L : Math.Max(0L, (long)LevelAt(experience, row.ExpArrayIndex));
             var needed = capped || level <= 0 ? 0L : gameData.ExpToNextLevel(level);

@@ -249,6 +249,9 @@ internal sealed class NotificationService : IDisposable
         }
     }
 
+    public void RemoveGroup(string appId, string groupKey) =>
+        RemoveGroup(PhoneNotification.StackKeyOf(appId, groupKey));
+
     public void RemoveGroup(string stackKey)
     {
         var removed = false;
