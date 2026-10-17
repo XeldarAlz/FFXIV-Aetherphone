@@ -140,7 +140,7 @@ internal sealed partial class SkywatcherApp : IPhoneApp
         DrawBody(body, screen, palette, daylight, hasData, showHero, scale);
         if (showHero)
         {
-            DrawHero(body, palette, scale);
+            DrawHero(body, screen, palette, scale);
         }
 
         DrawTabBar(content, scale);

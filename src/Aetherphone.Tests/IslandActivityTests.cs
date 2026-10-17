@@ -11,6 +11,33 @@ public sealed class IslandActivityTests
     private const long Minute = 60L;
 
     [Fact]
+    public void PlaybackCardIsTheOnlyTallerCard()
+    {
+        Assert.Equal(IslandActivities.PlaybackCardHeightUnits,
+            IslandActivities.ExpandedHeightUnits(IslandActivity.Playback));
+        Assert.True(IslandActivities.PlaybackCardHeightUnits > IslandActivities.CardHeightUnits);
+        for (var activity = IslandActivity.None; activity <= IslandActivity.Fishing; activity++)
+        {
+            if (activity == IslandActivity.Playback)
+            {
+                continue;
+            }
+
+            Assert.Equal(IslandActivities.CardHeightUnits, IslandActivities.ExpandedHeightUnits(activity));
+        }
+    }
+
+    [Fact]
+    public void RemainingSecondsCountsWholeSecondsLeftAndNeverGoesNegative()
+    {
+        Assert.Equal(91, IslandActivities.RemainingSeconds(185f, 276f));
+        Assert.Equal(92, IslandActivities.RemainingSeconds(185.6f, 276.4f));
+        Assert.Equal(0, IslandActivities.RemainingSeconds(300f, 276f));
+        Assert.Equal(0, IslandActivities.RemainingSeconds(10f, 0f));
+        Assert.Equal(276, IslandActivities.RemainingSeconds(-5f, 276f));
+    }
+
+    [Fact]
     public void CallOutranksEveryOtherActivity()
     {
         Assert.Equal(IslandActivity.Call, IslandActivities.Select(new IslandSignals(true, true, true, true, true)));

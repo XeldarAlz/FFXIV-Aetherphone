@@ -57,7 +57,7 @@ flowchart TD
 | `Muted` | Skips the notification sound only, for producers that ring some other way |
 | `ActorId`, `PostId`, `SocialType`, `CreatedAtUnix` | Deep link targets and read-acknowledgement data for social notifications |
 
-Two derived keys drive everything else. `StackKey` is the group key when set, otherwise the app id: the center stacks by it, a banner replaces by it, and the sound throttle (one sound per stack every 3 seconds) keys on it. `SettingsKey` is the channel id when set, otherwise the app id, and every per-app setting except the timed mute is looked up by it.
+Two derived keys drive everything else. `StackKey` is the app id joined to the group key when one is set (`velvet:user-1`), otherwise the app id alone, so two apps that key on the same user never share a stack: the center stacks by it, a banner replaces by it, the sound throttle (one sound per stack every 3 seconds) keys on it, and `NotificationService.RemoveGroup(appId, groupKey)` clears it. `SettingsKey` is the channel id when set, otherwise the app id, and every per-app setting except the timed mute is looked up by it.
 
 `TimerNotifier` (src/Aetherphone/Core/Notifications/TimerNotifier.cs) is a small producer. It passes one group key per category, so resets, ventures, and voyages each stack on their own:
 
@@ -181,7 +181,7 @@ A home screen badge is `IPhoneApp.BadgeCount`, computed by each app; the notific
 The Notifications app's badge, the unread count, also shows in two more places, and turning that badge off clears all three:
 
 - The minimized phone shows the count on its puck.
-- The server info bar entry (`ServerBarEntry`) in the game's top bar shows the game's Aethernet icon and a label the player can edit (default "Aetherphone", with a Dev or Beta tag on those builds), then the unread count. Settings > General picks one of three styles: icon and text, text only, or icon only. Its tooltip names the plugin and the unread count, and clicking it toggles the phone.
+- The server info bar entry (`ServerBarEntry`) in the game's top bar shows the game's Aethernet icon (with a Dev or Beta tag on those builds), then the unread count. Settings > General picks one of three styles: icon only (the default, the same as before the setting existed), icon and text, or text only, and the text is a label the player can edit (default "Aetherphone"). Its tooltip names the plugin and the unread count, and clicking it toggles the phone.
 
 Neither recomputes per frame; both refresh on change events. A social app's badge prefers the server's unread counts from the last poll, and opening its activity screen clears the count and sends a read acknowledgement. Acknowledgements are saved and retried until the server confirms them, so they survive a flaky network and a restart.
 

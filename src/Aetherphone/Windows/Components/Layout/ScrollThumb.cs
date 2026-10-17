@@ -32,4 +32,6 @@ internal readonly struct ScrollThumb
     }
 
     public float ScrollDelta(float pointerDelta) => Travel > 0f ? pointerDelta * maxY / Travel : 0f;
+
+    public bool Spans(float y, float slack) => y >= Top - slack && y <= Top + Height + slack;
 }

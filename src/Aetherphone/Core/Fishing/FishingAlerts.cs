@@ -27,7 +27,9 @@ internal readonly record struct FishingIslandStatus(
 
 internal sealed class FishingAlerts : IDisposable
 {
-    public const long FishLeadSeconds = 300;
+    public const int DefaultLeadMinutes = 5;
+    public const int MinLeadMinutes = 1;
+    public const int MaxLeadMinutes = 60;
     public const long VoyageLeadSeconds = 600;
     public const long BoardingWindowSeconds = 900;
     private const long TickIntervalMilliseconds = 1000;
@@ -45,7 +47,8 @@ internal sealed class FishingAlerts : IDisposable
     private readonly Dictionary<uint, long> notifiedWindowStart = new();
     private readonly HashSet<uint> caughtItems = new();
     private readonly OceanVoyageSlot[] voyageProbe = new OceanVoyageSlot[1];
-    private long lastCaughtRefresh = long.MinValue;
+    private long lastCaughtRefresh = long.MinValue / 2;
+    private bool catalogTracked;
 
     public FishingAlerts(Configuration configuration, FishingCatalog catalog, NotificationService notifications,
         IClientState clientState, IFramework framework, AppGate gate)
@@ -77,10 +80,56 @@ internal sealed class FishingAlerts : IDisposable
         {
             alarms.Add(itemId);
             notifiedWindowStart.Remove(itemId);
+            SkipRunningWindow(itemId);
         }
 
         configuration.Save();
         return enabled;
+    }
+
+    public int LeadMinutes => Math.Clamp(configuration.FishingAlertLeadMinutes, MinLeadMinutes, MaxLeadMinutes);
+
+    public long LeadSeconds => LeadMinutes * 60L;
+
+    public void SetLeadMinutes(int minutes)
+    {
+        var clamped = Math.Clamp(minutes, MinLeadMinutes, MaxLeadMinutes);
+        if (configuration.FishingAlertLeadMinutes == clamped)
+        {
+            return;
+        }
+
+        configuration.FishingAlertLeadMinutes = clamped;
+        configuration.Save();
+    }
+
+    public static bool AlertWindowRunning(in FishWindow window, long nowUnix, long leadSeconds) =>
+        window.Exists && nowUnix >= window.StartUnix - leadSeconds && nowUnix < window.EndUnix;
+
+    private void SkipRunningWindow(uint itemId)
+    {
+        if (!catalog.TryIndex(itemId, out var index))
+        {
+            return;
+        }
+
+        var entry = catalog.Entries[index];
+        if (entry.Fish.Rule.AlwaysOpen)
+        {
+            return;
+        }
+
+        var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var window = catalog.WindowAt(index);
+        if (!window.Exists || nowUnix >= window.EndUnix)
+        {
+            window = FishWindowMath.Next(entry.Fish.Rule, entry.Odds, nowUnix);
+        }
+
+        if (AlertWindowRunning(window, nowUnix, LeadSeconds))
+        {
+            notifiedWindowStart[itemId] = window.StartUnix;
+        }
     }
 
     public bool HasVoyageReminder(long boardingUnix) => FindReminder(boardingUnix) >= 0;
@@ -212,6 +261,7 @@ internal sealed class FishingAlerts : IDisposable
 
         var alarms = configuration.FishingAlarms;
         var entries = catalog.Entries;
+        var leadSeconds = LeadSeconds;
         for (var alarmIndex = 0; alarmIndex < alarms.Count; alarmIndex++)
         {
             var itemId = alarms[alarmIndex];
@@ -227,7 +277,7 @@ internal sealed class FishingAlerts : IDisposable
             }
 
             var window = catalog.WindowAt(index);
-            if (!window.Exists || nowUnix < window.StartUnix - FishLeadSeconds || nowUnix >= window.EndUnix)
+            if (!window.Exists || nowUnix < window.StartUnix - leadSeconds || nowUnix >= window.EndUnix)
             {
                 continue;
             }
@@ -262,7 +312,8 @@ internal sealed class FishingAlerts : IDisposable
     private unsafe void RefreshCaught()
     {
         var now = Environment.TickCount64;
-        if (now - lastCaughtRefresh < CaughtRefreshMilliseconds)
+        var catalogReady = catalog.State == FishingCatalogState.Ready;
+        if (now - lastCaughtRefresh < CaughtRefreshMilliseconds && catalogReady == catalogTracked)
         {
             return;
         }
@@ -271,6 +322,7 @@ internal sealed class FishingAlerts : IDisposable
         var playerState = clientState.IsLoggedIn ? PlayerState.Instance() : null;
         if (playerState == null || !playerState->IsLoaded)
         {
+            catalogTracked = false;
             if (CaughtKnown)
             {
                 CaughtKnown = false;
@@ -282,7 +334,7 @@ internal sealed class FishingAlerts : IDisposable
         }
 
         var changed = !CaughtKnown;
-        if (catalog.State == FishingCatalogState.Ready)
+        if (catalogReady)
         {
             var entries = catalog.Entries;
             for (var index = 0; index < entries.Length; index++)
@@ -290,6 +342,8 @@ internal sealed class FishingAlerts : IDisposable
                 changed |= Track(playerState, entries[index].ItemId, entries[index].LogRow);
             }
         }
+
+        catalogTracked = catalogReady;
 
         var blueFish = OceanItinerary.AllBlueFish;
         for (var index = 0; index < blueFish.Length; index++)

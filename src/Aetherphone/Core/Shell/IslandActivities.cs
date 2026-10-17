@@ -29,6 +29,18 @@ internal static class IslandActivities
 {
     public const long MusterHorizonSeconds = 3600;
     public const long MusterStartedGraceSeconds = 300;
+    public const float CardHeightUnits = 96f;
+    public const float PlaybackCardHeightUnits = 136f;
+
+    public static float ExpandedHeightUnits(IslandActivity activity) =>
+        activity == IslandActivity.Playback ? PlaybackCardHeightUnits : CardHeightUnits;
+
+    public static int RemainingSeconds(float positionSeconds, float durationSeconds)
+    {
+        var duration = (int)MathF.Ceiling(MathF.Max(0f, durationSeconds));
+        var elapsed = Math.Clamp((int)MathF.Max(0f, positionSeconds), 0, duration);
+        return duration - elapsed;
+    }
 
     public static IslandActivity Select(in IslandSignals signals)
     {

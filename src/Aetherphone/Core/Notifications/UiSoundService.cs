@@ -78,8 +78,11 @@ internal sealed class UiSoundService : IDisposable
         var cursor = variantCursor[index];
         variantCursor[index] = (cursor + 1) % files.Length;
         var haunt = HauntingOn ? UiSoundCatalog.HauntDepthFor(sound) : HauntDepth.None;
-        player.Play(files[cursor], volume, pitched ? rate : PlaybackRate(entry.PitchVariance), haunt);
+        PlayOffThread(files[cursor], volume, pitched ? rate : PlaybackRate(entry.PitchVariance), haunt);
     }
+
+    private void PlayOffThread(string fileName, float volume, float rate, HauntDepth haunt) =>
+        _ = Task.Run(() => player.Play(fileName, volume, rate, haunt));
 
     private bool HauntingOn => SeasonalTheme.Halloween && configuration.SeasonalSounds;
 

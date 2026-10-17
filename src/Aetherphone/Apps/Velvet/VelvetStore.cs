@@ -89,6 +89,7 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
     private volatile bool posting;
     private volatile VelvetPostDto? fetchedPost;
     private volatile string? fetchingPostId;
+    private volatile bool fetchPostFailed;
     private volatile string? likersPostId;
     private volatile UserDto[] likers = Array.Empty<UserDto>();
     private volatile string? likersCursor;
@@ -231,10 +232,12 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
     public bool FeedLoaded => FeedScope == VelvetFeedScope.All ? feedLoadedAll : feedLoadedConnections;
     public bool HasMoreFeed => ActiveFeedLane.HasMore;
     public bool LoadingMoreFeed => ActiveFeedLane.LoadingMore;
+    public bool FeedFailed => ActiveFeedLane.Failed;
     public ITrimmable FeedSource => ActiveFeedLane;
     private FeedLane<VelvetPostDto> ActiveFeedLane => feedLanes[feedScope];
     public bool Posting => posting;
     public VelvetPostDto? FetchedPost => fetchedPost;
+    public bool FetchPostFailed => fetchPostFailed;
     public UserDto[] Likers => likers;
     public bool LikersLoading => likersLoading;
     public bool LikersLoadingMore => likersLoadingMore;
@@ -333,6 +336,7 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
         feedLoadedConnections = false;
         fetchedPost = null;
         fetchingPostId = null;
+        fetchPostFailed = false;
         Interlocked.Increment(ref likersGeneration);
         likersPostId = null;
         likers = Array.Empty<UserDto>();
@@ -477,6 +481,8 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
         };
     }
 
+    protected override string NotificationAppId => "velvet";
+
     protected override string ThreadKeyOf(VelvetThreadDto thread) => thread.OtherUserId;
 
     protected override long ThreadLastMessageAtOf(VelvetThreadDto thread) => thread.LastMessageAtUnix;
@@ -488,8 +494,8 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
     protected override PhoneNotification BuildInboxNotification(VelvetThreadDto thread)
     {
         var name = string.IsNullOrEmpty(thread.OtherDisplayName) ? thread.OtherHandle : thread.OtherDisplayName;
-        return new PhoneNotification("velvet", name, ChatText.ListPreview(thread.LastMessagePreview), DateTime.Now,
-            AppPalettes.Velvet.Accent, thread.OtherUserId);
+        return new PhoneNotification(NotificationAppId, name, ChatText.ListPreview(thread.LastMessagePreview),
+            DateTime.Now, AppPalettes.Velvet.Accent, thread.OtherUserId);
     }
 
     protected override VelvetMessageDto[] DecorateMessages(string threadId, VelvetMessageDto[] items)

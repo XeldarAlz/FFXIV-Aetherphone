@@ -25,6 +25,7 @@ internal sealed class PhoneWindow : Window
     private bool dockGrowUp;
     private bool turning;
     private bool turnToLandscape;
+    private MinimizePhase lastPhase;
     private float turnScale = 1f;
     private float turnTravelOrigin;
     private Vector2 deviceSize;
@@ -234,6 +235,12 @@ internal sealed class PhoneWindow : Window
             ? BaseFlags | ImGuiWindowFlags.NoMove
             : BaseFlags;
         Components.DragScrollHost.Enabled = locked;
+        if (phase == MinimizePhase.None && lastPhase == MinimizePhase.Expanding)
+        {
+            RequestPosition(maximizedPosition);
+        }
+
+        lastPhase = phase;
 
         if (recenterFrames > 0)
         {

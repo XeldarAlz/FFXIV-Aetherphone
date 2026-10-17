@@ -3,6 +3,7 @@ using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;
+using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 
@@ -21,6 +22,9 @@ internal sealed partial class SkywatcherApp
     private const float RowUnits = 44f;
     private const float OddsRowUnits = 50f;
     private const float TileUnits = 158f;
+    private const float DayBarUnits = 80f;
+    private const float DayBarMinUnits = 56f;
+    private const float ForecastNameMinimumFit = 0.72f;
     private const float DawnBell = 6f;
     private const float DuskBell = 19f;
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
@@ -171,11 +175,28 @@ internal sealed partial class SkywatcherApp
         var card = new Rect(origin, origin + new Vector2(width, height));
         WeatherCard.Panel(drawList, card, palette, sky.Density, scale);
         WeatherCard.Header(drawList, card, FontAwesomeIcon.CalendarAlt, Loc.T(L.Skywatcher.Forecast), palette, scale);
-        var labelWidth = 62f * scale;
-        var barWidth = 80f * scale;
+        var labelWidth = 0f;
+        var longestName = 0f;
+        for (var index = 0; index < forecast.Count; index++)
+        {
+            labelWidth = MathF.Max(labelWidth, Typography.Measure(hourLabels[index], TextStyles.BodyEmphasized).X);
+            longestName = MathF.Max(longestName,
+                Typography.Measure(forecast[index].Weather.Name, TextStyles.Body).X);
+        }
+
         var glyphX = card.Min.X + padding + labelWidth + 12f * scale;
         var nameX = glyphX + 22f * scale;
+        var nameGap = 10f * scale;
+        var barWidth = DayBarUnits * scale;
+        var nameRoom = card.Max.X - padding - barWidth - nameGap - nameX;
+        var nameNeed = longestName * ForecastNameMinimumFit;
+        if (nameNeed > nameRoom)
+        {
+            barWidth = MathF.Max(DayBarMinUnits * scale, barWidth - (nameNeed - nameRoom));
+        }
+
         var barMinX = card.Max.X - padding - barWidth;
+        var nameMaxWidth = MathF.Max(1f, barMinX - nameGap - nameX);
         var behind = WeatherCard.Behind(palette, sky.Density);
         var now = EorzeaTime.Now();
         var nowBell = now.Hour + now.Minute / 60f;
@@ -190,17 +211,17 @@ internal sealed partial class SkywatcherApp
             }
 
             var labelStyle = window.IsCurrent ? TextStyles.BodyEmphasized : TextStyles.Body;
-            var label = Typography.FitText(hourLabels[index], labelWidth, labelStyle);
             var labelHeight = Typography.LineHeight(labelStyle);
-            Typography.Draw(drawList, new Vector2(card.Min.X + padding, centerY - labelHeight * 0.5f), label,
-                palette.Ink, labelStyle);
+            Typography.Draw(drawList, new Vector2(card.Min.X + padding, centerY - labelHeight * 0.5f),
+                hourLabels[index], palette.Ink, labelStyle);
             var kind = WeatherSky.Classify(window.Weather.EnglishKey);
             var isDay = IsDayWindow(window);
             WeatherCard.Glyph(drawList, kind, new Vector2(glyphX, centerY), 12f * scale, isDay, behind);
-            var name = Typography.FitText(window.Weather.Name, MathF.Max(1f, barMinX - 10f * scale - nameX),
-                TextStyles.Body);
-            Typography.Draw(drawList, new Vector2(nameX, centerY - Typography.LineHeight(TextStyles.Body) * 0.5f),
-                name, palette.Ink, TextStyles.Body);
+            var name = WidgetText.Fit(window.Weather.Name, nameMaxWidth, TextStyles.Body, ForecastNameMinimumFit,
+                out var nameScale);
+            var nameHeight = Typography.LineHeight(new TextStyle(nameScale, TextStyles.Body.Weight));
+            Typography.Draw(drawList, new Vector2(nameX, centerY - nameHeight * 0.5f), name, palette.Ink, nameScale,
+                TextStyles.Body.Weight);
             DrawDayBar(drawList, new Rect(new Vector2(barMinX, centerY - 2.5f * scale),
                 new Vector2(card.Max.X - padding, centerY + 2.5f * scale)), window, kind, isDay,
                 window.IsCurrent ? nowBell : -1f, palette, scale);
@@ -282,16 +303,28 @@ internal sealed partial class SkywatcherApp
         var amplitude = area.Height * 0.45f;
         drawList.AddLine(new Vector2(area.Min.X, horizonY), new Vector2(area.Max.X, horizonY),
             ImGui.GetColorU32(palette.Ink with { W = 0.22f }), 1f * scale);
+        var lit = ImGui.GetColorU32(palette.Ink with { W = 0.55f });
+        var dim = ImGui.GetColorU32(palette.Ink with { W = 0.18f });
         var previous = SunPoint(area, horizonY, amplitude, 0f);
+        var runAbove = false;
+        drawList.PathLineTo(previous);
         for (var segment = 1; segment <= SunArcSegments; segment++)
         {
             var bell = BellsPerDay * segment / (float)SunArcSegments;
             var point = SunPoint(area, horizonY, amplitude, bell);
             var above = point.Y <= horizonY && previous.Y <= horizonY;
-            drawList.AddLine(previous, point, ImGui.GetColorU32(palette.Ink with { W = above ? 0.55f : 0.18f }),
-                (above ? 1.6f : 1.2f) * scale);
+            if (segment > 1 && above != runAbove)
+            {
+                drawList.PathStroke(runAbove ? lit : dim, ImDrawFlags.None, (runAbove ? 1.6f : 1.2f) * scale);
+                drawList.PathLineTo(previous);
+            }
+
+            runAbove = above;
+            drawList.PathLineTo(point);
             previous = point;
         }
+
+        drawList.PathStroke(runAbove ? lit : dim, ImDrawFlags.None, (runAbove ? 1.6f : 1.2f) * scale);
 
         var now = EorzeaTime.Now();
         var sun = SunPoint(area, horizonY, amplitude, now.Hour + now.Minute / 60f);

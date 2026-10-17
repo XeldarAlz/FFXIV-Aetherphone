@@ -45,6 +45,7 @@ internal abstract class SocialFeedStore : IDisposable
     protected readonly FeedLane<PostDto> forYouLane = FeedLane<PostDto>.ServerOrdered();
     protected readonly FeedLane<PostDto> latestLane = new(PostOrder.NewestFirst, PostOrder.CreatedAtUnix);
     protected readonly FeedLane<PostDto> followingLane = new(PostOrder.NewestFirst, PostOrder.CreatedAtUnix);
+    private volatile FeedPage? pendingForYouPage;
     private static readonly Dictionary<string, FeedItemNote> NoNotes = new(StringComparer.Ordinal);
     private volatile Dictionary<string, FeedItemNote> forYouNotes = NoNotes;
     private volatile string? caughtUpAfterId;
@@ -624,6 +625,7 @@ internal abstract class SocialFeedStore : IDisposable
                 lane.ApplyRefresh(page.Items, page.NextCursor);
                 if (scope == SocialFeedScope.ForYou)
                 {
+                    pendingForYouPage = null;
                     RecordForYouPage(page, true);
                 }
 
@@ -633,6 +635,70 @@ internal abstract class SocialFeedStore : IDisposable
             lane.RecordFailure(reported.Failed ? reported : AepFailure.Transport(AepFailureKind.Offline));
             AepLog.Warning($"Feed '{FeedKey(scope)}' failed to refresh: {lane.Failure.Describe()}");
         }, () => lane.Loading = false);
+    }
+
+    public bool HasPendingFeed(SocialFeedScope scope) => Lane(scope).HasPending;
+
+    public int PendingFeedCount(SocialFeedScope scope) => Lane(scope).PendingCount;
+
+    public void PrefetchFeed(SocialFeedScope scope)
+    {
+        if (!session.IsSignedIn)
+        {
+            return;
+        }
+
+        var lane = Lane(scope);
+        if (lane.NeverLoaded)
+        {
+            RefreshFeed(scope);
+            return;
+        }
+
+        if (lane.Loading || lane.Prefetching)
+        {
+            return;
+        }
+
+        lane.Prefetching = true;
+        var regions = RegionsFor(scope);
+        var includeSensitive = feedIncludesSensitive;
+        work.Run("feed prefetch", async token =>
+        {
+            var reported = AepFailure.None;
+            var page = await FetchFeedAsync(FeedKey(scope), null, regions, includeSensitive, token,
+                    failure => reported = failure)
+                .ConfigureAwait(false);
+            if (page is null)
+            {
+                var failure = reported.Failed ? reported : AepFailure.Transport(AepFailureKind.Offline);
+                AepLog.Warning($"Feed '{FeedKey(scope)}' failed to prefetch: {failure.Describe()}");
+                return;
+            }
+
+            if (scope == SocialFeedScope.ForYou)
+            {
+                pendingForYouPage = page;
+            }
+
+            lane.Park(page.Items, page.NextCursor);
+        }, () => lane.Prefetching = false);
+    }
+
+    public bool ApplyPendingFeed(SocialFeedScope scope)
+    {
+        if (!Lane(scope).ApplyPending())
+        {
+            return false;
+        }
+
+        if (scope == SocialFeedScope.ForYou && pendingForYouPage is { } page)
+        {
+            pendingForYouPage = null;
+            RecordForYouPage(page, true);
+        }
+
+        return true;
     }
 
     public void LoadMoreFeed(SocialFeedScope scope)

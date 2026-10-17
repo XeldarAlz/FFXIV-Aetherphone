@@ -78,7 +78,7 @@ internal sealed class FameView
         if (data is null)
         {
             top = CoinArt.DrawPanel(ui, new Vector2(origin.X, top), width, FontAwesomeIcon.Trophy, CasinoColors.Money,
-                Loc.T(L.Club.FameTitle), Loc.T(L.Casino.TablesLoading), scale);
+                Loc.T(L.Club.FameTitle), Loc.T(L.Common.Loading), scale);
             CoinArt.Reserve(origin, width, top + CoinArt.BottomPad * scale);
             return;
         }

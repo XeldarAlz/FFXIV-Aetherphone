@@ -2273,6 +2273,94 @@ internal static class L
         public static readonly LocString SectionSounds = new("changelog.sectionSounds", "Sounds");
         public static readonly LocString SectionHalloween = new("changelog.sectionHalloween", "Halloween");
 
+        public static readonly LocString[] Release1311MogCast =
+        {
+            new("changelog.r1311.12",
+                "Fixed videos freezing on the first frame when the audio device stops taking sound: the video keeps playing without sound, says so, and sound returns on the next video, contributed by t3sco"),
+            new("changelog.r1311.13",
+                "Fixed a stutter when pressing play: the player now starts and restarts in the background, contributed by t3sco"),
+        };
+
+        public static readonly LocString[] Release1311Velvet =
+        {
+            new("changelog.r1311.16",
+                "Fixed posts, the feed, chats and intro requests sitting on loading or reading as empty after a failed fetch: they now say loading and offer a retry, contributed by t3sco"),
+            new("changelog.r1311.17",
+                "Fixed onboarding marking you as set up before your profile had saved: it now waits for the save and shows an error if it fails, contributed by t3sco"),
+        };
+
+        public static readonly LocString[] Release1311Games =
+        {
+            new("changelog.r1311.18",
+                "Fixed your ranks disappearing from the profile when they failed to load: a retry card shows instead, contributed by t3sco"),
+        };
+
+        public static readonly LocString[] Release1311Photos =
+        {
+            new("changelog.r1311.19",
+                "Fixed the first open of a large screenshot folder stalling the phone while every thumbnail decoded at once: thumbnails now load three at a time in the background, contributed by t3sco"),
+        };
+
+        public static readonly LocString[] Release1311Gamba =
+        {
+            new("changelog.r1311.0",
+                "Fixed long names on a full seven-seat blackjack rail being cut short: a seat's plate now widens into the empty seats beside it"),
+            new("changelog.r1311.1",
+                "Fixed the gil ledger missing trades once you had been away from your table page for 30 minutes or had reloaded the plugin: trades now record for 12 hours after you were last at your open gil table, across restarts, until you close the table"),
+            new("changelog.r1311.14",
+                "Fixed the lobby balance, cashier, floor feed and fairness panel reading as zero or empty while they were still loading, contributed by t3sco"),
+            new("changelog.r1311.15",
+                "Fixed the Limits page sitting on a spinner when the casino state fails to load: it now offers a retry, contributed by t3sco"),
+        };
+
+        public static readonly LocString[] Release1311Phone =
+        {
+            new("changelog.r1311.20",
+                "Added song progress to the expanded Dynamic Island: a bar you can drag, the time played and left, and previous and next buttons"),
+            new("changelog.r1311.4",
+                "Changed the scroll indicator while the phone position is locked: it dims when idle, brightens under the pointer, and a click on it no longer reaches what is underneath"),
+            new("changelog.r1311.8",
+                "Changed the MogCast and Music setup button to say checking while it only checks, and installing once a download starts, contributed by t3sco"),
+            new("changelog.r1311.9",
+                "Fixed rows cutting off the word that told them apart, from tomestone names and forecast weather to district tiles and leaderboard ranks, contributed by t3sco"),
+            new("changelog.r1311.10",
+                "Fixed a short hitch when an app opened with a sound after the phone had been quiet for a while, contributed by t3sco"),
+            new("changelog.r1311.11",
+                "Fixed Gamba history, the Skywatcher sun arc, chess clocks, the inventory list and the call history doing more work every frame than they needed to, contributed by t3sco"),
+        };
+
+        public static readonly LocString[] Release1311Fishing =
+        {
+            new("changelog.r1311.2",
+                "Added a lead time for fish alerts: a stepper under the alerts list sets how many minutes before a window the alert rings, 1 to 60, 5 by default"),
+            new("changelog.r1311.3",
+                "Changed the Timed Fish tab filters: the big fish and caught filters sit on their own row above the expansion chips"),
+        };
+
+        public static readonly LocString[] Release1311Messaging =
+        {
+            new("changelog.r1311.6",
+                "Added the double tick to the chats list in ChocoChat, Aethergram and Velvet: a message you sent shows two ticks once it has been read"),
+            new("changelog.r1311.5",
+                "Fixed a tall or narrow photo making its bubble narrow and cutting the caption short: the bubble keeps its full width and a tall photo is cropped to fit it"),
+        };
+
+        public static readonly LocString[] Release1311Chirper =
+        {
+            new("changelog.r1311.22",
+                "Changed the Chirper timeline to keep your place when you come back to the Home tab: new chirps wait behind a button at the top instead of moving the list"),
+            new("changelog.r1311.23",
+                "Fixed a rechirped quote chirp showing the chirp it quoted as unavailable"),
+        };
+
+        public static readonly LocString[] Release1311Skywatcher =
+        {
+            new("changelog.r1311.7",
+                "Fixed the sky staying at the overridden time after resetting it in Skywatcher: the clock is handed back to the game over a second so the lighting follows"),
+            new("changelog.r1311.21",
+                "Fixed the Skywatcher header shrinking in steps as you scroll: the title now resizes smoothly, its lines fade together and the cards fade under it"),
+        };
+
         public static readonly LocString[] Release1310Phone =
         {
             new("changelog.r1310.0",
@@ -2289,6 +2377,8 @@ internal static class L
                 "Fixed buttons on empty screens and in-app Back links using the system accent instead of the app's own color, contributed by t3sco"),
             new("changelog.r1310.6",
                 "Fixed faint seams along progress rings, contributed by t3sco"),
+            new("changelog.r1310.34",
+                "Fixed the phone creeping a little further from its spot every time it was minimized and brought back"),
         };
 
         public static readonly LocString[] Release1310ChirperAethergramVelvet =
@@ -2324,11 +2414,17 @@ internal static class L
         public static readonly LocString[] Release1310Fishing =
         {
             new("changelog.r1310.24",
-                "Added expansion filters to the fish list, and patch numbers to its search: type 7.2 to find that patch's fish"),
+                "Added expansion and patch filters to the fish list: pick an expansion, then one of its patches, or type 7.2 in search to find that patch's fish"),
             new("changelog.r1310.25",
                 "Added a Caught filter beside Not caught: either one lists every matching fish under a caught count with a progress bar"),
+            new("changelog.r1310.31",
+                "Added a tap on the bell of a fish in the Alerts list to turn its alert off"),
             new("changelog.r1310.12",
                 "Changed the fish and voyage lists to skip rows you cannot see, so Fishing draws about three times faster, contributed by t3sco"),
+            new("changelog.r1310.27",
+                "Fixed Fishing not knowing which fish you have caught: the Not caught filter, the caught badge and the check marks on caught fish show up now"),
+            new("changelog.r1310.32",
+                "Fixed turning on a fish alert while its window was already open or about to open firing the alert at once: it waits for the next window"),
         };
 
         public static readonly LocString[] Release1310Messaging =
@@ -2337,6 +2433,10 @@ internal static class L
                 "Changed the message box in ChocoChat, Aethergram and Velvet chats to take a click anywhere on it, not only on its line of text"),
             new("changelog.r1310.13",
                 "Fixed pressing a photo or reaction to scroll a chat opening it: taps now act when you let go, contributed by t3sco"),
+            new("changelog.r1310.29",
+                "Fixed the Speaker and Microphone lists in calls and in Phone Calls settings only offering System default: they list your devices now"),
+            new("changelog.r1310.30",
+                "Fixed Aethergram and Velvet messages from the same person landing in one notification stack and clearing together when you opened either chat"),
         };
 
         public static readonly LocString[] Release1310Chirper =
@@ -2373,6 +2473,10 @@ internal static class L
                 "Fixed the big win banner on slot machines covering the jackpot meters: it is centred on the reels now, with the amount on a dark plate"),
             new("changelog.r1310.26",
                 "Fixed Hold'em reactions only showing on your own screen: everyone at the table sees them now"),
+            new("changelog.r1310.28",
+                "Fixed the red or black gamble on Golden Bird Deluxe never showing its card: the card and Doubled or Not this time now show on every phone size"),
+            new("changelog.r1310.33",
+                "Fixed names, bets, payouts and balance titles on a full seven-seat blackjack rail being cut short: they shrink to fit instead"),
         };
 
         public static readonly LocString[] Release1300Halloween =
@@ -6918,6 +7022,8 @@ internal static class L
         public static readonly LocString Quote = new("chirper.quote", "Quote");
         public static readonly LocString QuoteTitle = new("chirper.quoteTitle", "Quote Chirp");
         public static readonly LocString Unavailable = new("chirper.unavailable", "This chirp is unavailable");
+        public static readonly LocString NewChirps = new("chirper.newChirps", "New chirps");
+        public static readonly LocPlural NewChirpsCount = new("chirper.newChirpsCount", "{0} new chirp", "{0} new chirps");
     }
 
     internal static class Aethergram
@@ -7590,6 +7696,8 @@ internal static class L
         public static readonly LocString WatchingCount = new("aetherstream.watchingCount", "{0} watching");
         public static readonly LocString ResolverRecovering = new("aetherstream.resolverRecovering",
             "The video service refused the stream. Updating the link resolver and retrying.");
+        public static readonly LocString PlayingWithoutSound = new("aetherstream.playingWithoutSound",
+            "Your audio device stopped responding, so this video is playing without sound.");
         public static readonly LocString ResolverStillRefused = new("aetherstream.resolverStillRefused",
             "The video service refused this stream even after a link resolver update. Try again later.");
         public static readonly LocString ResolverAlreadyCurrent = new("aetherstream.resolverAlreadyCurrent",
@@ -8118,6 +8226,8 @@ internal static class L
         public static readonly LocString SearchHint = new("fishing.searchHint", "Search fish, holes or zones");
         public static readonly LocString BigFish = new("fishing.bigFish", "Big fish");
         public static readonly LocString UncaughtFilter = new("fishing.uncaughtFilter", "Not caught");
+        public static readonly LocString AlertLeadValue = new("fishing.alertLeadValue", "{0} min before");
+        public static readonly LocString AlertLeadHint = new("fishing.alertLeadHint", "How early a fish alert rings before its window opens.");
         public static readonly LocString CaughtProgress = new("fishing.caughtProgress", "Caught {0} of {1}");
         public static readonly LocString AnyTime = new("fishing.anyTime", "Any time");
         public static readonly LocString NoWindowShort = new("fishing.noWindowShort", "No window");
@@ -12134,7 +12244,7 @@ internal static class L
         public static readonly LocString BroadcastPot = new("casino.venue.broadcastPot", "Pot {0}");
         public static readonly LocString BroadcastBet = new("casino.venue.broadcastBet", "Bet {0}");
         public static readonly LocString TradeSync = new("casino.venue.tradeSync", "Trade sync");
-        public static readonly LocString TradeSyncHint = new("casino.venue.tradeSyncHint", "Records the gil trades you make while you are at your open gil table in Gamba and for 30 minutes after. Gil you receive is a buy-in and gil you send is a payout; a trade that pays an owed line settles it. Players are matched by character name, and anyone else is booked as a guest. After that, for up to 12 hours, only trades with the table's players are recorded. Nothing in the game is clicked for you.");
+        public static readonly LocString TradeSyncHint = new("casino.venue.tradeSyncHint", "Records the gil trades you make while you are at your open gil table in Gamba and for 12 hours after, until you close the table. Gil you receive is a buy-in and gil you send is a payout; a trade that pays an owed line settles it. Players are matched by character name, and anyone else is booked as a guest. After the table closes, only cash-outs to its players are recorded, for 12 hours. Nothing in the game is clicked for you.");
         public static readonly LocString TradeReceivedFrom = new("casino.venue.tradeReceivedFrom", "You received {1} gil from {0}");
         public static readonly LocString TradeSentTo = new("casino.venue.tradeSentTo", "You sent {1} gil to {0}");
         public static readonly LocString TradeRecorded = new("casino.venue.tradeRecorded", "{0} recorded");
@@ -12232,7 +12342,7 @@ internal static class L
         public static readonly LocString RemoveCoDealer = new("casino.hostDesk.removeCoDealer", "Remove co-dealer");
         public static readonly LocString RemoveFromTable = new("casino.hostDesk.removeFromTable", "Remove from table");
         public static readonly LocString CoDealersFull = new("casino.hostDesk.coDealersFull", "All {0} co-dealer spots are taken. Remove one first.");
-        public static readonly LocString TradeSyncLine = new("casino.hostDesk.tradeSyncLine", "Writes the gil trades you make at this table, and for 30 minutes after you leave it.");
+        public static readonly LocString TradeSyncLine = new("casino.hostDesk.tradeSyncLine", "Writes the gil trades you make at this table, and for 12 hours after you were last at it.");
         public static readonly LocString TakenIn = new("casino.hostDesk.takenIn", "Taken in");
         public static readonly LocString PaidOut = new("casino.hostDesk.paidOut", "Paid out");
         public static readonly LocString Owed = new("casino.hostDesk.owed", "Owed");

@@ -31,6 +31,8 @@ internal static class StatusTitle
     private const float PaddingX = 9f;
     private const float Height = 24f;
 
+    private static readonly TextStyle Style = TextStyles.FootnoteEmphasized;
+
     private static readonly long[] Thresholds = { Legend, Whale, Vip, HighRoller, Shark };
     private static readonly int[] LevelThresholds = { LegendLevel, WhaleLevel, VipLevel, HighRollerLevel, SharkLevel };
     private static readonly BalanceTitle[] Titles =
@@ -88,6 +90,9 @@ internal static class StatusTitle
 
     public static float PillHeight(BalanceTitle title, float scale) => title == BalanceTitle.None ? 0f : Height * scale;
 
+    public static bool Fits(BalanceTitle title, float maxWidth, float scale) =>
+        title != BalanceTitle.None && Plan(Loc.T(Label(title)), maxWidth, scale).Fits;
+
     public static float Width(BalanceTitle title, float maxWidth, float scale)
     {
         if (title == BalanceTitle.None)
@@ -95,9 +100,7 @@ internal static class StatusTitle
             return 0f;
         }
 
-        var text = Loc.T(Label(title));
-        var size = Typography.Measure(text, TextStyles.FootnoteEmphasized);
-        return MathF.Min(maxWidth, size.X + PaddingX * 2f * scale);
+        return MathF.Min(maxWidth, Plan(Loc.T(Label(title)), maxWidth, scale).Width);
     }
 
     public static float Draw(ImDrawListPtr drawList, Vector2 center, BalanceTitle title, float maxWidth, float scale)
@@ -107,14 +110,19 @@ internal static class StatusTitle
             return 0f;
         }
 
-        var tint = Tint(title);
-        var width = Width(title, maxWidth, scale);
+        var text = Loc.T(Label(title));
+        var fit = Plan(text, maxWidth, scale);
+        var width = MathF.Min(maxWidth, fit.Width);
         var half = new Vector2(width, Height * scale) * 0.5f;
         var min = center - half;
         var max = center + half;
-        Squircle.Fill(drawList, min, max, half.Y, ImGui.GetColorU32(tint));
-        var text = Typography.FitText(Loc.T(Label(title)), width - PaddingX * 2f * scale, TextStyles.FootnoteEmphasized);
-        Typography.DrawCentered(drawList, center, text, CasinoColors.InkOnLight, TextStyles.FootnoteEmphasized);
+        Squircle.Fill(drawList, min, max, half.Y, ImGui.GetColorU32(Tint(title)));
+        Typography.DrawCentered(drawList, center, StageText.Shown(text, fit, Style.Weight), CasinoColors.InkOnLight,
+            fit.Scale, Style.Weight);
         return width;
     }
+
+    private static StageFit Plan(string text, float maxWidth, float scale) =>
+        StageText.Squeeze(text, maxWidth, StageText.TightPadX * scale, PaddingX * scale, Style,
+            StageTextRole.Caption);
 }

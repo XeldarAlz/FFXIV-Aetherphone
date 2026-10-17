@@ -671,9 +671,14 @@ internal sealed partial class HousingApp
         Typography.Draw(drawList, new Vector2(left, cursorY),
             Typography.FitText(openLine, width, TextStyles.Subheadline), subInk, TextStyles.Subheadline);
         cursorY -= lineGap + Typography.LineHeight(TextStyles.Headline);
-        Typography.Draw(drawList, new Vector2(left, cursorY),
-            Typography.FitText(HousingDistricts.DisplayName(districtId), width, TextStyles.Headline), TileInk,
-            TextStyles.Headline);
+        var name = HousingDistricts.DisplayName(districtId);
+        if (Typography.Measure(name, TextStyles.Headline).X > width)
+        {
+            name = HousingDistricts.ShortDisplayName(districtId);
+        }
+
+        Typography.Draw(drawList, new Vector2(left, cursorY), Typography.FitText(name, width, TextStyles.Headline),
+            TileInk, TextStyles.Headline);
     }
 
     private static float LayoutTileSwatches(ImDrawListPtr drawList, Vector2 leftCenter, float right,

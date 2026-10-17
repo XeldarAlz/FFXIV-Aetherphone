@@ -43,6 +43,7 @@ internal readonly record struct StripHeroModel(
     bool SpinReady,
     bool Claiming,
     long NowUnix,
+    bool Loaded,
     long Rate = CasinoChipLots.ChipPerCoin);
 
 internal sealed class StripHero
@@ -99,6 +100,8 @@ internal sealed class StripHero
     public Rect SpinSource => spinSource;
 
     public void Snap(long value) => balance.Snap(value);
+
+    public void Forget() => balance = default;
 
     public static StripHeroClaims ClaimsOf(in StripHeroModel model)
     {
@@ -314,9 +317,22 @@ internal sealed class StripHero
     private bool DrawBalance(ImDrawListPtr drawList, in StripHeroModel model, float left, float right, float top,
         float rowHeight, float block, float deltaSeconds, float scale)
     {
+        var amountLine = Typography.LineHeight(AmountStyle);
+        if (!model.Loaded)
+        {
+            var barTop = top + (rowHeight - block) * 0.5f;
+            var amountBar = amountLine * 0.6f;
+            var footBar = Typography.LineHeight(TextStyles.Footnote) * 0.6f;
+            Skeleton.Bar(drawList, new Vector2(left, barTop + (amountLine - amountBar) * 0.5f),
+                new Vector2(left + (right - left) * 0.45f, barTop + (amountLine + amountBar) * 0.5f), amountBar * 0.5f);
+            var footTop = barTop + amountLine + CoinsGap * scale;
+            Skeleton.Bar(drawList, new Vector2(left, footTop), new Vector2(left + (right - left) * 0.3f, footTop + footBar),
+                footBar * 0.5f);
+            return false;
+        }
+
         balance.Update(model.Balance, deltaSeconds);
         var amount = NumberText.Compact(balance.Display);
-        var amountLine = Typography.LineHeight(AmountStyle);
         var reserve = CurrencyGlyph.Reserve(amountLine);
         var amountScale = Typography.FitScale(amount, MathF.Max(1f, right - left - reserve),
             AmountStyle.Scale * balance.PopScale, TextStyles.Title2.Scale, AmountStyle.Weight);

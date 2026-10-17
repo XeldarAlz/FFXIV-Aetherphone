@@ -241,7 +241,7 @@ internal sealed partial class MessagePopoutWindow : Window
 
         var resizable = !collapsed && collapseSpring.Value <= 0f;
         Flags = resizable ? PopoutFlags : PopoutFlags | ImGuiWindowFlags.NoResize;
-        if (Plugin.DragDrop.IsDragging)
+        if (Plugin.DragDrop.IsDragging || UiInteract.PointerOverGestureSurface)
         {
             Flags |= ImGuiWindowFlags.NoMove;
         }

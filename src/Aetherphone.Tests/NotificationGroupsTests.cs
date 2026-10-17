@@ -26,8 +26,23 @@ public sealed class NotificationGroupsTests
             Build(3, "message", "alice", 10));
 
         Assert.Equal(2, groups.Count);
-        Assert.Equal("alice", groups.Groups[0].Key);
-        Assert.Equal("bob", groups.Groups[1].Key);
+        Assert.Equal("message:alice", groups.Groups[0].Key);
+        Assert.Equal("message:bob", groups.Groups[1].Key);
+    }
+
+    [Fact]
+    public void TheSameGroupKeyUnderTwoAppsMakesTwoStacks()
+    {
+        var groups = BuildGroups(
+            Build(1, "velvet", "alice", 30),
+            Build(2, "aethergram", "alice", 20),
+            Build(3, "velvet", "alice", 10));
+
+        Assert.Equal(2, groups.Count);
+        Assert.Equal("velvet:alice", groups.Groups[0].Key);
+        Assert.Equal(2, groups.Groups[0].Count);
+        Assert.Equal("aethergram:alice", groups.Groups[1].Key);
+        Assert.Equal(1, groups.Groups[1].Count);
     }
 
     [Fact]
@@ -118,8 +133,8 @@ public sealed class NotificationGroupsTests
         groups.Rebuild(new[] { Build(2, "message", "bob", 20) });
 
         Assert.Equal(1, groups.Count);
-        Assert.False(groups.TryGet("alice", out _));
-        Assert.True(groups.TryGet("bob", out var bob));
+        Assert.False(groups.TryGet("message:alice", out _));
+        Assert.True(groups.TryGet("message:bob", out var bob));
         Assert.Equal(1, bob.Count);
         Assert.False(groups.Contains(1));
         Assert.True(groups.Contains(2));

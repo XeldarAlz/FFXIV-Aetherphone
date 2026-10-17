@@ -371,7 +371,7 @@ public sealed class CasinoTableWireContractTests
             System.DateTime.Now, default,
             string.Concat(CasinoTurnNotifier.GroupPrefix, CasinoRoomIds.BlackjackPit));
         Assert.Equal("casino:blackjack-pit", notification.GroupKey);
-        Assert.Equal("casino:blackjack-pit", notification.StackKey);
+        Assert.Equal(PhoneNotification.StackKeyOf("casino", "casino:blackjack-pit"), notification.StackKey);
         Assert.Equal("casino", notification.SettingsKey);
 
         var launcher = new CasinoLauncher();

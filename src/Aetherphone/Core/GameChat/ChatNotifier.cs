@@ -6,7 +6,7 @@ namespace Aetherphone.Core.GameChat;
 
 internal sealed class ChatNotifier : IDisposable
 {
-    private const string AppId = "messages";
+    public const string AppId = "messages";
 
     private readonly ChatLog log;
     private readonly TabStore tabs;

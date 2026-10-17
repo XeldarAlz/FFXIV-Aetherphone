@@ -645,9 +645,9 @@ internal sealed partial class GamesApp
                 ImGui.GetColorU32(accent with { W = LeaderboardHighlightAlpha }));
         }
 
-        var rankWidth = LeaderboardRankWidth * scale;
-        var rankLabel = Typography.FitText(GameNumber.Label(data.Rank), rankWidth, TextStyles.Headline);
+        var rankLabel = GameNumber.Label(data.Rank);
         var rankSize = Typography.Measure(rankLabel, TextStyles.Headline);
+        var rankWidth = MathF.Max(LeaderboardRankWidth * scale, rankSize.X);
         Typography.Draw(drawList, new Vector2(row.Min.X, row.Center.Y - rankSize.Y * 0.5f), rankLabel,
             data.Mine ? accentInk : ui.MutedInk, TextStyles.Headline);
         var radius = LeaderboardAvatarRadius * scale;

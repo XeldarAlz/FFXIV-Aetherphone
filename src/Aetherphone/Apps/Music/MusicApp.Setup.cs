@@ -82,16 +82,19 @@ internal sealed partial class MusicApp
         var resolver = media.LinkResolver.Snapshot();
         var runtime = media.JsRuntime.Snapshot();
         var busy = DependencySetup.IsBusy(resolver) || DependencySetup.IsBusy(runtime);
+        var installing = DependencySetup.IsInstalling(resolver) || DependencySetup.IsInstalling(runtime);
         var failed = resolver.State == DependencyState.Failed || runtime.State == DependencyState.Failed;
         var pending = media.PendingSongBytes;
-        var label = busy
+        var label = installing
             ? Loc.T(L.AetherStream.SetupInstalling)
-            : failed
-                ? Loc.T(L.AetherStream.SetupRetry)
-                : pending > 0
-                    ? string.Format(Loc.T(L.AetherStream.SetupInstallSized),
-                        DependencySetup.FormatMegabytes(pending))
-                    : Loc.T(L.AetherStream.SetupInstall);
+            : busy
+                ? Loc.T(L.AetherStream.SetupChecking)
+                : failed
+                    ? Loc.T(L.AetherStream.SetupRetry)
+                    : pending > 0
+                        ? string.Format(Loc.T(L.AetherStream.SetupInstallSized),
+                            DependencySetup.FormatMegabytes(pending))
+                        : Loc.T(L.AetherStream.SetupInstall);
 
         if (Button.Draw(button, label, ui.Ink, ButtonStyle.Prominent, enabled: !busy) && !busy)
         {

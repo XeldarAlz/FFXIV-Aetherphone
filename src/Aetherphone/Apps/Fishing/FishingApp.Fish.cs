@@ -37,7 +37,9 @@ internal sealed partial class FishingApp
     private const int FilterBigFish = 0;
     private const int FilterCaught = 1;
     private const int FilterUncaught = 2;
-    private const int FilterSlots = 3 + TimedFish.ExpansionSlots;
+    private const int FilterSlots = 3;
+    private const float AlertLeadGap = 6f;
+    private static readonly int[] AlertLeadMinuteSteps = { 1, 2, 3, 5, 10, 15, 20, 30, 45, 60 };
     private const float ProgressPad = 14f;
     private const float ProgressGap = 8f;
     private const float ProgressBarHeight = 8f;
@@ -47,7 +49,17 @@ internal sealed partial class FishingApp
     private readonly ChipRail filterRail = new();
     private readonly string[] filterLabels = new string[FilterSlots];
     private readonly bool[] filterActive = new bool[FilterSlots];
+    private readonly ChipRail expansionRail = new();
+    private readonly string[] expansionLabels = new string[TimedFish.ExpansionSlots];
+    private readonly bool[] expansionActive = new bool[TimedFish.ExpansionSlots];
     private readonly int[] expansionChips = new int[TimedFish.ExpansionSlots];
+    private Action? stepAlertLeadDown;
+    private Action? stepAlertLeadUp;
+    private readonly ChipRail patchRail = new();
+    private readonly string[] patchLabels = new string[FishPatchChips.PatchSlots];
+    private readonly bool[] patchActive = new bool[FishPatchChips.PatchSlots];
+    private readonly float[] patchChips = new float[FishPatchChips.PatchSlots];
+    private readonly int[] patchKeys = new int[FishPatchChips.PatchSlots];
     private int[] alarmRows = Array.Empty<int>();
     private int[] openRows = Array.Empty<int>();
     private int[] upcomingRows = Array.Empty<int>();
@@ -67,6 +79,9 @@ internal sealed partial class FishingApp
     private FishCaughtFilter caughtFilter;
     private int expansionFilter = -1;
     private int expansionChipCount = -1;
+    private int patchFilter = -1;
+    private int patchChipCount = -1;
+    private int patchChipExpansion = -1;
     private int progressCaught;
     private int progressTotal;
     private int shownProgressCaught = -1;
@@ -138,6 +153,7 @@ internal sealed partial class FishingApp
         if (alarmCount > 0)
         {
             DrawFishSection(Loc.T(L.Fishing.AlarmsSection), alarmRows, alarmCount, nowUnix, scale, true);
+            DrawAlertLead(scale);
         }
 
         if (openCount > 0)
@@ -194,14 +210,6 @@ internal sealed partial class FishingApp
             count = FilterUncaught + 1;
         }
 
-        var firstExpansion = count;
-        for (var chip = 0; chip < expansionChipCount; chip++)
-        {
-            filterLabels[count] = catalog.ExpansionName(expansionChips[chip]);
-            filterActive[count] = expansionFilter == expansionChips[chip];
-            count++;
-        }
-
         var tapped = filterRail.Draw(ui, filterLabels.AsSpan(0, count), filterActive.AsSpan(0, count),
             "fishing.filters");
         if (tapped == FilterBigFish)
@@ -209,13 +217,6 @@ internal sealed partial class FishingApp
             bigFishOnly = !bigFishOnly;
             fishListDirty = true;
             UiFeedback.Play(bigFishOnly ? UiSound.ToggleOn : UiSound.ToggleOff);
-        }
-        else if (tapped >= firstExpansion)
-        {
-            var picked = expansionChips[tapped - firstExpansion];
-            expansionFilter = expansionFilter == picked ? -1 : picked;
-            fishListDirty = true;
-            UiFeedback.Play(expansionFilter >= 0 ? UiSound.ToggleOn : UiSound.ToggleOff);
         }
         else if (tapped == FilterCaught || tapped == FilterUncaught)
         {
@@ -225,7 +226,112 @@ internal sealed partial class FishingApp
             UiFeedback.Play(caughtFilter != FishCaughtFilter.All ? UiSound.ToggleOn : UiSound.ToggleOff);
         }
 
+        DrawExpansionChips();
+        if (expansionFilter >= 0)
+        {
+            DrawPatchChips();
+        }
+
         ImGui.Dummy(new Vector2(0f, 2f * UiScale.Current));
+    }
+
+    private void DrawExpansionChips()
+    {
+        if (expansionChipCount <= 0)
+        {
+            return;
+        }
+
+        for (var chip = 0; chip < expansionChipCount; chip++)
+        {
+            expansionLabels[chip] = catalog.ExpansionName(expansionChips[chip]);
+            expansionActive[chip] = expansionFilter == expansionChips[chip];
+        }
+
+        var tapped = expansionRail.Draw(ui, expansionLabels.AsSpan(0, expansionChipCount),
+            expansionActive.AsSpan(0, expansionChipCount), "fishing.expansions");
+        if (tapped < 0)
+        {
+            return;
+        }
+
+        var picked = expansionChips[tapped];
+        expansionFilter = expansionFilter == picked ? -1 : picked;
+        patchFilter = -1;
+        fishListDirty = true;
+        UiFeedback.Play(expansionFilter >= 0 ? UiSound.ToggleOn : UiSound.ToggleOff);
+    }
+
+    private void DrawAlertLead(float scale)
+    {
+        stepAlertLeadDown ??= () => StepAlertLead(-1);
+        stepAlertLeadUp ??= () => StepAlertLead(1);
+        var card = GroupCard.Begin(ui, 1);
+        StepperField.Draw(ui, card.NextRow(), Loc.T(L.Fishing.AlertLeadValue, alerts.LeadMinutes), scale,
+            stepAlertLeadDown, stepAlertLeadUp);
+        card.End();
+        DrawFootnote(Loc.T(L.Fishing.AlertLeadHint), scale);
+        ImGui.Dummy(new Vector2(0f, AlertLeadGap * scale));
+    }
+
+    private void StepAlertLead(int direction)
+    {
+        var current = alerts.LeadMinutes;
+        var nearest = 0;
+        for (var index = 0; index < AlertLeadMinuteSteps.Length; index++)
+        {
+            if (AlertLeadMinuteSteps[index] <= current)
+            {
+                nearest = index;
+            }
+        }
+
+        var target = Math.Clamp(nearest + direction, 0, AlertLeadMinuteSteps.Length - 1);
+        alerts.SetLeadMinutes(AlertLeadMinuteSteps[target]);
+    }
+
+    private void DrawPatchChips()
+    {
+        EnsurePatchChips();
+        if (patchChipCount == 0)
+        {
+            return;
+        }
+
+        for (var chip = 0; chip < patchChipCount; chip++)
+        {
+            patchActive[chip] = patchFilter == patchKeys[chip];
+        }
+
+        var tapped = patchRail.Draw(ui, patchLabels.AsSpan(0, patchChipCount), patchActive.AsSpan(0, patchChipCount),
+            "fishing.patches");
+        if (tapped < 0)
+        {
+            return;
+        }
+
+        var picked = patchKeys[tapped];
+        patchFilter = patchFilter == picked ? -1 : picked;
+        fishListDirty = true;
+        UiFeedback.Play(patchFilter >= 0 ? UiSound.ToggleOn : UiSound.ToggleOff);
+    }
+
+    private void EnsurePatchChips()
+    {
+        if (patchChipCount >= 0 && patchChipExpansion == expansionFilter)
+        {
+            return;
+        }
+
+        patchChipExpansion = expansionFilter;
+        patchChipCount = FishPatchChips.Collect(catalog.Entries, expansionFilter, patchChips);
+        for (var chip = 0; chip < patchChipCount; chip++)
+        {
+            patchKeys[chip] = FishPatchChips.Key(patchChips[chip]);
+            patchLabels[chip] = FishingCatalog.PatchText(patchChips[chip]);
+        }
+
+        patchRail.Reset();
     }
 
     private void EnsureExpansionChips()
@@ -329,6 +435,7 @@ internal sealed partial class FishingApp
         rowWhen = new CachedText[count];
         rowSubtitles = new string[count];
         expansionChipCount = -1;
+        patchChipCount = -1;
         fishListDirty = true;
     }
 
@@ -373,7 +480,17 @@ internal sealed partial class FishingApp
                 continue;
             }
 
+            if (patchFilter >= 0 && FishPatchChips.Key(entry.Fish.Patch) != patchFilter)
+            {
+                continue;
+            }
+
             if (searching && !entry.SearchKey.Contains(foldedSearch, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (listing && entry.LogRow == 0)
             {
                 continue;
             }
@@ -512,11 +629,12 @@ internal sealed partial class FishingApp
         var subRight = row.Max.X - whenWidth;
         Typography.Draw(drawList, new Vector2(subRight, top + titleHeight + LineGap * scale), when, ui.MutedInk,
             TextStyles.Footnote);
+        var bellHovered = false;
         if (alerts.HasAlarm(entry.ItemId))
         {
             var bell = FishBellSize * scale;
-            PhoneIcon.Draw(drawList, new Vector2(subRight - bell, top + titleHeight + LineGap * scale + subHeight * 0.5f),
-                PhoneIcons.BellFilled, ui.Accent, bell);
+            var bellCenter = new Vector2(subRight - bell, top + titleHeight + LineGap * scale + subHeight * 0.5f);
+            bellHovered = DrawAlarmBell(drawList, entry.ItemId, bellCenter, bell, scale);
             subRight -= bell * 2f;
         }
 
@@ -535,11 +653,28 @@ internal sealed partial class FishingApp
         Typography.Draw(drawList, new Vector2(textLeft, top + titleHeight + LineGap * scale),
             Typography.FitText(Subtitle(entryIndex, entry), MathF.Max(1f, subRight - RowGap * scale - textLeft),
                 TextStyles.Footnote), ui.MutedInk, TextStyles.Footnote);
-        if (UiInteract.Click(bounds.Min, bounds.Max, hovered))
+        if (UiInteract.Click(bounds.Min, bounds.Max, hovered && !bellHovered))
         {
             UiFeedback.Play(UiSound.Tap);
             router.Push(FishingRoute.Fish(entry.ItemId));
         }
+    }
+
+    private bool DrawAlarmBell(ImDrawListPtr drawList, uint itemId, Vector2 center, float size, float scale)
+    {
+        var reach = new Vector2(Metrics.Size.TapTarget * scale * 0.5f);
+        var min = center - reach;
+        var max = center + reach;
+        var hovered = UiInteract.Hover(min, max);
+        PhoneIcon.Draw(drawList, center, hovered ? PhoneIcons.BellOff : PhoneIcons.BellFilled, ui.Accent, size);
+        if (!UiInteract.Click(min, max, hovered, UiSound.ToggleOff))
+        {
+            return hovered;
+        }
+
+        alerts.ToggleAlarm(itemId);
+        fishListDirty = true;
+        return hovered;
     }
 
     private string Subtitle(int entryIndex, FishEntry entry)

@@ -6,8 +6,13 @@ internal static class ComposerFieldPress
 {
     public static bool PressedAroundInput(Vector2 fieldMin, Vector2 fieldMax)
     {
-        if (!UiInteract.Hover(fieldMin, fieldMax)
-            || ImGui.IsMouseHoveringRect(ImGui.GetItemRectMin(), ImGui.GetItemRectMax()))
+        if (!UiInteract.Hover(fieldMin, fieldMax))
+        {
+            return false;
+        }
+
+        UiInteract.ReportGestureSurface();
+        if (ImGui.IsMouseHoveringRect(ImGui.GetItemRectMin(), ImGui.GetItemRectMax()))
         {
             return false;
         }

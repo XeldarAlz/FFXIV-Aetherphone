@@ -52,7 +52,8 @@ internal sealed class GambleLadder
     public float RevealProgress => phase == GamblePhase.Revealing ? Math.Clamp(seconds / RevealSeconds, 0f, 1f)
         : phase == GamblePhase.Closing ? 1f : 0f;
 
-    public bool CardShown => phase is GamblePhase.Revealing or GamblePhase.Closing && RevealProgress >= 0.5f;
+    public bool CardShown => (phase is GamblePhase.Revealing or GamblePhase.Closing && RevealProgress >= 0.5f)
+        || (phase == GamblePhase.Choosing && Card >= 0);
 
     public long UnshownPayout => phase is GamblePhase.Waiting or GamblePhase.Revealing && !CardShown
         ? Amount

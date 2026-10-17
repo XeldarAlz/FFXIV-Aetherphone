@@ -52,7 +52,10 @@ internal static class DependencySetup
     }
 
     public static bool IsBusy(DependencyProgress snapshot) =>
-        snapshot.State is DependencyState.Checking or DependencyState.Downloading or DependencyState.Installing;
+        snapshot.State == DependencyState.Checking || IsInstalling(snapshot);
+
+    public static bool IsInstalling(DependencyProgress snapshot) =>
+        snapshot.State is DependencyState.Downloading or DependencyState.Installing;
 
     public static string StatusText(DependencyProgress snapshot)
     {

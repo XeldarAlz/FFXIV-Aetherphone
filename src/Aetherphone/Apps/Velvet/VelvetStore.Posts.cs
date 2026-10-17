@@ -206,12 +206,22 @@ internal sealed partial class VelvetStore
         lane.Loading = true;
         work.Run("feed", async token =>
         {
-            var page = await client.FeedAsync(ScopeKey(scope), filter, region, postTags, null, token)
+            var reported = AepFailure.None;
+            var page = await client.FeedAsync(ScopeKey(scope), filter, region, postTags, null, token,
+                    failure => reported = failure)
                 .ConfigureAwait(false);
-            if (page is not null && epoch == feedEpoch)
+            if (epoch != feedEpoch)
             {
-                lane.ApplyRefresh(page.Items, page.NextCursor);
+                return;
             }
+
+            if (page is null)
+            {
+                lane.RecordFailure(reported.Failed ? reported : AepFailure.Transport(AepFailureKind.Offline));
+                return;
+            }
+
+            lane.ApplyRefresh(page.Items, page.NextCursor);
         }, () =>
         {
             lane.Loading = false;
@@ -419,14 +429,24 @@ internal sealed partial class VelvetStore
 
         fetchingPostId = postId;
         fetchedPost = null;
+        fetchPostFailed = false;
         work.Run("post by id", async token =>
         {
             var post = await client.PostAsync(postId, token).ConfigureAwait(false);
-            if (fetchingPostId == postId && post is not null)
+            if (fetchingPostId != postId)
             {
-                fetchedPost = post;
+                return;
             }
+
+            fetchedPost = post;
+            fetchPostFailed = post is null;
         });
+    }
+
+    public void RetryPost(string postId)
+    {
+        fetchingPostId = null;
+        EnsurePost(postId);
     }
 
     public void OpenLikers(string postId)

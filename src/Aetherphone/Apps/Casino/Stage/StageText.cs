@@ -11,6 +11,25 @@ internal enum StageTextRole : byte
     Status,
     Amount,
     Label,
+    Caption,
+}
+
+internal readonly struct StageFit
+{
+    public readonly float Scale;
+    public readonly float TextWidth;
+    public readonly float Pad;
+    public readonly bool Fits;
+
+    public StageFit(float scale, float textWidth, float pad, bool fits)
+    {
+        Scale = scale;
+        TextWidth = textWidth;
+        Pad = pad;
+        Fits = fits;
+    }
+
+    public float Width => TextWidth + Pad * 2f;
 }
 
 internal readonly struct StageTextPlan
@@ -41,6 +60,7 @@ internal static class StageText
     public const float ShadowOffset = 1.5f;
     public const float ShadowAlpha = 0.6f;
     public const float FitSlack = 0.5f;
+    public const float TightPadX = 3f;
 
     public static readonly Vector4 Strong = CasinoColors.InkTitle;
     public static readonly Vector4 Body = CasinoColors.InkBody;
@@ -54,6 +74,7 @@ internal static class StageText
     {
         StageTextRole.State => TextStyles.Title2,
         StageTextRole.Amount => TextStyles.Title3,
+        StageTextRole.Caption => TextStyles.Caption2,
         _ => TextStyles.Footnote,
     };
 
@@ -74,6 +95,20 @@ internal static class StageText
         var floor = MathF.Min(style.Scale, Minimum(role).Scale);
         return Typography.FitScale(text, maxWidth, style.Scale, floor, style.Weight);
     }
+
+    public static StageFit Squeeze(string text, float maxWidth, float minimumPad, float pad, in TextStyle style,
+        StageTextRole role)
+    {
+        var budget = MathF.Max(1f, maxWidth - minimumPad * 2f);
+        var scale = FitScale(text, budget, style, role);
+        var width = Typography.Measure(text, scale, style.Weight).X;
+        var fits = Fits(width, budget);
+        return new StageFit(scale, fits ? width : budget, Math.Clamp((maxWidth - width) * 0.5f, minimumPad, pad),
+            fits);
+    }
+
+    public static string Shown(string text, in StageFit fit, FontWeight weight) =>
+        fit.Fits ? text : Typography.FitText(text, fit.TextWidth, fit.Scale, weight);
 
     public static float StateLine(ImDrawListPtr drawList, Vector2 center, string text, float maxWidth, Vector4 ink)
     {

@@ -49,6 +49,8 @@ internal struct VRowModel
     public string Time;
     public bool Chevron;
     public bool Pinned;
+    public string? SubtitleGlyph;
+    public Vector4 SubtitleGlyphTint;
 }
 
 internal static class VRow
@@ -56,6 +58,8 @@ internal static class VRow
     private const float DefaultHeight = 64f;
     private const float PinGlyph = 12f;
     private const float PinGap = 4f;
+    private const float SubtitleGlyphUnits = 14f;
+    private const float SubtitleGlyphGap = 4f;
 
     public static VRowHit Cell(in VRowModel model, PhoneTheme theme, RemoteImageCache images,
         LodestoneService lodestone)
@@ -240,10 +244,21 @@ internal static class VRow
             innerWidth, TextStyles.Headline, VelvetTheme.TitleInk, titleHovering, false);
         var subtitleY = centerY + 3f * scale;
         var subtitleSize = Typography.Measure(subtitleText, TextStyles.Subheadline);
-        var subtitleHovering = UiInteract.Hover(new Vector2(textLeft, subtitleY),
-            new Vector2(textLeft + innerWidth, subtitleY + subtitleSize.Y));
-        Marquee.DrawLeft(new MarqueeId("vrow.subtitle.", subtitleText), subtitleText, textLeft, subtitleY,
-            innerWidth, TextStyles.Subheadline, VelvetTheme.MutedInk, subtitleHovering);
+        var subtitleLeft = textLeft;
+        var subtitleWidth = innerWidth;
+        if (model.SubtitleGlyph is { Length: > 0 } subtitleGlyph)
+        {
+            var glyph = SubtitleGlyphUnits * scale;
+            PhoneIcon.Draw(drawList, new Vector2(subtitleLeft + glyph * 0.5f, subtitleY + subtitleSize.Y * 0.5f),
+                subtitleGlyph, model.SubtitleGlyphTint, glyph);
+            subtitleLeft += glyph + SubtitleGlyphGap * scale;
+            subtitleWidth = MathF.Max(10f * scale, textRight - subtitleLeft);
+        }
+
+        var subtitleHovering = UiInteract.Hover(new Vector2(subtitleLeft, subtitleY),
+            new Vector2(subtitleLeft + subtitleWidth, subtitleY + subtitleSize.Y));
+        Marquee.DrawLeft(new MarqueeId("vrow.subtitle.", subtitleText), subtitleText, subtitleLeft, subtitleY,
+            subtitleWidth, TextStyles.Subheadline, VelvetTheme.MutedInk, subtitleHovering);
         return hit;
     }
 }

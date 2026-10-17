@@ -48,10 +48,21 @@ internal sealed partial class VelvetShell
             {
                 var emptyRect = new Rect(new Vector2(area.Min.X, ImGui.GetCursorScreenPos().Y), area.Max);
                 var filtered = feedInclude.Any || mutes.Any;
-                DrawEmpty(emptyRect, store.LoadingFeed ? Loc.T(L.Common.Loading) : Loc.T(FeedNoneTitle),
-                    store.LoadingFeed
-                        ? string.Empty
-                        : Loc.T(filtered ? L.Velvet.FeedNoneFiltered : L.Velvet.FeedNoneHint));
+                if (!store.LoadingFeed && store.FeedFailed)
+                {
+                    if (EmptyState.Draw(emptyRect, ui, PhoneIcons.CloudDownload, Loc.T(L.Failure.CouldNotLoad),
+                            Loc.T(L.Common.LoadFailedHint), Loc.T(L.Common.Retry)))
+                    {
+                        RefreshFeedContent();
+                    }
+                }
+                else
+                {
+                    DrawEmpty(emptyRect, store.LoadingFeed ? Loc.T(L.Common.Loading) : Loc.T(FeedNoneTitle),
+                        store.LoadingFeed
+                            ? string.Empty
+                            : Loc.T(filtered ? L.Velvet.FeedNoneFiltered : L.Velvet.FeedNoneHint));
+                }
             }
             else
             {
@@ -76,6 +87,11 @@ internal sealed partial class VelvetShell
                     ImGui.GetScrollY() >= ImGui.GetScrollMaxY() - 400f * scale)
                 {
                     store.LoadMoreFeed();
+                }
+
+                if (store.LoadingMoreFeed)
+                {
+                    InfiniteScroll.DrawLoadingRow(area.Center.X, VelvetTheme.MutedInk);
                 }
 
                 Gap(40f);

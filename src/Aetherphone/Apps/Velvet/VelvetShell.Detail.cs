@@ -63,7 +63,16 @@ internal sealed partial class VelvetShell
         if (found is not { } post)
         {
             store.EnsurePost(postId);
-            Typography.DrawCentered(body.Center, Loc.T(L.Common.Loading), VelvetTheme.MutedInk);
+            if (!store.FetchPostFailed)
+            {
+                Typography.DrawCentered(body.Center, Loc.T(L.Common.Loading), VelvetTheme.MutedInk);
+            }
+            else if (EmptyState.Draw(body, ui, PhoneIcons.CloudDownload, Loc.T(L.Failure.CouldNotLoad),
+                         Loc.T(L.Common.LoadFailedHint), Loc.T(L.Common.Retry)))
+            {
+                store.RetryPost(postId);
+            }
+
             return;
         }
 

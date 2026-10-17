@@ -219,6 +219,11 @@ internal static class DragScrollHost
             scroller.Tick(deltaSeconds);
         }
 
+        if (grabStripWidth > 0f && hovered && ImGui.GetScrollMaxY() > 0f && HoversEdgeStrip(grabStripWidth))
+        {
+            shouldBlock = true;
+        }
+
         if (scroller.IsControlling)
         {
             ImGui.SetScrollY(scroller.Offset);

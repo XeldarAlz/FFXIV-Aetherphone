@@ -212,9 +212,11 @@ internal sealed partial class BlackjackTable
         var limit = SeatLimit(board);
         var tapped = -1;
         var sitLabel = Loc.T(L.Blackjack.SeatSit);
+        Span<bool> emptySlots = stackalloc bool[BlackjackRules.SeatCount];
+        MarkEmptySlots(emptySlots, seated, limit);
         for (var seatIndex = 0; seatIndex < BlackjackRules.SeatCount; seatIndex++)
         {
-            if ((seated && seatIndex == mySeat) || seatIndex >= limit)
+            if (!OnRail(seatIndex, seated, limit))
             {
                 continue;
             }
@@ -257,7 +259,8 @@ internal sealed partial class BlackjackTable
                     ImGui.GetColorU32(Palette.WithAlpha(ui.MutedInk, 0.45f + 0.4f * Pulse.Wave(Pulse.Breath))), 12);
             }
 
-            DrawSeatPlate(drawList, currency, view, puck, puckRadius, layout.RailPlateWidth, dimmed, scale);
+            var plate = layout.RailPlateRect(slot, SlotEmpty(emptySlots, slot - 1), SlotEmpty(emptySlots, slot + 1));
+            DrawSeatPlate(drawList, currency, view, plate, dimmed, scale);
             if (layout.ShowsRailTitles)
             {
                 DrawBalanceTitle(drawList, currency, view.Stack, puck, puckRadius, columnWidth, scale);
@@ -267,31 +270,62 @@ internal sealed partial class BlackjackTable
 
             DrawBetDisplay(drawList, ui, seatIndex, currency, puck,
                 new Vector2(puck.X, puck.Y - layout.RailBetLift), dealerAnchor, false, scale);
-            DrawRailHands(drawList, ui, board, seatIndex, puck, columnWidth, shoe, scale);
+            DrawRailHands(drawList, ui, board, seatIndex, puck, shoe, scale);
         }
 
         return tapped;
     }
 
-    private void DrawSeatPlate(ImDrawListPtr drawList, int currency, in SeatView view, Vector2 puck, float puckRadius,
-        float width, bool dimmed, float scale)
+    private void MarkEmptySlots(Span<bool> emptySlots, bool seated, int limit)
     {
-        var top = puck.Y + layout.RailPlateTop;
-        var min = new Vector2(puck.X - width * 0.5f, top);
-        var max = new Vector2(puck.X + width * 0.5f, top + BlackjackTableLayout.RailPlateHeight * scale);
+        for (var seatIndex = 0; seatIndex < BlackjackRules.SeatCount; seatIndex++)
+        {
+            if (!OnRail(seatIndex, seated, limit))
+            {
+                continue;
+            }
+
+            emptySlots[BlackjackTableLayout.RailSlotOf(seatIndex, mySeat, limit)] =
+                seatViews[seatIndex].Phase == SeatPhase.Empty;
+        }
+    }
+
+    private bool OnRail(int seatIndex, bool seated, int limit) => (!seated || seatIndex != mySeat) && seatIndex < limit;
+
+    private static bool SlotEmpty(ReadOnlySpan<bool> emptySlots, int slot) =>
+        slot >= 0 && slot < emptySlots.Length && emptySlots[slot];
+
+    private void DrawSeatPlate(ImDrawListPtr drawList, int currency, in SeatView view, in Rect plate, bool dimmed,
+        float scale)
+    {
         var rounding = Metrics.Radius.Md * scale;
-        Material.LiquidGlass(drawList, min, max, rounding, scale, GlassTone.Dark, 0f);
-        var inner = width - 6f * scale;
-        var lineHeight = (max.Y - min.Y) * 0.5f;
-        var name = Typography.FitText(RailName(view.SeatIndex, view.DisplayName, inner), inner, TextStyles.Footnote);
-        Typography.DrawCentered(drawList, new Vector2(puck.X, min.Y + lineHeight * 0.55f), name,
-            dimmed ? StageText.Body : StageText.Strong, TextStyles.Footnote);
-        var stack = StackLabel(currency, view.Stack, true);
-        var style = TextStyles.FootnoteEmphasized;
-        var fit = StageText.FitScale(stack, inner, style, StageTextRole.Label);
-        Typography.DrawCentered(drawList, new Vector2(puck.X, min.Y + lineHeight * 1.45f),
-            Typography.FitText(stack, inner, fit, style.Weight), dimmed ? StageText.Body : StackInk(currency), fit,
-            style.Weight);
+        Material.LiquidGlass(drawList, plate.Min, plate.Max, rounding, scale, GlassTone.Dark, 0f);
+        var textWidth = layout.RailPlateTextWidthFor(plate.Width);
+        var centerX = plate.Center.X;
+        var lineHeight = plate.Height * 0.5f;
+        var nameStyle = TextStyles.Footnote;
+        var name = RailName(view.SeatIndex, view.DisplayName, textWidth);
+        var nameFit = StageText.FitScale(name, textWidth, nameStyle, StageTextRole.Caption);
+        Typography.DrawCentered(drawList, new Vector2(centerX, plate.Min.Y + lineHeight * 0.55f),
+            Typography.FitText(name, textWidth, nameFit, nameStyle.Weight),
+            dimmed ? StageText.Body : StageText.Strong, nameFit, nameStyle.Weight);
+        var stackStyle = TextStyles.FootnoteEmphasized;
+        var stack = RailStack(currency, view.Stack, textWidth, stackStyle);
+        var stackFit = StageText.FitScale(stack, textWidth, stackStyle, StageTextRole.Caption);
+        Typography.DrawCentered(drawList, new Vector2(centerX, plate.Min.Y + lineHeight * 1.45f),
+            Typography.FitText(stack, textWidth, stackFit, stackStyle.Weight),
+            dimmed ? StageText.Body : StackInk(currency), stackFit, stackStyle.Weight);
+    }
+
+    private string RailStack(int currency, long amount, float width, in TextStyle style)
+    {
+        var label = StackLabel(currency, amount, true);
+        if (currency != CasinoCurrencies.Gil || StageText.Fits(Typography.Measure(label, style).X, width))
+        {
+            return label;
+        }
+
+        return NumberText.Compact(amount);
     }
 
     private void DrawRailSideStakes(ImDrawListPtr drawList, CasinoBlackjackRoomStateDto board, int seatIndex,
@@ -360,7 +394,7 @@ internal sealed partial class BlackjackTable
         }
 
         var title = StatusTitle.For(stack);
-        if (title == BalanceTitle.None)
+        if (!StatusTitle.Fits(title, maxWidth, scale))
         {
             return;
         }
@@ -385,7 +419,7 @@ internal sealed partial class BlackjackTable
     }
 
     private void DrawRailHands(ImDrawListPtr drawList, AppSkin ui, CasinoBlackjackRoomStateDto board, int seatIndex,
-        Vector2 puck, float columnWidth, Vector2 shoe, float scale)
+        Vector2 puck, Vector2 shoe, float scale)
     {
         var hands = projection.HandsAt(seatIndex);
         if (hands.Length == 0)
@@ -395,7 +429,7 @@ internal sealed partial class BlackjackTable
 
         var count = hands.Length < BlackjackRules.MaxHandsPerSeat ? hands.Length : BlackjackRules.MaxHandsPerSeat;
         var cardWidth = layout.RailCardPixels(count);
-        var handWidth = columnWidth / count;
+        var handWidth = layout.RailHandWidth(count);
         var fanY = puck.Y - layout.RailCardsLift;
         var activeHand = board.ActiveSeat == seatIndex ? board.ActiveHand : -1;
         for (var handIndex = 0; handIndex < count; handIndex++)
@@ -550,7 +584,7 @@ internal sealed partial class BlackjackTable
                 else
                 {
                     BlackjackTableArt.DrawBetPlate(drawList, anchor, motion.ShownBet, ui.TitleInk, entrance,
-                        practice, layout.ColumnWidth - 2f * scale, scale);
+                        practice, layout.RailBetPlateWidth, scale);
                 }
             }
         }
