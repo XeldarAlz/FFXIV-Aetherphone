@@ -30,7 +30,8 @@ internal readonly struct BakedImage
 
 internal static class ImageProcessor
 {
-    private const int JpegQuality = 88;
+    private const int JpegQuality = 90;
+    public const int UploadJpegQuality = 95;
     private const JpegChromaSubsampling JpegSubsampling = JpegChromaSubsampling.Ratio420;
     private const int MaxUploadBytes = 8 * 1024 * 1024;
     private const float OversizeScale = 0.8f;
@@ -125,17 +126,19 @@ internal static class ImageProcessor
     public static BakedImage BakeCroppedJpeg(string sourcePath, WallpaperCrop crop, int targetWidth, int targetHeight,
         bool revealWholeImage, in PhotoEdit edit)
     {
-        return BakeCroppedImage(sourcePath, crop, targetWidth, targetHeight, revealWholeImage, edit, false);
+        return BakeCroppedImage(sourcePath, crop, targetWidth, targetHeight, revealWholeImage, edit, false,
+            JpegQuality);
     }
 
     public static BakedImage BakeCroppedUpload(string sourcePath, WallpaperCrop crop, int targetWidth, int targetHeight,
         bool revealWholeImage, in PhotoEdit edit)
     {
-        return BakeCroppedImage(sourcePath, crop, targetWidth, targetHeight, revealWholeImage, edit, true);
+        return BakeCroppedImage(sourcePath, crop, targetWidth, targetHeight, revealWholeImage, edit, true,
+            UploadJpegQuality);
     }
 
     private static BakedImage BakeCroppedImage(string sourcePath, WallpaperCrop crop, int targetWidth, int targetHeight,
-        bool revealWholeImage, in PhotoEdit edit, bool preserveTransparency)
+        bool revealWholeImage, in PhotoEdit edit, bool preserveTransparency, int quality)
     {
         using var image = LoadForBake(sourcePath, edit);
         var size = new Vector2(image.Width, image.Height);
@@ -153,7 +156,7 @@ internal static class ImageProcessor
         image.Mutate(context => context
             .Crop(new Rectangle(x, y, width, height))
             .Resize(containedWidth, containedHeight));
-        return EncodeImage(image, preserveTransparency);
+        return EncodeImage(image, preserveTransparency, quality);
     }
 
     public static (int Width, int Height) ContainSize(int width, int height, int targetWidth, int targetHeight)
@@ -169,21 +172,21 @@ internal static class ImageProcessor
         return (containedWidth, containedHeight);
     }
 
-    public static BakedImage BakeJpeg(string sourcePath, int maxDimension)
+    public static BakedImage BakeJpeg(string sourcePath, int maxDimension, int quality = JpegQuality)
     {
-        return BakeImage(sourcePath, maxDimension, false);
+        return BakeImage(sourcePath, maxDimension, false, quality);
     }
 
     public static BakedImage BakeUpload(string sourcePath, int maxDimension)
     {
-        return BakeImage(sourcePath, maxDimension, true);
+        return BakeImage(sourcePath, maxDimension, true, UploadJpegQuality);
     }
 
-    private static BakedImage BakeImage(string sourcePath, int maxDimension, bool preserveTransparency)
+    private static BakedImage BakeImage(string sourcePath, int maxDimension, bool preserveTransparency, int quality)
     {
         using var image = LoadForBake(sourcePath, PhotoEdit.None);
         ScaleWithin(image, maxDimension);
-        return EncodeImage(image, preserveTransparency);
+        return EncodeImage(image, preserveTransparency, quality);
     }
 
     private static Image<Rgba32> LoadForBake(string sourcePath, in PhotoEdit edit)
@@ -207,7 +210,7 @@ internal static class ImageProcessor
         }
     }
 
-    private static BakedImage EncodeImage(Image<Rgba32> image, bool preserveTransparency)
+    private static BakedImage EncodeImage(Image<Rgba32> image, bool preserveTransparency, int quality)
     {
         var length = checked(image.Width * image.Height * 4);
         var pixels = ArrayPool<byte>.Shared.Rent(length);
@@ -221,7 +224,7 @@ internal static class ImageProcessor
             }
 
             FlattenOntoBlack(span);
-            var bytes = ScalarJpegEncoder.Encode(span, image.Width, image.Height, JpegQuality, JpegSubsampling);
+            var bytes = ScalarJpegEncoder.Encode(span, image.Width, image.Height, quality, JpegSubsampling);
             return new BakedImage(bytes, image.Width, image.Height);
         }
         finally
