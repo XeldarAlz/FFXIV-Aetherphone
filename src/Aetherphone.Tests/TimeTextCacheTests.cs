@@ -83,6 +83,19 @@ public sealed class TimeTextCacheTests
     }
 
     [Fact]
+    public void CompactClockIsTheClockWithoutTheDayPeriod()
+    {
+        var start = new DateTime(2026, 3, 14, 0, 0, 0, DateTimeKind.Local);
+        for (var minute = 0; minute < 24 * 60; minute += 13)
+        {
+            var moment = start.AddMinutes(minute);
+            var compact = TimeText.CompactClock(moment);
+            Assert.StartsWith(compact, TimeText.Clock(moment));
+            Assert.Equal(moment.ToString(TimeText.Use24Hour ? "HH:mm" : "h:mm", Loc.Culture), compact);
+        }
+    }
+
+    [Fact]
     public void ClockStaysCorrectPastTheCacheLimit()
     {
         var start = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Local);
