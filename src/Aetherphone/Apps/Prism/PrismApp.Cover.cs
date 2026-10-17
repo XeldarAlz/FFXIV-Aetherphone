@@ -70,7 +70,9 @@ internal sealed partial class PrismApp
         var pills = PrismMotion.Mark(drawList);
         DrawCoverPills(drawList, content, below, week, scale);
         PrismMotion.Rise(drawList, pills, PrismMotion.At(screenAge, CreditsDelay, Motion.PageSettle), 0f);
-        var steps = DrawCoverStory(drawList, content, week, cover, scale);
+        var primary = week.Phase == PrismPhases.Entering || PrismPhases.Judgeable(week.Phase);
+        var strips = (primary ? 1 : 0) + (store.Results is null ? 0 : 1);
+        var steps = DrawCoverStory(drawList, content, week, cover, strips, scale);
         var strip = PrismMotion.Mark(drawList);
         DrawCoverStrip(drawList, content, week, scale);
         RiseStep(drawList, strip, steps, scale);
@@ -105,27 +107,15 @@ internal sealed partial class PrismApp
     private void DrawCoverPills(ImDrawListPtr drawList, Rect content, float top, PrismWeekDto week, float scale)
     {
         var left = content.Min.X + PrismArt.Gutter(scale);
-        if (store.Results is { } results)
-        {
-            var seen = configuration.PrismRevealedWeek == results.WeekId;
-            if (PrismArt.Pill(drawList, new Vector2(left, top), Loc.T(seen ? L.Prism.LastResults : L.Prism.ResultsIn),
-                    !seen, scale, out var width))
-            {
-                OpenResults();
-            }
-
-            left += width + Metrics.Space.Sm * scale;
-        }
-
         if (week.MyEntry is not null && week.Phase != PrismPhases.Entering &&
-            PrismArt.Pill(drawList, new Vector2(left, top), Loc.T(L.Prism.YourLook), false, scale, out _))
+            PrismArt.Pill(drawList, new Vector2(left, top), Loc.T(L.Prism.YourLook), scale, out _))
         {
             Go(PrismScreen.Entry);
         }
     }
 
     private int DrawCoverStory(ImDrawListPtr drawList, Rect content, PrismWeekDto week, PrismPlacingDto? cover,
-        float scale)
+        int strips, float scale)
     {
         var gutter = PrismArt.Gutter(scale);
         var width = content.Width - gutter * 2f;
@@ -140,7 +130,8 @@ internal sealed partial class PrismApp
             HeadlineMinUnits * scale, HeadlineLines, out var lines);
         var headlineLine = PrismType.LineHeight(EditorialFace.Headline, pixels);
         var eyebrowGap = Metrics.Space.Sm * scale;
-        var bottom = StripRect(content, scale).Min.Y - Metrics.Space.Xl * scale;
+        var bottom = (strips > 0 ? StripRect(content, scale, strips - 1).Min.Y : content.Max.Y - gutter) -
+                     Metrics.Space.Xl * scale;
         var top = bottom - statHeight - Metrics.Space.Xl * scale - briefHeight - lines.Length * headlineLine -
                   eyebrowGap - labelLine;
         var left = content.Min.X + gutter;
@@ -203,7 +194,17 @@ internal sealed partial class PrismApp
 
     private void DrawCoverStrip(ImDrawListPtr drawList, Rect content, PrismWeekDto week, float scale)
     {
-        var strip = StripRect(content, scale);
+        var strip = StripRect(content, scale, store.Results is null ? 0 : 1);
+        if (store.Results is { } results)
+        {
+            var seen = configuration.PrismRevealedWeek == results.WeekId;
+            if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(seen ? L.Prism.LastResults : L.Prism.ResultsIn),
+                    "→", false))
+            {
+                OpenResults();
+            }
+        }
+
         if (week.Phase == PrismPhases.Entering)
         {
             if (week.MyEntry is { } entry)
