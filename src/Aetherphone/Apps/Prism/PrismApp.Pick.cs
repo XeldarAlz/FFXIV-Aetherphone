@@ -61,10 +61,9 @@ internal sealed partial class PrismApp
         if (store.ActionFailed && !store.Busy)
         {
             var reason = store.ActionFailureText;
-            var lines = PrismType.Wrap(PrismType.Upper(reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint)),
-                EditorialFace.Mono, PrismArt.MonoPixels(), strip.Width);
-            gridTop += PrismType.DrawLines(drawList, new Vector2(strip.Min.X, gridTop), lines, PrismArt.Muted,
-                EditorialFace.Mono, PrismArt.MonoPixels()) + Metrics.Space.Md * scale;
+            gridTop += Typography.DrawWrappedLeft(new Vector2(strip.Min.X, gridTop),
+                reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint), PrismArt.Muted, TextStyles.Subheadline,
+                strip.Width) + Metrics.Space.Md * scale;
         }
 
         var gridRect = new Rect(new Vector2(content.Min.X, gridTop), content.Max);

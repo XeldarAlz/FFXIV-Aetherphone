@@ -167,11 +167,11 @@ internal sealed partial class PrismApp : IPhoneApp
                 Go(screen == PrismScreen.Pick ? pickReturn : PrismScreen.Cover, -1);
             }
 
-            height = PrismType.LineHeight(EditorialFace.Mono, PrismArt.MonoPixels());
+            height = PrismType.LineHeight(EditorialFace.Label, PrismArt.LabelPixels());
             if (right.Length > 0)
             {
-                PrismType.DrawRight(drawList, new Vector2(row.Max.X, top), right, PrismArt.White, EditorialFace.Mono,
-                    PrismArt.MonoPixels());
+                PrismType.DrawRight(drawList, new Vector2(row.Max.X, top), right, PrismArt.White, EditorialFace.Label,
+                    PrismArt.LabelPixels());
             }
         }
         else
@@ -185,7 +185,7 @@ internal sealed partial class PrismApp : IPhoneApp
     }
 
     private Rect DrawLook(ImDrawListPtr drawList, Rect rect, string url, bool contain, float alpha = 1f,
-        float zoom = 1f)
+        float zoom = 1f, Vector2? pivot = null)
     {
         if (url.Length == 0)
         {
@@ -196,9 +196,9 @@ internal sealed partial class PrismApp : IPhoneApp
         if (texture is null)
         {
             var placeholder = PrismType.Upper(Loc.T(images.Failed(url) ? L.Common.ImageFailed : L.Common.Loading));
-            var size = PrismType.Measure(placeholder, EditorialFace.Mono, PrismArt.MonoPixels());
-            PrismType.Draw(drawList, rect.Center - size * 0.5f, placeholder, PrismArt.Faint, EditorialFace.Mono,
-                PrismArt.MonoPixels());
+            var size = PrismType.Measure(placeholder, EditorialFace.Label, PrismArt.LabelPixels());
+            PrismType.Draw(drawList, rect.Center - size * 0.5f, placeholder, PrismArt.Faint, EditorialFace.Label,
+                PrismArt.LabelPixels());
             return rect;
         }
 
@@ -214,7 +214,8 @@ internal sealed partial class PrismApp : IPhoneApp
         var (uv0, uv1) = contain
             ? (Vector2.Zero, Vector2.One)
             : ImageFit.Cover(texture.Size.X, texture.Size.Y, rect.Width, rect.Height);
-        var drawn = zoom == 1f ? frame : new Rect(frame.Center - frame.Size * 0.5f * zoom, frame.Center + frame.Size * 0.5f * zoom);
+        var anchor = pivot ?? frame.Center;
+        var drawn = zoom == 1f ? frame : new Rect(anchor + (frame.Min - anchor) * zoom, anchor + (frame.Max - anchor) * zoom);
         if (zoom != 1f)
         {
             drawList.PushClipRect(frame.Min, frame.Max, true);
@@ -244,18 +245,21 @@ internal sealed partial class PrismApp : IPhoneApp
     {
         var gutter = PrismArt.Gutter(scale);
         var width = content.Width - gutter * 2f;
-        var pixels = PrismType.Fit(PrismType.Upper(title), EditorialFace.Headline, width, NoticeMaxUnits * scale,
+        var pixels = PrismType.Fit(title, EditorialFace.Headline, width, NoticeMaxUnits * scale,
             NoticeMinUnits * scale, NoticeLines, out var lines);
-        var mono = PrismArt.MonoPixels();
-        var bodyLines = body.Length > 0 ? PrismType.Wrap(PrismType.Upper(body), EditorialFace.Mono, mono, width) : [];
+        var bodyHeight = body.Length > 0 ? Typography.MeasureWrappedBlock(body, TextStyles.Subheadline, width).Y : 0f;
         var height = lines.Length * PrismType.LineHeight(EditorialFace.Headline, pixels) + Metrics.Space.Md * scale +
-                     bodyLines.Length * PrismType.LineHeight(EditorialFace.Mono, mono);
+                     bodyHeight;
         var bottom = StripRect(content, scale, strips - 1).Min.Y - Metrics.Space.Lg * scale;
         var top = bottom - height;
         top += PrismType.DrawLines(drawList, new Vector2(content.Min.X + gutter, top), lines, PrismArt.White,
             EditorialFace.Headline, pixels) + Metrics.Space.Md * scale;
-        PrismType.DrawLines(drawList, new Vector2(content.Min.X + gutter, top), bodyLines, PrismArt.Muted,
-            EditorialFace.Mono, mono);
+        if (body.Length > 0)
+        {
+            Typography.DrawWrappedLeft(new Vector2(content.Min.X + gutter, top), body, PrismArt.Muted,
+                TextStyles.Subheadline, width);
+        }
+
         return bottom;
     }
 

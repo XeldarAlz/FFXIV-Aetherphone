@@ -12,15 +12,18 @@ internal static class PrismArt
     public const float GutterUnits = 14f;
     public const int Stars = 5;
 
-    private const float MonoRatio = 0.82f;
+    private const float LabelRatio = 0.82f;
     private const float LabelDigitUnits = 26f;
     private const float LabelPadUnits = 12f;
     private const float StitchInsetUnits = 4f;
     private const float StitchDashUnits = 5f;
-    private const float CircleStroke = 1.6f;
-    private const float CircleWobble = 0.08f;
-    private const float CircleStart = -2.2f;
+    private const float CircleStroke = 1.4f;
+    private const float CircleStart = -MathF.PI * 0.5f;
     private const int CircleSegments = 40;
+    private const float StoryBarUnits = 2f;
+    private const float StoryBarSpacingUnits = 4f;
+    private const float TagPadUnits = 8f;
+    private const float TagInsetUnits = 10f;
     private const float ShadeShare = 0.62f;
     private const float TopShadeUnits = 96f;
     private const float PressedAlpha = 0.82f;
@@ -47,7 +50,7 @@ internal static class PrismArt
 
     private static readonly string[] Digits = { "1", "2", "3", "4", "5" };
 
-    public static float MonoPixels() => Typography.LineHeight(TextStyles.Caption1) * MonoRatio;
+    public static float LabelPixels() => Typography.LineHeight(TextStyles.Caption1) * LabelRatio;
 
     public static float Gutter(float scale) => GutterUnits * scale;
 
@@ -67,14 +70,14 @@ internal static class PrismArt
 
     public static float Programme(ImDrawListPtr drawList, Rect row, string left, string right, Vector4 color)
     {
-        var pixels = MonoPixels();
-        PrismType.Draw(drawList, row.Min, left, color, EditorialFace.Mono, pixels);
+        var pixels = LabelPixels();
+        PrismType.Draw(drawList, row.Min, left, color, EditorialFace.Label, pixels);
         if (right.Length > 0)
         {
-            PrismType.DrawRight(drawList, new Vector2(row.Max.X, row.Min.Y), right, color, EditorialFace.Mono, pixels);
+            PrismType.DrawRight(drawList, new Vector2(row.Max.X, row.Min.Y), right, color, EditorialFace.Label, pixels);
         }
 
-        return PrismType.LineHeight(EditorialFace.Mono, pixels);
+        return PrismType.LineHeight(EditorialFace.Label, pixels);
     }
 
     public static bool Strip(ImDrawListPtr drawList, Rect rect, string left, string right, bool filled,
@@ -94,16 +97,16 @@ internal static class PrismArt
             drawList.AddRect(rect.Min, rect.Max, ImGui.GetColorU32(fill), 0f, ImDrawFlags.None, 1f);
         }
 
-        var pixels = MonoPixels();
+        var pixels = LabelPixels();
         var inset = rect.Height * 0.32f;
         var top = rect.Center.Y - pixels * 0.5f;
-        PrismType.Draw(drawList, new Vector2(rect.Min.X + inset, top), left, text, EditorialFace.Mono, pixels);
-        var room = rect.Width - inset * 3f - PrismType.Measure(left, EditorialFace.Mono, pixels).X;
-        if (right.Length > 0 && PrismType.Measure(right, EditorialFace.Mono, pixels).X <= room)
+        PrismType.Draw(drawList, new Vector2(rect.Min.X + inset, top), left, text, EditorialFace.Label, pixels);
+        var room = rect.Width - inset * 3f - PrismType.Measure(left, EditorialFace.Label, pixels).X;
+        if (right.Length > 0 && PrismType.Measure(right, EditorialFace.Label, pixels).X <= room)
         {
             var nudge = PressFx.Toward(ImGui.GetID(left), hovered ? 1f + ArrowNudge : 1f) - 1f;
             PrismType.DrawRight(drawList, new Vector2(rect.Max.X - inset + nudge * rect.Height, top), right, text,
-                EditorialFace.Mono, pixels);
+                EditorialFace.Label, pixels);
         }
 
         if (hovered)
@@ -116,13 +119,13 @@ internal static class PrismArt
 
     public static bool Link(ImDrawListPtr drawList, Vector2 topLeft, string label, Vector4 color, float scale)
     {
-        var pixels = MonoPixels();
-        var size = PrismType.Measure(label, EditorialFace.Mono, pixels);
+        var pixels = LabelPixels();
+        var size = PrismType.Measure(label, EditorialFace.Label, pixels);
         var pad = MathF.Max(0f, (Metrics.Size.TapTarget * scale - size.Y) * 0.5f);
         var min = new Vector2(topLeft.X, topLeft.Y - pad);
         var max = new Vector2(topLeft.X + size.X, topLeft.Y + size.Y + pad);
         var hovered = UiInteract.Hover(min, max);
-        PrismType.Draw(drawList, topLeft, label, hovered ? White : color, EditorialFace.Mono, pixels);
+        PrismType.Draw(drawList, topLeft, label, hovered ? White : color, EditorialFace.Label, pixels);
         Hairline(drawList, topLeft.X, topLeft.X + size.X, topLeft.Y + size.Y + 2f * scale, hovered ? White : color,
             scale);
         if (hovered)
@@ -134,7 +137,7 @@ internal static class PrismArt
     }
 
     public static float LabelHeight(float scale) =>
-        LabelPadUnits * 2f * scale + MonoPixels() * 1.6f + Metrics.Size.TapTarget * scale;
+        LabelPadUnits * 2f * scale + LabelPixels() * 1.6f + Metrics.Size.TapTarget * scale;
 
     public static int Label(ImDrawListPtr drawList, Rect rect, string prompt, int chosen, float circle, bool enabled,
         float scale)
@@ -142,9 +145,9 @@ internal static class PrismArt
         drawList.AddRectFilled(rect.Min, rect.Max, ImGui.GetColorU32(Bone));
         DrawStitch(drawList, rect, scale);
         var pad = LabelPadUnits * scale;
-        var pixels = MonoPixels();
+        var pixels = LabelPixels();
         PrismType.Draw(drawList, new Vector2(rect.Min.X + pad, rect.Min.Y + pad), prompt, InkMuted,
-            EditorialFace.Mono, pixels);
+            EditorialFace.Label, pixels);
         var cellTop = rect.Max.Y - pad - Metrics.Size.TapTarget * scale;
         var cellWidth = (rect.Width - pad * 2f) / Stars;
         var digitPixels = LabelDigitUnits * scale;
@@ -234,15 +237,41 @@ internal static class PrismArt
             return;
         }
 
-        var sweep = MathF.Tau * 1.08f * MathF.Min(1f, progress);
-        for (var index = 0; index <= CircleSegments; index++)
-        {
-            var angle = CircleStart + sweep * index / CircleSegments;
-            var wobble = 1f + CircleWobble * MathF.Sin(angle * 2f);
-            drawList.PathLineTo(center + new Vector2(MathF.Cos(angle) * radius * wobble * 1.12f,
-                MathF.Sin(angle) * radius * wobble));
-        }
-
+        var sweep = MathF.Tau * MathF.Min(1f, progress);
+        drawList.PathArcTo(center, radius, CircleStart, CircleStart + sweep, CircleSegments);
         drawList.PathStroke(ImGui.GetColorU32(color), ImDrawFlags.None, CircleStroke * scale);
+    }
+
+    public static void StoryBars(ImDrawListPtr drawList, float left, float right, float top, int count, int current,
+        float fill, float scale)
+    {
+        var gap = StoryBarSpacingUnits * scale;
+        var height = MathF.Max(1f, StoryBarUnits * scale);
+        var width = (right - left - gap * (count - 1)) / count;
+        for (var index = 0; index < count; index++)
+        {
+            var min = new Vector2(left + index * (width + gap), top);
+            drawList.AddRectFilled(min, new Vector2(min.X + width, top + height), ImGui.GetColorU32(Faint));
+            var share = index < current ? 1f : index == current ? Math.Clamp(fill, 0f, 1f) : 0f;
+            if (share > 0f)
+            {
+                drawList.AddRectFilled(min, new Vector2(min.X + width * share, top + height),
+                    ImGui.GetColorU32(White));
+            }
+        }
+    }
+
+    public static Vector2 Tag(ImDrawListPtr drawList, Vector2 topRight, string label, float scale)
+    {
+        var pixels = LabelPixels();
+        var pad = TagPadUnits * scale;
+        var size = PrismType.Measure(label, EditorialFace.Label, pixels) + new Vector2(pad * 2f, pad * 2f);
+        var inset = TagInsetUnits * scale;
+        var min = new Vector2(topRight.X - inset - size.X, topRight.Y + inset);
+        var rect = new Rect(min, min + size);
+        drawList.AddRectFilled(rect.Min, rect.Max, ImGui.GetColorU32(Bone));
+        DrawStitch(drawList, rect, scale);
+        PrismType.Draw(drawList, min + new Vector2(pad, pad), label, Ink, EditorialFace.Label, pixels);
+        return rect.Center;
     }
 }

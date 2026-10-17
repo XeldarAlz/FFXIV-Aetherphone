@@ -5598,6 +5598,8 @@
   "prism.submitting": "Отправляем ваши оценки…",
   "prism.heatName": "Раунд {0}",
   "prism.yourPlacing": "Ваше место",
+  "prism.tapHint": "Нажмите, чтобы увидеть следующий образ",
+  "prism.inspectHint": "Удерживайте, чтобы рассмотреть",
   "announcements.signInRequired": "Войдите в Aethernet в Настройках, чтобы читать объявления",
   "announcements.signInTitle": "Требуется вход",
   "announcements.emptyTitle": "Пока нет объявлений",

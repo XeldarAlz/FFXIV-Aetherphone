@@ -42,6 +42,23 @@ internal static class PrismMotion
         }
     }
 
+    public static void Scale(ImDrawListPtr drawList, int from, Vector2 pivot, float scale, float alpha)
+    {
+        if (alpha >= Settled)
+        {
+            return;
+        }
+
+        var transform = LayerTransform.ScaleAbout(pivot, scale, default, alpha);
+        var vertices = drawList.VtxBuffer.AsSpan();
+        for (var index = Math.Max(0, from); index < vertices.Length; index++)
+        {
+            ref var vertex = ref vertices[index];
+            vertex.Pos = transform.Map(vertex.Pos);
+            vertex.Col = transform.MapColor(vertex.Col);
+        }
+    }
+
     public static LayerTransform Stage(Rect full, float progress, int direction, float scale)
     {
         var alpha = MathF.Min(1f, progress);

@@ -54,7 +54,7 @@ Text renders in Inter, in four weights. `FontService` owns Dalamud's font atlas 
 - **Shared handles**: two Noto Sans CJK fonts (Regular and Medium) baked once at the largest size for scripts too big to bake per tier. Their glyphs are copied into every text font after each build.
 - **Icon handles**: FontAwesome with the Tabler subset merged on top, at a few sizes.
 - **Display handle**: Pirata One at one size, Latin only, built only while the Halloween theme is on. `NightWordmark` draws the seasonal wordmarks and blackletter user names with it, and falls back to the normal style for text outside that range.
-- **Editorial handles**: Unbounded Black for headlines and for a digits-only numeral size, and JetBrains Mono for programme text, each at one size with Latin and Cyrillic. They are built the first time `EditorialReady` is asked (only Prism asks) and released after five idle minutes. `PrismType` draws with them and falls back to the normal style for text outside their ranges.
+- **Editorial handles**: Inter at sizes past the text tiers, with their own tracking: Medium for headlines, Regular for a digits-only numeral size, and Medium for small tracked labels, covering Latin, Greek and Cyrillic. They are built the first time `EditorialReady` is asked (only Prism asks) and released after five idle minutes. `PrismType` draws with them and falls back to the normal style for text outside their ranges.
 
 Draw sites never pass raw sizes. `TextStyles` names the ladder, and each style snaps to a tier:
 

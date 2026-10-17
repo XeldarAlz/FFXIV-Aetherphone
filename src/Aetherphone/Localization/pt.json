@@ -5598,6 +5598,8 @@
   "prism.submitting": "Enviando suas notas…",
   "prism.heatName": "Rodada {0}",
   "prism.yourPlacing": "Sua colocação",
+  "prism.tapHint": "Toque para o próximo look",
+  "prism.inspectHint": "Segure para ver de perto",
   "announcements.signInRequired": "Entre no Aethernet em Ajustes para ler os avisos",
   "announcements.signInTitle": "É necessário entrar",
   "announcements.emptyTitle": "Nenhum aviso ainda",

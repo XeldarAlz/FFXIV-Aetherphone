@@ -5598,6 +5598,8 @@
   "prism.submitting": "Sending your scores…",
   "prism.heatName": "Heat {0}",
   "prism.yourPlacing": "Your placing",
+  "prism.tapHint": "Tap for the next look",
+  "prism.inspectHint": "Hold to look closer",
   "announcements.signInRequired": "Sign in to Aethernet in Settings to read announcements",
   "announcements.signInTitle": "Sign in required",
   "announcements.emptyTitle": "No announcements yet",

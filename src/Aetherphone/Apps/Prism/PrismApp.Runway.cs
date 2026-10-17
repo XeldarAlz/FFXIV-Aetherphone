@@ -21,6 +21,8 @@ internal sealed partial class PrismApp
     private const float TurnShift = 0.35f;
     private const float TurnIdle = 10f;
     private const float DoneTextDelay = 0.12f;
+    private const float InspectZoom = 2.2f;
+    private const float InspectHoldSeconds = 0.18f;
     private const int OutcomePending = 0;
     private const int OutcomeSent = 1;
     private const int OutcomeFailed = 2;
@@ -39,6 +41,9 @@ internal sealed partial class PrismApp
     private string previousLookUrl = string.Empty;
     private float turnAge = TurnIdle;
     private Spring progressLine = new(0f);
+    private Spring inspectZoom = new(0f);
+    private float inspectHold;
+    private Vector2 inspectFocus;
     private Spring circle = new(0f);
     private CachedText lookCounter;
     private CachedText doneCounter;
@@ -96,7 +101,7 @@ internal sealed partial class PrismApp
         if (lookIndex >= looks.Length)
         {
             DrawHeader(drawList, content, string.Empty, string.Empty, false, scale);
-            DrawCenteredMono(drawList, content, Loc.T(L.Prism.Submitting));
+            DrawCenteredLabel(drawList, content, Loc.T(L.Prism.Submitting));
             return;
         }
 
@@ -119,7 +124,7 @@ internal sealed partial class PrismApp
         var numeralPixels = LookNumeralUnits * scale;
         var photoBottom = label.Min.Y - Metrics.Space.Lg * scale - numeralPixels * (1f - NumeralOverlap);
         var photo = new Rect(new Vector2(content.Min.X, top), new Vector2(content.Max.X, photoBottom));
-        DrawTurningLook(drawList, photo, look, turn);
+        DrawTurningLook(drawList, photo, look, turn, delta, scale);
         DrawLookNumeral(drawList, new Vector2(photo.Min.X + gutter, photo.Max.Y - numeralPixels * NumeralOverlap),
             numeralPixels, turn, scale);
 
@@ -146,7 +151,7 @@ internal sealed partial class PrismApp
     {
         var gutter = PrismArt.Gutter(scale);
         var top = content.Min.Y + HeaderGapUnits * scale;
-        var mono = PrismArt.MonoPixels();
+        var labelPixels = PrismArt.LabelPixels();
         if (PrismArt.Link(drawList, new Vector2(content.Min.X + gutter, top), PrismType.Upper(Loc.T(L.Prism.Back)),
                 PrismArt.Muted, scale))
         {
@@ -154,18 +159,18 @@ internal sealed partial class PrismApp
         }
 
         var counter = LookCounter(lookIndex + 1, total, ballot);
-        var counterWidth = PrismType.Measure(counter, EditorialFace.Mono, mono).X;
+        var counterWidth = PrismType.Measure(counter, EditorialFace.Label, labelPixels).X;
         PrismType.Draw(drawList, new Vector2(content.Center.X - counterWidth * 0.5f, top), counter, PrismArt.White,
-            EditorialFace.Mono, mono);
+            EditorialFace.Label, labelPixels);
         var reportLabel = PrismType.Upper(Loc.T(L.Prism.Report));
-        var reportWidth = PrismType.Measure(reportLabel, EditorialFace.Mono, mono).X;
+        var reportWidth = PrismType.Measure(reportLabel, EditorialFace.Label, labelPixels).X;
         if (PrismArt.Link(drawList, new Vector2(content.Max.X - gutter - reportWidth, top), reportLabel,
                 PrismArt.Muted, scale))
         {
             OpenReport(lookId);
         }
 
-        var rule = top + PrismType.LineHeight(EditorialFace.Mono, mono) + HeaderGapUnits * 0.5f * scale;
+        var rule = top + PrismType.LineHeight(EditorialFace.Label, labelPixels) + HeaderGapUnits * 0.5f * scale;
         var span = content.Width - gutter * 2f;
         PrismArt.Hairline(drawList, content.Min.X + gutter, content.Max.X - gutter, rule, PrismArt.Faint, scale);
         var filled = progressLine.Step((lookIndex + 1f) / total, Motion.PageSettle, delta);
@@ -174,7 +179,8 @@ internal sealed partial class PrismApp
         return rule + HeaderGapUnits * scale;
     }
 
-    private void DrawTurningLook(ImDrawListPtr drawList, Rect photo, PrismLookDto look, float turn)
+    private void DrawTurningLook(ImDrawListPtr drawList, Rect photo, PrismLookDto look, float turn, float delta,
+        float scale)
     {
         var shift = new Vector2(photo.Width * TurnShift, 0f);
         drawList.PushClipRect(photo.Min, photo.Max, true);
@@ -184,8 +190,27 @@ internal sealed partial class PrismApp
                 1f - turn);
         }
 
+        var holding = turn >= PrismMotion.Settled && ImGui.IsMouseDown(ImGuiMouseButton.Left) &&
+                      UiInteract.Hover(photo.Min, photo.Max);
+        inspectHold = holding ? inspectHold + delta : 0f;
+        if (inspectHold >= InspectHoldSeconds)
+        {
+            inspectFocus = Vector2.Clamp(ImGui.GetMousePos(), photo.Min, photo.Max);
+        }
+
+        var inspect = inspectZoom.Step(inspectHold >= InspectHoldSeconds ? 1f : 0f, Motion.PageSettle, delta);
         var incoming = shift * (1f - turn);
-        DrawLook(drawList, new Rect(photo.Min + incoming, photo.Max + incoming), look.ImageUrl, true, turn);
+        DrawLook(drawList, new Rect(photo.Min + incoming, photo.Max + incoming), look.ImageUrl, true, turn,
+            1f + (InspectZoom - 1f) * inspect, inspectFocus);
+        if (lookIndex == 0 && inspect < PrismMotion.Settled && turn >= PrismMotion.Settled)
+        {
+            var hint = PrismType.Upper(Loc.T(L.Prism.InspectHint));
+            var labelPixels = PrismArt.LabelPixels();
+            PrismType.DrawRight(drawList, new Vector2(photo.Max.X - PrismArt.Gutter(scale),
+                photo.Min.Y + Metrics.Space.Sm * scale), hint, Palette.WithAlpha(PrismArt.White, 1f - inspect),
+                EditorialFace.Label, labelPixels);
+        }
+
         drawList.PopClipRect();
     }
 
@@ -260,7 +285,7 @@ internal sealed partial class PrismApp
     {
         if (store.Busy || !store.ActionFailed)
         {
-            DrawCenteredMono(drawList, content, Loc.T(L.Common.Loading));
+            DrawCenteredLabel(drawList, content, Loc.T(L.Common.Loading));
             return;
         }
 
@@ -309,12 +334,12 @@ internal sealed partial class PrismApp
             Motion.PageSettle), PrismMotion.RiseUnits * scale);
     }
 
-    private void DrawCenteredMono(ImDrawListPtr drawList, Rect content, string text)
+    private void DrawCenteredLabel(ImDrawListPtr drawList, Rect content, string text)
     {
         var upper = PrismType.Upper(text);
-        var mono = PrismArt.MonoPixels();
-        var size = PrismType.Measure(upper, EditorialFace.Mono, mono);
-        PrismType.Draw(drawList, content.Center - size * 0.5f, upper, PrismArt.Muted, EditorialFace.Mono, mono);
+        var labelPixels = PrismArt.LabelPixels();
+        var size = PrismType.Measure(upper, EditorialFace.Label, labelPixels);
+        PrismType.Draw(drawList, content.Center - size * 0.5f, upper, PrismArt.Muted, EditorialFace.Label, labelPixels);
     }
 
     private string LookCounter(int current, int total, PrismBallotDto ballot)

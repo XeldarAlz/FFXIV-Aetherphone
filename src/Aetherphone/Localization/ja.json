@@ -5598,6 +5598,8 @@
   "prism.submitting": "評価を送信中…",
   "prism.heatName": "予選{0}",
   "prism.yourPlacing": "あなたの順位",
+  "prism.tapHint": "タップで次のルック",
+  "prism.inspectHint": "長押しで拡大",
   "announcements.signInRequired": "お知らせを読むには設定からAethernetにログインしてください",
   "announcements.signInTitle": "ログインが必要です",
   "announcements.emptyTitle": "まだお知らせはありません",

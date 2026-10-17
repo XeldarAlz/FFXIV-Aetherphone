@@ -5598,6 +5598,8 @@
   "prism.submitting": "正在提交你的评分…",
   "prism.heatName": "第 {0} 组",
   "prism.yourPlacing": "你的名次",
+  "prism.tapHint": "点击查看下一套造型",
+  "prism.inspectHint": "长按放大查看",
   "announcements.signInRequired": "请在设置中登录Aethernet以阅读公告",
   "announcements.signInTitle": "需要登录",
   "announcements.emptyTitle": "暂无公告",

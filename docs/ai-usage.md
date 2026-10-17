@@ -51,7 +51,7 @@ Nobody is judged for the level they declare. An undeclared one is the problem.
 | --- | --- |
 | App icons | Painted from [Phosphor Icons](https://phosphoricons.com) fill glyphs, recolored, by the generator in tools/icon-generator. The one exception is the Rolladeck partner logo, shown with Rolladeck's live DJ listings in the Music app |
 | Emoji | [Twemoji](https://github.com/jdecked/twemoji) 15.1.0, unmodified |
-| Fonts | Inter in four weights, [Pirata One](https://github.com/google/fonts/tree/main/ofl/pirataone) for the seasonal Chirper, Aethergram and Velvet wordmarks and display names, [Unbounded](https://github.com/googlefonts/unbounded) Black and [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) Regular for the Prism app's headlines and programme text, and a subset of [Tabler Icons](https://tabler.io/icons) for the glyphs inside apps |
+| Fonts | Inter in four weights, [Pirata One](https://github.com/google/fonts/tree/main/ofl/pirataone) for the seasonal Chirper, Aethergram and Velvet wordmarks and display names, and a subset of [Tabler Icons](https://tabler.io/icons) for the glyphs inside apps |
 | Phone cases | Drawn by human artists, each credited by name in the app's Settings |
 | Interface sounds | Original to Aetherphone, synthesized from code in tools/sound-generator, plus a CC0 shutter from BigSoundBank, one Material Design sound by Google and two Android Open Source Project alarm tones |
 | Game sounds | Original to Aetherphone, synthesized from code in tools/sound-generator, plus CC0 card and chip recordings from Kenney |

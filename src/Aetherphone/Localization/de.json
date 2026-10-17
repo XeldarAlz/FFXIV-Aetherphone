@@ -5598,6 +5598,8 @@
   "prism.submitting": "Deine Bewertungen werden gesendet…",
   "prism.heatName": "Runde {0}",
   "prism.yourPlacing": "Deine Platzierung",
+  "prism.tapHint": "Tippen für den nächsten Look",
+  "prism.inspectHint": "Halten, um genauer hinzusehen",
   "announcements.signInRequired": "Melde dich in den Einstellungen bei Aethernet an, um Ankündigungen zu lesen",
   "announcements.signInTitle": "Anmeldung erforderlich",
   "announcements.emptyTitle": "Noch keine Ankündigungen",

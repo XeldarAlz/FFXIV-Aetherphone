@@ -7,7 +7,9 @@ namespace Aetherphone.Apps.Prism;
 internal static class PrismType
 {
     private const float FallbackDisplayScale = 1.90f;
-    private const float FallbackMonoScale = 1.00f;
+    private const float FallbackLabelScale = 1.00f;
+    private const float LabelLeading = 1.45f;
+    private const float HeadlineLeading = 1.08f;
     private const int CacheLimit = 256;
     private const float FitStep = 0.92f;
 
@@ -59,7 +61,7 @@ internal static class PrismType
         return width;
     }
 
-    public static float LineHeight(EditorialFace face, float pixels) => pixels * (face == EditorialFace.Mono ? 1.35f : 1.0f);
+    public static float LineHeight(EditorialFace face, float pixels) => pixels * (face == EditorialFace.Label ? LabelLeading : HeadlineLeading);
 
     public static string[] Wrap(string text, EditorialFace face, float pixels, float width)
     {
@@ -162,8 +164,8 @@ internal static class PrismType
         }
 
         Plugin.Fonts.NoticeText(text);
-        return face == EditorialFace.Mono
-            ? Plugin.Fonts.Push(FallbackMonoScale, FontWeight.Medium)
-            : Plugin.Fonts.Push(FallbackDisplayScale, FontWeight.Bold);
+        return face == EditorialFace.Label
+            ? Plugin.Fonts.Push(FallbackLabelScale, FontWeight.Medium)
+            : Plugin.Fonts.Push(FallbackDisplayScale, FontWeight.Medium);
     }
 }

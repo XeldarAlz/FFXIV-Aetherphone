@@ -21,7 +21,7 @@ internal enum EditorialFace : byte
 {
     Headline,
     Numerals,
-    Mono,
+    Label,
 }
 
 internal readonly struct FontToken : IDisposable
@@ -78,15 +78,15 @@ internal sealed class FontService : IDisposable
 
     private static readonly string[] EditorialFiles =
     {
-        "Unbounded-Black.ttf", "Unbounded-Black.ttf", "JetBrainsMono-Regular.ttf",
+        "Inter-Medium.ttf", "Inter-Regular.ttf", "Inter-Medium.ttf",
     };
 
     private static readonly float[] EditorialMultipliers = { 2.60f, 6.40f, 0.80f };
-    private static readonly float[] EditorialTracking = { -0.03f, -0.04f, 0.02f };
+    private static readonly float[] EditorialTracking = { -0.025f, -0.05f, 0.08f };
 
     private static readonly ushort[][] EditorialRanges =
     {
-        new ushort[] { 0x0020, 0x017E, 0x0400, 0x045F, 0x2018, 0x201E, 0x0000 },
+        new ushort[] { 0x0020, 0x017E, 0x0370, 0x03FF, 0x0400, 0x045F, 0x2018, 0x2026, 0x0000 },
         new ushort[] { 0x002F, 0x0039, 0x0000 },
         new ushort[] { 0x0020, 0x017E, 0x0370, 0x03FF, 0x0400, 0x045F, 0x2018, 0x2026, 0x2190, 0x2193, 0x0000 },
     };
