@@ -83,6 +83,21 @@ public sealed class TimeTextCacheTests
     }
 
     [Fact]
+    public void CompactClockIsTheClockWithoutTheDayPeriod()
+    {
+        var start = new DateTime(2026, 3, 14, 0, 0, 0, DateTimeKind.Local);
+        for (var minute = 0; minute < 24 * 60; minute += 13)
+        {
+            var moment = start.AddMinutes(minute);
+            var compact = TimeText.CompactClock(moment);
+            Assert.StartsWith(compact, TimeText.Clock(moment));
+            var dayPeriod = TimeText.Clock(moment)[compact.Length..].Trim();
+            Assert.True(dayPeriod.Length == 0 || dayPeriod == Loc.Culture.DateTimeFormat.AMDesignator ||
+                        dayPeriod == Loc.Culture.DateTimeFormat.PMDesignator);
+        }
+    }
+
+    [Fact]
     public void ClockStaysCorrectPastTheCacheLimit()
     {
         var start = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Local);

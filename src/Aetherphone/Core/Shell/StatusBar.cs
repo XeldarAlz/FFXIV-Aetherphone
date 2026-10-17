@@ -11,7 +11,6 @@ internal static class StatusBar
 {
     private const float TimeScale = 0.95f;
     private const FontWeight TimeWeight = FontWeight.SemiBold;
-    private const float TimePadding = 24f;
     private const float EarGap = 10f;
     private const float IndicatorGap = 6f;
     private const float IndicatorHeight = 11f;
@@ -33,7 +32,7 @@ internal static class StatusBar
         {
             cachedTimeKey = key;
             cachedFormatVersion = TimeText.FormatVersion;
-            cachedTime = TimeText.Clock(now);
+            cachedTime = TimeText.CompactClock(now);
         }
 
         return cachedTime;
@@ -55,11 +54,12 @@ internal static class StatusBar
         var drawList = ImGui.GetWindowDrawList();
         var vertexStart = drawList.VtxBuffer.Size;
         var earGap = EarGap * scale;
-        var timeLeft = MathF.Min(screen.Min.X + TimePadding * scale,
-            island.Min.X - earGap - timeSize.X - IndicatorsWidth(scale));
+        var earRight = island.Min.X - earGap;
+        var edgeInset = (earRight - screen.Min.X - StatusIcons.MeasureWidth(scale, Plugin.Device.BatteryPercent)) * 0.5f;
+        var timeLeft = MathF.Min(screen.Min.X + edgeInset, earRight - timeSize.X);
         Typography.Draw(new Vector2(timeLeft, rowCenterY - timeSize.Y * 0.5f), localTime, theme.TextStrong, TimeScale,
             TimeWeight);
-        DrawIndicators(drawList, timeLeft + timeSize.X, rowCenterY, scale, theme);
+        DrawIndicators(drawList, timeLeft + timeSize.X, earRight, rowCenterY, scale, theme);
         StatusIcons.Draw(screen, theme, rowCenterY, island.Max.X + earGap);
         LayerCompositor.Fade(drawList, vertexStart, Math.Clamp(alpha, 0f, 1f));
     }
@@ -83,17 +83,18 @@ internal static class StatusBar
 
     private static float IndicatorsWidth(float scale) => IndicatorCount() * (IndicatorGap + IndicatorHeight) * scale;
 
-    private static void DrawIndicators(ImDrawListPtr drawList, float timeRight, float rowCenterY, float scale,
-        PhoneTheme theme)
+    private static void DrawIndicators(ImDrawListPtr drawList, float timeRight, float limit, float rowCenterY,
+        float scale, PhoneTheme theme)
     {
         var configuration = Plugin.Cfg;
+        var slot = (IndicatorGap + IndicatorHeight) * scale;
         var cursor = timeRight;
-        if (configuration.DoNotDisturb)
+        if (configuration.DoNotDisturb && cursor + slot <= limit)
         {
             cursor = DrawIndicator(drawList, cursor, rowCenterY, scale, FontAwesomeIcon.Moon, DndTone);
         }
 
-        if (configuration.LockPosition)
+        if (configuration.LockPosition && cursor + slot <= limit)
         {
             DrawIndicator(drawList, cursor, rowCenterY, scale, FontAwesomeIcon.Lock, theme.TextStrong);
         }
