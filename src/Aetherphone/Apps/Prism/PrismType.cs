@@ -36,20 +36,30 @@ internal static class PrismType
         return title;
     }
 
+    public static float Snap(EditorialFace face, float pixels)
+    {
+        var scale = UiScale.Current;
+        return FontService.EditorialUnits(face, FontService.EditorialStep(face, pixels / scale)) * scale;
+    }
+
     public static Vector2 Measure(string text, EditorialFace face, float pixels)
     {
-        using (Push(text, face))
+        var native = Native(text, face);
+        using (Push(text, face, pixels, native))
         {
-            return ImGui.CalcTextSize(text) * (pixels / ImGui.GetFontSize());
+            var size = ImGui.CalcTextSize(text);
+            return native ? size : size * (Snap(face, pixels) / ImGui.GetFontSize());
         }
     }
 
     public static void Draw(ImDrawListPtr drawList, Vector2 position, string text, Vector4 color, EditorialFace face,
         float pixels)
     {
-        using (Push(text, face))
+        var native = Native(text, face);
+        using (Push(text, face, pixels, native))
         {
-            drawList.AddText(ImGui.GetFont(), pixels, position, ImGui.GetColorU32(color), text);
+            drawList.AddText(ImGui.GetFont(), native ? ImGui.GetFontSize() : Snap(face, pixels), position,
+                ImGui.GetColorU32(color), text);
         }
     }
 
@@ -61,11 +71,11 @@ internal static class PrismType
         return width;
     }
 
-    public static float LineHeight(EditorialFace face, float pixels) => pixels * (face == EditorialFace.Label ? LabelLeading : HeadlineLeading);
+    public static float LineHeight(EditorialFace face, float pixels) => Snap(face, pixels) * (face == EditorialFace.Label ? LabelLeading : HeadlineLeading);
 
     public static string[] Wrap(string text, EditorialFace face, float pixels, float width)
     {
-        var key = new WrapKey(text, face, (int)MathF.Round(pixels), (int)MathF.Round(width), Native(text, face));
+        var key = new WrapKey(text, face, (int)MathF.Round(Snap(face, pixels)), (int)MathF.Round(width), Native(text, face));
         if (WrapCache.TryGetValue(key, out var cached))
         {
             return cached;
@@ -117,16 +127,17 @@ internal static class PrismType
     public static float Fit(string text, EditorialFace face, float width, float maxPixels, float minPixels,
         int maxLines, out string[] lines)
     {
-        var pixels = maxPixels;
+        var pixels = Snap(face, maxPixels);
+        var floor = Snap(face, minPixels);
         while (true)
         {
             lines = Wrap(text, face, pixels, width);
-            if (pixels <= minPixels || (lines.Length <= maxLines && Widest(lines, face, pixels) <= width))
+            if (pixels <= floor + 0.01f || (lines.Length <= maxLines && Widest(lines, face, pixels) <= width))
             {
                 return pixels;
             }
 
-            pixels = MathF.Max(minPixels, pixels * FitStep);
+            pixels = Snap(face, pixels * FitStep);
         }
     }
 
@@ -156,11 +167,11 @@ internal static class PrismType
     private static bool Native(string text, EditorialFace face) =>
         Plugin.Fonts.EditorialReady(face) && FontService.EditorialCovers(face, text);
 
-    private static FontToken Push(string text, EditorialFace face)
+    private static FontToken Push(string text, EditorialFace face, float pixels, bool native)
     {
-        if (Native(text, face))
+        if (native)
         {
-            return Plugin.Fonts.PushEditorial(face);
+            return Plugin.Fonts.PushEditorial(face, FontService.EditorialStep(face, pixels / UiScale.Current));
         }
 
         Plugin.Fonts.NoticeText(text);

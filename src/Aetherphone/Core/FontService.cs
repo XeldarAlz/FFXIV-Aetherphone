@@ -81,7 +81,13 @@ internal sealed class FontService : IDisposable
         "Inter-Bold.ttf", "Inter-Regular.ttf", "Inter-Medium.ttf",
     };
 
-    private static readonly float[] EditorialMultipliers = { 3.00f, 12.50f, 0.90f };
+    private static readonly float[][] EditorialSizes =
+    {
+        new[] { 24f, 28f, 32f, 40f, 48f },
+        new[] { 48f, 64f, 88f, 96f, 120f, 200f },
+        new[] { 11f, 12f, 13f, 14f, 15f, 16f, 18f, 20f },
+    };
+
     private static readonly float[] EditorialTracking = { -0.03f, -0.05f, 0f };
 
     private static readonly ushort[][] EditorialRanges =
@@ -107,9 +113,14 @@ internal sealed class FontService : IDisposable
     private readonly ImFontPtr[,] textFonts = new ImFontPtr[WeightFiles.Length, SizeMultipliers.Length];
     private readonly IFontHandle dalamudIconHandle;
     private IFontHandle? displayHandle;
-    private readonly IFontHandle?[] editorialHandles = new IFontHandle?[EditorialFiles.Length];
+    private readonly IFontHandle?[][] editorialHandles =
+    {
+        new IFontHandle?[EditorialSizes[0].Length], new IFontHandle?[EditorialSizes[1].Length],
+        new IFontHandle?[EditorialSizes[2].Length],
+    };
     private long editorialUsedAt = -EditorialIdleMs;
     private float editorialZoom;
+    private float editorialWantedZoom;
     private ushort[] nativeRanges;
     private ushort[] sharedRanges;
     private ushort[] fontAwesomeRanges;
@@ -163,11 +174,29 @@ internal sealed class FontService : IDisposable
     public bool EditorialReady(EditorialFace face)
     {
         editorialUsedAt = Environment.TickCount64;
-        return editorialHandles[(int)face] is { Available: true };
+        editorialWantedZoom = phoneZoom;
+        return editorialHandles[(int)face][0] is { Available: true };
     }
 
-    public FontToken PushEditorial(EditorialFace face) =>
-        new(editorialHandles[(int)face] is { } handle ? handle.Push() : textHandles[0, 0].Push());
+    public FontToken PushEditorial(EditorialFace face, int step) =>
+        new(editorialHandles[(int)face][step] is { } handle ? handle.Push() : textHandles[0, 0].Push());
+
+    public static int EditorialStep(EditorialFace face, float units)
+    {
+        var sizes = EditorialSizes[(int)face];
+        var step = 0;
+        for (var index = 1; index < sizes.Length; index++)
+        {
+            if (sizes[index] <= units + 0.01f)
+            {
+                step = index;
+            }
+        }
+
+        return step;
+    }
+
+    public static float EditorialUnits(EditorialFace face, int step) => EditorialSizes[(int)face][step];
 
     public static bool EditorialCovers(EditorialFace face, ReadOnlySpan<char> text)
     {
@@ -199,31 +228,43 @@ internal sealed class FontService : IDisposable
     public void SyncEditorial()
     {
         var wanted = Environment.TickCount64 - editorialUsedAt < EditorialIdleMs;
-        var built = editorialHandles[0] is not null;
-        var outgrown = built && phoneZoom > editorialZoom + 0.001f;
-        if (built == wanted && !outgrown)
+        var built = editorialHandles[0][0] is not null;
+        var stale = built && MathF.Abs(editorialWantedZoom - editorialZoom) > 0.001f;
+        if (built == wanted && !stale)
         {
             return;
         }
 
-        for (var index = 0; index < editorialHandles.Length; index++)
-        {
-            editorialHandles[index]?.Dispose();
-            editorialHandles[index] = null;
-        }
-
+        ReleaseEditorial();
         if (!wanted)
         {
             return;
         }
 
-        editorialZoom = phoneZoom;
+        editorialZoom = editorialWantedZoom;
         using (atlas.SuppressAutoRebuild())
         {
-            for (var index = 0; index < editorialHandles.Length; index++)
+            for (var faceIndex = 0; faceIndex < editorialHandles.Length; faceIndex++)
             {
-                editorialHandles[index] = BuildFaceHandle(EditorialFiles[index], EditorialMultipliers[index],
-                    EditorialRanges[index], EditorialTracking[index], editorialZoom);
+                var sizes = EditorialSizes[faceIndex];
+                for (var step = 0; step < sizes.Length; step++)
+                {
+                    editorialHandles[faceIndex][step] = BuildFaceHandle(EditorialFiles[faceIndex],
+                        sizes[step] * editorialZoom, EditorialRanges[faceIndex], EditorialTracking[faceIndex], true);
+                }
+            }
+        }
+    }
+
+    private void ReleaseEditorial()
+    {
+        for (var faceIndex = 0; faceIndex < editorialHandles.Length; faceIndex++)
+        {
+            var handles = editorialHandles[faceIndex];
+            for (var step = 0; step < handles.Length; step++)
+            {
+                handles[step]?.Dispose();
+                handles[step] = null;
             }
         }
     }
@@ -586,17 +627,17 @@ internal sealed class FontService : IDisposable
     }
 
     private IFontHandle BuildDisplayHandle() =>
-        BuildFaceHandle(DisplayFontFile, DisplayMultiplier, DisplayRanges, 0f, MaxZoom);
+        BuildFaceHandle(DisplayFontFile, baseSize * DisplayMultiplier * MaxZoom, DisplayRanges, 0f, false);
 
-    private IFontHandle BuildFaceHandle(string file, float multiplier, ushort[] ranges, float tracking, float scale)
+    private IFontHandle BuildFaceHandle(string file, float pixels, ushort[] ranges, float tracking, bool snap)
     {
-        var pixels = baseSize * multiplier * scale;
         var path = Path.Combine(fontDirectory, file);
         return atlas.NewDelegateFontHandle(e => e.OnPreBuild(tk =>
         {
             var config = new SafeFontConfig
             {
                 SizePx = pixels, GlyphRanges = ranges, GlyphExtraSpacing = new Vector2(pixels * tracking, 0f),
+                PixelSnapH = snap,
             };
             if (!File.Exists(path))
             {
@@ -884,10 +925,7 @@ internal sealed class FontService : IDisposable
         atlas.BuildStepChange -= MeasureCrests;
         DisposeHandles(textHandles, sharedHandles, iconHandles);
         displayHandle?.Dispose();
-        for (var index = 0; index < editorialHandles.Length; index++)
-        {
-            editorialHandles[index]?.Dispose();
-        }
+        ReleaseEditorial();
     }
 
     private static void DisposeHandles(IFontHandle[,] text, IFontHandle[] shared, IFontHandle[] icons)
