@@ -1305,7 +1305,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             OpenProfileFromPost(post.AuthorId, post.Id);
         }
 
-        var moreExtent = new Vector2(moreRadius, moreRadius);
+        var moreExtent = new Vector2(MathF.Max(moreRadius, Metrics.Size.TapTarget * 0.5f * scale));
         var moreHovered = UiInteract.Hover(moreCenter - moreExtent, moreCenter + moreExtent);
         if (moreHovered)
         {

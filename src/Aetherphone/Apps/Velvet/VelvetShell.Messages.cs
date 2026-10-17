@@ -543,7 +543,7 @@ internal sealed partial class VelvetShell
                 var hit = VRow.Cell(in model, theme, images, lodestone);
                 if (hit == VRowHit.Pill)
                 {
-                    store.CancelRequest(request.UserId);
+                    AskWithdrawIntro(request.UserId, model.Name);
                 }
                 else if (hit == VRowHit.Body)
                 {

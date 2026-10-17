@@ -291,7 +291,7 @@ internal sealed partial class VelvetShell
             case VelvetConnectionState.OutgoingRequest:
                 if (Button.Draw(drawList, rect, Loc.T(L.Velvet.Requested), VelvetTheme.Ink, ButtonStyle.Gray))
                 {
-                    store.CancelRequest(user.UserId);
+                    AskWithdrawIntro(user.UserId, DisplayNameOf(user.DisplayName, user.Handle));
                 }
 
                 break;
@@ -501,6 +501,18 @@ internal sealed partial class VelvetShell
                 store.Disconnect(userId);
                 router.Reset();
             },
+        });
+    }
+
+    private void AskWithdrawIntro(string userId, string name)
+    {
+        confirm.Ask(new ConfirmRequest
+        {
+            Message = Loc.T(L.Velvet.WithdrawIntroConfirm, name),
+            ConfirmLabel = Loc.T(L.Velvet.WithdrawIntro),
+            CancelLabel = Loc.T(L.Velvet.DeleteCancel),
+            Sheet = true,
+            Confirm = () => store.CancelRequest(userId),
         });
     }
 

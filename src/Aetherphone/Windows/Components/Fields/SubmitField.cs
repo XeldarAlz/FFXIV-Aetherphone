@@ -70,7 +70,8 @@ internal static class SubmitField
         }
 
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (UiInteract.Click(clearCenter - new Vector2(clearRadius, clearRadius),
+                clearCenter + new Vector2(clearRadius, clearRadius), true))
         {
             text = string.Empty;
         }
@@ -145,7 +146,8 @@ internal static class SubmitField
         }
 
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (UiInteract.Click(clearCenter - new Vector2(clearRadius, clearRadius),
+                clearCenter + new Vector2(clearRadius, clearRadius), true))
         {
             editor.Adopt(string.Empty);
         }

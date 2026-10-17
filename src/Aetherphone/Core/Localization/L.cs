@@ -7150,6 +7150,8 @@ internal static class L
         public static readonly LocString ThreadEmpty = new("velvet.threadEmpty", "Say hello");
         public static readonly LocString Connect = new("velvet.connect", "Connect");
         public static readonly LocString Requested = new("velvet.requested", "Requested");
+        public static readonly LocString WithdrawIntro = new("velvet.withdrawIntro", "Withdraw");
+        public static readonly LocString WithdrawIntroConfirm = new("velvet.withdrawIntroConfirm", "Withdraw your intro to {0}?");
         public static readonly LocString Message = new("velvet.message", "Message");
         public static readonly LocString MessageHint = new("velvet.messageHint", "Write a message…");
         public static readonly LocString Send = new("velvet.send", "Send");
@@ -8825,6 +8827,7 @@ internal static class L
         public static readonly LocString AlertHitTitle = new("market.alertHitTitle", "Triggered Alerts");
         public static readonly LocString AlertHitNow = new("market.alertHitNow", "{0} · now {1}");
         public static readonly LocString RemoveAlert = new("market.removeAlert", "Remove alert");
+        public static readonly LocString RemoveAlertConfirm = new("market.removeAlertConfirm", "Remove the alert for {0}?");
         public static readonly LocString NewAlert = new("market.newAlert", "New Price Alert");
         public static readonly LocString GilPrice = new("market.gilPrice", "Price in gil");
         public static readonly LocString Lower = new("market.lower", "Lower");

@@ -146,7 +146,7 @@ internal sealed partial class YellowPagesApp
         }
         else
         {
-            var moreExtent = new Vector2(moreRadius, moreRadius);
+            var moreExtent = new Vector2(MathF.Max(moreRadius, Metrics.Size.TapTarget * 0.5f * scale));
             var moreHovered = UiInteract.Hover(moreCenter - moreExtent, moreCenter + moreExtent);
             if (moreHovered)
             {

@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Market;
 using Aetherphone.Core.Notifications;
@@ -14,7 +15,7 @@ namespace Aetherphone.Apps.Market;
 internal sealed partial class MarketApp
 {
     private const float ToggleGap = 10f;
-    private const float RemoveRadius = 15f;
+    private const float RemoveRadius = 22f;
     private const float RemoveGlyphRadius = 9f;
     private const int MaxSaleRows = 64;
 
@@ -399,12 +400,26 @@ internal sealed partial class MarketApp
 
         if (removed is not null)
         {
-            UiFeedback.Play(UiSound.ToggleOff);
-            alerts.Remove(removed);
+            AskRemoveAlert(removed);
         }
 
         return max.Y;
     }
+
+    private void AskRemoveAlert(MarketAlert alert) =>
+        confirm.Ask(new ConfirmRequest
+        {
+            Message = Loc.T(L.Market.RemoveAlertConfirm, alert.ItemName),
+            ConfirmLabel = Loc.T(L.Market.RemoveAlert),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Sheet = true,
+            Danger = true,
+            Confirm = () =>
+            {
+                UiFeedback.Play(UiSound.ToggleOff);
+                alerts.Remove(alert);
+            },
+        });
 
     private string AlertId(int alertIndex)
     {

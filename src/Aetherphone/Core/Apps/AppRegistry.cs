@@ -113,7 +113,7 @@ internal static class AppRegistry
         apps.Add(new MapsApp(services.Maps, services.Configuration, services.ZoneMapTextures));
         apps.Add(new NewsApp(services.News, services.RemoteImages, services.GameData));
         apps.Add(new CollectionsApp(services.Collections, services.CollectionsJournal, services.Lodestone, services.Media, services.Http, services.GameData, services.MarketLauncher));
-        apps.Add(new MarketApp(services.Market, services.MarketIndex, services.MarketAlerts, services.MarketWatchlist, services.MarketLauncher, services.GameData, services.Textures, services.Configuration));
+        apps.Add(new MarketApp(services.Market, services.MarketIndex, services.MarketAlerts, services.MarketWatchlist, services.MarketLauncher, services.GameData, services.Textures, services.Configuration, services.Confirm));
         apps.Add(new WalletApp(services.Wallet, services.GameData, services.Textures));
         apps.Add(new InventoryApp(services.InventoryCapture, services.GameData, services.Textures, new InventoryItemSheet(Plugin.DataManager), services.Market, services.MarketLauncher, services.Configuration));
         apps.Add(new JobsApp(services.GameData, services.Textures, services.Configuration, services.Confirm, services.CharacterWatch));
