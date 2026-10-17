@@ -31,7 +31,7 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Chirper;
 
-internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INameplateHandleSource
+internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INameplateHandleSource, ISocialFeed
 {
     private enum SheetKind
     {
@@ -182,6 +182,14 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
     public string Glyph => "Ch";
     public int BadgeCount => social.UnseenCount(Id);
     public bool HasBadge => true;
+    public SocialFeedScope LatestScope => latestScope;
+
+    public PostDto[] Feed(SocialFeedScope scope) => store.Feed(scope);
+
+    public bool IsLoading(SocialFeedScope scope) => store.IsLoading(scope);
+
+    public void Load(SocialFeedScope scope) => store.RefreshFeed(scope);
+
     public ShareKindSet AcceptedShares => store.IsSignedIn ? ShareKindSet.Photo : ShareKindSet.None;
     private readonly ChirperStore store;
     private readonly SocialLauncher launcher;

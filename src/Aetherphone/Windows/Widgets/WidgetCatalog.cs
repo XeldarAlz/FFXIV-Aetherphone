@@ -4,6 +4,7 @@ using Aetherphone.Apps.Calendar;
 using Aetherphone.Apps.Calendar.Widgets;
 using Aetherphone.Apps.Casino.Widgets;
 using Aetherphone.Apps.Clock.Widgets;
+using Aetherphone.Apps.Chirper.Widgets;
 using Aetherphone.Apps.Coin.Widgets;
 using Aetherphone.Apps.Dailies.Widgets;
 using Aetherphone.Apps.Fishing.Widgets;
@@ -69,6 +70,7 @@ internal static class WidgetCatalog
             new ChatsWidget(messages, phone.Configuration, phone.AethernetSession, phone.RemoteImages),
             new TellsWidget(phone.ChatInbox, phone.ChatLog, phone.Lodestone),
             new RecentNotificationsWidget(phone.Notifications),
+            new ChirperWidget(services),
         };
 
         AddUtility(widgets, services);
