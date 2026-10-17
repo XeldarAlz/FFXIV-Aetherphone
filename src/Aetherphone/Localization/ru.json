@@ -10870,6 +10870,8 @@
   "widgetsPeople.notificationsDescription": "Ваши последние уведомления с одного взгляда.",
   "widgetsPeople.noNotifications": "Нет уведомлений",
   "widgetsPeople.caughtUp": "Вы всё просмотрели.",
+  "widgetsPeople.dailySummary": "Сводка за день",
+  "widgetsPeople.dailySummaryDescription": "Новые сообщения и посты, а также то, что осталось сделать до ежедневного сброса.",
   "widgetsPeople.signInHint": "Войдите в Aethernet, чтобы увидеть это.",
   "widgetsPeople.sampleMessage": "Увидимся сегодня вечером в Gold Saucer?",
   "widgetsPeople.sampleMessageRaid": "Рейд начинается в девять, возьми еду.",

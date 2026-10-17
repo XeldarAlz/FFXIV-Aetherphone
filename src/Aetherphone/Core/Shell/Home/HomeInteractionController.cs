@@ -39,6 +39,7 @@ internal sealed class HomeInteractionController
     private readonly FolderOverlay folder;
     private readonly WidgetContextMenu widgetMenu;
     private readonly WidgetGallery gallery;
+    private readonly DailySummarySheet summary;
     private readonly Spotlight.SpotlightOverlay spotlight;
     private readonly TilePoseCache poses;
     private readonly ShortcutRunner runner;
@@ -89,7 +90,8 @@ internal sealed class HomeInteractionController
     private Spring settleY;
 
     public HomeInteractionController(HomeLayoutService layout, Pager pager, FolderOverlay folder,
-        WidgetContextMenu widgetMenu, WidgetGallery gallery, Spotlight.SpotlightOverlay spotlight, TilePoseCache poses,
+        WidgetContextMenu widgetMenu, WidgetGallery gallery, DailySummarySheet summary,
+        Spotlight.SpotlightOverlay spotlight, TilePoseCache poses,
         ShortcutRunner runner, WidgetHost widgetHost)
     {
         this.layout = layout;
@@ -98,6 +100,7 @@ internal sealed class HomeInteractionController
         this.folder = folder;
         this.widgetMenu = widgetMenu;
         this.gallery = gallery;
+        this.summary = summary;
         this.spotlight = spotlight;
         this.poses = poses;
         this.runner = runner;
@@ -149,8 +152,10 @@ internal sealed class HomeInteractionController
     public bool WidgetsInteractive(in HomeMotion motion) =>
         motion.Interactive && !editing && dragTile is null && settleTile is null && resizeTile is null &&
         !folder.Active &&
-        !gallery.Active && !widgetMenu.Active && !spotlight.Active && !pager.Dragging &&
+        !SheetActive && !widgetMenu.Active && !spotlight.Active && !pager.Dragging &&
         MathF.Abs(pager.Value - pager.Page) < 0.001f;
+
+    private bool SheetActive => gallery.Active || summary.Active;
 
     public void HandleInput(Rect content, in HomeMetrics metrics, INavigator navigation, PhoneTheme theme,
         float delta)
@@ -165,7 +170,7 @@ internal sealed class HomeInteractionController
             StartDrag(draggedOut, draggedCenter, ImGui.GetMousePos(), pager.Page, false);
         }
 
-        if (gallery.Active || folder.Active && dragTile is null || widgetMenu.Active || spotlight.Active)
+        if (SheetActive || folder.Active && dragTile is null || widgetMenu.Active || spotlight.Active)
         {
             if (pressActive)
             {
@@ -298,7 +303,7 @@ internal sealed class HomeInteractionController
     }
 
     public bool RemoveBadgesLive(in HomeMotion motion) =>
-        editing && motion.Interactive && !gallery.Active && !widgetMenu.Active && !folder.Active;
+        editing && motion.Interactive && !SheetActive && !widgetMenu.Active && !folder.Active;
 
     private bool HandleEditChromeClick(Rect content, in HomeMetrics metrics, Vector2 mouse)
     {
@@ -838,7 +843,7 @@ internal sealed class HomeInteractionController
     {
         hoverPointer = ImGui.GetMousePos();
         var active = motion.Interactive && !editing && dragTile is null && settleTile is null &&
-                     !folder.Active && !gallery.Active && !widgetMenu.Active && !spotlight.Active &&
+                     !folder.Active && !SheetActive && !widgetMenu.Active && !spotlight.Active &&
                      !pager.Dragging && UiInteract.Hover(content.Min, content.Max);
         hoverTile = active ? TileAt(metrics, hoverPointer, out _) : null;
         if (hoverTile is not null && FindPointer(hoverTile) is null)

@@ -10870,6 +10870,8 @@
   "widgetsPeople.notificationsDescription": "Tus últimas notificaciones de un vistazo.",
   "widgetsPeople.noNotifications": "Sin notificaciones",
   "widgetsPeople.caughtUp": "Estás al día.",
+  "widgetsPeople.dailySummary": "Resumen diario",
+  "widgetsPeople.dailySummaryDescription": "Mensajes y publicaciones nuevos, y lo que te queda por hacer antes del reinicio diario.",
   "widgetsPeople.signInHint": "Inicia sesión en Aethernet para ver esto.",
   "widgetsPeople.sampleMessage": "¿Nos vemos esta noche en el Gold Saucer?",
   "widgetsPeople.sampleMessageRaid": "La raid empieza a las nueve, trae comida.",

@@ -10870,6 +10870,8 @@
   "widgetsPeople.notificationsDescription": "Your latest notifications at a glance.",
   "widgetsPeople.noNotifications": "No Notifications",
   "widgetsPeople.caughtUp": "You're all caught up.",
+  "widgetsPeople.dailySummary": "Daily Summary",
+  "widgetsPeople.dailySummaryDescription": "New messages and posts, plus what's left to do before the daily reset.",
   "widgetsPeople.signInHint": "Sign in to Aethernet to see this.",
   "widgetsPeople.sampleMessage": "See you at the Gold Saucer tonight?",
   "widgetsPeople.sampleMessageRaid": "Raid starts at nine, bring food.",

@@ -69,6 +69,7 @@ internal static class WidgetCatalog
             new ChatsWidget(messages, phone.Configuration, phone.AethernetSession, phone.RemoteImages),
             new TellsWidget(phone.ChatInbox, phone.ChatLog, phone.Lodestone),
             new RecentNotificationsWidget(phone.Notifications),
+            new DailySummaryWidget(services),
         };
 
         AddUtility(widgets, services);

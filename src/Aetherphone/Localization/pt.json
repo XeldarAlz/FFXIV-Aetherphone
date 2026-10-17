@@ -10870,6 +10870,8 @@
   "widgetsPeople.notificationsDescription": "Suas notificações mais recentes num relance.",
   "widgetsPeople.noNotifications": "Nenhuma notificação",
   "widgetsPeople.caughtUp": "Você está em dia.",
+  "widgetsPeople.dailySummary": "Resumo diário",
+  "widgetsPeople.dailySummaryDescription": "Novas mensagens e publicações, e o que falta fazer antes do reset diário.",
   "widgetsPeople.signInHint": "Entre no Aethernet para ver isto.",
   "widgetsPeople.sampleMessage": "Te vejo no Gold Saucer hoje à noite?",
   "widgetsPeople.sampleMessageRaid": "A raid começa às nove, traga comida.",

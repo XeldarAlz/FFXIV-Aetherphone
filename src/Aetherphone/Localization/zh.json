@@ -10870,6 +10870,8 @@
   "widgetsPeople.notificationsDescription": "一眼查看最新通知。",
   "widgetsPeople.noNotifications": "没有通知",
   "widgetsPeople.caughtUp": "你已全部查看。",
+  "widgetsPeople.dailySummary": "每日摘要",
+  "widgetsPeople.dailySummaryDescription": "新消息和帖子，以及每日重置前还要做的事。",
   "widgetsPeople.signInHint": "登录 Aethernet 即可查看。",
   "widgetsPeople.sampleMessage": "今晚在金碟游乐场见？",
   "widgetsPeople.sampleMessageRaid": "团本九点开始，记得带食物。",

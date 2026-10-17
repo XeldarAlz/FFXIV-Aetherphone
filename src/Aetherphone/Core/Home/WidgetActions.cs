@@ -8,6 +8,7 @@ internal sealed class WidgetActions
     private readonly Dictionary<string, IPhoneApp> appsById = new(StringComparer.Ordinal);
     private INavigator? navigator;
     private NotificationRouter? notificationRouter;
+    private bool summaryRequested;
 
     public WidgetActions(WidgetServices services)
     {
@@ -31,8 +32,21 @@ internal sealed class WidgetActions
 
     public bool IsAvailable(string appId) => App(appId) is { IsAvailable: true };
 
+    public bool TakeSummaryRequest()
+    {
+        var requested = summaryRequested;
+        summaryRequested = false;
+        return requested;
+    }
+
     public void Open(in WidgetRoute route, Rect origin)
     {
+        if (route.Kind == WidgetRouteKind.DailySummary)
+        {
+            summaryRequested = true;
+            return;
+        }
+
         if (navigator is null || route.IsEmpty || App(route.AppId) is not { IsAvailable: true } app)
         {
             return;

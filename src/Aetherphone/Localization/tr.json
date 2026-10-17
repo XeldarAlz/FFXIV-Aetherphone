@@ -10870,6 +10870,8 @@
   "widgetsPeople.notificationsDescription": "En son bildirimlerin bir bakışta.",
   "widgetsPeople.noNotifications": "Bildirim Yok",
   "widgetsPeople.caughtUp": "Her şeye yetiştin.",
+  "widgetsPeople.dailySummary": "Günlük özet",
+  "widgetsPeople.dailySummaryDescription": "Yeni mesajlar ve gönderiler, ayrıca günlük sıfırlamadan önce yapılacaklar.",
   "widgetsPeople.signInHint": "Bunu görmek için Aethernet'e giriş yap.",
   "widgetsPeople.sampleMessage": "Bu akşam Gold Saucer'da görüşür müyüz?",
   "widgetsPeople.sampleMessageRaid": "Raid dokuzda başlıyor, yemek getir.",

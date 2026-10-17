@@ -10870,6 +10870,8 @@
   "widgetsPeople.notificationsDescription": "最新の通知をひと目で確認できます。",
   "widgetsPeople.noNotifications": "通知はありません",
   "widgetsPeople.caughtUp": "すべて確認済みです。",
+  "widgetsPeople.dailySummary": "デイリーサマリー",
+  "widgetsPeople.dailySummaryDescription": "新着メッセージや投稿と、デイリーリセットまでにやることをまとめて表示します。",
   "widgetsPeople.signInHint": "表示するにはAethernetにサインインしてください。",
   "widgetsPeople.sampleMessage": "今夜ゴールドソーサーで会おう?",
   "widgetsPeople.sampleMessageRaid": "レイドは9時開始、食事を持ってきてね。",

@@ -19,6 +19,8 @@ internal sealed class HomeScreen
     private readonly FolderOverlay folder;
     private readonly WidgetContextMenu widgetMenu;
     private readonly WidgetGallery gallery;
+    private readonly DailySummarySheet summary;
+    private readonly WidgetActions widgetActions;
     private readonly TilePoseCache poses = new();
     private readonly HomeInteractionController interaction;
     private readonly HomeGridRenderer renderer;
@@ -32,13 +34,15 @@ internal sealed class HomeScreen
         SpotlightIndex spotlightIndex)
     {
         this.configuration = configuration;
+        this.widgetActions = widgetActions;
         var widgetHost = new WidgetHost(widgetActions, configuration);
         layout = new HomeLayoutService(apps, widgets, shortcuts, configuration);
         folder = new FolderOverlay(layout, shortcuts, runner, configuration);
         widgetMenu = new WidgetContextMenu(layout, widgetHost);
         gallery = new WidgetGallery(layout, widgets, widgetHost);
+        summary = new DailySummarySheet(widgetActions);
         spotlight = new SpotlightOverlay(spotlightIndex, configuration);
-        interaction = new HomeInteractionController(layout, pager, folder, widgetMenu, gallery, spotlight, poses,
+        interaction = new HomeInteractionController(layout, pager, folder, widgetMenu, gallery, summary, spotlight, poses,
             runner, widgetHost);
         renderer = new HomeGridRenderer(layout, pager, poses, interaction, shortcuts, confirm, configuration,
             widgetHost);
@@ -100,6 +104,12 @@ internal sealed class HomeScreen
             interaction.SettleFrom(placed, placedCenter, placedScale, metrics);
         }
 
+        if (widgetActions.TakeSummaryRequest())
+        {
+            summary.Open();
+        }
+
+        summary.Draw(screen, theme);
         ghostDrawList.PushClipRect(screen.Min, screen.Max, true);
         renderer.DrawSettleGhost(metrics, theme, delta);
         ghostDrawList.PopClipRect();
@@ -113,6 +123,7 @@ internal sealed class HomeScreen
     public void PrepareReveal(string appId)
     {
         gallery.CloseImmediate();
+        summary.CloseImmediate();
         spotlight.CloseImmediate();
         widgetMenu.CloseImmediate();
         interaction.ResetForReveal();
