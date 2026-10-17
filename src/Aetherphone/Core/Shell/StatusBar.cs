@@ -11,7 +11,6 @@ internal static class StatusBar
 {
     private const float TimeScale = 0.95f;
     private const FontWeight TimeWeight = FontWeight.SemiBold;
-    private const float TimePadding = 24f;
     private const float EarGap = 10f;
     private const float IndicatorGap = 6f;
     private const float IndicatorHeight = 11f;
@@ -55,8 +54,9 @@ internal static class StatusBar
         var drawList = ImGui.GetWindowDrawList();
         var vertexStart = drawList.VtxBuffer.Size;
         var earGap = EarGap * scale;
-        var timeLeft = MathF.Min(screen.Min.X + TimePadding * scale,
-            island.Min.X - earGap - timeSize.X - IndicatorsWidth(scale));
+        var groupWidth = timeSize.X + IndicatorsWidth(scale);
+        var earRight = island.Min.X - earGap;
+        var timeLeft = MathF.Min((screen.Min.X + earRight - groupWidth) * 0.5f, earRight - groupWidth);
         Typography.Draw(new Vector2(timeLeft, rowCenterY - timeSize.Y * 0.5f), localTime, theme.TextStrong, TimeScale,
             TimeWeight);
         DrawIndicators(drawList, timeLeft + timeSize.X, rowCenterY, scale, theme);

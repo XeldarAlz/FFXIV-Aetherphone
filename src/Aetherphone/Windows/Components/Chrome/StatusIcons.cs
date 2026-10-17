@@ -34,7 +34,6 @@ internal static class StatusIcons
     private const float BarRadius = 1.5f;
     private const float BarBaselineOffset = 5.9f;
     private const float DimAlpha = 0.30f;
-    private const float RightPadding = 24f;
     private const float MinRightPadding = 8f;
     private const int LowBatteryPercent = 20;
     private const int CriticalBatteryPercent = 10;
@@ -66,7 +65,7 @@ internal static class StatusIcons
         var scale = UiScale.Current;
         var device = Plugin.Device;
         var clusterWidth = MeasureWidth(scale, device.BatteryPercent);
-        var nubRight = screen.Max.X - RightPadding * scale;
+        var nubRight = (minClusterLeft + screen.Max.X + clusterWidth) * 0.5f;
         if (nubRight - clusterWidth < minClusterLeft)
         {
             nubRight = MathF.Min(screen.Max.X - MinRightPadding * scale, minClusterLeft + clusterWidth);
