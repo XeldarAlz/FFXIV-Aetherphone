@@ -71,9 +71,9 @@ internal sealed partial class PrismApp
         PrismArt.Shade(drawList, full, scale);
         var below = DrawMasthead(drawList, content, IssueLine(week.Issue),
             cover is null ? string.Empty : CreditLine(cover), scale);
-        var pills = PrismMotion.Mark(drawList);
-        DrawCoverPills(drawList, content, below, week, scale);
-        PrismMotion.Rise(drawList, pills, PrismMotion.At(screenAge, introDelay + CreditsDelay, Motion.PageSettle),
+        var buttons = PrismMotion.Mark(drawList);
+        DrawCoverButtons(drawList, content, below, week, scale);
+        PrismMotion.Rise(drawList, buttons, PrismMotion.At(screenAge, introDelay + CreditsDelay, Motion.PageSettle),
             0f);
         var primary = week.Phase == PrismPhases.Entering || PrismPhases.Judgeable(week.Phase);
         var strips = (primary ? 1 : 0) + (store.Results is null ? 0 : 1);
@@ -127,12 +127,12 @@ internal sealed partial class PrismApp
         return underTop + PrismType.Measure(under, EditorialFace.Label, labelPixels).Y + Metrics.Space.Md * scale;
     }
 
-    private void DrawCoverPills(ImDrawListPtr drawList, Rect content, float top, PrismWeekDto week, float scale)
+    private void DrawCoverButtons(ImDrawListPtr drawList, Rect content, float top, PrismWeekDto week, float scale)
     {
         var left = content.Min.X + PrismArt.Gutter(scale);
         if (week.MyEntry is not null && week.Phase != PrismPhases.Entering)
         {
-            if (PrismArt.Pill(drawList, new Vector2(left, top), Loc.T(L.Prism.YourLook), scale, out var width))
+            if (PrismArt.Button(drawList, new Vector2(left, top), Loc.T(L.Prism.YourLook), scale, out var width))
             {
                 Go(PrismScreen.Entry);
             }
@@ -140,7 +140,7 @@ internal sealed partial class PrismApp
             left += width + Metrics.Space.Sm * scale;
         }
 
-        if (PrismArt.Pill(drawList, new Vector2(left, top), Loc.T(L.Prism.HowItWorks), scale, out _))
+        if (PrismArt.Button(drawList, new Vector2(left, top), Loc.T(L.Prism.HowItWorks), scale, out _))
         {
             Go(PrismScreen.Guide);
         }

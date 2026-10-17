@@ -10,12 +10,12 @@ internal static class PrismArt
 {
     public const float StripUnits = 52f;
     public const float GutterUnits = 20f;
-    public const float PillUnits = 30f;
+    public const float ButtonUnits = 30f;
     public const int Stars = 5;
 
     private const float LabelRatio = 0.82f;
     private const float ScoreDigitUnits = 24f;
-    private const float PillPadUnits = 12f;
+    private const float ButtonPadUnits = 12f;
     private const float StitchInsetUnits = 4f;
     private const float StitchDashUnits = 5f;
     private const float StoryBarUnits = 2f;
@@ -137,19 +137,18 @@ internal static class PrismArt
         return UiInteract.Click(min, max, hovered);
     }
 
-    public static bool Pill(ImDrawListPtr drawList, Vector2 topLeft, string label, float scale, out float width)
+    public static bool Button(ImDrawListPtr drawList, Vector2 topLeft, string label, float scale, out float width)
     {
         var pixels = LabelPixels();
-        var pad = PillPadUnits * scale;
-        var height = PillUnits * scale;
+        var pad = ButtonPadUnits * scale;
+        var height = ButtonUnits * scale;
         width = PrismType.Measure(label, EditorialFace.Label, pixels).X + pad * 2f;
         var max = new Vector2(topLeft.X + width, topLeft.Y + height);
         var reach = MathF.Max(0f, (Metrics.Size.TapTarget * scale - height) * 0.5f);
         var hitMin = new Vector2(topLeft.X, topLeft.Y - reach);
         var hitMax = new Vector2(max.X, max.Y + reach);
         var hovered = UiInteract.Hover(hitMin, hitMax);
-        drawList.AddRect(topLeft, max, ImGui.GetColorU32(hovered ? White : Faint), height * 0.5f, ImDrawFlags.None,
-            1f);
+        drawList.AddRect(topLeft, max, ImGui.GetColorU32(hovered ? White : Faint), 0f, ImDrawFlags.None, 1f);
         PrismType.Draw(drawList, new Vector2(topLeft.X + pad, topLeft.Y + (height - pixels) * 0.5f), label,
             hovered ? White : Muted, EditorialFace.Label, pixels);
         if (hovered)
