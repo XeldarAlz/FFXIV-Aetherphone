@@ -342,7 +342,7 @@ internal sealed class HomeGridRenderer
             var pointer = interaction.Pointer(tile, rect.Center, rect.Width);
             HomeTileView.DrawApp(rect.Center + jiggle, rect.Width, tile.App!, theme, pointer.Scale, 0f, true, 0f,
                 configuration, motion.Zoom, pointer);
-            if (!interaction.Editing && dragTile is null)
+            if (interaction.WidgetsInteractive(motion))
             {
                 HoverTooltip.Show(string.Concat("dock:", tile.Key), rect, tile.App!.DisplayName,
                     HoverLabelSide.Above);
