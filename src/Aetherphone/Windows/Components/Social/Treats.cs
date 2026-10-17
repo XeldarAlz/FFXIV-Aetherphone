@@ -17,10 +17,7 @@ internal enum TreatSpot : byte
     ChirperDeep,
     AethergramFeed,
     AethergramDeep,
-    VelvetFeed,
-    VelvetDeep,
     Skywatcher,
-    EmptyState,
     Calendar,
     Clock,
     ChatWallpaper,
@@ -31,7 +28,7 @@ internal static class Treats
     public const int Total = 13;
     public const int NoSpot = -1;
 
-    private const int SpotCount = 13;
+    private const int SpotCount = 10;
     private const double MinimumWaitMilliseconds = 30 * 60 * 1000;
     private const double MaximumWaitMilliseconds = 60 * 60 * 1000;
     private const double CatchUpFactor = 0.3;
@@ -60,8 +57,6 @@ internal static class Treats
     private static int activeSpot = NoSpot;
     private static int lastSpot = NoSpot;
     private static bool devHunt;
-
-    public static bool VelvetBarred { get; set; }
 
     public static int Found => Plugin.Cfg.HalloweenTreatYear == DateTime.Today.Year
         ? BitOperations.PopCount((uint)Plugin.Cfg.HalloweenTreats)
@@ -95,7 +90,6 @@ internal static class Treats
         activeSpot = NoSpot;
         lastSpot = NoSpot;
         devHunt = false;
-        VelvetBarred = false;
     }
 
     public static void SummonNow()
@@ -173,23 +167,19 @@ internal static class Treats
 
     private static bool Reachable(TreatSpot spot) => spot switch
     {
-        TreatSpot.HomeTop or TreatSpot.HomeLow or TreatSpot.EmptyState => true,
+        TreatSpot.HomeTop or TreatSpot.HomeLow => true,
         TreatSpot.ChirperFeed or TreatSpot.ChirperDeep => Installed("chirper") && SignedIn,
         TreatSpot.AethergramFeed or TreatSpot.AethergramDeep => Installed("aethergram") && SignedIn,
-        TreatSpot.VelvetFeed or TreatSpot.VelvetDeep => VelvetOpen,
         TreatSpot.Skywatcher => Installed("skywatcher"),
         TreatSpot.Calendar => Installed("calendar"),
         TreatSpot.Clock => Installed("clock"),
-        TreatSpot.ChatWallpaper => Installed("message") || Installed("messages"),
+        TreatSpot.ChatWallpaper => Installed("message"),
         _ => false,
     };
 
     private static bool Installed(string appId) => installer is not null && installer.IsInstalled(appId);
 
     public static bool SignedIn => session is not null && session.IsSignedIn;
-
-    private static bool VelvetOpen => !VelvetBarred && Installed("velvet") && SignedIn &&
-        Plugin.Cfg.VelvetAcknowledgedGate && Plugin.Cfg.IsVelvetOnboarded();
 
     private static int PickSpot()
     {

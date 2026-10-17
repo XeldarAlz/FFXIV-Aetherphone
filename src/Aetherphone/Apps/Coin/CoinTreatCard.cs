@@ -156,11 +156,9 @@ internal sealed class CoinTreatCard
     private static string HidingText(TreatSpot spot) => spot switch
     {
         TreatSpot.HomeTop or TreatSpot.HomeLow => Loc.T(L.Seasonal.TreatHidingHome),
-        TreatSpot.EmptyState => Loc.T(L.Seasonal.TreatHidingEmpty),
         TreatSpot.ChirperFeed or TreatSpot.ChirperDeep => Loc.T(L.Seasonal.TreatHidingIn, Loc.T(L.Apps.Chirper)),
         TreatSpot.AethergramFeed or TreatSpot.AethergramDeep =>
             Loc.T(L.Seasonal.TreatHidingIn, Loc.T(L.Apps.Aethergram)),
-        TreatSpot.VelvetFeed or TreatSpot.VelvetDeep => Loc.T(L.Seasonal.TreatHidingIn, Loc.T(L.Apps.Velvet)),
         TreatSpot.Skywatcher => Loc.T(L.Seasonal.TreatHidingIn, Loc.T(L.Apps.Skywatcher)),
         TreatSpot.Calendar => Loc.T(L.Seasonal.TreatHidingIn, Loc.T(L.Apps.Calendar)),
         TreatSpot.Clock => Loc.T(L.Seasonal.TreatHidingIn, Loc.T(L.Apps.Clock)),

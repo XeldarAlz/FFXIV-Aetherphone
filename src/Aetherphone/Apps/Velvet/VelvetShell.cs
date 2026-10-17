@@ -299,8 +299,7 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
             return;
         }
 
-        Treats.VelvetBarred = LocalRaceIsLalafell is true || store.AccessBlocked;
-        if (Treats.VelvetBarred)
+        if (LocalRaceIsLalafell is true || store.AccessBlocked)
         {
             TourHolds.Hold(Id);
             store.EnsureMe();
@@ -532,8 +531,6 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
                 DrawRoot(area);
                 break;
         }
-
-        SocialSeason.OfferTreat(screenRect, area, depth, TreatSpot.VelvetFeed, TreatSpot.VelvetDeep, VHeader.Height);
     }
 
     private void DrawRoot(Rect area)
