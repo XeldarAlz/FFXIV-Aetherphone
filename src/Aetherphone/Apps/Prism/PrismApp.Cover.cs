@@ -29,7 +29,6 @@ internal sealed partial class PrismApp
     private CachedText creditText;
     private CachedText countText;
     private CachedText totalText;
-    private CachedText statusText;
     private float introDelay;
 
     private void DrawCover(ImDrawListPtr drawList, Rect full, Rect content, float scale)
@@ -215,9 +214,9 @@ internal sealed partial class PrismApp
 
         if (week.Phase == PrismPhases.Entering)
         {
-            if (week.MyEntry is { } entry)
+            if (week.MyEntry is not null)
             {
-                if (PrismArt.Strip(drawList, strip, StatusLine(entry), "→", true))
+                if (PrismArt.Strip(drawList, strip, Loc.T(L.Prism.YourLook), "→", true))
                 {
                     Go(PrismScreen.Entry);
                 }
@@ -374,14 +373,6 @@ internal sealed partial class PrismApp
     {
         var key = HashCode.Combine(count, Loc.Current.Code);
         return totalText.IsCurrent(key) ? totalText.Value : totalText.Store(key, count.ToString("N0", Loc.Culture));
-    }
-
-    private string StatusLine(PrismEntryDto entry)
-    {
-        var key = HashCode.Combine(entry.Status, Loc.Current.Code);
-        return statusText.IsCurrent(key)
-            ? statusText.Value
-            : statusText.Store(key, Loc.T(L.Prism.YourLookStatus, Loc.T(StatusName(entry.Status))));
     }
 
     private static LocString StatusName(string status) => status switch

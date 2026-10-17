@@ -10560,7 +10560,6 @@ internal static class L
         public static readonly LocPlural LooksThisIssue =
             new("prism.looksThisIssue", "{0} look this issue", "{0} looks this issue");
         public static readonly LocString YourLook = new("prism.yourLook", "Your look");
-        public static readonly LocString YourLookStatus = new("prism.yourLookStatus", "Your look: {0}");
         public static readonly LocString ResultsIn = new("prism.resultsIn", "New results");
         public static readonly LocString ReplayReveal = new("prism.replayReveal", "Replay the reveal");
         public static readonly LocString Submitting = new("prism.submitting", "Sending your scores…");
