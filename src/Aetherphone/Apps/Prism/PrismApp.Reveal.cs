@@ -52,7 +52,10 @@ internal sealed partial class PrismApp
     private float revealHoldSeconds;
     private CachedText placingText;
     private CachedText printLine;
-    private CachedText printDetail;
+    private CachedText heatFact;
+    private CachedText rankFact;
+    private CachedText topFact;
+    private CachedText coinFact;
 
     private void StartReveal()
     {
@@ -388,23 +391,59 @@ internal sealed partial class PrismApp
         var labelPixels = PrismArt.LabelPixels();
         var labelLine = PrismType.LineHeight(EditorialFace.Label, labelPixels);
         var valuePixels = StatUnits * scale;
-        var detail = PrismType.Wrap(PrintDetail(results), EditorialFace.Label, labelPixels, textWidth);
-        var textHeight = labelLine + PrismType.LineHeight(EditorialFace.Headline, valuePixels) +
-                         detail.Length * labelLine;
+        var factsTop = top + pad + labelLine + PrismType.LineHeight(EditorialFace.Headline, valuePixels);
+        var factsHeight = DrawFacts(drawList, new Vector2(textLeft, factsTop), textWidth, results, PrismArt.Muted,
+            false, scale);
         var card = new Rect(new Vector2(left, top),
-            new Vector2(left + width, top + pad * 2f + MathF.Max(thumb.Height, textHeight)));
+            new Vector2(left + width, MathF.Max(thumb.Max.Y, factsTop + factsHeight) + pad));
         drawList.AddRect(card.Min, card.Max, ImGui.GetColorU32(PrismArt.Faint), 0f, ImDrawFlags.None, 1f);
         DrawLook(drawList, thumb, results.MyImageUrl, false);
         var textTop = top + pad;
         PrismType.Draw(drawList, new Vector2(textLeft, textTop), Loc.T(L.Prism.YourPlacing), PrismArt.Muted,
             EditorialFace.Label, labelPixels);
-        textTop += labelLine;
-        PrismType.Draw(drawList, new Vector2(textLeft, textTop), PlacingLine(results), PrismArt.White,
+        PrismType.DrawRight(drawList, new Vector2(textLeft + textWidth, textTop), CoinFact(results), PrismArt.White,
+            EditorialFace.Label, labelPixels);
+        PrismType.Draw(drawList, new Vector2(textLeft, textTop + labelLine), PlacingLine(results), PrismArt.White,
             EditorialFace.Headline, valuePixels);
-        textTop += PrismType.LineHeight(EditorialFace.Headline, valuePixels);
-        PrismType.DrawLines(drawList, new Vector2(textLeft, textTop), detail, PrismArt.Muted, EditorialFace.Label,
-            labelPixels);
+        DrawFacts(drawList, new Vector2(textLeft, factsTop), textWidth, results, PrismArt.Muted, true, scale);
         return card.Max.Y + Metrics.Space.Xxl * scale;
+    }
+
+    private float DrawFacts(ImDrawListPtr drawList, Vector2 topLeft, float width, PrismResultsDto results,
+        Vector4 color, bool draw, float scale)
+    {
+        var labelPixels = PrismArt.LabelPixels();
+        var line = PrismType.LineHeight(EditorialFace.Label, labelPixels);
+        var cursor = topLeft;
+        DrawFact(drawList, HeatFact(results), topLeft.X, width, color, draw, ref cursor, scale);
+        DrawFact(drawList, Fact(ref rankFact, L.Prism.FinalRank, results.MyFinalRank), topLeft.X, width, color, draw,
+            ref cursor, scale);
+        DrawFact(drawList, Fact(ref topFact, L.Prism.TopPercent, results.Percentile), topLeft.X, width, color, draw,
+            ref cursor, scale);
+        return cursor.Y + line - topLeft.Y;
+    }
+
+    private static void DrawFact(ImDrawListPtr drawList, string text, float left, float width, Vector4 color,
+        bool draw, ref Vector2 cursor, float scale)
+    {
+        if (text.Length == 0)
+        {
+            return;
+        }
+
+        var labelPixels = PrismArt.LabelPixels();
+        var textWidth = PrismType.Measure(text, EditorialFace.Label, labelPixels).X;
+        if (cursor.X > left && cursor.X + textWidth > left + width)
+        {
+            cursor = new Vector2(left, cursor.Y + PrismType.LineHeight(EditorialFace.Label, labelPixels));
+        }
+
+        if (draw)
+        {
+            PrismType.Draw(drawList, cursor, text, color, EditorialFace.Label, labelPixels);
+        }
+
+        cursor.X += textWidth + Metrics.Space.Lg * scale;
     }
 
     private float DrawRankRow(ImDrawListPtr drawList, float left, float top, float width, PrismPlacingDto placing,
@@ -431,6 +470,7 @@ internal sealed partial class PrismApp
         PrismArt.Hairline(drawList, left, left + width, rule, PrismArt.Faint, scale);
         return rule + Metrics.Space.Md * scale;
     }
+
     private static Rect PrintFrame(Vector2 origin, float width, float scale)
     {
         var pad = PrintPadUnits * scale;
@@ -454,14 +494,13 @@ internal sealed partial class PrismApp
         var top = photo.Max.Y + pad;
         PrismType.Draw(drawList, new Vector2(photo.Min.X, top), PrintHeading(results), PrismArt.InkMuted,
             EditorialFace.Label, labelPixels);
+        PrismType.DrawRight(drawList, new Vector2(photo.Max.X, top), CoinFact(results), PrismArt.Ink,
+            EditorialFace.Label, labelPixels);
         top += labelLine;
         var pixels = PrintNumeralUnits * scale;
         PrismType.Draw(drawList, new Vector2(photo.Min.X, top), PlacingLine(results), PrismArt.Ink,
             EditorialFace.Numerals, pixels);
-        top += pixels;
-        var detail = PrismType.Wrap(PrintDetail(results), EditorialFace.Label, labelPixels, inner);
-        PrismType.DrawLines(drawList, new Vector2(photo.Min.X, top), detail, PrismArt.InkMuted, EditorialFace.Label,
-            labelPixels);
+        DrawFacts(drawList, new Vector2(photo.Min.X, top + pixels), inner, results, PrismArt.InkMuted, true, scale);
     }
 
     private void SyncOrder(PrismResultsDto results)
@@ -508,31 +547,26 @@ internal sealed partial class PrismApp
         return printLine.Store(key, heading);
     }
 
-    private string PrintDetail(PrismResultsDto results)
+    private string HeatFact(PrismResultsDto results)
     {
-        var key = HashCode.Combine(results.WeekId, results.MyFinalRank, results.CoinsAwarded, Loc.Current.Code);
-        if (printDetail.IsCurrent(key))
+        var key = HashCode.Combine(results.HeatLabel, Loc.Current.Code);
+        return heatFact.IsCurrent(key)
+            ? heatFact.Value
+            : heatFact.Store(key, results.HeatLabel.Length > 0
+                ? Loc.T(L.Prism.HeatName, results.HeatLabel)
+                : Loc.T(L.Prism.YourHeat));
+    }
+
+    private string CoinFact(PrismResultsDto results) => Fact(ref coinFact, L.Prism.CoinsWon, results.CoinsAwarded);
+
+    private static string Fact(ref CachedText cache, LocString format, long value)
+    {
+        if (value <= 0)
         {
-            return printDetail.Value;
+            return string.Empty;
         }
 
-        var heat = results.HeatLabel.Length > 0 ? Loc.T(L.Prism.HeatName, results.HeatLabel) : Loc.T(L.Prism.YourHeat);
-        var parts = heat;
-        if (results.MyFinalRank > 0)
-        {
-            parts += " · " + Loc.T(L.Prism.FinalRank, results.MyFinalRank);
-        }
-
-        if (results.Percentile > 0)
-        {
-            parts += " · " + Loc.T(L.Prism.TopPercent, results.Percentile);
-        }
-
-        if (results.CoinsAwarded > 0)
-        {
-            parts += " · " + Loc.T(L.Prism.CoinsWon, results.CoinsAwarded);
-        }
-
-        return printDetail.Store(key, parts);
+        var key = HashCode.Combine(value, Loc.Current.Code);
+        return cache.IsCurrent(key) ? cache.Value : cache.Store(key, Loc.T(format, value));
     }
 }

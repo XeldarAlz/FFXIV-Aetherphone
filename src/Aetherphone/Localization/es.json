@@ -5581,7 +5581,7 @@
   "prism.reportTitle": "Denunciar este look",
   "prism.lastResults": "Resultados de la semana pasada",
   "prism.finalRank": "Puesto {0} en la final",
-  "prism.topPercent": "Top {0} % esta semana",
+  "prism.topPercent": "Top {0} %",
   "prism.coinsWon": "+{0} Aether Coin",
   "prism.yourHeat": "Tu ronda",
   "prism.finalTitle": "La final",

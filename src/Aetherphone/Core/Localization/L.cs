@@ -10550,7 +10550,7 @@ internal static class L
         public static readonly LocString ReportTitle = new("prism.reportTitle", "Report this look");
         public static readonly LocString LastResults = new("prism.lastResults", "Last week's results");
         public static readonly LocString FinalRank = new("prism.finalRank", "Rank {0} in the final");
-        public static readonly LocString TopPercent = new("prism.topPercent", "Top {0}% this week");
+        public static readonly LocString TopPercent = new("prism.topPercent", "Top {0}%");
         public static readonly LocString CoinsWon = new("prism.coinsWon", "+{0} Aether Coin");
         public static readonly LocString YourHeat = new("prism.yourHeat", "Your heat");
         public static readonly LocString FinalTitle = new("prism.finalTitle", "The final");

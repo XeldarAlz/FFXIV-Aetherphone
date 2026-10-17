@@ -5581,7 +5581,7 @@
   "prism.reportTitle": "Пожаловаться на образ",
   "prism.lastResults": "Итоги прошлой недели",
   "prism.finalRank": "Место {0} в финале",
-  "prism.topPercent": "Топ {0}% на этой неделе",
+  "prism.topPercent": "Топ {0}%",
   "prism.coinsWon": "+{0} Aether Coin",
   "prism.yourHeat": "Ваш раунд",
   "prism.finalTitle": "Финал",

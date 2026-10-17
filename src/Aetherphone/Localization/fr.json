@@ -5581,7 +5581,7 @@
   "prism.reportTitle": "Signaler cette tenue",
   "prism.lastResults": "Résultats de la semaine dernière",
   "prism.finalRank": "Place {0} en finale",
-  "prism.topPercent": "Top {0} % cette semaine",
+  "prism.topPercent": "Top {0} %",
   "prism.coinsWon": "+{0} Aether Coin",
   "prism.yourHeat": "Votre manche",
   "prism.finalTitle": "La finale",
