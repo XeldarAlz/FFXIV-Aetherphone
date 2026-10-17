@@ -137,12 +137,15 @@ internal static class PrismArt
         return UiInteract.Click(min, max, hovered);
     }
 
+    public static float ButtonWidth(string label, float scale) =>
+        PrismType.Measure(label, EditorialFace.Label, LabelPixels()).X + ButtonPadUnits * scale * 2f;
+
     public static bool Button(ImDrawListPtr drawList, Vector2 topLeft, string label, float scale, out float width)
     {
         var pixels = LabelPixels();
         var pad = ButtonPadUnits * scale;
         var height = ButtonUnits * scale;
-        width = PrismType.Measure(label, EditorialFace.Label, pixels).X + pad * 2f;
+        width = ButtonWidth(label, scale);
         var max = new Vector2(topLeft.X + width, topLeft.Y + height);
         var reach = MathF.Max(0f, (Metrics.Size.TapTarget * scale - height) * 0.5f);
         var hitMin = new Vector2(topLeft.X, topLeft.Y - reach);

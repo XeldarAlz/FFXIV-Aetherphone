@@ -36,7 +36,7 @@ internal sealed partial class PrismApp
     {
         if (!store.IsSignedIn)
         {
-            DrawMasthead(drawList, content, string.Empty, string.Empty, scale);
+            DrawMasthead(drawList, content, string.Empty, scale);
             DrawNotice(drawList, content, Loc.T(L.Prism.SignInTitle), Loc.T(L.Prism.SignInRequired), scale);
             if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Prism.OpenSettings), "→",
                     true))
@@ -49,14 +49,14 @@ internal sealed partial class PrismApp
 
         if (store.Week is not { } week)
         {
-            DrawMasthead(drawList, content, string.Empty, string.Empty, scale);
+            DrawMasthead(drawList, content, string.Empty, scale);
             DrawWeekMissing(drawList, content, scale);
             return;
         }
 
         if (week.Id.Length == 0 || week.Phase.Length == 0)
         {
-            DrawMasthead(drawList, content, string.Empty, string.Empty, scale);
+            DrawMasthead(drawList, content, string.Empty, scale);
             DrawNotice(drawList, content, Loc.T(L.Prism.NoWeekTitle), Loc.T(L.Prism.NoWeekHint), scale);
             return;
         }
@@ -69,14 +69,12 @@ internal sealed partial class PrismApp
         }
 
         PrismArt.Shade(drawList, full, scale);
-        var below = DrawMasthead(drawList, content, IssueLine(week.Issue),
-            cover is null ? string.Empty : CreditLine(cover), scale);
+        var below = DrawMasthead(drawList, content, cover is null ? string.Empty : CreditLine(cover), scale);
         var buttons = PrismMotion.Mark(drawList);
         DrawCoverButtons(drawList, content, below, week, scale);
         PrismMotion.Rise(drawList, buttons, PrismMotion.At(screenAge, introDelay + CreditsDelay, Motion.PageSettle),
             0f);
-        var primary = week.Phase == PrismPhases.Entering || PrismPhases.Judgeable(week.Phase);
-        var strips = (primary ? 1 : 0) + (store.Results is null ? 0 : 1);
+        var strips = HasPrimary(week) || store.Results is not null ? 1 : 0;
         var steps = DrawCoverStory(drawList, content, week, strips, scale);
         var strip = PrismMotion.Mark(drawList);
         DrawCoverStrip(drawList, content, week, scale);
@@ -89,7 +87,7 @@ internal sealed partial class PrismApp
                 Motion.PageSettle),
             PrismMotion.RiseUnits * scale);
 
-    private float DrawMasthead(ImDrawListPtr drawList, Rect content, string right, string under, float scale)
+    private float DrawMasthead(ImDrawListPtr drawList, Rect content, string under, float scale)
     {
         var gutter = PrismArt.Gutter(scale);
         var top = content.Min.Y + HeaderGapUnits * scale;
@@ -98,23 +96,24 @@ internal sealed partial class PrismApp
         var mark = PrismMotion.Mark(drawList);
         PrismType.Draw(drawList, new Vector2(content.Min.X + gutter, top), DisplayName, PrismArt.White,
             EditorialFace.Headline, pixels);
-        var rule = top + PrismType.LineHeight(EditorialFace.Headline, pixels) + HeaderGapUnits * scale;
-        var gap = rule;
-        if (right.Length > 0)
+        var nameBottom = top + PrismType.Measure(DisplayName, EditorialFace.Headline, pixels).Y;
+        var guide = Loc.T(L.Prism.HowItWorks);
+        var buttonTop = (top + nameBottom - PrismArt.ButtonUnits * scale) * 0.5f;
+        if (PrismArt.Button(drawList, new Vector2(content.Max.X - gutter - PrismArt.ButtonWidth(guide, scale),
+                buttonTop), guide, scale, out _))
         {
-            var rightTop = top + pixels - labelPixels;
-            PrismType.DrawRight(drawList, new Vector2(content.Max.X - gutter, rightTop), right, PrismArt.White,
-                EditorialFace.Label, labelPixels);
-            gap = rule - rightTop - PrismType.Measure(right, EditorialFace.Label, labelPixels).Y;
+            Go(PrismScreen.Guide);
         }
 
+        var rule = top + PrismType.LineHeight(EditorialFace.Headline, pixels) + HeaderGapUnits * scale;
+        var gap = rule - nameBottom;
         PrismMotion.Rise(drawList, mark, PrismMotion.At(screenAge, introDelay, Motion.PageSettle),
             PrismMotion.RiseUnits * scale);
         var draw = PrismMotion.At(screenAge, introDelay + RuleDelay, Motion.Sheet);
         var span = content.Width - gutter * 2f;
         PrismArt.SpectrumRule(drawList, content.Min.X + gutter, content.Min.X + gutter + span * draw, rule, scale);
         var ruleBottom = rule + MathF.Max(1f, 2f * scale);
-        if (under.Length == 0 || right.Length == 0)
+        if (under.Length == 0)
         {
             return ruleBottom + HeaderGapUnits * scale;
         }
@@ -129,20 +128,11 @@ internal sealed partial class PrismApp
 
     private void DrawCoverButtons(ImDrawListPtr drawList, Rect content, float top, PrismWeekDto week, float scale)
     {
-        var left = content.Min.X + PrismArt.Gutter(scale);
-        if (week.MyEntry is not null && week.Phase != PrismPhases.Entering)
+        if (week.MyEntry is not null && week.Phase != PrismPhases.Entering &&
+            PrismArt.Button(drawList, new Vector2(content.Min.X + PrismArt.Gutter(scale), top), Loc.T(L.Prism.YourLook),
+                scale, out _))
         {
-            if (PrismArt.Button(drawList, new Vector2(left, top), Loc.T(L.Prism.YourLook), scale, out var width))
-            {
-                Go(PrismScreen.Entry);
-            }
-
-            left += width + Metrics.Space.Sm * scale;
-        }
-
-        if (PrismArt.Button(drawList, new Vector2(left, top), Loc.T(L.Prism.HowItWorks), scale, out _))
-        {
-            Go(PrismScreen.Guide);
+            Go(PrismScreen.Entry);
         }
     }
 
@@ -200,14 +190,19 @@ internal sealed partial class PrismApp
             value, PrismArt.White, EditorialFace.Headline, StatUnits * scale);
     }
 
+    private static bool HasPrimary(PrismWeekDto week) =>
+        week.Phase == PrismPhases.Entering || PrismPhases.Judgeable(week.Phase);
+
     private void DrawCoverStrip(ImDrawListPtr drawList, Rect content, PrismWeekDto week, float scale)
     {
-        var strip = StripRect(content, scale, store.Results is null ? 0 : 1);
+        var row = StripRect(content, scale);
+        var half = (row.Width - Metrics.Space.Md * scale) * 0.5f;
+        var strip = store.Results is null ? row : new Rect(row.Min, new Vector2(row.Min.X + half, row.Max.Y));
         if (store.Results is { } results)
         {
             var seen = configuration.PrismRevealedWeek == results.WeekId;
-            if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(seen ? L.Prism.LastResults : L.Prism.ResultsIn),
-                    "→", false))
+            var slot = HasPrimary(week) ? new Rect(new Vector2(row.Max.X - half, row.Min.Y), row.Max) : row;
+            if (PrismArt.Strip(drawList, slot, Loc.T(seen ? L.Prism.LastResults : L.Prism.ResultsIn), "→", false))
             {
                 OpenResults();
             }
