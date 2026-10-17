@@ -49,7 +49,7 @@ internal sealed class AlarmOverlay
         using (ImRaii.Child("##alarmRinging", screen.Size, false, OverlayFlags))
         {
             DrawContent(screen, theme, Math.Clamp(presence.Value, 0f, 1f),
-                ringing && presence.IsResting(1f, 0.001f, 0.005f));
+                ringing && presence.Arrive(1f));
         }
     }
 

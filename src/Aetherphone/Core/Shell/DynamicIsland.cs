@@ -639,7 +639,7 @@ internal sealed partial class DynamicIsland
         var controlCenter = new Vector2(bounds.Max.X - CardPadX * scale - controlRadius, centerY);
         var textLeft = iconCenter.X + iconRadius + CardTextGap * scale;
         var textWidth = MathF.Max(1f, controlCenter.X - controlRadius - CardTextGap * scale - textLeft);
-        var active = alpha > ControlThreshold && expand.IsResting(1f, 0.001f, 0.005f);
+        var active = alpha > ControlThreshold && expand.Arrive(1f);
         var controlExtent = new Vector2(controlRadius, controlRadius);
         var overControl = active && UiInteract.Hover(controlCenter - controlExtent, controlCenter + controlExtent);
         var controlFill = Palette.WithAlpha(Ink, ControlFillAlpha);

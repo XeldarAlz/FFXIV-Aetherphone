@@ -48,7 +48,7 @@ internal sealed class IncomingCallOverlay
         using (ImRaii.Child("##incomingCall", screen.Size, false, OverlayFlags))
         {
             DrawContent(screen, theme, view, Math.Clamp(presence.Value, 0f, 1f),
-                ringing && presence.IsResting(1f, 0.001f, 0.005f));
+                ringing && presence.Arrive(1f));
         }
     }
 

@@ -92,7 +92,7 @@ internal sealed class InfoSheet
         Squircle.Fill(drawList, panelMin, panelMax, rounding, ImGui.GetColorU32(panelFill));
         Squircle.Stroke(drawList, panelMin, panelMax, rounding,
             ImGui.GetColorU32(Palette.WithAlpha(PanelStroke, PanelStroke.W * opacity)), 1f);
-        var interactive = open && reveal.IsResting(1f, 0.001f, 0.005f);
+        var interactive = open && reveal.Arrive(1f);
 
         var grabberMin = new Vector2(screen.Center.X - GrabberWidth * scale * 0.5f, panelTop + 8f * scale);
         drawList.AddRectFilled(grabberMin, grabberMin + new Vector2(GrabberWidth, GrabberHeight) * scale,
