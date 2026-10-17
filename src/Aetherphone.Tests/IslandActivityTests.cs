@@ -15,6 +15,37 @@ public sealed class IslandActivityTests
     private const long UpdatedTicks = 638_000_000_000_000_000L;
 
     [Fact]
+    public void OnlyPausedMediaSwipesAway()
+    {
+        Assert.True(IslandActivities.Swipeable(IslandActivity.Playback, false));
+        Assert.True(IslandActivities.Swipeable(IslandActivity.PcMedia, false));
+        Assert.False(IslandActivities.Swipeable(IslandActivity.Playback, true));
+        Assert.False(IslandActivities.Swipeable(IslandActivity.PcMedia, true));
+        for (var activity = IslandActivity.None; activity <= IslandActivity.Fishing; activity++)
+        {
+            if (activity is IslandActivity.Playback or IslandActivity.PcMedia)
+            {
+                continue;
+            }
+
+            Assert.False(IslandActivities.Swipeable(activity, false));
+        }
+    }
+
+    [Theory]
+    [InlineData(48f, 0f, 1f, true)]
+    [InlineData(47f, 0f, 1f, false)]
+    [InlineData(20f, 700f, 1f, true)]
+    [InlineData(20f, 699f, 1f, false)]
+    [InlineData(0f, 900f, 1f, false)]
+    [InlineData(60f, 0f, 1.5f, false)]
+    [InlineData(72f, 0f, 1.5f, true)]
+    public void ASwipeDismissesOnDistanceOrAFlick(float offset, float velocity, float scale, bool dismisses)
+    {
+        Assert.Equal(dismisses, IslandActivities.SwipeDismisses(offset, velocity, scale));
+    }
+
+    [Fact]
     public void MediaCardsAreTheOnlyTallerCards()
     {
         Assert.Equal(IslandActivities.PlaybackCardHeightUnits,

@@ -24,7 +24,18 @@ internal sealed partial class DynamicIsland
         ref readonly var current = ref pcMedia.Current;
         if (!PcMediaSource.IsLive(current))
         {
+            pcMediaSwipedAway = false;
             return false;
+        }
+
+        if (pcMediaSwipedAway)
+        {
+            if (!current.IsPlaying)
+            {
+                return false;
+            }
+
+            pcMediaSwipedAway = false;
         }
 
         pcSnapshot = current;
