@@ -239,7 +239,8 @@ internal sealed partial class PrismApp
         }
 
         var label = week.Phase == PrismPhases.Final ? L.Prism.JudgeFinal : L.Prism.JudgeHeat;
-        var right = HeatInProgress ? LookCounter(lookIndex + 1, stars.Length) : JudgedLine(week.BallotsCast);
+        var right = store.Results is not null ? "→"
+            : HeatInProgress ? LookCounter(lookIndex + 1, stars.Length) : JudgedLine(week.BallotsCast);
         if (PrismArt.Strip(drawList, strip, Loc.T(label), right, true, !store.Busy))
         {
             StartJudging();
