@@ -97,7 +97,8 @@ internal static class PrismArt
         var inset = rect.Height * 0.32f;
         var top = rect.Center.Y - pixels * 0.5f;
         PrismType.Draw(drawList, new Vector2(rect.Min.X + inset, top), left, text, EditorialFace.Mono, pixels);
-        if (right.Length > 0)
+        var room = rect.Width - inset * 3f - PrismType.Measure(left, EditorialFace.Mono, pixels).X;
+        if (right.Length > 0 && PrismType.Measure(right, EditorialFace.Mono, pixels).X <= room)
         {
             PrismType.DrawRight(drawList, new Vector2(rect.Max.X - inset, top), right, text, EditorialFace.Mono,
                 pixels);

@@ -130,12 +130,13 @@ internal sealed partial class PrismApp
             : [];
         var briefCount = Math.Min(brief.Length, BriefLines);
         var count = CountLine(week.EntryCount);
+        var deadline = week.Phase == PrismPhases.Tallying ? string.Empty : DeadlineLine(week);
         var pixels = PrismType.Fit(QuotedTitle(week.Title), EditorialFace.Headline, width, HeadlineMaxUnits * scale,
             HeadlineMinUnits * scale, HeadlineLines, out var lines);
         var headline = lines.Length * PrismType.LineHeight(EditorialFace.Headline, pixels);
         var gap = Metrics.Space.Md * scale;
         var bottom = StripRect(content, scale).Min.Y - Metrics.Space.Lg * scale;
-        var meta = monoLine * (briefCount + (count.Length > 0 ? 1 : 0));
+        var meta = monoLine * (briefCount + (count.Length > 0 ? 1 : 0) + (deadline.Length > 0 ? 1 : 0));
         var top = bottom - meta - gap - headline - gap - monoLine;
         var left = content.Min.X + gutter;
         PrismType.Draw(drawList, new Vector2(left, top), PrismType.Upper(Loc.T(L.Prism.ThemeLabel)), PrismArt.Muted,
@@ -146,6 +147,12 @@ internal sealed partial class PrismApp
         for (var index = 0; index < briefCount; index++)
         {
             PrismType.Draw(drawList, new Vector2(left, top), brief[index], PrismArt.White, EditorialFace.Mono, mono);
+            top += monoLine;
+        }
+
+        if (deadline.Length > 0)
+        {
+            PrismType.Draw(drawList, new Vector2(left, top), deadline, PrismArt.White, EditorialFace.Mono, mono);
             top += monoLine;
         }
 
@@ -171,7 +178,7 @@ internal sealed partial class PrismApp
             }
 
             var left = PrismType.Upper(Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.EnterLook));
-            if (PrismArt.Strip(drawList, strip, left, DeadlineLine(week), true, !store.Busy))
+            if (PrismArt.Strip(drawList, strip, left, "→", true, !store.Busy))
             {
                 StartPick();
             }
