@@ -22,7 +22,8 @@ internal static class PrismArt
     private const float StoryBarSpacingUnits = 4f;
     private const float TagPadUnits = 8f;
     private const float TagInsetUnits = 10f;
-    private const float ShadeShare = 0.62f;
+    private const float ShadeShare = 0.78f;
+    private const float ShadeSolidShare = 0.46f;
     private const float TopShadeUnits = 96f;
     private const float PressedAlpha = 0.82f;
     private const float ArrowNudge = 0.08f;
@@ -36,7 +37,8 @@ internal static class PrismArt
     public static readonly Vector4 InkMuted = new(0.067f, 0.067f, 0.067f, 0.62f);
 
     private static readonly Vector4 ShadeClear = new(0f, 0f, 0f, 0f);
-    private static readonly Vector4 ShadeDeep = new(0f, 0f, 0f, 0.82f);
+    private static readonly Vector4 ShadeMid = new(0f, 0f, 0f, 0.72f);
+    private static readonly Vector4 ShadeDeep = new(0f, 0f, 0f, 0.92f);
     private static readonly Vector4 ShadeTop = new(0f, 0f, 0f, 0.55f);
     private static readonly Vector4 Stitch = new(0.067f, 0.067f, 0.067f, 0.35f);
 
@@ -56,9 +58,13 @@ internal static class PrismArt
         var top = new Vector2(screen.Max.X, screen.Min.Y + TopShadeUnits * scale);
         drawList.AddRectFilledMultiColor(screen.Min, top, ImGui.GetColorU32(ShadeTop), ImGui.GetColorU32(ShadeTop),
             ImGui.GetColorU32(ShadeClear), ImGui.GetColorU32(ShadeClear));
-        var bottom = new Vector2(screen.Min.X, screen.Max.Y - screen.Height * ShadeShare);
-        drawList.AddRectFilledMultiColor(bottom, screen.Max, ImGui.GetColorU32(ShadeClear),
-            ImGui.GetColorU32(ShadeClear), ImGui.GetColorU32(ShadeDeep), ImGui.GetColorU32(ShadeDeep));
+        var fade = screen.Max.Y - screen.Height * ShadeShare;
+        var settle = screen.Max.Y - screen.Height * ShadeSolidShare;
+        drawList.AddRectFilledMultiColor(new Vector2(screen.Min.X, fade), new Vector2(screen.Max.X, settle),
+            ImGui.GetColorU32(ShadeClear), ImGui.GetColorU32(ShadeClear), ImGui.GetColorU32(ShadeMid),
+            ImGui.GetColorU32(ShadeMid));
+        drawList.AddRectFilledMultiColor(new Vector2(screen.Min.X, settle), screen.Max, ImGui.GetColorU32(ShadeMid),
+            ImGui.GetColorU32(ShadeMid), ImGui.GetColorU32(ShadeDeep), ImGui.GetColorU32(ShadeDeep));
     }
 
     public static void Hairline(ImDrawListPtr drawList, float left, float right, float y, Vector4 color, float scale) =>
