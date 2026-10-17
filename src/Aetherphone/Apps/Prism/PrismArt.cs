@@ -10,11 +10,11 @@ internal static class PrismArt
 {
     public const float StripUnits = 52f;
     public const float GutterUnits = 20f;
+    public const float PillUnits = 30f;
     public const int Stars = 5;
 
     private const float LabelRatio = 0.82f;
     private const float ScoreDigitUnits = 24f;
-    private const float PillUnits = 30f;
     private const float PillPadUnits = 12f;
     private const float StitchInsetUnits = 4f;
     private const float StitchDashUnits = 5f;

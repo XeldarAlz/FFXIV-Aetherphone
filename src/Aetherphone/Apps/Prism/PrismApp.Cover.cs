@@ -68,11 +68,11 @@ internal sealed partial class PrismApp
         PrismArt.Shade(drawList, full, scale);
         var below = DrawMasthead(drawList, content, IssueLine(week.Issue), scale);
         var pills = PrismMotion.Mark(drawList);
-        DrawCoverPills(drawList, content, below, week, scale);
+        DrawCoverPills(drawList, content, below, week, cover, scale);
         PrismMotion.Rise(drawList, pills, PrismMotion.At(screenAge, CreditsDelay, Motion.PageSettle), 0f);
         var primary = week.Phase == PrismPhases.Entering || PrismPhases.Judgeable(week.Phase);
         var strips = (primary ? 1 : 0) + (store.Results is null ? 0 : 1);
-        var steps = DrawCoverStory(drawList, content, week, cover, strips, scale);
+        var steps = DrawCoverStory(drawList, content, week, strips, scale);
         var strip = PrismMotion.Mark(drawList);
         DrawCoverStrip(drawList, content, week, scale);
         RiseStep(drawList, strip, steps, scale);
@@ -104,18 +104,38 @@ internal sealed partial class PrismApp
         return rule + HeaderGapUnits * scale;
     }
 
-    private void DrawCoverPills(ImDrawListPtr drawList, Rect content, float top, PrismWeekDto week, float scale)
+    private void DrawCoverPills(ImDrawListPtr drawList, Rect content, float top, PrismWeekDto week,
+        PrismPlacingDto? cover, float scale)
     {
-        var left = content.Min.X + PrismArt.Gutter(scale);
-        if (week.MyEntry is not null && week.Phase != PrismPhases.Entering &&
-            PrismArt.Pill(drawList, new Vector2(left, top), Loc.T(L.Prism.YourLook), scale, out _))
+        var gutter = PrismArt.Gutter(scale);
+        var left = content.Min.X + gutter;
+        var used = 0f;
+        if (week.MyEntry is not null && week.Phase != PrismPhases.Entering)
         {
-            Go(PrismScreen.Entry);
+            if (PrismArt.Pill(drawList, new Vector2(left, top), Loc.T(L.Prism.YourLook), scale, out used))
+            {
+                Go(PrismScreen.Entry);
+            }
+
+            used += Metrics.Space.Lg * scale;
+        }
+
+        if (cover is null)
+        {
+            return;
+        }
+
+        var credit = CreditLine(cover);
+        var labelPixels = PrismArt.LabelPixels();
+        if (PrismType.Measure(credit, EditorialFace.Label, labelPixels).X <= content.Width - gutter * 2f - used)
+        {
+            PrismType.DrawRight(drawList, new Vector2(content.Max.X - gutter,
+                top + (PrismArt.PillUnits * scale - labelPixels) * 0.5f), credit, PrismArt.Muted, EditorialFace.Label,
+                labelPixels);
         }
     }
 
-    private int DrawCoverStory(ImDrawListPtr drawList, Rect content, PrismWeekDto week, PrismPlacingDto? cover,
-        int strips, float scale)
+    private int DrawCoverStory(ImDrawListPtr drawList, Rect content, PrismWeekDto week, int strips, float scale)
     {
         var gutter = PrismArt.Gutter(scale);
         var width = content.Width - gutter * 2f;
@@ -129,29 +149,18 @@ internal sealed partial class PrismApp
         var pixels = PrismType.Fit(PrismType.Title(week.Title), EditorialFace.Headline, width, HeadlineMaxUnits * scale,
             HeadlineMinUnits * scale, HeadlineLines, out var lines);
         var headlineLine = PrismType.LineHeight(EditorialFace.Headline, pixels);
-        var eyebrowGap = Metrics.Space.Sm * scale;
+        var eyebrowGap = Metrics.Space.Xs * scale;
         var bottom = (strips > 0 ? StripRect(content, scale, strips - 1).Min.Y : content.Max.Y - gutter) -
                      Metrics.Space.Xl * scale;
         var top = bottom - statHeight - Metrics.Space.Xl * scale - briefHeight - lines.Length * headlineLine -
-                  eyebrowGap - labelLine;
+                  eyebrowGap - labelPixels;
         var left = content.Min.X + gutter;
         var step = 0;
         var mark = PrismMotion.Mark(drawList);
-        var eyebrow = Loc.T(L.Prism.ThemeLabel);
-        PrismType.Draw(drawList, new Vector2(left, top), eyebrow, PrismArt.Muted, EditorialFace.Label, labelPixels);
-        if (cover is not null)
-        {
-            var credit = CreditLine(cover);
-            var room = width - PrismType.Measure(eyebrow, EditorialFace.Label, labelPixels).X - Metrics.Space.Lg * scale;
-            if (PrismType.Measure(credit, EditorialFace.Label, labelPixels).X <= room)
-            {
-                PrismType.DrawRight(drawList, new Vector2(left + width, top), credit, PrismArt.Muted,
-                    EditorialFace.Label, labelPixels);
-            }
-        }
-
+        PrismType.Draw(drawList, new Vector2(left, top), Loc.T(L.Prism.ThemeLabel), PrismArt.Muted,
+            EditorialFace.Label, labelPixels);
         RiseStep(drawList, mark, step++, scale);
-        top += labelLine + eyebrowGap;
+        top += labelPixels + eyebrowGap;
         for (var index = 0; index < lines.Length; index++)
         {
             mark = PrismMotion.Mark(drawList);
