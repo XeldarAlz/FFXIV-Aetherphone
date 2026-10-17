@@ -14187,6 +14187,7 @@ internal static class L
         public static readonly LocString NotificationsDescription = new("widgetsPeople.notificationsDescription", "Your latest notifications at a glance.");
         public static readonly LocString NoNotifications = new("widgetsPeople.noNotifications", "No Notifications");
         public static readonly LocString CaughtUp = new("widgetsPeople.caughtUp", "You're all caught up.");
+        public static readonly LocString ChirperDescription = new("widgetsPeople.chirperDescription", "Your For You feed, the latest chirps and your Chirper activity, with tabs to switch.");
         public static readonly LocString SignInHint = new("widgetsPeople.signInHint", "Sign in to Aethernet to see this.");
         public static readonly LocString SampleMessage = new("widgetsPeople.sampleMessage", "See you at the Gold Saucer tonight?");
         public static readonly LocString SampleMessageRaid = new("widgetsPeople.sampleMessageRaid", "Raid starts at nine, bring food.");
