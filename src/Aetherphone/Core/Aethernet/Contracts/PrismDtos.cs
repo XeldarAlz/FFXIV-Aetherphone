@@ -19,13 +19,16 @@ internal sealed record PrismWeekDto(
     long ResultsAtUnix = 0,
     PrismEntryDto? MyEntry = null,
     int BallotsCast = 0,
-    string PreviousWeekId = "");
+    string PreviousWeekId = "",
+    int Issue = 0,
+    int EntryCount = 0);
 
 internal sealed record PrismEntryRequest(string MediaKey, int Width, int Height);
 
 internal sealed record PrismLookDto(string Id = "", string ImageUrl = "", int Width = 0, int Height = 0);
 
-internal sealed record PrismBallotDto(string Id = "", string Stage = "", PrismLookDto[]? Looks = null);
+internal sealed record PrismBallotDto(string Id = "", string Stage = "", PrismLookDto[]? Looks = null,
+    string HeatLabel = "");
 
 internal sealed record PrismStarDto(string LookId, int Stars, int ViewedMs);
 
@@ -48,4 +51,8 @@ internal sealed record PrismResultsDto(
     int HeatSize = 0,
     int MyFinalRank = 0,
     int Percentile = 0,
-    long CoinsAwarded = 0);
+    long CoinsAwarded = 0,
+    int Issue = 0,
+    int EntryCount = 0,
+    string MyImageUrl = "",
+    string HeatLabel = "");

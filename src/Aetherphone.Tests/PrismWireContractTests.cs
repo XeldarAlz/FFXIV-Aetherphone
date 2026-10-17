@@ -27,13 +27,15 @@ public sealed class PrismWireContractTests
             + "\"entriesCloseAtUnix\":10,\"judgingCloseAtUnix\":20,\"finalCloseAtUnix\":30,\"resultsAtUnix\":40,"
             + "\"myEntry\":{\"id\":\"e_1\",\"imageUrl\":\"https://x/e.jpg\",\"width\":810,\"height\":1080,"
             + "\"status\":\"rejected\",\"rejectReason\":\"Not your character\"},\"ballotsCast\":2,"
-            + "\"previousWeekId\":\"w_0\"}";
+            + "\"previousWeekId\":\"w_0\",\"issue\":43,\"entryCount\":214}";
         var week = JsonSerializer.Deserialize(json, AethernetJsonContext.Default.PrismWeekDto);
         Assert.NotNull(week);
         Assert.Equal("entering", week.Phase);
         Assert.Equal(40, week.ResultsAtUnix);
         Assert.Equal(2, week.BallotsCast);
         Assert.Equal("w_0", week.PreviousWeekId);
+        Assert.Equal(43, week.Issue);
+        Assert.Equal(214, week.EntryCount);
         Assert.NotNull(week.MyEntry);
         Assert.Equal("rejected", week.MyEntry.Status);
         Assert.Equal("Not your character", week.MyEntry.RejectReason);
@@ -49,6 +51,8 @@ public sealed class PrismWireContractTests
         Assert.Equal(string.Empty, week.Title);
         Assert.Equal(string.Empty, week.PreviousWeekId);
         Assert.Equal(0, week.BallotsCast);
+        Assert.Equal(0, week.Issue);
+        Assert.Equal(0, week.EntryCount);
     }
 
     [Fact]
@@ -67,9 +71,11 @@ public sealed class PrismWireContractTests
     public void BallotAndResultsDeserialize()
     {
         var ballot = JsonSerializer.Deserialize("{\"id\":\"b_1\",\"stage\":\"final\",\"looks\":[{\"id\":\"l_1\","
-            + "\"imageUrl\":\"https://x/l.jpg\",\"width\":810,\"height\":1080}]}", AethernetJsonContext.Default.PrismBallotDto);
+            + "\"imageUrl\":\"https://x/l.jpg\",\"width\":810,\"height\":1080}],\"heatLabel\":\"B\"}",
+            AethernetJsonContext.Default.PrismBallotDto);
         Assert.NotNull(ballot);
         Assert.Equal("final", ballot.Stage);
+        Assert.Equal("B", ballot.HeatLabel);
         Assert.NotNull(ballot.Looks);
         Assert.Single(ballot.Looks);
         Assert.Equal("l_1", ballot.Looks[0].Id);
@@ -83,12 +89,16 @@ public sealed class PrismWireContractTests
         var results = JsonSerializer.Deserialize("{\"weekId\":\"w_0\",\"title\":\"Gold Saucer glam\","
             + "\"heatPodium\":[{\"rank\":1,\"imageUrl\":\"https://x/p.jpg\",\"displayName\":\"Ada Moon\","
             + "\"world\":\"Phoenix\"}],\"finalPodium\":[],\"myHeatRank\":2,\"heatSize\":12,\"percentile\":15,"
-            + "\"coinsAwarded\":150}", AethernetJsonContext.Default.PrismResultsDto);
+            + "\"coinsAwarded\":150,\"issue\":42,\"entryCount\":214,\"myImageUrl\":\"https://x/me.jpg\","
+            + "\"heatLabel\":\"B\"}", AethernetJsonContext.Default.PrismResultsDto);
         Assert.NotNull(results);
         Assert.NotNull(results.HeatPodium);
         Assert.Equal("Ada Moon", results.HeatPodium[0].DisplayName);
         Assert.Equal(2, results.MyHeatRank);
         Assert.Equal(0, results.MyFinalRank);
         Assert.Equal(150, results.CoinsAwarded);
+        Assert.Equal(42, results.Issue);
+        Assert.Equal("https://x/me.jpg", results.MyImageUrl);
+        Assert.Equal("B", results.HeatLabel);
     }
 }

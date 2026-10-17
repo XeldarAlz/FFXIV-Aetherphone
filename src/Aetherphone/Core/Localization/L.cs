@@ -10450,25 +10450,35 @@ internal static class L
         public static readonly LocString JudgeHeat = new("prism.judgeHeat", "Judge a heat");
         public static readonly LocString JudgeFinal = new("prism.judgeFinal", "Judge the final");
         public static readonly LocPlural HeatsJudged = new("prism.heatsJudged", "{0} heat judged", "{0} heats judged");
-        public static readonly LocString LookCount = new("prism.lookCount", "Look {0} of {1}");
-        public static readonly LocString RateHint = new("prism.rateHint",
-            "Tap a star to rate how well this look fits the theme");
+        public static readonly LocString LookCount = new("prism.lookCount", "Look {0}/{1}");
+        public static readonly LocString RateHint = new("prism.rateHint", "How well does it wear the theme?");
         public static readonly LocString HeatDoneTitle = new("prism.heatDoneTitle", "Heat judged");
         public static readonly LocString HeatDoneHint = new("prism.heatDoneHint",
-            "Your stars are in. Names stay hidden until the results.");
+            "Your scores are in. Names stay hidden until the results.");
         public static readonly LocString JudgeAnother = new("prism.judgeAnother", "Judge another");
         public static readonly LocString NothingLeftTitle = new("prism.nothingLeftTitle", "All caught up");
         public static readonly LocString NothingLeftHint = new("prism.nothingLeftHint",
             "You've judged every heat you can for now.");
         public static readonly LocString ReportTitle = new("prism.reportTitle", "Report this look");
         public static readonly LocString LastResults = new("prism.lastResults", "Last week's results");
-        public static readonly LocString HeatRank = new("prism.heatRank", "Rank {0} of {1} in your heat");
         public static readonly LocString FinalRank = new("prism.finalRank", "Rank {0} in the final");
         public static readonly LocString TopPercent = new("prism.topPercent", "Top {0}% this week");
         public static readonly LocString CoinsWon = new("prism.coinsWon", "+{0} Aether Coin");
         public static readonly LocString YourHeat = new("prism.yourHeat", "Your heat");
         public static readonly LocString FinalTitle = new("prism.finalTitle", "The final");
-        public static readonly LocString NotEntered = new("prism.notEntered", "You didn't enter this theme");
+        public static readonly LocString Back = new("prism.back", "Back");
+        public static readonly LocString Report = new("prism.report", "Report");
+        public static readonly LocString Issue = new("prism.issue", "N°{0}");
+        public static readonly LocString CoverCredit = new("prism.coverCredit", "Cover: {0}");
+        public static readonly LocPlural LooksThisIssue =
+            new("prism.looksThisIssue", "{0} look this issue", "{0} looks this issue");
+        public static readonly LocString YourLook = new("prism.yourLook", "Your look");
+        public static readonly LocString YourLookStatus = new("prism.yourLookStatus", "Your look: {0}");
+        public static readonly LocString ResultsIn = new("prism.resultsIn", "The results are in");
+        public static readonly LocString ReplayReveal = new("prism.replayReveal", "Replay the reveal");
+        public static readonly LocString Submitting = new("prism.submitting", "Sending your scores…");
+        public static readonly LocString HeatName = new("prism.heatName", "Heat {0}");
+        public static readonly LocString YourPlacing = new("prism.yourPlacing", "Your placing");
     }
 
     internal static class Announcements

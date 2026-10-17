@@ -80,7 +80,6 @@ internal static class AppPalettes
     public static readonly AppPalette YellowPages = For("yellowpages");
     public static readonly AppPalette Feedback = For("feedback");
     public static readonly AppPalette Polls = For("polls");
-    public static readonly AppPalette Prism = For("prism");
     public static readonly AppPalette Activity = Neutral(AppAccents.For("character"));
     public static readonly AppPalette Dailies = For("dailies");
     public static readonly AppPalette Collections = For("collections");
