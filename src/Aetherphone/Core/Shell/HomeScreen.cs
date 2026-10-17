@@ -47,6 +47,8 @@ internal sealed class HomeScreen
 
     public bool Editing => interaction.Editing;
 
+    public float EditPresence => chrome.EditPresence;
+
     public HomeLayoutService Layout => layout;
 
     public void Draw(Rect screen, Rect content, PhoneTheme theme, INavigator navigation, in HomeMotion motion)
@@ -54,15 +56,14 @@ internal sealed class HomeScreen
         layout.EnsureCurrent();
         var delta = FrameClock.Delta;
         interaction.Advance(delta);
-        var editReserve = interaction.Editing && motion.Interactive ? HomeMetrics.EditToolbarBandUnits : 0f;
         sidePaddingUnits = theme.SidePadding;
         var metrics = HomeMetrics.Compute(content, HomeLayoutService.Columns, layout.Rows, UiScale.Current,
-            motion, sidePaddingUnits, editReserve);
+            motion, sidePaddingUnits);
         pager.Step(delta, interaction.DisplayPageCount());
         var chromeAlpha = 1f - motion.Recession;
         if (motion.Interactive)
         {
-            interaction.HandleInput(content, metrics, navigation, theme, delta);
+            interaction.HandleInput(screen, content, metrics, navigation, theme, delta);
         }
         else
         {
@@ -82,10 +83,7 @@ internal sealed class HomeScreen
             LayerCompositor.Fade(tileDrawList, tileVertexStart, chromeAlpha);
         }
 
-        if (interaction.Editing && motion.Interactive)
-        {
-            chrome.DrawEditChrome(content, metrics, theme);
-        }
+        chrome.DrawEditChrome(screen, theme, interaction.RemoveBadgesLive(motion));
 
         folder.Draw(screen, content, metrics, theme, navigation, interaction.Editing, pager.Page, delta);
         var ghostDrawList = ImGui.GetWindowDrawList();

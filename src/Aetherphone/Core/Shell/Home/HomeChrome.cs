@@ -4,6 +4,7 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 
 namespace Aetherphone.Core.Shell.Home;
 
@@ -15,11 +16,15 @@ internal sealed class HomeChrome
     private const float DotRadiusUnits = 3f;
     private const float DotsPillPadUnits = 11f;
     private const float DotsPillHeightUnits = 18f;
+    private const float EditPillWidthUnits = 60f;
+    private const float EditIconUnits = 12f;
+    private const float EditPillRestScale = 0.85f;
 
     private readonly Pager pager;
     private readonly HomeInteractionController interaction;
     private readonly Spotlight.SpotlightOverlay spotlight;
     private Spring dotsPresence;
+    private Spring editPresence;
 
     public HomeChrome(Pager pager, HomeInteractionController interaction, Spotlight.SpotlightOverlay spotlight)
     {
@@ -132,7 +137,7 @@ internal sealed class HomeChrome
         var contentWidth = iconHeight + gap + labelSize.X * press;
         var left = center.X - contentWidth * 0.5f;
         ProgressRing.CenterIcon(drawList, new Vector2(left + iconHeight * 0.5f, center.Y),
-            Dalamud.Interface.FontAwesomeIcon.Search, Palette.WithAlpha(theme.TextStrong, 0.85f * alpha), iconHeight);
+            FontAwesomeIcon.Search, Palette.WithAlpha(theme.TextStrong, 0.85f * alpha), iconHeight);
         Typography.Draw(drawList, new Vector2(left + iconHeight + gap, center.Y - labelSize.Y * 0.5f * press), label,
             Palette.WithAlpha(theme.TextStrong, 0.85f * alpha), TextStyles.FootnoteEmphasized);
     }
@@ -193,48 +198,52 @@ internal sealed class HomeChrome
         }
     }
 
-    public void DrawEditChrome(Rect content, in HomeMetrics metrics, PhoneTheme theme)
+    public float EditPresence => Math.Clamp(editPresence.Value, 0f, 1f);
+
+    public void DrawEditChrome(Rect screen, PhoneTheme theme, bool editing)
     {
+        var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+        editPresence.Step(editing ? 1f : 0f, Motion.Appear, delta);
+        var presence = EditPresence;
+        if (presence <= 0.01f)
+        {
+            return;
+        }
+
+        DrawEditPill(theme, AddRect(screen), FontAwesomeIcon.Plus, editing, presence);
+        DrawEditPill(theme, DoneRect(screen), FontAwesomeIcon.Check, editing, presence);
+    }
+
+    private static void DrawEditPill(PhoneTheme theme, Rect rect, FontAwesomeIcon icon, bool live, float presence)
+    {
+        var scale = UiScale.Current;
+        var hovered = live && UiInteract.Hover(rect.Min, rect.Max);
+        var half = rect.Size * 0.5f * (EditPillRestScale + (1f - EditPillRestScale) * presence);
         var drawList = ImGui.GetWindowDrawList();
-        var scale = metrics.Scale;
-        var add = AddRect(content, metrics);
-        var addHovered = UiInteract.Hover(add.Min, add.Max);
-        var addCenter = add.Center;
-        drawList.AddCircleFilled(addCenter, add.Width * 0.5f,
-            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, addHovered ? 0.26f : 0.17f)), 32);
-        var arm = add.Width * 0.22f;
-        var ink = ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.95f));
-        drawList.AddLine(addCenter - new Vector2(arm, 0f), addCenter + new Vector2(arm, 0f), ink, 2f * scale);
-        drawList.AddLine(addCenter - new Vector2(0f, arm), addCenter + new Vector2(0f, arm), ink, 2f * scale);
-        if (addHovered)
+        Material.LiquidGlass(drawList, rect.Center - half, rect.Center + half, half.Y, scale, GlassTone.Light,
+            WallpaperLegibility.Strength(theme), presence);
+        if (hovered)
         {
+            Squircle.Fill(drawList, rect.Center - half, rect.Center + half, half.Y,
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f * presence)));
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        var done = DoneRect(content, metrics);
-        var doneHovered = UiInteract.Hover(done.Min, done.Max);
-        Squircle.Fill(drawList, done.Min, done.Max, done.Height * 0.5f,
-            ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, doneHovered ? 1f : 0.88f)));
-        Typography.DrawCentered(done.Center, Loc.T(L.Home.Done), new Vector4(1f, 1f, 1f, 1f), 0.82f,
-            FontWeight.SemiBold);
-        if (doneHovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
+        ProgressRing.CenterIcon(drawList, rect.Center, icon, Palette.WithAlpha(theme.TextStrong, 0.95f * presence),
+            EditIconUnits * scale);
     }
 
-    public static Rect DoneRect(Rect content, in HomeMetrics metrics)
-    {
-        var width = 64f * metrics.Scale;
-        var height = 30f * metrics.Scale;
-        var max = new Vector2(content.Max.X - 4f * metrics.Scale, content.Min.Y + height);
-        return new Rect(new Vector2(max.X - width, content.Min.Y), max);
-    }
+    public static Rect DoneRect(Rect screen) => EditPillRect(screen, 1);
 
-    public static Rect AddRect(Rect content, in HomeMetrics metrics)
+    public static Rect AddRect(Rect screen) => EditPillRect(screen, -1);
+
+    private static Rect EditPillRect(Rect screen, int side)
     {
-        var size = 30f * metrics.Scale;
-        var min = new Vector2(content.Min.X + 4f * metrics.Scale, content.Min.Y);
-        return new Rect(min, min + new Vector2(size, size));
+        var scale = UiScale.Current;
+        var island = StatusBar.BaseIsland(screen);
+        var earCenterX = side < 0 ? (screen.Min.X + island.Min.X) * 0.5f : (island.Max.X + screen.Max.X) * 0.5f;
+        var half = new Vector2(EditPillWidthUnits, island.Height / scale) * 0.5f * scale;
+        var center = new Vector2(earCenterX, island.Center.Y);
+        return new Rect(center - half, center + half);
     }
 }
