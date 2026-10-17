@@ -34,20 +34,20 @@
       },
       "NAudio.Wasapi": {
         "type": "Direct",
-        "requested": "[2.3.0, )",
-        "resolved": "2.3.0",
-        "contentHash": "y5K2BxrLnvohgu5znzg5wRsai3YcuNXfrpo68i7PmCQqpK5MC/R24e5aO3OyN/XhfRr12e0QYV0OnUWEHi5SzA==",
+        "requested": "[2.4.0, )",
+        "resolved": "2.4.0",
+        "contentHash": "DKwpFzgJkUkge4sR+5t/DND1SbuHOJXQX3BBqnmd0n/zjM/CqBqbKA1wMXKIKdN2R1PtETVDu5C9ODPif37hhw==",
         "dependencies": {
-          "NAudio.Core": "2.3.0"
+          "NAudio.Core": "2.4.0"
         }
       },
       "NAudio.WinMM": {
         "type": "Direct",
-        "requested": "[2.3.0, )",
-        "resolved": "2.3.0",
-        "contentHash": "5G1dRjsZm50T3luyuqcmI2BSvj3K4ZJaD/x776/0Epj88qOsOryDZG40+MufwIk1UFJSFWhRobBqtJYFc8Ss4g==",
+        "requested": "[2.4.0, )",
+        "resolved": "2.4.0",
+        "contentHash": "mipx4Wx/C2c/ajptYaInJyakSq+33TjfQWSjFuOoq7JnU2E7nIkZj6pf9Qx4AwExPQ094Gn9R/jt52agiETkwQ==",
         "dependencies": {
-          "NAudio.Core": "2.3.0"
+          "NAudio.Core": "2.4.0"
         }
       },
       "NEbml": {
@@ -177,8 +177,8 @@
       },
       "NAudio.Core": {
         "type": "Transitive",
-        "resolved": "2.3.0",
-        "contentHash": "jMd7r6dB6tAtXhOYL58ntPqwERNm1/Rhw5MKOIYvsnXzuX+PTGsa2VMam6n0npZYSwlSidKa4GAm4bFcXFUlcg=="
+        "resolved": "2.4.0",
+        "contentHash": "VDXi1Wp1CUFgMxYyyajaG8sM9c9v5Mf2AdJkYUnksqwENSqVlrXsPe9l/mG55pNIv9eMYXGHiIxVuhS7+a3BQg=="
       },
       "NETStandard.Library": {
         "type": "Transitive",
