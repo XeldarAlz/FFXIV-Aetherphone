@@ -40,7 +40,7 @@ internal sealed partial class PrismApp
         }
 
         pickIntake.AcceptDrop(content, library, PrismArt.White);
-        var top = DrawHeader(drawList, content, string.Empty, PrismType.Upper(Loc.T(L.Prism.EnterLook)), true, scale);
+        var top = DrawHeader(drawList, content, string.Empty, Loc.T(L.Prism.EnterLook), true, scale);
         var gutter = PrismArt.Gutter(scale);
         var paneHeight = MathF.Min(content.Width, (content.Max.Y - top) * PickPaneFraction);
         var pane = new Rect(new Vector2(content.Min.X, top), new Vector2(content.Max.X, top + paneHeight));
@@ -50,7 +50,7 @@ internal sealed partial class PrismApp
         var stripTop = pane.Max.Y + Metrics.Space.Md * scale;
         var strip = new Rect(new Vector2(content.Min.X + gutter, stripTop),
             new Vector2(content.Max.X - gutter, stripTop + PrismArt.StripUnits * scale));
-        var label = PrismType.Upper(Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.EnterThisLook));
+        var label = Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.EnterThisLook);
         if (PrismArt.Strip(drawList, strip, label, "→", true, pickSession.HasSelection && !store.Busy,
                 UiSound.Shutter))
         {

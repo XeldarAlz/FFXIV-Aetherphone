@@ -126,8 +126,6 @@ internal static class PrismArt
         var max = new Vector2(topLeft.X + size.X, topLeft.Y + size.Y + pad);
         var hovered = UiInteract.Hover(min, max);
         PrismType.Draw(drawList, topLeft, label, hovered ? White : color, EditorialFace.Label, pixels);
-        Hairline(drawList, topLeft.X, topLeft.X + size.X, topLeft.Y + size.Y + 2f * scale, hovered ? White : color,
-            scale);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

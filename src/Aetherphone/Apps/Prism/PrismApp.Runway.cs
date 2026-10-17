@@ -78,7 +78,7 @@ internal sealed partial class PrismApp
         {
             DrawHeader(drawList, content, string.Empty, string.Empty, true, scale);
             DrawNotice(drawList, content, Loc.T(L.Prism.NothingLeftTitle), Loc.T(L.Prism.NothingLeftHint), scale);
-            if (PrismArt.Strip(drawList, StripRect(content, scale), PrismType.Upper(Loc.T(L.Prism.Back)), "→", false))
+            if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Prism.Back), "→", false))
             {
                 Go(PrismScreen.Cover);
             }
@@ -131,8 +131,8 @@ internal sealed partial class PrismApp
         var progress = chosen > 0 ? circle.Step(1f, Motion.Release, delta) : 0f;
         var failure = store.ActionFailed ? store.ActionFailureText : string.Empty;
         var prompt = store.ActionFailed
-            ? PrismType.Upper(failure.Length > 0 ? failure : Loc.T(L.Common.LoadFailedHint))
-            : PrismType.Upper(Loc.T(L.Prism.RateHint));
+            ? failure.Length > 0 ? failure : Loc.T(L.Common.LoadFailedHint)
+            : Loc.T(L.Prism.RateHint);
         var picked = PrismArt.Label(drawList, label, prompt, chosen, progress, chosen == 0 && !store.Busy, scale);
         if (picked > 0)
         {
@@ -152,7 +152,7 @@ internal sealed partial class PrismApp
         var gutter = PrismArt.Gutter(scale);
         var top = content.Min.Y + HeaderGapUnits * scale;
         var labelPixels = PrismArt.LabelPixels();
-        if (PrismArt.Link(drawList, new Vector2(content.Min.X + gutter, top), PrismType.Upper(Loc.T(L.Prism.Back)),
+        if (PrismArt.Link(drawList, new Vector2(content.Min.X + gutter, top), Loc.T(L.Prism.Back),
                 PrismArt.Muted, scale))
         {
             Go(PrismScreen.Cover);
@@ -162,7 +162,7 @@ internal sealed partial class PrismApp
         var counterWidth = PrismType.Measure(counter, EditorialFace.Label, labelPixels).X;
         PrismType.Draw(drawList, new Vector2(content.Center.X - counterWidth * 0.5f, top), counter, PrismArt.White,
             EditorialFace.Label, labelPixels);
-        var reportLabel = PrismType.Upper(Loc.T(L.Prism.Report));
+        var reportLabel = Loc.T(L.Prism.Report);
         var reportWidth = PrismType.Measure(reportLabel, EditorialFace.Label, labelPixels).X;
         if (PrismArt.Link(drawList, new Vector2(content.Max.X - gutter - reportWidth, top), reportLabel,
                 PrismArt.Muted, scale))
@@ -204,7 +204,7 @@ internal sealed partial class PrismApp
             1f + (InspectZoom - 1f) * inspect, inspectFocus);
         if (lookIndex == 0 && inspect < PrismMotion.Settled && turn >= PrismMotion.Settled)
         {
-            var hint = PrismType.Upper(Loc.T(L.Prism.InspectHint));
+            var hint = Loc.T(L.Prism.InspectHint);
             var labelPixels = PrismArt.LabelPixels();
             PrismType.DrawRight(drawList, new Vector2(photo.Max.X - PrismArt.Gutter(scale),
                 photo.Min.Y + Metrics.Space.Sm * scale), hint, Palette.WithAlpha(PrismArt.White, 1f - inspect),
@@ -292,7 +292,7 @@ internal sealed partial class PrismApp
         var reason = store.ActionFailureText;
         DrawNotice(drawList, content, Loc.T(L.Common.LoadFailed),
             reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint), scale);
-        if (PrismArt.Strip(drawList, StripRect(content, scale), PrismType.Upper(Loc.T(L.Common.Retry)), "→", true))
+        if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Common.Retry), "→", true))
         {
             store.RequestBallot();
         }
@@ -314,7 +314,7 @@ internal sealed partial class PrismApp
         DrawWipe(drawList, new Vector2(content.Min.X + gutter, top), count, EditorialFace.Numerals, pixels,
             PrismMotion.At(screenAge, 0f, Motion.Sheet), PrismArt.White);
         var strip = PrismMotion.Mark(drawList);
-        if (canJudge && PrismArt.Strip(drawList, StripRect(content, scale, 1), PrismType.Upper(Loc.T(L.Prism.JudgeAnother)),
+        if (canJudge && PrismArt.Strip(drawList, StripRect(content, scale, 1), Loc.T(L.Prism.JudgeAnother),
                 "→", true))
         {
             heatDone = false;
@@ -324,7 +324,7 @@ internal sealed partial class PrismApp
             Go(PrismScreen.Runway);
         }
 
-        if (PrismArt.Strip(drawList, StripRect(content, scale), PrismType.Upper(Loc.T(L.Prism.Back)), string.Empty,
+        if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Prism.Back), string.Empty,
                 strips == 1))
         {
             Go(PrismScreen.Cover, -1);
@@ -336,7 +336,7 @@ internal sealed partial class PrismApp
 
     private void DrawCenteredLabel(ImDrawListPtr drawList, Rect content, string text)
     {
-        var upper = PrismType.Upper(text);
+        var upper = text;
         var labelPixels = PrismArt.LabelPixels();
         var size = PrismType.Measure(upper, EditorialFace.Label, labelPixels);
         PrismType.Draw(drawList, content.Center - size * 0.5f, upper, PrismArt.Muted, EditorialFace.Label, labelPixels);
@@ -350,8 +350,8 @@ internal sealed partial class PrismApp
             return lookCounter.Value;
         }
 
-        var counter = PrismType.Upper(Loc.T(L.Prism.LookCount, Padded[Math.Min(current, Padded.Length - 1)],
-            Padded[Math.Min(total, Padded.Length - 1)]));
+        var counter = Loc.T(L.Prism.LookCount, Padded[Math.Min(current, Padded.Length - 1)],
+            Padded[Math.Min(total, Padded.Length - 1)]);
         var stage = HeatTitle(ballot);
         return lookCounter.Store(key, stage.Length > 0 ? counter + " · " + stage : counter);
     }
@@ -367,7 +367,7 @@ internal sealed partial class PrismApp
     {
         var text = ballot.Stage == PrismPhases.StageFinal ? Loc.T(L.Prism.FinalTitle)
             : ballot.HeatLabel.Length > 0 ? Loc.T(L.Prism.HeatName, ballot.HeatLabel) : string.Empty;
-        return PrismType.Upper(text);
+        return text;
     }
 
     private static string[] BuildDigits(string format)

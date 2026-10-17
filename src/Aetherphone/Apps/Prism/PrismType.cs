@@ -13,27 +13,27 @@ internal static class PrismType
     private const int CacheLimit = 256;
     private const float FitStep = 0.92f;
 
-    private static readonly Dictionary<string, string> UpperCache = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, string> TitleCache = new(StringComparer.Ordinal);
     private static readonly Dictionary<WrapKey, string[]> WrapCache = new();
     private static readonly List<string> Scratch = new();
 
     private readonly record struct WrapKey(string Text, EditorialFace Face, int Pixels, int Width, bool Native);
 
-    public static string Upper(string text)
+    public static string Title(string text)
     {
-        if (UpperCache.TryGetValue(text, out var cached))
+        if (TitleCache.TryGetValue(text, out var cached))
         {
             return cached;
         }
 
-        if (UpperCache.Count >= CacheLimit)
+        if (TitleCache.Count >= CacheLimit)
         {
-            UpperCache.Clear();
+            TitleCache.Clear();
         }
 
-        var upper = Loc.Culture.TextInfo.ToUpper(text);
-        UpperCache[text] = upper;
-        return upper;
+        var title = Loc.Culture.TextInfo.ToTitleCase(text);
+        TitleCache[text] = title;
+        return title;
     }
 
     public static Vector2 Measure(string text, EditorialFace face, float pixels)
@@ -166,6 +166,6 @@ internal static class PrismType
         Plugin.Fonts.NoticeText(text);
         return face == EditorialFace.Label
             ? Plugin.Fonts.Push(FallbackLabelScale, FontWeight.Medium)
-            : Plugin.Fonts.Push(FallbackDisplayScale, FontWeight.Medium);
+            : Plugin.Fonts.Push(FallbackDisplayScale, FontWeight.Bold);
     }
 }

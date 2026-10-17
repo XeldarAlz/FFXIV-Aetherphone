@@ -78,11 +78,11 @@ internal sealed class FontService : IDisposable
 
     private static readonly string[] EditorialFiles =
     {
-        "Inter-Medium.ttf", "Inter-Regular.ttf", "Inter-Medium.ttf",
+        "Inter-Bold.ttf", "Inter-Regular.ttf", "Inter-Medium.ttf",
     };
 
     private static readonly float[] EditorialMultipliers = { 2.60f, 6.40f, 0.80f };
-    private static readonly float[] EditorialTracking = { -0.025f, -0.05f, 0.08f };
+    private static readonly float[] EditorialTracking = { -0.03f, -0.05f, 0f };
 
     private static readonly ushort[][] EditorialRanges =
     {

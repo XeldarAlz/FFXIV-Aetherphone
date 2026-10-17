@@ -45,7 +45,7 @@ internal sealed partial class PrismApp
         {
             var tag = PrismMotion.Mark(drawList);
             var pivot = PrismArt.Tag(drawList, new Vector2(frame.Max.X, frame.Min.Y),
-                PrismType.Upper(Loc.T(StatusName(entry.Status))), scale);
+                Loc.T(StatusName(entry.Status)), scale);
             var stamp = PrismMotion.At(screenAge, TagDelay, Motion.PageSettle);
             PrismMotion.Scale(drawList, tag, pivot, 1f + TagStamp * (1f - stamp), stamp);
         }
@@ -62,13 +62,13 @@ internal sealed partial class PrismApp
             return;
         }
 
-        if (PrismArt.Strip(drawList, StripRect(content, scale, 1), PrismType.Upper(Loc.T(L.Common.ChangePhoto)), "→",
+        if (PrismArt.Strip(drawList, StripRect(content, scale, 1), Loc.T(L.Common.ChangePhoto), "→",
                 true, !store.Busy))
         {
             StartPick();
         }
 
-        if (PrismArt.Strip(drawList, StripRect(content, scale), PrismType.Upper(Loc.T(L.Prism.Withdraw)),
+        if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Prism.Withdraw),
                 string.Empty, false, !store.Busy))
         {
             confirm.Ask(new ConfirmRequest

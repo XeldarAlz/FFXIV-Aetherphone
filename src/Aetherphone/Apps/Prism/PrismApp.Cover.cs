@@ -33,7 +33,7 @@ internal sealed partial class PrismApp
         {
             DrawMasthead(drawList, content, string.Empty, scale);
             DrawNotice(drawList, content, Loc.T(L.Prism.SignInTitle), Loc.T(L.Prism.SignInRequired), scale);
-            if (PrismArt.Strip(drawList, StripRect(content, scale), PrismType.Upper(Loc.T(L.Prism.OpenSettings)), "→",
+            if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Prism.OpenSettings), "→",
                     true))
             {
                 navigation.Open("settings");
@@ -110,14 +110,14 @@ internal sealed partial class PrismApp
             PrismType.DrawRight(drawList, new Vector2(content.Max.X - gutter, top), CreditLine(cover), PrismArt.Muted,
                 EditorialFace.Label, labelPixels);
             PrismType.DrawRight(drawList, new Vector2(content.Max.X - gutter, top + PrismType.LineHeight(
-                EditorialFace.Label, labelPixels)), PrismType.Upper(cover.World), PrismArt.Muted, EditorialFace.Label, labelPixels);
+                EditorialFace.Label, labelPixels)), cover.World, PrismArt.Muted, EditorialFace.Label, labelPixels);
         }
 
         var left = new Vector2(content.Min.X + gutter, top);
         if (store.Results is { } results)
         {
             var seen = configuration.PrismRevealedWeek == results.WeekId;
-            var label = PrismType.Upper(Loc.T(seen ? L.Prism.LastResults : L.Prism.ResultsIn));
+            var label = Loc.T(seen ? L.Prism.LastResults : L.Prism.ResultsIn);
             if (PrismArt.Link(drawList, left, label, seen ? PrismArt.Muted : PrismArt.White, scale))
             {
                 OpenResults();
@@ -127,7 +127,7 @@ internal sealed partial class PrismApp
         }
 
         if (week.MyEntry is not null && week.Phase != PrismPhases.Entering &&
-            PrismArt.Link(drawList, left, PrismType.Upper(Loc.T(L.Prism.YourLook)), PrismArt.Muted, scale))
+            PrismArt.Link(drawList, left, Loc.T(L.Prism.YourLook), PrismArt.Muted, scale))
         {
             Go(PrismScreen.Entry);
         }
@@ -144,7 +144,7 @@ internal sealed partial class PrismApp
             : 0f;
         var count = CountLine(week.EntryCount);
         var deadline = week.Phase == PrismPhases.Tallying ? string.Empty : DeadlineLine(week);
-        var pixels = PrismType.Fit(week.Title, EditorialFace.Headline, width, HeadlineMaxUnits * scale,
+        var pixels = PrismType.Fit(PrismType.Title(week.Title), EditorialFace.Headline, width, HeadlineMaxUnits * scale,
             HeadlineMinUnits * scale, HeadlineLines, out var lines);
         var headline = lines.Length * PrismType.LineHeight(EditorialFace.Headline, pixels);
         var gap = Metrics.Space.Md * scale;
@@ -154,7 +154,7 @@ internal sealed partial class PrismApp
         var left = content.Min.X + gutter;
         var step = 0;
         var mark = PrismMotion.Mark(drawList);
-        PrismType.Draw(drawList, new Vector2(left, top), PrismType.Upper(Loc.T(L.Prism.ThemeLabel)), PrismArt.Muted,
+        PrismType.Draw(drawList, new Vector2(left, top), Loc.T(L.Prism.ThemeLabel), PrismArt.Muted,
             EditorialFace.Label, labelPixels);
         RiseStep(drawList, mark, step++, scale);
         top += labelLine + gap;
@@ -206,7 +206,7 @@ internal sealed partial class PrismApp
                 return;
             }
 
-            var left = PrismType.Upper(Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.EnterLook));
+            var left = Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.EnterLook);
             if (PrismArt.Strip(drawList, strip, left, "→", true, !store.Busy))
             {
                 StartPick();
@@ -218,7 +218,7 @@ internal sealed partial class PrismApp
         if (PrismPhases.Judgeable(week.Phase))
         {
             var label = week.Phase == PrismPhases.Final ? L.Prism.JudgeFinal : L.Prism.JudgeHeat;
-            if (PrismArt.Strip(drawList, strip, PrismType.Upper(Loc.T(label)), JudgedLine(week.BallotsCast), true,
+            if (PrismArt.Strip(drawList, strip, Loc.T(label), JudgedLine(week.BallotsCast), true,
                     !store.Busy))
             {
                 StartJudging();
@@ -234,7 +234,7 @@ internal sealed partial class PrismApp
     {
         if (!store.WeekFailed || store.Loading)
         {
-            var loading = PrismType.Upper(Loc.T(L.Common.Loading));
+            var loading = Loc.T(L.Common.Loading);
             var size = PrismType.Measure(loading, EditorialFace.Label, PrismArt.LabelPixels());
             PrismType.Draw(drawList, content.Center - size * 0.5f, loading, PrismArt.Muted, EditorialFace.Label,
                 PrismArt.LabelPixels());
@@ -244,7 +244,7 @@ internal sealed partial class PrismApp
         var reason = store.WeekFailureText;
         DrawNotice(drawList, content, Loc.T(L.Common.LoadFailed), reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint),
             scale);
-        if (PrismArt.Strip(drawList, StripRect(content, scale), PrismType.Upper(Loc.T(L.Common.Retry)), "→", true))
+        if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Common.Retry), "→", true))
         {
             UiFeedback.Play(UiSound.Refresh);
             store.Refresh();
@@ -304,7 +304,7 @@ internal sealed partial class PrismApp
         var key = HashCode.Combine(week.Phase, unix, minute, Loc.Current.Code);
         return deadlineText.IsCurrent(key)
             ? deadlineText.Value
-            : deadlineText.Store(key, PrismType.Upper(Loc.T(format, TimeText.Until(unix))));
+            : deadlineText.Store(key, Loc.T(format, TimeText.Until(unix)));
     }
 
     private string JudgedLine(int count)
@@ -312,7 +312,7 @@ internal sealed partial class PrismApp
         var key = HashCode.Combine(count, Loc.Current.Code);
         return judgedText.IsCurrent(key)
             ? judgedText.Value
-            : judgedText.Store(key, PrismType.Upper(Loc.Plural(L.Prism.HeatsJudged, count)));
+            : judgedText.Store(key, Loc.Plural(L.Prism.HeatsJudged, count));
     }
 
     private string IssueLine(int issue)
@@ -323,7 +323,7 @@ internal sealed partial class PrismApp
         }
 
         var key = HashCode.Combine(issue, Loc.Current.Code);
-        return issueText.IsCurrent(key) ? issueText.Value : issueText.Store(key, PrismType.Upper(Loc.T(L.Prism.Issue, issue)));
+        return issueText.IsCurrent(key) ? issueText.Value : issueText.Store(key, Loc.T(L.Prism.Issue, issue));
     }
 
     private string CreditLine(PrismPlacingDto cover)
@@ -331,7 +331,7 @@ internal sealed partial class PrismApp
         var key = HashCode.Combine(cover.DisplayName, Loc.Current.Code);
         return creditText.IsCurrent(key)
             ? creditText.Value
-            : creditText.Store(key, PrismType.Upper(Loc.T(L.Prism.CoverCredit, cover.DisplayName)));
+            : creditText.Store(key, Loc.T(L.Prism.CoverCredit, cover.DisplayName));
     }
 
     private string CountLine(int count)
@@ -344,7 +344,7 @@ internal sealed partial class PrismApp
         var key = HashCode.Combine(count, Loc.Current.Code);
         return countText.IsCurrent(key)
             ? countText.Value
-            : countText.Store(key, PrismType.Upper(Loc.Plural(L.Prism.LooksThisIssue, count)));
+            : countText.Store(key, Loc.Plural(L.Prism.LooksThisIssue, count));
     }
 
     private string StatusLine(PrismEntryDto entry)
@@ -352,7 +352,7 @@ internal sealed partial class PrismApp
         var key = HashCode.Combine(entry.Status, Loc.Current.Code);
         return statusText.IsCurrent(key)
             ? statusText.Value
-            : statusText.Store(key, PrismType.Upper(Loc.T(L.Prism.YourLookStatus, Loc.T(StatusName(entry.Status)))));
+            : statusText.Store(key, Loc.T(L.Prism.YourLookStatus, Loc.T(StatusName(entry.Status))));
     }
 
     private static LocString StatusName(string status) => status switch

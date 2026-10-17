@@ -162,7 +162,7 @@ internal sealed partial class PrismApp : IPhoneApp
         float height;
         if (back)
         {
-            if (PrismArt.Link(drawList, row.Min, PrismType.Upper(Loc.T(L.Prism.Back)), PrismArt.White, scale))
+            if (PrismArt.Link(drawList, row.Min, Loc.T(L.Prism.Back), PrismArt.White, scale))
             {
                 Go(screen == PrismScreen.Pick ? pickReturn : PrismScreen.Cover, -1);
             }
@@ -195,7 +195,7 @@ internal sealed partial class PrismApp : IPhoneApp
         var texture = images.Sized(url, MathF.Max(rect.Width, rect.Height));
         if (texture is null)
         {
-            var placeholder = PrismType.Upper(Loc.T(images.Failed(url) ? L.Common.ImageFailed : L.Common.Loading));
+            var placeholder = Loc.T(images.Failed(url) ? L.Common.ImageFailed : L.Common.Loading);
             var size = PrismType.Measure(placeholder, EditorialFace.Label, PrismArt.LabelPixels());
             PrismType.Draw(drawList, rect.Center - size * 0.5f, placeholder, PrismArt.Faint, EditorialFace.Label,
                 PrismArt.LabelPixels());
