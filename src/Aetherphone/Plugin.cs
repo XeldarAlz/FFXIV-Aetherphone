@@ -361,6 +361,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         SeasonalTheme.Update(Cfg, DateTime.Now);
         Fonts.SyncDisplay(SeasonalTheme.Halloween);
+        Fonts.SyncEditorial();
     }
 
     private void OnDeviceLinkTick(IFramework framework)

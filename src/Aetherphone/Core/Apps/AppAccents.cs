@@ -43,6 +43,7 @@ internal static class AppAccents
         ["appstore"] = AccentRing.Azure,
         ["feedback"] = AccentRing.Teal,
         ["polls"] = AccentRing.Indigo,
+        ["prism"] = AccentRing.Violet,
         ["announcements"] = AccentRing.Orange,
         ["muster"] = AccentRing.Cyan,
         ["yellowpages"] = AccentRing.Gold,

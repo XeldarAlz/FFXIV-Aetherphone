@@ -55,6 +55,7 @@ internal static class AppStoreCatalog
         ["polls"] = new(L.Apps.Polls, L.StoreCopy.PollsSub, L.StoreCopy.PollsBody, StoreCategory.Community),
         ["camera"] = new(L.Apps.Camera, L.StoreCopy.CameraSub, L.StoreCopy.CameraBody, StoreCategory.PhotoVideo),
         ["photos"] = new(L.Apps.Photos, L.StoreCopy.PhotosSub, L.StoreCopy.PhotosBody, StoreCategory.PhotoVideo),
+        ["prism"] = new(L.Apps.Prism, L.StoreCopy.PrismSub, L.StoreCopy.PrismBody, StoreCategory.PhotoVideo),
         ["aetherstream"] = new(L.Apps.AetherStream, L.StoreCopy.AetherStreamSub, L.StoreCopy.AetherStreamBody,
             StoreCategory.PhotoVideo),
         ["music"] = new(L.Apps.Music, L.StoreCopy.MusicSub, L.StoreCopy.MusicBody, StoreCategory.Entertainment),

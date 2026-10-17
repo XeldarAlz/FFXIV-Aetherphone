@@ -198,6 +198,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public float TextZoom { get; set; } = TextZoomCatalog.DefaultZoom;
     public string FontGlyphCache { get; set; } = string.Empty;
     public string IconGlyphCache { get; set; } = string.Empty;
+    public string PrismRevealedWeek { get; set; } = string.Empty;
     public float ScreenBrightness { get; set; } = 1f;
     public float PhoneScale { get; set; } = PhoneSizeCatalog.DefaultWidth / PhoneSizeCatalog.DesignWidth;
     public float PhoneWidth { get; set; }

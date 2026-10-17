@@ -32,6 +32,28 @@ Chirper and Aethergram, is redistributed unmodified.
 - Full license text: `src/Aetherphone/Fonts/PirataOne-OFL.txt`, shipped next
   to the fonts in every release archive.
 
+## Unbounded font
+
+`src/Aetherphone/Fonts/Unbounded-Black.ttf`, the headline and numeral face of
+the Prism app, is redistributed unmodified.
+
+- Copyright 2022 The Unbounded Project Authors
+  (https://github.com/googlefonts/unbounded)
+- License: SIL Open Font License 1.1
+- Full license text: `src/Aetherphone/Fonts/Unbounded-OFL.txt`, shipped next
+  to the fonts in every release archive.
+
+## JetBrains Mono font
+
+`src/Aetherphone/Fonts/JetBrainsMono-Regular.ttf`, the programme face of the
+Prism app, is redistributed unmodified.
+
+- Copyright 2020 The JetBrains Mono Project Authors
+  (https://github.com/JetBrains/JetBrainsMono)
+- License: SIL Open Font License 1.1
+- Full license text: `src/Aetherphone/Fonts/JetBrainsMono-OFL.txt`, shipped
+  next to the fonts in every release archive.
+
 ## Phosphor Icons
 
 The painted application icons under `src/Aetherphone/Icons/` (`<appid>.png`,
