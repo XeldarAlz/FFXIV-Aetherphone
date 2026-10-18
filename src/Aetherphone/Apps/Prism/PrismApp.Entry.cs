@@ -30,13 +30,13 @@ internal sealed partial class PrismApp
         var labelPixels = PrismArt.LabelPixels();
         var stripHeight = PrismArt.StripUnits * scale;
         var bottom = content.Max.Y - gutter;
-        var linkTop = bottom - PrismType.LineHeight(EditorialFace.Label, labelPixels);
+        var linkTop = bottom - PrismType.LineHeight(PrismFace.Label, labelPixels);
         var change = new Rect(new Vector2(left, linkTop - Metrics.Space.Lg * scale - stripHeight),
             new Vector2(left + width, linkTop - Metrics.Space.Lg * scale));
         var doneBottom = editable ? change.Min.Y - Metrics.Space.Md * scale : bottom;
         var done = new Rect(new Vector2(left, doneBottom - stripHeight), new Vector2(left + width, doneBottom));
         var actionsTop = done.Min.Y;
-        var pixels = PrismType.Fit(Loc.T(StatusTitle(entry.Status)), EditorialFace.Headline, width,
+        var pixels = PrismType.Fit(Loc.T(StatusTitle(entry.Status)), PrismFace.Headline, width,
             StatusMaxUnits * scale, StatusMinUnits * scale, 2, out var lines);
         var failure = store.ActionFailed && !store.Busy ? store.ActionFailureText : string.Empty;
         var hint = store.ActionFailed && !store.Busy
@@ -48,7 +48,7 @@ internal sealed partial class PrismApp
             ? Typography.MeasureWrappedBlock(hint, TextStyles.Subheadline, width).Y + Metrics.Space.Sm * scale
             : 0f;
         var textTop = actionsTop - Metrics.Space.Xl * scale - hintHeight -
-                      lines.Length * PrismType.LineHeight(EditorialFace.Headline, pixels);
+                      lines.Length * PrismType.LineHeight(PrismFace.Headline, pixels);
         var photo = new Rect(new Vector2(left, top), new Vector2(left + width, textTop - Metrics.Space.Xl * scale));
         var frame = DrawLook(drawList, photo, store.Busy ? string.Empty : entry.ImageUrl, true);
         if (!store.Busy)
@@ -61,7 +61,7 @@ internal sealed partial class PrismApp
         }
 
         textTop += PrismType.DrawLines(drawList, new Vector2(left, textTop), lines, PrismArt.Fore,
-            EditorialFace.Headline, pixels);
+            PrismFace.Headline, pixels);
         if (hint.Length > 0)
         {
             Typography.DrawWrappedLeft(new Vector2(left, textTop + Metrics.Space.Sm * scale), hint, PrismArt.Muted,

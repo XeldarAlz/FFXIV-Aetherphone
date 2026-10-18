@@ -107,13 +107,13 @@ internal static class PrismArt
     public static float Programme(ImDrawListPtr drawList, Rect row, string left, string right, Vector4 color)
     {
         var pixels = LabelPixels();
-        PrismType.Draw(drawList, row.Min, left, color, EditorialFace.Label, pixels);
+        PrismType.Draw(drawList, row.Min, left, color, PrismFace.Label, pixels);
         if (right.Length > 0)
         {
-            PrismType.DrawRight(drawList, new Vector2(row.Max.X, row.Min.Y), right, color, EditorialFace.Label, pixels);
+            PrismType.DrawRight(drawList, new Vector2(row.Max.X, row.Min.Y), right, color, PrismFace.Label, pixels);
         }
 
-        return PrismType.LineHeight(EditorialFace.Label, pixels);
+        return PrismType.LineHeight(PrismFace.Label, pixels);
     }
 
     public static bool Strip(ImDrawListPtr drawList, Rect rect, string left, string right, bool filled,
@@ -136,13 +136,13 @@ internal static class PrismArt
         var pixels = LabelPixels();
         var inset = rect.Height * 0.32f;
         var top = rect.Center.Y - pixels * 0.5f;
-        PrismType.Draw(drawList, new Vector2(rect.Min.X + inset, top), left, text, EditorialFace.Label, pixels);
-        var room = rect.Width - inset * 3f - PrismType.Measure(left, EditorialFace.Label, pixels).X;
-        if (right.Length > 0 && PrismType.Measure(right, EditorialFace.Label, pixels).X <= room)
+        PrismType.Draw(drawList, new Vector2(rect.Min.X + inset, top), left, text, PrismFace.Label, pixels);
+        var room = rect.Width - inset * 3f - PrismType.Measure(left, PrismFace.Label, pixels).X;
+        if (right.Length > 0 && PrismType.Measure(right, PrismFace.Label, pixels).X <= room)
         {
             var nudge = PressFx.Toward(ImGui.GetID(left), hovered ? 1f + ArrowNudge : 1f) - 1f;
             PrismType.DrawRight(drawList, new Vector2(rect.Max.X - inset + nudge * rect.Height, top), right, text,
-                EditorialFace.Label, pixels);
+                PrismFace.Label, pixels);
         }
 
         if (hovered)
@@ -156,12 +156,12 @@ internal static class PrismArt
     public static bool Link(ImDrawListPtr drawList, Vector2 topLeft, string label, Vector4 color, float scale)
     {
         var pixels = LabelPixels();
-        var size = PrismType.Measure(label, EditorialFace.Label, pixels);
+        var size = PrismType.Measure(label, PrismFace.Label, pixels);
         var pad = MathF.Max(0f, (Metrics.Size.TapTarget * scale - size.Y) * 0.5f);
         var min = new Vector2(topLeft.X, topLeft.Y - pad);
         var max = new Vector2(topLeft.X + size.X, topLeft.Y + size.Y + pad);
         var hovered = UiInteract.Hover(min, max);
-        PrismType.Draw(drawList, topLeft, label, hovered ? Fore : color, EditorialFace.Label, pixels);
+        PrismType.Draw(drawList, topLeft, label, hovered ? Fore : color, PrismFace.Label, pixels);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -171,7 +171,7 @@ internal static class PrismArt
     }
 
     public static float ButtonWidth(string label, float scale) =>
-        PrismType.Measure(label, EditorialFace.Label, LabelPixels()).X + ButtonPadUnits * scale * 2f;
+        PrismType.Measure(label, PrismFace.Label, LabelPixels()).X + ButtonPadUnits * scale * 2f;
 
     public static bool Button(ImDrawListPtr drawList, Vector2 topLeft, string label, float scale, out float width)
     {
@@ -186,7 +186,7 @@ internal static class PrismArt
         var hovered = UiInteract.Hover(hitMin, hitMax);
         drawList.AddRect(topLeft, max, ImGui.GetColorU32(hovered ? Fore : Faint), 0f, ImDrawFlags.None, 1f);
         PrismType.Draw(drawList, new Vector2(topLeft.X + pad, topLeft.Y + (height - pixels) * 0.5f), label,
-            hovered ? Fore : Muted, EditorialFace.Label, pixels);
+            hovered ? Fore : Muted, PrismFace.Label, pixels);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -215,9 +215,9 @@ internal static class PrismArt
                 drawList.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(Fore, share)));
             }
 
-            var size = PrismType.Measure(Digits[index], EditorialFace.Headline, digitPixels);
+            var size = PrismType.Measure(Digits[index], PrismFace.Headline, digitPixels);
             PrismType.Draw(drawList, (min + max) * 0.5f - size * 0.5f, Digits[index], Vector4.Lerp(Fore, inks.OnFore, share),
-                EditorialFace.Headline, digitPixels);
+                PrismFace.Headline, digitPixels);
             if (hovered)
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -353,13 +353,13 @@ internal static class PrismArt
     {
         var pixels = LabelPixels();
         var pad = TagPadUnits * scale;
-        var size = PrismType.Measure(label, EditorialFace.Label, pixels) + new Vector2(pad * 2f, pad * 2f);
+        var size = PrismType.Measure(label, PrismFace.Label, pixels) + new Vector2(pad * 2f, pad * 2f);
         var inset = TagInsetUnits * scale;
         var min = new Vector2(topRight.X - inset - size.X, topRight.Y + inset);
         var rect = new Rect(min, min + size);
         drawList.AddRectFilled(rect.Min, rect.Max, ImGui.GetColorU32(Bone));
         DrawStitch(drawList, rect, scale);
-        PrismType.Draw(drawList, min + new Vector2(pad, pad), label, Ink, EditorialFace.Label, pixels);
+        PrismType.Draw(drawList, min + new Vector2(pad, pad), label, Ink, PrismFace.Label, pixels);
         return rect.Center;
     }
 }

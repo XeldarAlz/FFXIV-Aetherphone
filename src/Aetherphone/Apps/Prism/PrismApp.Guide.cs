@@ -45,10 +45,10 @@ internal sealed partial class PrismApp
         for (var index = 0; index < GuideTitles.Length; index++)
         {
             PrismType.Draw(list, new Vector2(left, cursor + (titlePixels - labelPixels) * 0.5f), SectionIndex[index],
-                PrismArt.Muted, EditorialFace.Label, labelPixels);
+                PrismArt.Muted, PrismFace.Label, labelPixels);
             PrismType.Draw(list, new Vector2(left + indent, cursor), Loc.T(GuideTitles[index]), PrismArt.Fore,
-                EditorialFace.Headline, titlePixels);
-            cursor += PrismType.LineHeight(EditorialFace.Headline, titlePixels) + Metrics.Space.Xs * scale;
+                PrismFace.Headline, titlePixels);
+            cursor += PrismType.LineHeight(PrismFace.Headline, titlePixels) + Metrics.Space.Xs * scale;
             cursor += Typography.DrawWrappedLeft(new Vector2(left + indent, cursor), Loc.T(GuideBodies[index]),
                 PrismArt.Muted, TextStyles.Subheadline, width - indent) + Metrics.Space.Xl * scale;
         }

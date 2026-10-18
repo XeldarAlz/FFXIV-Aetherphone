@@ -193,10 +193,10 @@ internal sealed partial class PrismApp : IResumableApp
                 Go(screen == PrismScreen.Pick ? pickReturn : PrismScreen.Cover, -1);
             }
 
-            height = PrismType.LineHeight(EditorialFace.Label, PrismArt.LabelPixels());
+            height = PrismType.LineHeight(PrismFace.Label, PrismArt.LabelPixels());
             if (right.Length > 0)
             {
-                PrismType.DrawRight(drawList, new Vector2(row.Max.X, top), right, PrismArt.Fore, EditorialFace.Label,
+                PrismType.DrawRight(drawList, new Vector2(row.Max.X, top), right, PrismArt.Fore, PrismFace.Label,
                     PrismArt.LabelPixels());
             }
         }
@@ -222,8 +222,8 @@ internal sealed partial class PrismApp : IResumableApp
         if (texture is null)
         {
             var placeholder = Loc.T(images.Failed(url) ? L.Common.ImageFailed : L.Common.Loading);
-            var size = PrismType.Measure(placeholder, EditorialFace.Label, PrismArt.LabelPixels());
-            PrismType.Draw(drawList, rect.Center - size * 0.5f, placeholder, PrismArt.Faint, EditorialFace.Label,
+            var size = PrismType.Measure(placeholder, PrismFace.Label, PrismArt.LabelPixels());
+            PrismType.Draw(drawList, rect.Center - size * 0.5f, placeholder, PrismArt.Faint, PrismFace.Label,
                 PrismArt.LabelPixels());
             return rect;
         }
@@ -257,7 +257,7 @@ internal sealed partial class PrismApp : IResumableApp
         return frame;
     }
 
-    private static void DrawWipe(ImDrawListPtr drawList, Vector2 position, string text, EditorialFace face,
+    private static void DrawWipe(ImDrawListPtr drawList, Vector2 position, string text, PrismFace face,
         float pixels, float progress, Vector4 color)
     {
         var size = PrismType.Measure(text, face, pixels);
@@ -271,15 +271,15 @@ internal sealed partial class PrismApp : IResumableApp
     {
         var gutter = PrismArt.Gutter(scale);
         var width = content.Width - gutter * 2f;
-        var pixels = PrismType.Fit(title, EditorialFace.Headline, width, NoticeMaxUnits * scale,
+        var pixels = PrismType.Fit(title, PrismFace.Headline, width, NoticeMaxUnits * scale,
             NoticeMinUnits * scale, NoticeLines, out var lines);
         var bodyHeight = body.Length > 0 ? Typography.MeasureWrappedBlock(body, TextStyles.Subheadline, width).Y : 0f;
-        var height = lines.Length * PrismType.LineHeight(EditorialFace.Headline, pixels) + Metrics.Space.Lg * scale +
+        var height = lines.Length * PrismType.LineHeight(PrismFace.Headline, pixels) + Metrics.Space.Lg * scale +
                      bodyHeight;
         var bottom = StripRect(content, scale, strips - 1).Min.Y - Metrics.Space.Xxl * scale;
         var top = bottom - height;
         top += PrismType.DrawLines(drawList, new Vector2(content.Min.X + gutter, top), lines, PrismArt.Fore,
-            EditorialFace.Headline, pixels) + Metrics.Space.Lg * scale;
+            PrismFace.Headline, pixels) + Metrics.Space.Lg * scale;
         if (body.Length > 0)
         {
             Typography.DrawWrappedLeft(new Vector2(content.Min.X + gutter, top), body, PrismArt.Muted,

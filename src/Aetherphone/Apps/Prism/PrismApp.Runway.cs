@@ -130,24 +130,24 @@ internal sealed partial class PrismApp
         var prompt = store.ActionFailed
             ? failure.Length > 0 ? failure : Loc.T(L.Common.LoadFailedHint)
             : Loc.T(L.Prism.RateHint);
-        var pixels = PrismType.Fit(prompt, EditorialFace.Headline, width, QuestionUnits * scale,
+        var pixels = PrismType.Fit(prompt, PrismFace.Headline, width, QuestionUnits * scale,
             QuestionUnits * scale, 2, out var lines);
         var labelPixels = PrismArt.LabelPixels();
         var questionTop = row.Min.Y - Metrics.Space.Xl * scale -
-                          lines.Length * PrismType.LineHeight(EditorialFace.Headline, pixels);
-        var countTop = questionTop - Metrics.Space.Sm * scale - PrismType.LineHeight(EditorialFace.Label, labelPixels);
+                          lines.Length * PrismType.LineHeight(PrismFace.Headline, pixels);
+        var countTop = questionTop - Metrics.Space.Sm * scale - PrismType.LineHeight(PrismFace.Label, labelPixels);
         var photo = new Rect(new Vector2(content.Min.X, top),
             new Vector2(content.Max.X, countTop - Metrics.Space.Xl * scale));
         DrawTurningLook(drawList, photo, look, turn, delta);
         PrismType.Draw(drawList, new Vector2(left, countTop), LookCounter(lookIndex + 1, looks.Length),
-            PrismArt.Muted, EditorialFace.Label, labelPixels);
+            PrismArt.Muted, PrismFace.Label, labelPixels);
         if (lookIndex == 0 && chosen == 0)
         {
             PrismType.DrawRight(drawList, new Vector2(left + width, countTop), Loc.T(L.Prism.InspectHint),
-                PrismArt.Muted, EditorialFace.Label, labelPixels);
+                PrismArt.Muted, PrismFace.Label, labelPixels);
         }
 
-        PrismType.DrawLines(drawList, new Vector2(left, questionTop), lines, PrismArt.Fore, EditorialFace.Headline,
+        PrismType.DrawLines(drawList, new Vector2(left, questionTop), lines, PrismArt.Fore, PrismFace.Headline,
             pixels);
         var fill = chosen > 0 ? scoreFill.Step(1f, Motion.Release, delta) : 0f;
         var picked = PrismArt.Score(drawList, row, chosen, fill, chosen == 0 && !store.Busy, scale);
@@ -181,18 +181,18 @@ internal sealed partial class PrismApp
         var title = HeatTitle(ballot);
         if (title.Length > 0)
         {
-            var titleWidth = PrismType.Measure(title, EditorialFace.Label, labelPixels).X;
+            var titleWidth = PrismType.Measure(title, PrismFace.Label, labelPixels).X;
             PrismType.Draw(drawList, new Vector2(content.Center.X - titleWidth * 0.5f, row), title, PrismArt.Fore,
-                EditorialFace.Label, labelPixels);
+                PrismFace.Label, labelPixels);
         }
 
-        var moreWidth = PrismType.Measure(MoreGlyph, EditorialFace.Label, labelPixels).X;
+        var moreWidth = PrismType.Measure(MoreGlyph, PrismFace.Label, labelPixels).X;
         if (PrismArt.Link(drawList, new Vector2(right - moreWidth, row), MoreGlyph, PrismArt.Muted, scale))
         {
             OpenReport(lookId);
         }
 
-        return row + PrismType.LineHeight(EditorialFace.Label, labelPixels) + HeaderGapUnits * scale;
+        return row + PrismType.LineHeight(PrismFace.Label, labelPixels) + HeaderGapUnits * scale;
     }
 
     private void DrawTurningLook(ImDrawListPtr drawList, Rect photo, PrismLookDto look, float turn, float delta)
@@ -288,9 +288,9 @@ internal sealed partial class PrismApp
             PrismMotion.RiseUnits * scale);
         var gutter = PrismArt.Gutter(scale);
         var count = DoneCounter(stars.Length);
-        var pixels = PrismType.Fit(count, EditorialFace.Numerals, content.Width - gutter * 2f,
+        var pixels = PrismType.Fit(count, PrismFace.Numerals, content.Width - gutter * 2f,
             DoneNumeralUnits * scale, DoneNumeralMinUnits * scale, 1, out _);
-        DrawWipe(drawList, new Vector2(content.Min.X + gutter, top), count, EditorialFace.Numerals, pixels,
+        DrawWipe(drawList, new Vector2(content.Min.X + gutter, top), count, PrismFace.Numerals, pixels,
             PrismMotion.At(screenAge, 0f, Motion.Sheet), PrismArt.Fore);
         var strip = PrismMotion.Mark(drawList);
         if (canJudge && PrismArt.Strip(drawList, StripRect(content, scale, 1), Loc.T(L.Prism.JudgeAnother),
@@ -317,8 +317,8 @@ internal sealed partial class PrismApp
     {
         var upper = text;
         var labelPixels = PrismArt.LabelPixels();
-        var size = PrismType.Measure(upper, EditorialFace.Label, labelPixels);
-        PrismType.Draw(drawList, content.Center - size * 0.5f, upper, PrismArt.Muted, EditorialFace.Label, labelPixels);
+        var size = PrismType.Measure(upper, PrismFace.Label, labelPixels);
+        PrismType.Draw(drawList, content.Center - size * 0.5f, upper, PrismArt.Muted, PrismFace.Label, labelPixels);
     }
 
     private string LookCounter(int current, int total)

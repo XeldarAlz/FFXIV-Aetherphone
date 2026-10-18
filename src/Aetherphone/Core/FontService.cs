@@ -17,13 +17,6 @@ internal enum FontWeight : byte
     Bold,
 }
 
-internal enum EditorialFace : byte
-{
-    Headline,
-    Numerals,
-    Label,
-}
-
 internal readonly struct FontToken : IDisposable
 {
     private readonly IDisposable inner;
@@ -53,6 +46,12 @@ internal sealed class FontService : IDisposable
         0.60f, 1.00f, 1.60f, 2.60f, 4.20f, 6.00f,
     };
 
+    private static readonly float[] TitleMultipliers = { 2.50f, 3.00f };
+    private static readonly float[] NumeralMultipliers = { 3.00f, 4.00f, 7.50f, 12.50f };
+    private static readonly ushort[] TitleRanges = { 0x0020, 0x017E, 0x0400, 0x045F, 0x2018, 0x2026, 0x0000 };
+    private static readonly ushort[] NumeralRanges = { 0x002F, 0x0039, 0x0000 };
+    private const float NumeralTracking = -0.05f;
+
     private static readonly Dalamud.DalamudAsset[] SharedAssets =
     {
         Dalamud.DalamudAsset.NotoSansCjkRegular, Dalamud.DalamudAsset.NotoSansCjkMedium,
@@ -75,29 +74,6 @@ internal sealed class FontService : IDisposable
     private const string DisplayFontFile = "PirataOne-Regular.ttf";
     private const float DisplayMultiplier = 1.90f;
     private static readonly ushort[] DisplayRanges = { 0x0020, 0x017E, 0x0000 };
-
-    private static readonly string[] EditorialFiles =
-    {
-        "Inter-Bold.ttf", "Inter-Regular.ttf", "Inter-Medium.ttf",
-    };
-
-    private static readonly float[][] EditorialSizes =
-    {
-        new[] { 24f, 28f, 32f, 40f, 48f },
-        new[] { 48f, 64f, 96f, 120f, 200f },
-        new[] { 11f, 12f, 13f, 14f, 15f, 16f, 18f, 20f },
-    };
-
-    private static readonly float[] EditorialTracking = { -0.03f, -0.05f, 0f };
-
-    private static readonly ushort[][] EditorialRanges =
-    {
-        new ushort[] { 0x0020, 0x017E, 0x0370, 0x03FF, 0x0400, 0x045F, 0x2018, 0x2026, 0x0000 },
-        new ushort[] { 0x002F, 0x0039, 0x0000 },
-        new ushort[] { 0x0020, 0x017E, 0x0370, 0x03FF, 0x0400, 0x045F, 0x2018, 0x2026, 0x2190, 0x2193, 0x0000 },
-    };
-
-    private const long EditorialIdleMs = 5 * 60 * 1000;
     private const long LearnRebuildDebounceMs = 600;
     private readonly Configuration configuration;
     private readonly LoadingScreen loading;
@@ -113,20 +89,14 @@ internal sealed class FontService : IDisposable
     private readonly ImFontPtr[,] textFonts = new ImFontPtr[WeightFiles.Length, SizeMultipliers.Length];
     private readonly IFontHandle dalamudIconHandle;
     private IFontHandle? displayHandle;
-    private readonly IFontHandle?[][] editorialHandles =
-    {
-        new IFontHandle?[EditorialSizes[0].Length], new IFontHandle?[EditorialSizes[1].Length],
-        new IFontHandle?[EditorialSizes[2].Length],
-    };
-    private long editorialUsedAt = -EditorialIdleMs;
-    private float editorialZoom;
-    private float editorialWantedZoom;
     private ushort[] nativeRanges;
     private ushort[] sharedRanges;
     private ushort[] fontAwesomeRanges;
     private IFontHandle[,] textHandles;
     private IFontHandle[] sharedHandles;
     private IFontHandle[] iconHandles;
+    private IFontHandle[] titleHandles = Array.Empty<IFontHandle>();
+    private IFontHandle[] numeralHandles = Array.Empty<IFontHandle>();
     private float zoom;
     private float phoneZoom;
     private float renderScale;
@@ -170,104 +140,6 @@ internal sealed class FontService : IDisposable
     public bool DisplayReady => displayHandle is { Available: true };
 
     public FontToken PushDisplay() => new(displayHandle is null ? textHandles[0, 0].Push() : displayHandle.Push());
-
-    public bool EditorialReady(EditorialFace face)
-    {
-        editorialUsedAt = Environment.TickCount64;
-        editorialWantedZoom = phoneZoom * zoom;
-        return editorialHandles[(int)face][0] is { Available: true };
-    }
-
-    public FontToken PushEditorial(EditorialFace face, int step) =>
-        new(editorialHandles[(int)face][step] is { } handle ? handle.Push() : textHandles[0, 0].Push());
-
-    public static int EditorialStep(EditorialFace face, float units)
-    {
-        var sizes = EditorialSizes[(int)face];
-        var step = 0;
-        for (var index = 1; index < sizes.Length; index++)
-        {
-            if (sizes[index] <= units + 0.01f)
-            {
-                step = index;
-            }
-        }
-
-        return step;
-    }
-
-    public static float EditorialUnits(EditorialFace face, int step) => EditorialSizes[(int)face][step];
-
-    public static bool EditorialCovers(EditorialFace face, ReadOnlySpan<char> text)
-    {
-        var ranges = EditorialRanges[(int)face];
-        for (var index = 0; index < text.Length; index++)
-        {
-            if (!InRanges(ranges, text[index]))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static bool InRanges(ushort[] ranges, char codepoint)
-    {
-        for (var index = 0; index + 1 < ranges.Length; index += 2)
-        {
-            if (codepoint >= ranges[index] && codepoint <= ranges[index + 1])
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public void SyncEditorial()
-    {
-        var wanted = Environment.TickCount64 - editorialUsedAt < EditorialIdleMs;
-        var built = editorialHandles[0][0] is not null;
-        var stale = built && MathF.Abs(editorialWantedZoom - editorialZoom) > 0.001f;
-        if (built == wanted && !stale)
-        {
-            return;
-        }
-
-        ReleaseEditorial();
-        if (!wanted)
-        {
-            return;
-        }
-
-        editorialZoom = editorialWantedZoom;
-        using (atlas.SuppressAutoRebuild())
-        {
-            for (var faceIndex = 0; faceIndex < editorialHandles.Length; faceIndex++)
-            {
-                var sizes = EditorialSizes[faceIndex];
-                for (var step = 0; step < sizes.Length; step++)
-                {
-                    editorialHandles[faceIndex][step] = BuildFaceHandle(EditorialFiles[faceIndex],
-                        sizes[step] * editorialZoom, EditorialRanges[faceIndex], EditorialTracking[faceIndex], true);
-                }
-            }
-        }
-    }
-
-    private void ReleaseEditorial()
-    {
-        for (var faceIndex = 0; faceIndex < editorialHandles.Length; faceIndex++)
-        {
-            var handles = editorialHandles[faceIndex];
-            for (var step = 0; step < handles.Length; step++)
-            {
-                handles[step]?.Dispose();
-                handles[step] = null;
-            }
-        }
-    }
 
     public int Generation => Volatile.Read(ref generation);
 
@@ -374,6 +246,71 @@ internal sealed class FontService : IDisposable
     }
 
     public float NearestScale(float scale) => SizeMultipliers[NearestSize(scale)];
+
+    public static float SmallestTextScale => SizeMultipliers[0];
+
+    public static float TextScaleAtMost(float scale) => AtMost(SizeMultipliers, scale);
+
+    public static float TitleScaleAtMost(float scale) => MathF.Max(AtMost(SizeMultipliers, scale),
+        AtMost(TitleMultipliers, scale));
+
+    public static float NumeralScaleAtMost(float scale) => MathF.Max(AtMost(SizeMultipliers, scale),
+        AtMost(NumeralMultipliers, scale));
+
+    public FontToken PushTitle(float scale, ReadOnlySpan<char> text) =>
+        PushLarge(titleHandles, TitleMultipliers, TitleRanges, FontWeight.Bold, scale, text);
+
+    public FontToken PushNumerals(float scale, ReadOnlySpan<char> text) =>
+        PushLarge(numeralHandles, NumeralMultipliers, NumeralRanges, FontWeight.Regular, scale, text);
+
+    private FontToken PushLarge(IFontHandle[] handles, float[] multipliers, ushort[] ranges, FontWeight weight,
+        float scale, ReadOnlySpan<char> text)
+    {
+        var index = Array.IndexOf(multipliers, scale);
+        if (index >= 0 && index < handles.Length && handles[index].Available && Covers(ranges, text))
+        {
+            return new FontToken(handles[index].Push());
+        }
+
+        return Push(MathF.Min(scale, SizeMultipliers[^1]), weight);
+    }
+
+    private static float AtMost(float[] tiers, float scale)
+    {
+        var best = 0f;
+        for (var index = 0; index < tiers.Length; index++)
+        {
+            if (tiers[index] <= scale + 0.001f && tiers[index] > best)
+            {
+                best = tiers[index];
+            }
+        }
+
+        return best;
+    }
+
+    private static bool Covers(ushort[] ranges, ReadOnlySpan<char> text)
+    {
+        for (var index = 0; index < text.Length; index++)
+        {
+            var covered = false;
+            for (var range = 0; range + 1 < ranges.Length; range += 2)
+            {
+                if (text[index] >= ranges[range] && text[index] <= ranges[range + 1])
+                {
+                    covered = true;
+                    break;
+                }
+            }
+
+            if (!covered)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     public FontToken PushIcon(float pixelHeight, string glyph)
     {
@@ -579,6 +516,14 @@ internal sealed class FontService : IDisposable
             textHandles = text;
             sharedHandles = shared;
             iconHandles = icons;
+            if (titleHandles.Length == 0)
+            {
+                titleHandles = BuildLargeHandles(WeightFiles[(int)FontWeight.Bold], TitleMultipliers, TitleRanges,
+                    TrackingRatio);
+                numeralHandles = BuildLargeHandles(WeightFiles[(int)FontWeight.Regular], NumeralMultipliers,
+                    NumeralRanges, NumeralTracking);
+            }
+
             displayHandle ??= SeasonalTheme.ResolveHalloween(configuration, DateTime.Now) ? BuildDisplayHandle() : null;
             buildLanded = false;
         }
@@ -626,19 +571,13 @@ internal sealed class FontService : IDisposable
         displayHandle = null;
     }
 
-    private IFontHandle BuildDisplayHandle() =>
-        BuildFaceHandle(DisplayFontFile, baseSize * DisplayMultiplier * MaxZoom, DisplayRanges, 0f, false);
-
-    private IFontHandle BuildFaceHandle(string file, float pixels, ushort[] ranges, float tracking, bool snap)
+    private IFontHandle BuildDisplayHandle()
     {
-        var path = Path.Combine(fontDirectory, file);
+        var pixels = baseSize * DisplayMultiplier * MaxZoom;
+        var path = Path.Combine(fontDirectory, DisplayFontFile);
         return atlas.NewDelegateFontHandle(e => e.OnPreBuild(tk =>
         {
-            var config = new SafeFontConfig
-            {
-                SizePx = pixels, GlyphRanges = ranges, GlyphExtraSpacing = new Vector2(pixels * tracking, 0f),
-                PixelSnapH = snap,
-            };
+            var config = new SafeFontConfig { SizePx = pixels, GlyphRanges = DisplayRanges, };
             if (!File.Exists(path))
             {
                 tk.AddDalamudAssetFont(Dalamud.DalamudAsset.NotoSansCjkRegular, config);
@@ -647,6 +586,33 @@ internal sealed class FontService : IDisposable
 
             tk.AddFontFromFile(path, config);
         }));
+    }
+
+    private IFontHandle[] BuildLargeHandles(string file, float[] multipliers, ushort[] ranges, float tracking)
+    {
+        var path = Path.Combine(fontDirectory, file);
+        var handles = new IFontHandle[multipliers.Length];
+        for (var index = 0; index < multipliers.Length; index++)
+        {
+            var pixels = baseSize * multipliers[index] * MaxZoom;
+            var font = default(ImFontPtr);
+            handles[index] = atlas.NewDelegateFontHandle(e =>
+            {
+                e.OnPreBuild(tk =>
+                {
+                    var config = new SafeFontConfig
+                    {
+                        SizePx = pixels, GlyphRanges = ranges, GlyphExtraSpacing = new Vector2(pixels * tracking, 0f),
+                    };
+                    font = File.Exists(path)
+                        ? tk.AddFontFromFile(path, config)
+                        : tk.AddDalamudAssetFont(Dalamud.DalamudAsset.NotoSansCjkRegular, config);
+                });
+                e.OnPostBuild(_ => font.Scale = renderScale);
+            });
+        }
+
+        return handles;
     }
 
     private IFontHandle BuildTextHandle(string path, int weightIndex, int sizeIndex)
@@ -750,6 +716,23 @@ internal sealed class FontService : IDisposable
                 using var locked = handle.Lock();
                 locked.ImFont.Scale = renderScale;
             }
+        }
+
+        ScaleHandles(titleHandles);
+        ScaleHandles(numeralHandles);
+    }
+
+    private void ScaleHandles(IFontHandle[] handles)
+    {
+        for (var index = 0; index < handles.Length; index++)
+        {
+            if (!handles[index].Available)
+            {
+                continue;
+            }
+
+            using var locked = handles[index].Lock();
+            locked.ImFont.Scale = renderScale;
         }
     }
 
@@ -924,8 +907,17 @@ internal sealed class FontService : IDisposable
     {
         atlas.BuildStepChange -= MeasureCrests;
         DisposeHandles(textHandles, sharedHandles, iconHandles);
+        DisposeHandles(titleHandles);
+        DisposeHandles(numeralHandles);
         displayHandle?.Dispose();
-        ReleaseEditorial();
+    }
+
+    private static void DisposeHandles(IFontHandle[] handles)
+    {
+        for (var index = 0; index < handles.Length; index++)
+        {
+            handles[index].Dispose();
+        }
     }
 
     private static void DisposeHandles(IFontHandle[,] text, IFontHandle[] shared, IFontHandle[] icons)
