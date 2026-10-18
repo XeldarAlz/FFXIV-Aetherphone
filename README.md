@@ -178,7 +178,7 @@ Aethernet opened on 2 July 2026. By the end of the season, players on 113 worlds
 
 **Widgets and Smart Stacks.** Widgets for most apps, resized from the corner and stacked by dropping one onto another.
 
-**A Dynamic Island** for calls, playback, timers, voyages, watch parties and meetups. Tap it to expand, or swipe paused music to the right to clear it.
+**A Dynamic Island** for calls, playback, timers, voyages, watch parties and meetups.
 
 **Spotlight and Control Center.** Pull down on the Home Screen to search apps, contacts, settings, notes and market items, or tap the top of the screen for music, volume, brightness and Do Not Disturb.
 
