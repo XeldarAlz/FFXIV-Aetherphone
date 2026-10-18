@@ -235,6 +235,7 @@ internal sealed partial class PrismApp
         DrawLook(drawList, full, placing.ImageUrl, false, 1f, 1f + RevealZoom * (1f - settle));
         PrismArt.Shade(drawList, full, scale);
         PrismArt.OverPhoto(true);
+        onPhoto = true;
         drawList.AddRectFilled(full.Min, full.Max,
             ImGui.GetColorU32(Palette.WithAlpha(PrismArt.Back, RevealDim * (1f - settle))));
         if (placing.Rank == 1)

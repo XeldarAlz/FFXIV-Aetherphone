@@ -67,6 +67,7 @@ internal sealed partial class PrismApp
             var zoom = 1f + CoverZoom * (1f - PrismMotion.At(screenAge, 0f, Motion.Sheet));
             DrawLook(drawList, full, backdrop, false, 1f, zoom);
             PrismArt.Shade(drawList, full, scale);
+            onPhoto = true;
         }
 
         var below = DrawMasthead(drawList, content, cover is null ? string.Empty : CreditLine(cover), scale);
@@ -216,16 +217,13 @@ internal sealed partial class PrismApp
 
         if (week.Phase == PrismPhases.Entering)
         {
-            if (week.MyEntry is { } entry)
+            if (week.MyEntry is not null)
             {
                 if (PrismArt.Strip(drawList, strip, Loc.T(L.Prism.YourLook), "→", true))
                 {
                     Go(PrismScreen.Entry);
                 }
 
-                var status = Loc.T(StatusName(entry.Status));
-                PrismArt.TagAt(drawList, new Vector2(strip.Max.X - Metrics.Space.Md * scale,
-                    strip.Min.Y - PrismArt.TagHeight(status, scale) * 0.5f), status, scale);
                 return;
             }
 

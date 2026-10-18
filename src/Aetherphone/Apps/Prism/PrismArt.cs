@@ -25,7 +25,9 @@ internal static class PrismArt
     private const float TagInsetUnits = 10f;
     private const float ShadeShare = 0.78f;
     private const float ShadeSolidShare = 0.46f;
-    private const float TopShadeUnits = 96f;
+    private const float TopShadeUnits = 110f;
+    private const float TopFadeShare = 0.34f;
+    private const float TopFogDeep = 0.9f;
     private const float PressedAlpha = 0.82f;
     private const float ArrowNudge = 0.08f;
     private const double GlowPeriodSeconds = 4.5;
@@ -94,10 +96,14 @@ internal static class PrismArt
 
     public static void Shade(ImDrawListPtr drawList, Rect screen, float scale)
     {
-        var top = new Vector2(screen.Max.X, screen.Min.Y + TopShadeUnits * scale);
+        var deep = ImGui.GetColorU32(Palette.WithAlpha(themeInks.Fog, TopFogDeep));
         var fog = ImGui.GetColorU32(themeInks.Fog);
         var clear = ImGui.GetColorU32(Palette.WithAlpha(themeInks.Fog, 0f));
-        drawList.AddRectFilledMultiColor(screen.Min, top, fog, fog, clear, clear);
+        var band = screen.Min.Y + TopShadeUnits * scale;
+        var lift = screen.Min.Y + screen.Height * TopFadeShare;
+        drawList.AddRectFilledMultiColor(screen.Min, new Vector2(screen.Max.X, band), deep, deep, fog, fog);
+        drawList.AddRectFilledMultiColor(new Vector2(screen.Min.X, band), new Vector2(screen.Max.X, lift), fog, fog,
+            clear, clear);
         var fade = screen.Max.Y - screen.Height * ShadeShare;
         var settle = screen.Max.Y - screen.Height * ShadeSolidShare;
         drawList.AddRectFilledMultiColor(new Vector2(screen.Min.X, fade), new Vector2(screen.Max.X, settle),
@@ -360,19 +366,11 @@ internal static class PrismArt
 
     public static Vector2 Tag(ImDrawListPtr drawList, Vector2 topRight, string label, float scale)
     {
-        var inset = TagInsetUnits * scale;
-        return TagAt(drawList, new Vector2(topRight.X - inset, topRight.Y + inset), label, scale);
-    }
-
-    public static float TagHeight(string label, float scale) =>
-        PrismType.Measure(label, PrismFace.Label, LabelPixels()).Y + TagPadUnits * scale * 2f;
-
-    public static Vector2 TagAt(ImDrawListPtr drawList, Vector2 topRight, string label, float scale)
-    {
         var pixels = LabelPixels();
         var pad = TagPadUnits * scale;
         var size = PrismType.Measure(label, PrismFace.Label, pixels) + new Vector2(pad * 2f, pad * 2f);
-        var min = new Vector2(topRight.X - size.X, topRight.Y);
+        var inset = TagInsetUnits * scale;
+        var min = new Vector2(topRight.X - inset - size.X, topRight.Y + inset);
         var rect = new Rect(min, min + size);
         drawList.AddRectFilled(rect.Min, rect.Max, ImGui.GetColorU32(Bone));
         DrawStitch(drawList, rect, scale);

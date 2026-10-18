@@ -50,6 +50,7 @@ internal sealed partial class PrismApp : IResumableApp
     private PrismScreen pickReturn = PrismScreen.Cover;
     private readonly Dictionary<string, double> loadedAt = new(StringComparer.Ordinal);
     private string loadedWeek = string.Empty;
+    private bool onPhoto;
     private float screenAge;
     private int enterDirection = 1;
     private INavigator navigation = null!;
@@ -76,7 +77,7 @@ internal sealed partial class PrismApp : IResumableApp
     public string DisplayName => Loc.T(L.Apps.Prism);
     public string Glyph => "Pr";
     public int BadgeCount => 0;
-    public bool WantsSystemTheme => true;
+    public bool WantsSystemTheme => !onPhoto;
 
     public ShareKindSet AcceptedShares => store.IsSignedIn ? ShareKindSet.Photo : ShareKindSet.None;
 
@@ -146,6 +147,7 @@ internal sealed partial class PrismApp : IResumableApp
 
     private void DrawScreen(ImDrawListPtr drawList, Rect full, Rect content, float scale)
     {
+        onPhoto = false;
         switch (screen)
         {
             case PrismScreen.Entry:
