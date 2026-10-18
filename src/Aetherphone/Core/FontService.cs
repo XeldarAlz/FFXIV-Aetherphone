@@ -49,7 +49,7 @@ internal sealed class FontService : IDisposable
     private static readonly float[] TitleMultipliers = { 2.50f, 3.00f };
     private static readonly float[] NumeralMultipliers = { 3.00f, 4.00f, 7.50f, 12.50f };
     private static readonly ushort[] TitleRanges = { 0x0020, 0x017E, 0x0400, 0x045F, 0x2018, 0x2026, 0x0000 };
-    private static readonly ushort[] NumeralRanges = { 0x002F, 0x0039, 0x0000 };
+    private static readonly ushort[] NumeralRanges = { 0x002B, 0x0039, 0x0000 };
     private const float NumeralTracking = -0.05f;
 
     private static readonly Dalamud.DalamudAsset[] SharedAssets =

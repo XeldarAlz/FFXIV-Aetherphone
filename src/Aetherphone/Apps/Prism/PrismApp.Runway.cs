@@ -2,6 +2,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
@@ -21,12 +22,17 @@ internal sealed partial class PrismApp
     private const float InspectZoom = 2.2f;
     private const float InspectHoldSeconds = 0.18f;
     private const string MoreGlyph = "•••";
+    private const int JudgingCoins = 5;
+    private const int CoinBallotsPerWeek = 4;
+    private const int ViewedLooksForCoins = 3;
+    private const int ViewedMinimumMs = 600;
     private const int OutcomePending = 0;
     private const int OutcomeSent = 1;
     private const int OutcomeFailed = 2;
 
     private static readonly string[] Padded = BuildDigits("00");
     private static readonly string[] Plain = BuildDigits("0");
+    private static readonly string JudgingCoinText = "+" + Plain[JudgingCoins];
 
     private PrismStarDto[] stars = Array.Empty<PrismStarDto>();
     private PrismBallotDto? ratingBallot;
@@ -41,6 +47,7 @@ internal sealed partial class PrismApp
     private float inspectHold;
     private Vector2 inspectFocus;
     private Spring scoreFill = new(0f);
+    private int heatCoins;
     private CachedText lookCounter;
     private CachedText heatTitle;
     private CachedText doneCounter;
@@ -124,18 +131,20 @@ internal sealed partial class PrismApp
         var left = content.Min.X + gutter;
         var width = content.Width - gutter * 2f;
         var top = DrawRunwayHeader(drawList, content, ballot, looks.Length, look.Id, scale);
-        var row = new Rect(new Vector2(left, content.Max.Y - PrismArt.BottomMargin(scale) - ScoreRowUnits * scale),
-            new Vector2(left + width, content.Max.Y - PrismArt.BottomMargin(scale)));
+        var labelPixels = PrismArt.LabelPixels();
+        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
+        var anchorTop = content.Max.Y - PrismArt.BottomMargin(scale) - labelLine;
+        var rowBottom = anchorTop - Metrics.Space.Xs * scale;
+        var row = new Rect(new Vector2(left, rowBottom - ScoreRowUnits * scale), new Vector2(left + width, rowBottom));
         var failure = store.ActionFailed ? store.ActionFailureText : string.Empty;
         var prompt = store.ActionFailed
             ? failure.Length > 0 ? failure : Loc.T(L.Common.LoadFailedHint)
             : Loc.T(L.Prism.RateHint);
         var pixels = PrismType.Fit(prompt, PrismFace.Headline, width, QuestionUnits * scale,
             QuestionUnits * scale, 2, out var lines);
-        var labelPixels = PrismArt.LabelPixels();
         var questionTop = row.Min.Y - Metrics.Space.Xl * scale -
                           lines.Length * PrismType.LineHeight(PrismFace.Headline, pixels);
-        var countTop = questionTop - Metrics.Space.Sm * scale - PrismType.LineHeight(PrismFace.Label, labelPixels);
+        var countTop = questionTop - Metrics.Space.Sm * scale - labelLine;
         var photo = new Rect(new Vector2(content.Min.X, top),
             new Vector2(content.Max.X, countTop - Metrics.Space.Xl * scale));
         DrawTurningLook(drawList, photo, look, turn, delta);
@@ -150,12 +159,17 @@ internal sealed partial class PrismApp
         PrismType.DrawLines(drawList, new Vector2(left, questionTop), lines, PrismArt.Fore, PrismFace.Headline,
             pixels);
         var fill = chosen > 0 ? scoreFill.Step(1f, Motion.Release, delta) : 0f;
-        var picked = PrismArt.Score(drawList, row, chosen, fill, chosen == 0 && !store.Busy, scale);
-        if (picked > 0)
+        var picked = PrismArt.Score(drawList, row, chosen, fill, !store.Busy, scale);
+        if (picked > 0 && picked != chosen)
         {
             chosen = picked;
             scoreFill.SnapTo(0f);
         }
+
+        PrismType.Draw(drawList, new Vector2(left, anchorTop), Loc.T(L.Prism.ScoreLow), PrismArt.Muted,
+            PrismFace.Label, labelPixels);
+        PrismType.DrawRight(drawList, new Vector2(left + width, anchorTop), Loc.T(L.Prism.ScoreHigh),
+            PrismArt.Muted, PrismFace.Label, labelPixels);
 
         if (chosen > 0 && fill >= ScoreDone)
         {
@@ -233,7 +247,22 @@ internal sealed partial class PrismApp
         }
 
         ballotOutcome = OutcomePending;
+        heatCoins = EarnsJudgingCoins(store.Week?.BallotsCast ?? 0) ? JudgingCoins : 0;
         store.SubmitBallot(stars, ballotSettled);
+    }
+
+    private bool EarnsJudgingCoins(int ballotsBefore)
+    {
+        var viewed = 0;
+        for (var index = 0; index < stars.Length; index++)
+        {
+            if (stars[index].ViewedMs >= ViewedMinimumMs)
+            {
+                viewed++;
+            }
+        }
+
+        return viewed >= ViewedLooksForCoins && ballotsBefore < CoinBallotsPerWeek;
     }
 
     private void SettleBallot(bool succeeded)
@@ -253,6 +282,7 @@ internal sealed partial class PrismApp
         if (outcome == OutcomeSent)
         {
             heatDone = true;
+            UiFeedback.Play(heatCoins > 0 ? UiSound.Payout : UiSound.Success);
             Go(PrismScreen.Runway, 0);
             return;
         }
@@ -287,11 +317,17 @@ internal sealed partial class PrismApp
         PrismMotion.Rise(drawList, notice, PrismMotion.At(screenAge, DoneTextDelay, Motion.PageSettle),
             PrismMotion.RiseUnits * scale);
         var gutter = PrismArt.Gutter(scale);
-        var count = DoneCounter(stars.Length);
+        var count = heatCoins > 0 ? JudgingCoinText : DoneCounter(stars.Length);
         var pixels = PrismType.Fit(count, PrismFace.Numerals, content.Width - gutter * 2f,
             DoneNumeralUnits * scale, DoneNumeralMinUnits * scale, 1, out _);
-        DrawWipe(drawList, new Vector2(content.Min.X + gutter, top), count, PrismFace.Numerals, pixels,
-            PrismMotion.At(screenAge, 0f, Motion.Sheet), PrismArt.Fore);
+        var reveal = PrismMotion.At(screenAge, 0f, Motion.Sheet);
+        DrawWipe(drawList, new Vector2(content.Min.X + gutter, top), count, PrismFace.Numerals, pixels, reveal,
+            PrismArt.Fore);
+        if (heatCoins > 0)
+        {
+            DrawWipe(drawList, new Vector2(content.Min.X + gutter, top + PrismType.Snap(PrismFace.Numerals, pixels)),
+                Loc.T(L.Prism.JudgingCoinLabel), PrismFace.Label, PrismArt.LabelPixels(), reveal, PrismArt.Muted);
+        }
         var strip = PrismMotion.Mark(drawList);
         if (canJudge && PrismArt.Strip(drawList, StripRect(content, scale, 1), Loc.T(L.Prism.JudgeAnother),
                 "→", true))

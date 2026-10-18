@@ -2,6 +2,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
@@ -38,6 +39,8 @@ internal sealed partial class PrismApp
     private const float RefractionDelay = 0.05f;
     private const float PrintDelay = 0.05f;
     private const float HintDelay = 0.5f;
+    private const float RevealPitchTop = 1.3f;
+    private const float RevealPitchStep = 0.12f;
 
     private readonly List<PrismPlacingDto> finalOrder = new();
     private readonly List<PrismPlacingDto> heatOrder = new();
@@ -48,6 +51,7 @@ internal sealed partial class PrismApp
 
     private PrismResultsDto? orderedFor;
     private int revealIndex;
+    private int soundedPage = -1;
     private float revealPageSeconds;
     private float revealHoldSeconds;
     private CachedText placingText;
@@ -61,6 +65,7 @@ internal sealed partial class PrismApp
     {
         revealIndex = 0;
         revealPageSeconds = 0f;
+        soundedPage = -1;
         Go(PrismScreen.Reveal, 0);
     }
 
@@ -83,6 +88,12 @@ internal sealed partial class PrismApp
         var pages = finalOrder.Count + 1;
         revealIndex = Math.Min(revealIndex, pages - 1);
         var summary = revealIndex == pages - 1;
+        if (soundedPage != revealIndex)
+        {
+            soundedPage = revealIndex;
+            PlayRevealSound(summary ? 0 : finalOrder[finalOrder.Count - 1 - revealIndex].Rank);
+        }
+
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         var held = !summary && ImGui.IsMouseDown(ImGuiMouseButton.Left) && UiInteract.Hover(content.Min, content.Max);
         revealHoldSeconds = held ? revealHoldSeconds + delta : 0f;
@@ -210,7 +221,7 @@ internal sealed partial class PrismApp
                 issueWidth, top), issue, PrismArt.Muted, PrismFace.Label, labelPixels);
         }
 
-        if (PrismArt.Link(drawList, new Vector2(content.Max.X - gutter - closeWidth, top), close, PrismArt.Fore,
+        if (PrismArt.Link(drawList, new Vector2(content.Max.X - gutter - closeWidth, top), close, PrismArt.Muted,
                 scale))
         {
             Go(PrismScreen.Cover, -1);
@@ -255,6 +266,23 @@ internal sealed partial class PrismApp
             PrismMotion.At(screenAge, NumeralDelay, Motion.PageSettle), PrismArt.Fore);
         DrawWipe(drawList, new Vector2(content.Min.X + gutter, numeralTop - labelLine), Loc.T(L.Prism.PlaceLabel),
             PrismFace.Label, labelPixels, credit, PrismArt.Muted);
+    }
+
+    private static void PlayRevealSound(int rank)
+    {
+        if (rank == 1)
+        {
+            UiFeedback.Play(UiSound.GameWin);
+            return;
+        }
+
+        if (rank > 1)
+        {
+            UiFeedback.PlayPitched(UiSound.Tap, RevealPitchTop - RevealPitchStep * rank);
+            return;
+        }
+
+        UiFeedback.Play(UiSound.Shutter);
     }
 
     private void FinishReveal(PrismResultsDto results)

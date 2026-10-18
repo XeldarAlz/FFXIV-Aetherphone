@@ -10675,6 +10675,9 @@ internal static class L
         public static readonly LocString Done = new("prism.done", "Done");
         public static readonly LocString Submit = new("prism.submit", "Submit");
         public static readonly LocString PrintHeading = new("prism.printHeading", "{0} N°{1}");
+        public static readonly LocString ScoreLow = new("prism.scoreLow", "Off theme");
+        public static readonly LocString ScoreHigh = new("prism.scoreHigh", "Nails it");
+        public static readonly LocString JudgingCoinLabel = new("prism.judgingCoinLabel", "Aether Coin for judging");
         public static readonly LocString HowItWorks = new("prism.howItWorks", "How it works");
         public static readonly LocString GuideEnterTitle = new("prism.guideEnterTitle", "Enter one look");
         public static readonly LocString GuideEnterBody = new("prism.guideEnterBody",

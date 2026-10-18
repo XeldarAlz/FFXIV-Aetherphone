@@ -61,14 +61,11 @@ internal sealed partial class PrismApp
         }
 
         var cover = CoverPlacing(store.Results);
-        if (cover is not null)
+        var backdrop = cover?.ImageUrl ?? week.MyEntry?.ImageUrl ?? string.Empty;
+        if (backdrop.Length > 0)
         {
             var zoom = 1f + CoverZoom * (1f - PrismMotion.At(screenAge, 0f, Motion.Sheet));
-            DrawLook(drawList, full, cover.ImageUrl, false, 1f, zoom);
-        }
-
-        if (cover is not null)
-        {
+            DrawLook(drawList, full, backdrop, false, 1f, zoom);
             PrismArt.Shade(drawList, full, scale);
         }
 
@@ -78,7 +75,7 @@ internal sealed partial class PrismApp
         PrismMotion.Rise(drawList, buttons, PrismMotion.At(screenAge, introDelay + CreditsDelay, Motion.PageSettle),
             0f);
         var strips = HasPrimary(week) || store.Results is not null ? 1 : 0;
-        PrismArt.OverPhoto(cover is not null);
+        PrismArt.OverPhoto(backdrop.Length > 0);
         var steps = DrawCoverStory(drawList, content, week, strips, scale);
         var strip = PrismMotion.Mark(drawList);
         DrawCoverStrip(drawList, content, week, scale);
@@ -219,13 +216,16 @@ internal sealed partial class PrismApp
 
         if (week.Phase == PrismPhases.Entering)
         {
-            if (week.MyEntry is not null)
+            if (week.MyEntry is { } entry)
             {
                 if (PrismArt.Strip(drawList, strip, Loc.T(L.Prism.YourLook), "→", true))
                 {
                     Go(PrismScreen.Entry);
                 }
 
+                var status = Loc.T(StatusName(entry.Status));
+                PrismArt.TagAt(drawList, new Vector2(strip.Max.X - Metrics.Space.Md * scale,
+                    strip.Min.Y - PrismArt.TagHeight(status, scale) * 0.5f), status, scale);
                 return;
             }
 

@@ -188,7 +188,7 @@ internal sealed partial class PrismApp : IResumableApp
         float height;
         if (back)
         {
-            if (PrismArt.Link(drawList, row.Min, Loc.T(L.Prism.Back), PrismArt.Fore, scale))
+            if (PrismArt.Link(drawList, row.Min, Loc.T(L.Prism.Back), PrismArt.Muted, scale))
             {
                 Go(screen == PrismScreen.Pick ? pickReturn : PrismScreen.Cover, -1);
             }
@@ -273,7 +273,8 @@ internal sealed partial class PrismApp : IResumableApp
         var width = content.Width - gutter * 2f;
         var pixels = PrismType.Fit(title, PrismFace.Headline, width, NoticeMaxUnits * scale,
             NoticeMinUnits * scale, NoticeLines, out var lines);
-        var bodyHeight = body.Length > 0 ? Typography.MeasureWrappedBlock(body, TextStyles.Subheadline, width).Y : 0f;
+        var bodyWidth = PrismType.BalancedWidth(body, TextStyles.Subheadline, width);
+        var bodyHeight = body.Length > 0 ? Typography.MeasureWrappedBlock(body, TextStyles.Subheadline, bodyWidth).Y : 0f;
         var height = lines.Length * PrismType.LineHeight(PrismFace.Headline, pixels) + Metrics.Space.Lg * scale +
                      bodyHeight;
         var bottom = StripRect(content, scale, strips - 1).Min.Y - Metrics.Space.Xxl * scale;
@@ -283,7 +284,7 @@ internal sealed partial class PrismApp : IResumableApp
         if (body.Length > 0)
         {
             Typography.DrawWrappedLeft(new Vector2(content.Min.X + gutter, top), body, PrismArt.Muted,
-                TextStyles.Subheadline, width);
+                TextStyles.Subheadline, bodyWidth);
         }
 
         return bottom;

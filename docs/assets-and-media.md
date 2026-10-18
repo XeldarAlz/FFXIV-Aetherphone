@@ -54,7 +54,7 @@ Text renders in Inter, in four weights. `FontService` owns Dalamud's font atlas 
 - **Shared handles**: two Noto Sans CJK fonts (Regular and Medium) baked once at the largest size for scripts too big to bake per tier. Their glyphs are copied into every text font after each build.
 - **Icon handles**: FontAwesome with the Tabler subset merged on top, at a few sizes.
 - **Display handle**: Pirata One at one size, Latin only, built only while the Halloween theme is on. `NightWordmark` draws the seasonal wordmarks and blackletter user names with it, and falls back to the normal style for text outside that range.
-- **Title and numeral handles**: Inter Bold at two sizes past the largest text tier (Latin and Cyrillic), and Inter Regular digits and slash at four large sizes. They build with the rest of the atlas, scale with the phone and text size like the text tiers, and fall back to the largest text tier for anything outside their ranges. `PushTitle` and `PushNumerals` take a size from `TitleScaleAtMost` or `NumeralScaleAtMost`, which pick the text tiers below that; Prism uses them for its large type.
+- **Title and numeral handles**: Inter Bold at two sizes past the largest text tier (Latin and Cyrillic), and Inter Regular digits and number signs at four large sizes. They build with the rest of the atlas, scale with the phone and text size like the text tiers, and fall back to the largest text tier for anything outside their ranges. `PushTitle` and `PushNumerals` take a size from `TitleScaleAtMost` or `NumeralScaleAtMost`, which pick the text tiers below that; Prism uses them for its large type.
 
 Draw sites never pass raw sizes. `TextStyles` names the ladder, and each style snaps to a tier:
 

@@ -44,8 +44,9 @@ internal sealed partial class PrismApp
             : entry.Status == PrismPhases.StatusRejected
                 ? entry.RejectReason
                 : entry.Status == PrismPhases.StatusLive ? string.Empty : Loc.T(L.Prism.StatusReviewHint);
+        var hintWidth = PrismType.BalancedWidth(hint, TextStyles.Subheadline, width);
         var hintHeight = hint.Length > 0
-            ? Typography.MeasureWrappedBlock(hint, TextStyles.Subheadline, width).Y + Metrics.Space.Sm * scale
+            ? Typography.MeasureWrappedBlock(hint, TextStyles.Subheadline, hintWidth).Y + Metrics.Space.Sm * scale
             : 0f;
         var textTop = actionsTop - Metrics.Space.Xl * scale - hintHeight -
                       lines.Length * PrismType.LineHeight(PrismFace.Headline, pixels);
@@ -65,10 +66,11 @@ internal sealed partial class PrismApp
         if (hint.Length > 0)
         {
             Typography.DrawWrappedLeft(new Vector2(left, textTop + Metrics.Space.Sm * scale), hint, PrismArt.Muted,
-                TextStyles.Subheadline, width);
+                TextStyles.Subheadline, hintWidth);
         }
 
-        if (PrismArt.Strip(drawList, done, Loc.T(L.Prism.Done), string.Empty, true))
+        var retry = editable && entry.Status == PrismPhases.StatusRejected;
+        if (PrismArt.Strip(drawList, retry ? change : done, Loc.T(L.Prism.Done), string.Empty, !retry))
         {
             Go(PrismScreen.Cover, -1);
         }
@@ -78,7 +80,7 @@ internal sealed partial class PrismApp
             return;
         }
 
-        if (PrismArt.Strip(drawList, change, Loc.T(L.Common.ChangePhoto), "→", false, !store.Busy))
+        if (PrismArt.Strip(drawList, retry ? done : change, Loc.T(L.Common.ChangePhoto), "→", retry, !store.Busy))
         {
             StartPick();
         }

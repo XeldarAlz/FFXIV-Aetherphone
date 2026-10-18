@@ -49,7 +49,9 @@ internal sealed partial class PrismApp
         {
             var gutter = PrismArt.Gutter(scale);
             top += Typography.DrawWrappedLeft(new Vector2(content.Min.X + gutter, top), week.Brief, PrismArt.Muted,
-                TextStyles.Subheadline, content.Width - gutter * 2f) + Metrics.Space.Lg * scale;
+                TextStyles.Subheadline,
+                PrismType.BalancedWidth(week.Brief, TextStyles.Subheadline, content.Width - gutter * 2f)) +
+                   Metrics.Space.Lg * scale;
         }
 
         var paneHeight = MathF.Min(content.Width, (content.Max.Y - top) * PickPaneFraction);

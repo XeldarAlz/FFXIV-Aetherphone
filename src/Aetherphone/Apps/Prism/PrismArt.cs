@@ -14,6 +14,8 @@ internal static class PrismArt
 
     private const float LabelUnits = 13f;
     private const float ScoreDigitUnits = 24f;
+    private const float ScorePitchLow = 0.84f;
+    private const float ScorePitchStep = 0.08f;
     private const float ButtonPadUnits = 12f;
     private const float StitchInsetUnits = 4f;
     private const float StitchDashUnits = 5f;
@@ -228,14 +230,16 @@ internal static class PrismArt
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             }
 
-            if (enabled && UiInteract.Click(min, max, hovered))
+            if (enabled && UiInteract.Click(min, max, hovered, (UiSound?)null))
             {
+                UiFeedback.PlayPitched(UiSound.Tap, ScorePitchLow + ScorePitchStep * index);
                 picked = index + 1;
             }
         }
 
         return picked;
     }
+
     public static void SpectrumRule(ImDrawListPtr drawList, float left, float right, float y, float scale)
     {
         var segment = (right - left) / Spectrum.Length;
@@ -356,11 +360,19 @@ internal static class PrismArt
 
     public static Vector2 Tag(ImDrawListPtr drawList, Vector2 topRight, string label, float scale)
     {
+        var inset = TagInsetUnits * scale;
+        return TagAt(drawList, new Vector2(topRight.X - inset, topRight.Y + inset), label, scale);
+    }
+
+    public static float TagHeight(string label, float scale) =>
+        PrismType.Measure(label, PrismFace.Label, LabelPixels()).Y + TagPadUnits * scale * 2f;
+
+    public static Vector2 TagAt(ImDrawListPtr drawList, Vector2 topRight, string label, float scale)
+    {
         var pixels = LabelPixels();
         var pad = TagPadUnits * scale;
         var size = PrismType.Measure(label, PrismFace.Label, pixels) + new Vector2(pad * 2f, pad * 2f);
-        var inset = TagInsetUnits * scale;
-        var min = new Vector2(topRight.X - inset - size.X, topRight.Y + inset);
+        var min = new Vector2(topRight.X - size.X, topRight.Y);
         var rect = new Rect(min, min + size);
         drawList.AddRectFilled(rect.Min, rect.Max, ImGui.GetColorU32(Bone));
         DrawStitch(drawList, rect, scale);

@@ -19,13 +19,18 @@ internal static class PrismType
     private const float HeadlineLeading = 1.02f;
     private const int CacheLimit = 256;
     private const float FitStep = 0.92f;
+    private const float BalanceFloor = 0.5f;
+    private const int BalanceSteps = 10;
 
     private static readonly Dictionary<string, string> TitleCache = new(StringComparer.Ordinal);
     private static string titleLanguage = string.Empty;
     private static readonly Dictionary<WrapKey, string[]> WrapCache = new();
     private static readonly List<string> Scratch = new();
+    private static readonly Dictionary<BalanceKey, float> BalanceCache = new();
 
     private readonly record struct WrapKey(string Text, PrismFace Face, int Pixels, int Width);
+
+    private readonly record struct BalanceKey(string Text, float Scale, FontWeight Weight, int Width);
 
     public static string Title(string text)
     {
@@ -94,6 +99,69 @@ internal static class PrismType
             WrapCache.Clear();
         }
 
+        var lines = Break(text, face, pixels, width);
+        if (face == PrismFace.Headline && lines.Length > 1)
+        {
+            var low = width * BalanceFloor;
+            var high = width;
+            for (var step = 0; step < BalanceSteps; step++)
+            {
+                var middle = (low + high) * 0.5f;
+                if (Break(text, face, pixels, middle).Length <= lines.Length)
+                {
+                    high = middle;
+                }
+                else
+                {
+                    low = middle;
+                }
+            }
+
+            lines = Break(text, face, pixels, high);
+        }
+
+        WrapCache[key] = lines;
+        return lines;
+    }
+
+    public static float BalancedWidth(string text, in TextStyle style, float width)
+    {
+        var key = new BalanceKey(text, style.Scale, style.Weight, (int)MathF.Round(width));
+        if (BalanceCache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        if (BalanceCache.Count >= CacheLimit)
+        {
+            BalanceCache.Clear();
+        }
+
+        var count = Typography.WrapText(text, style, width).Length;
+        var high = width;
+        if (count > 1)
+        {
+            var low = width * BalanceFloor;
+            for (var step = 0; step < BalanceSteps; step++)
+            {
+                var middle = (low + high) * 0.5f;
+                if (Typography.WrapText(text, style, middle).Length <= count)
+                {
+                    high = middle;
+                }
+                else
+                {
+                    low = middle;
+                }
+            }
+        }
+
+        BalanceCache[key] = high;
+        return high;
+    }
+
+    private static string[] Break(string text, PrismFace face, float pixels, float width)
+    {
         Scratch.Clear();
         var line = string.Empty;
         var index = 0;
@@ -135,9 +203,7 @@ internal static class PrismType
             Scratch.Add(line);
         }
 
-        var lines = Scratch.ToArray();
-        WrapCache[key] = lines;
-        return lines;
+        return Scratch.ToArray();
     }
 
     public static float Fit(string text, PrismFace face, float width, float maxPixels, float minPixels,
