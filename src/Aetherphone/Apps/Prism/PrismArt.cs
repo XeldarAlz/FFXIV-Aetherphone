@@ -83,7 +83,7 @@ internal static class PrismArt
 
     public static float LabelPixels() => LabelUnits * UiScale.Current;
 
-    public static float Gutter(float scale) => Metrics.Space.Lg * scale;
+    public static float BottomMargin(float scale) => Metrics.Space.Lg * scale;
 
     public static void Shade(ImDrawListPtr drawList, Rect screen, float scale)
     {

@@ -93,17 +93,16 @@ internal sealed partial class PrismApp
 
     private float DrawMasthead(ImDrawListPtr drawList, Rect content, string under, float scale)
     {
-        var gutter = PrismArt.Gutter(scale);
         var top = content.Min.Y + HeaderGapUnits * scale;
         var pixels = MastheadUnits * scale;
         var labelPixels = PrismArt.LabelPixels();
         var mark = PrismMotion.Mark(drawList);
-        PrismType.Draw(drawList, new Vector2(content.Min.X + gutter, top), DisplayName, PrismArt.Fore,
+        PrismType.Draw(drawList, new Vector2(content.Min.X, top), DisplayName, PrismArt.Fore,
             PrismFace.Headline, pixels);
         var nameBottom = top + PrismType.Measure(DisplayName, PrismFace.Headline, pixels).Y;
         var guide = Loc.T(L.Prism.HowItWorks);
         var buttonTop = (top + nameBottom - PrismArt.ButtonUnits * scale) * 0.5f;
-        if (PrismArt.Button(drawList, new Vector2(content.Max.X - gutter - PrismArt.ButtonWidth(guide, scale),
+        if (PrismArt.Button(drawList, new Vector2(content.Max.X - PrismArt.ButtonWidth(guide, scale),
                 buttonTop), guide, scale, out _))
         {
             Go(PrismScreen.Guide);
@@ -114,11 +113,11 @@ internal sealed partial class PrismApp
         PrismMotion.Rise(drawList, mark, PrismMotion.At(screenAge, introDelay, Motion.PageSettle),
             PrismMotion.RiseUnits * scale);
         var draw = PrismMotion.At(screenAge, introDelay + RuleDelay, Motion.Sheet);
-        var span = content.Width - gutter * 2f;
-        PrismArt.SpectrumRule(drawList, content.Min.X + gutter, content.Min.X + gutter + span * draw, rule, scale);
+        var span = content.Width;
+        PrismArt.SpectrumRule(drawList, content.Min.X, content.Min.X + span * draw, rule, scale);
         if (draw >= PrismMotion.Settled)
         {
-            PrismArt.RuleGlow(drawList, content.Min.X + gutter, content.Max.X - gutter, rule, scale);
+            PrismArt.RuleGlow(drawList, content.Min.X, content.Max.X, rule, scale);
         }
 
         var ruleBottom = rule + MathF.Max(1f, 2f * scale);
@@ -129,7 +128,7 @@ internal sealed partial class PrismApp
 
         var underTop = ruleBottom + gap;
         mark = PrismMotion.Mark(drawList);
-        PrismType.DrawRight(drawList, new Vector2(content.Max.X - gutter, underTop), under, PrismArt.Muted,
+        PrismType.DrawRight(drawList, new Vector2(content.Max.X, underTop), under, PrismArt.Muted,
             PrismFace.Label, labelPixels);
         PrismMotion.Rise(drawList, mark, PrismMotion.At(screenAge, introDelay + CreditsDelay, Motion.PageSettle), 0f);
         return underTop + PrismType.Measure(under, PrismFace.Label, labelPixels).Y + Metrics.Space.Md * scale;
@@ -138,7 +137,7 @@ internal sealed partial class PrismApp
     private void DrawCoverButtons(ImDrawListPtr drawList, Rect content, float top, PrismWeekDto week, float scale)
     {
         if (week.MyEntry is not null && week.Phase != PrismPhases.Entering &&
-            PrismArt.Button(drawList, new Vector2(content.Min.X + PrismArt.Gutter(scale), top), Loc.T(L.Prism.YourLook),
+            PrismArt.Button(drawList, new Vector2(content.Min.X, top), Loc.T(L.Prism.YourLook),
                 scale, out _))
         {
             Go(PrismScreen.Entry);
@@ -147,8 +146,7 @@ internal sealed partial class PrismApp
 
     private int DrawCoverStory(ImDrawListPtr drawList, Rect content, PrismWeekDto week, int strips, float scale)
     {
-        var gutter = PrismArt.Gutter(scale);
-        var width = content.Width - gutter * 2f;
+        var width = content.Width;
         var labelPixels = PrismArt.LabelPixels();
         var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var statPixels = StatUnits * scale;
@@ -157,11 +155,11 @@ internal sealed partial class PrismApp
             HeadlineMinUnits * scale, HeadlineLines, out var lines);
         var headlineLine = PrismType.LineHeight(PrismFace.Headline, pixels);
         var eyebrowGap = Metrics.Space.Xs * scale;
-        var bottom = (strips > 0 ? StripRect(content, scale, strips - 1).Min.Y : content.Max.Y - gutter) -
+        var bottom = (strips > 0 ? StripRect(content, scale, strips - 1).Min.Y : content.Max.Y - PrismArt.BottomMargin(scale)) -
                      Metrics.Space.Xl * scale;
         var top = bottom - statHeight - Metrics.Space.Xl * scale - lines.Length * headlineLine -
                   eyebrowGap - labelPixels;
-        var left = content.Min.X + gutter;
+        var left = content.Min.X;
         var step = 0;
         var mark = PrismMotion.Mark(drawList);
         PrismType.Draw(drawList, new Vector2(left, top), Loc.T(L.Prism.ThemeLabel), PrismArt.Muted,

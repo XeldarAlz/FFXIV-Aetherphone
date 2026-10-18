@@ -23,13 +23,12 @@ internal sealed partial class PrismApp
         }
 
         var top = DrawHeader(drawList, content, string.Empty, IssueLine(week.Issue), true, scale);
-        var gutter = PrismArt.Gutter(scale);
-        var width = content.Width - gutter * 2f;
-        var left = content.Min.X + gutter;
+        var width = content.Width;
+        var left = content.Min.X;
         var editable = week.Phase == PrismPhases.Entering;
         var labelPixels = PrismArt.LabelPixels();
         var stripHeight = PrismArt.StripUnits * scale;
-        var bottom = content.Max.Y - gutter;
+        var bottom = content.Max.Y - PrismArt.BottomMargin(scale);
         var linkTop = bottom - PrismType.LineHeight(PrismFace.Label, labelPixels);
         var change = new Rect(new Vector2(left, linkTop - Metrics.Space.Lg * scale - stripHeight),
             new Vector2(left + width, linkTop - Metrics.Space.Lg * scale));

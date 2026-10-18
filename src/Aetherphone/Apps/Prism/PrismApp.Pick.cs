@@ -47,9 +47,8 @@ internal sealed partial class PrismApp
             week is null ? Loc.T(L.Prism.EnterLook) : PrismType.Title(week.Title), true, scale);
         if (week is { Brief.Length: > 0 })
         {
-            var gutter = PrismArt.Gutter(scale);
-            top += Typography.DrawWrappedLeft(new Vector2(content.Min.X + gutter, top), week.Brief, PrismArt.Muted,
-                TextStyles.Subheadline, content.Width - gutter * 2f) + Metrics.Space.Lg * scale;
+            top += Typography.DrawWrappedLeft(new Vector2(content.Min.X, top), week.Brief, PrismArt.Muted,
+                TextStyles.Subheadline, content.Width) + Metrics.Space.Lg * scale;
         }
 
         var paneHeight = MathF.Min(content.Width, (content.Max.Y - top) * PickPaneFraction);
