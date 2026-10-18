@@ -88,12 +88,13 @@ public sealed class PrismWireContractTests
 
         var results = JsonSerializer.Deserialize("{\"weekId\":\"w_0\",\"title\":\"Gold Saucer glam\","
             + "\"heatPodium\":[{\"rank\":1,\"imageUrl\":\"https://x/p.jpg\",\"displayName\":\"Ada Moon\","
-            + "\"world\":\"Phoenix\"}],\"finalPodium\":[],\"myHeatRank\":2,\"heatSize\":12,\"percentile\":15,"
+            + "\"world\":\"Phoenix\",\"handle\":\"ada.moon\"}],\"finalPodium\":[],\"myHeatRank\":2,\"heatSize\":12,\"percentile\":15,"
             + "\"coinsAwarded\":150,\"issue\":42,\"entryCount\":214,\"myImageUrl\":\"https://x/me.jpg\","
             + "\"heatLabel\":\"B\"}", AethernetJsonContext.Default.PrismResultsDto);
         Assert.NotNull(results);
         Assert.NotNull(results.HeatPodium);
         Assert.Equal("Ada Moon", results.HeatPodium[0].DisplayName);
+        Assert.Equal("ada.moon", results.HeatPodium[0].Handle);
         Assert.Equal(2, results.MyHeatRank);
         Assert.Equal(0, results.MyFinalRank);
         Assert.Equal(150, results.CoinsAwarded);

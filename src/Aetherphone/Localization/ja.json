@@ -5618,6 +5618,7 @@
   "prism.looksIn": "エントリー数",
   "prism.done": "完了",
   "prism.submit": "エントリー",
+  "prism.printHeading": "{0} No.{1}",
   "prism.howItWorks": "遊び方",
   "prism.guideEnterTitle": "コーデを1つエントリー",
   "prism.guideEnterBody": "毎週新しいテーマが登場します。テーマに一番合う写真を1枚選びましょう。Modもありです。",

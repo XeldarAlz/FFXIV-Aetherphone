@@ -5618,6 +5618,7 @@
   "prism.looksIn": "Gelen görünümler",
   "prism.done": "Bitti",
   "prism.submit": "Gönder",
+  "prism.printHeading": "{0} Sayı {1}",
   "prism.howItWorks": "Nasıl çalışır",
   "prism.guideEnterTitle": "Bir görünüm gönder",
   "prism.guideEnterBody": "Her hafta yeni bir tema gelir. Temayı en iyi taşıyan tek fotoğrafı seç, modlar dahil.",

@@ -40,7 +40,8 @@ internal sealed record PrismPlacingDto(
     int Width = 0,
     int Height = 0,
     string DisplayName = "",
-    string World = "");
+    string World = "",
+    string Handle = "");
 
 internal sealed record PrismResultsDto(
     string WeekId = "",

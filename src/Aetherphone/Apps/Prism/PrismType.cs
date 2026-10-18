@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Localization;
+using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Prism;
@@ -14,6 +15,7 @@ internal static class PrismType
     private const float FitStep = 0.92f;
 
     private static readonly Dictionary<string, string> TitleCache = new(StringComparer.Ordinal);
+    private static string titleLanguage = string.Empty;
     private static readonly Dictionary<WrapKey, string[]> WrapCache = new();
     private static readonly List<string> Scratch = new();
 
@@ -21,6 +23,12 @@ internal static class PrismType
 
     public static string Title(string text)
     {
+        if (!string.Equals(titleLanguage, Loc.Current.Code, StringComparison.Ordinal))
+        {
+            TitleCache.Clear();
+            titleLanguage = Loc.Current.Code;
+        }
+
         if (TitleCache.TryGetValue(text, out var cached))
         {
             return cached;
@@ -39,7 +47,8 @@ internal static class PrismType
     public static float Snap(EditorialFace face, float pixels)
     {
         var scale = UiScale.Current;
-        return FontService.EditorialUnits(face, FontService.EditorialStep(face, pixels / scale)) * scale;
+        return FontService.EditorialUnits(face, FontService.EditorialStep(face, pixels / scale)) * scale *
+               Plugin.Fonts.Zoom;
     }
 
     public static Vector2 Measure(string text, EditorialFace face, float pixels)
@@ -88,30 +97,38 @@ internal static class PrismType
 
         Scratch.Clear();
         var line = string.Empty;
-        var start = 0;
-        for (var index = 0; index <= text.Length; index++)
+        var index = 0;
+        while (index < text.Length)
         {
-            if (index < text.Length && text[index] != ' ')
+            if (text[index] == ' ')
             {
+                index++;
                 continue;
             }
 
-            var word = text[start..index];
-            start = index + 1;
-            if (word.Length == 0)
+            var end = index + 1;
+            if (!Typography.IsCjk(text[index]))
             {
-                continue;
+                while (end < text.Length && text[end] != ' ' && !Typography.IsCjk(text[end]))
+                {
+                    end++;
+                }
             }
 
-            var candidate = line.Length == 0 ? word : line + " " + word;
+            var word = text[index..end];
+            var spaced = index > 0 && text[index - 1] == ' ';
+            var candidate = line.Length == 0 ? word : spaced ? line + " " + word : line + word;
             if (line.Length > 0 && Measure(candidate, face, pixels).X > width)
             {
                 Scratch.Add(line);
                 line = word;
-                continue;
+            }
+            else
+            {
+                line = candidate;
             }
 
-            line = candidate;
+            index = end;
         }
 
         if (line.Length > 0)

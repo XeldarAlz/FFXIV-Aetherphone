@@ -26,7 +26,7 @@ internal enum PrismScreen : byte
     Guide,
 }
 
-internal sealed partial class PrismApp : IPhoneApp
+internal sealed partial class PrismApp : IResumableApp
 {
     private const float RefreshSeconds = 120f;
     private const float HeaderGapUnits = 14f;
@@ -49,6 +49,7 @@ internal sealed partial class PrismApp : IPhoneApp
     private PrismScreen screen = PrismScreen.Cover;
     private PrismScreen pickReturn = PrismScreen.Cover;
     private readonly Dictionary<string, double> loadedAt = new(StringComparer.Ordinal);
+    private string loadedWeek = string.Empty;
     private float screenAge;
     private int enterDirection = 1;
     private INavigator navigation = null!;
@@ -75,6 +76,7 @@ internal sealed partial class PrismApp : IPhoneApp
     public string DisplayName => Loc.T(L.Apps.Prism);
     public string Glyph => "Pr";
     public int BadgeCount => 0;
+    public bool WantsSystemTheme => true;
 
     public ShareKindSet AcceptedShares => store.IsSignedIn ? ShareKindSet.Photo : ShareKindSet.None;
 
@@ -107,6 +109,12 @@ internal sealed partial class PrismApp : IPhoneApp
         store.Refresh();
     }
 
+    public void OnResumed()
+    {
+        sinceRefresh = 0f;
+        store.Refresh();
+    }
+
     public void OnClosed()
     {
         pickIntake.Discard();
@@ -118,8 +126,10 @@ internal sealed partial class PrismApp : IPhoneApp
         var scale = UiScale.Current;
         var content = context.Content;
         var full = SceneChrome.ScreenFrom(content, context.Theme, scale);
-        ImGui.GetWindowDrawList().AddRectFilled(full.Min, full.Max, ImGui.GetColorU32(PrismArt.Black));
+        PrismArt.Follow(context.Theme);
+        ImGui.GetWindowDrawList().AddRectFilled(full.Min, full.Max, ImGui.GetColorU32(PrismArt.Back));
         TickRefresh();
+        ForgetLoadsOnNewWeek();
         ConsumeSharedPhoto();
         screenAge += MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         var enter = PrismMotion.At(screenAge, 0f, TransitionTiming.PresentSmoothTime);
@@ -178,7 +188,7 @@ internal sealed partial class PrismApp : IPhoneApp
         float height;
         if (back)
         {
-            if (PrismArt.Link(drawList, row.Min, Loc.T(L.Prism.Back), PrismArt.White, scale))
+            if (PrismArt.Link(drawList, row.Min, Loc.T(L.Prism.Back), PrismArt.Fore, scale))
             {
                 Go(screen == PrismScreen.Pick ? pickReturn : PrismScreen.Cover, -1);
             }
@@ -186,17 +196,17 @@ internal sealed partial class PrismApp : IPhoneApp
             height = PrismType.LineHeight(EditorialFace.Label, PrismArt.LabelPixels());
             if (right.Length > 0)
             {
-                PrismType.DrawRight(drawList, new Vector2(row.Max.X, top), right, PrismArt.White, EditorialFace.Label,
+                PrismType.DrawRight(drawList, new Vector2(row.Max.X, top), right, PrismArt.Fore, EditorialFace.Label,
                     PrismArt.LabelPixels());
             }
         }
         else
         {
-            height = PrismArt.Programme(drawList, row, left, right, PrismArt.White);
+            height = PrismArt.Programme(drawList, row, left, right, PrismArt.Fore);
         }
 
         var rule = top + height + HeaderGapUnits * 0.5f * scale;
-        PrismArt.Hairline(drawList, row.Min.X, row.Max.X, rule, PrismArt.White, scale);
+        PrismArt.Hairline(drawList, row.Min.X, row.Max.X, rule, PrismArt.Fore, scale);
         return rule + HeaderGapUnits * scale;
     }
 
@@ -268,7 +278,7 @@ internal sealed partial class PrismApp : IPhoneApp
                      bodyHeight;
         var bottom = StripRect(content, scale, strips - 1).Min.Y - Metrics.Space.Xxl * scale;
         var top = bottom - height;
-        top += PrismType.DrawLines(drawList, new Vector2(content.Min.X + gutter, top), lines, PrismArt.White,
+        top += PrismType.DrawLines(drawList, new Vector2(content.Min.X + gutter, top), lines, PrismArt.Fore,
             EditorialFace.Headline, pixels) + Metrics.Space.Lg * scale;
         if (body.Length > 0)
         {
@@ -297,6 +307,18 @@ internal sealed partial class PrismApp : IPhoneApp
 
         sinceRefresh = 0f;
         store.Refresh();
+    }
+
+    private void ForgetLoadsOnNewWeek()
+    {
+        var week = store.Week?.Id ?? string.Empty;
+        if (string.Equals(week, loadedWeek, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        loadedWeek = week;
+        loadedAt.Clear();
     }
 
     private void ConsumeSharedPhoto()

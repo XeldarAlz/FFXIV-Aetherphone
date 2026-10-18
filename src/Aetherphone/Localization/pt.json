@@ -5618,6 +5618,7 @@
   "prism.looksIn": "Looks enviados",
   "prism.done": "Concluído",
   "prism.submit": "Enviar",
+  "prism.printHeading": "{0} N.º {1}",
   "prism.howItWorks": "Como funciona",
   "prism.guideEnterTitle": "Inscreva um look",
   "prism.guideEnterBody": "Um tema novo chega toda semana. Escolha a foto que melhor o veste, mods inclusos.",

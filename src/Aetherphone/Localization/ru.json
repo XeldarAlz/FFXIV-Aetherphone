@@ -5618,6 +5618,7 @@
   "prism.looksIn": "Образов прислано",
   "prism.done": "Готово",
   "prism.submit": "Отправить",
+  "prism.printHeading": "{0} № {1}",
   "prism.howItWorks": "Как это работает",
   "prism.guideEnterTitle": "Отправьте один образ",
   "prism.guideEnterBody": "Каждую неделю появляется новая тема. Выберите одно фото, которое раскрывает её лучше всего, моды тоже можно.",

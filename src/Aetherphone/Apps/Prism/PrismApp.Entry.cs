@@ -38,9 +38,12 @@ internal sealed partial class PrismApp
         var actionsTop = done.Min.Y;
         var pixels = PrismType.Fit(Loc.T(StatusTitle(entry.Status)), EditorialFace.Headline, width,
             StatusMaxUnits * scale, StatusMinUnits * scale, 2, out var lines);
-        var hint = entry.Status == PrismPhases.StatusRejected
-            ? entry.RejectReason
-            : entry.Status == PrismPhases.StatusLive ? string.Empty : Loc.T(L.Prism.StatusReviewHint);
+        var failure = store.ActionFailed && !store.Busy ? store.ActionFailureText : string.Empty;
+        var hint = store.ActionFailed && !store.Busy
+            ? failure.Length > 0 ? failure : Loc.T(L.Common.LoadFailedHint)
+            : entry.Status == PrismPhases.StatusRejected
+                ? entry.RejectReason
+                : entry.Status == PrismPhases.StatusLive ? string.Empty : Loc.T(L.Prism.StatusReviewHint);
         var hintHeight = hint.Length > 0
             ? Typography.MeasureWrappedBlock(hint, TextStyles.Subheadline, width).Y + Metrics.Space.Sm * scale
             : 0f;
@@ -57,7 +60,7 @@ internal sealed partial class PrismApp
             PrismMotion.Scale(drawList, tag, pivot, 1f + TagStamp * (1f - stamp), stamp);
         }
 
-        textTop += PrismType.DrawLines(drawList, new Vector2(left, textTop), lines, PrismArt.White,
+        textTop += PrismType.DrawLines(drawList, new Vector2(left, textTop), lines, PrismArt.Fore,
             EditorialFace.Headline, pixels);
         if (hint.Length > 0)
         {

@@ -55,6 +55,7 @@ internal sealed partial class PrismApp
         if (!HeatInProgress)
         {
             ratingBallot = null;
+            store.ClearBallot();
             store.RequestBallot();
         }
 
@@ -146,7 +147,7 @@ internal sealed partial class PrismApp
                 PrismArt.Muted, EditorialFace.Label, labelPixels);
         }
 
-        PrismType.DrawLines(drawList, new Vector2(left, questionTop), lines, PrismArt.White, EditorialFace.Headline,
+        PrismType.DrawLines(drawList, new Vector2(left, questionTop), lines, PrismArt.Fore, EditorialFace.Headline,
             pixels);
         var fill = chosen > 0 ? scoreFill.Step(1f, Motion.Release, delta) : 0f;
         var picked = PrismArt.Score(drawList, row, chosen, fill, chosen == 0 && !store.Busy, scale);
@@ -181,7 +182,7 @@ internal sealed partial class PrismApp
         if (title.Length > 0)
         {
             var titleWidth = PrismType.Measure(title, EditorialFace.Label, labelPixels).X;
-            PrismType.Draw(drawList, new Vector2(content.Center.X - titleWidth * 0.5f, row), title, PrismArt.White,
+            PrismType.Draw(drawList, new Vector2(content.Center.X - titleWidth * 0.5f, row), title, PrismArt.Fore,
                 EditorialFace.Label, labelPixels);
         }
 
@@ -290,7 +291,7 @@ internal sealed partial class PrismApp
         var pixels = PrismType.Fit(count, EditorialFace.Numerals, content.Width - gutter * 2f,
             DoneNumeralUnits * scale, DoneNumeralMinUnits * scale, 1, out _);
         DrawWipe(drawList, new Vector2(content.Min.X + gutter, top), count, EditorialFace.Numerals, pixels,
-            PrismMotion.At(screenAge, 0f, Motion.Sheet), PrismArt.White);
+            PrismMotion.At(screenAge, 0f, Motion.Sheet), PrismArt.Fore);
         var strip = PrismMotion.Mark(drawList);
         if (canJudge && PrismArt.Strip(drawList, StripRect(content, scale, 1), Loc.T(L.Prism.JudgeAnother),
                 "→", true))

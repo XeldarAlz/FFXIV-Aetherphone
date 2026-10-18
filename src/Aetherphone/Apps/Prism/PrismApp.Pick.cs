@@ -2,6 +2,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Platform;
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -11,9 +12,10 @@ internal sealed partial class PrismApp
 {
     private const float PickPaneFraction = 0.52f;
 
-    private static readonly Vector4 PickFill = new(1f, 1f, 1f, 0.08f);
-    private static readonly PhotoComposeStyle PickStyle =
-        new(PrismArt.White, PrismArt.Muted, PickFill, PrismArt.Faint, false);
+    private const float PickFillAlpha = 0.08f;
+
+    private static PhotoComposeStyle PickStyle =>
+        new(PrismArt.Fore, PrismArt.Muted, Palette.WithAlpha(PrismArt.Fore, PickFillAlpha), PrismArt.Faint, false);
 
     private volatile int entryOutcome;
 
@@ -39,7 +41,7 @@ internal sealed partial class PrismApp
             pickIntake.Paste(library);
         }
 
-        pickIntake.AcceptDrop(content, library, PrismArt.White);
+        pickIntake.AcceptDrop(content, library, PrismArt.Fore);
         var week = store.Week;
         var top = DrawHeader(drawList, content, string.Empty,
             week is null ? Loc.T(L.Prism.EnterLook) : PrismType.Title(week.Title), true, scale);

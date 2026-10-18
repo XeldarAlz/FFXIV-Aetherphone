@@ -174,7 +174,7 @@ internal sealed class FontService : IDisposable
     public bool EditorialReady(EditorialFace face)
     {
         editorialUsedAt = Environment.TickCount64;
-        editorialWantedZoom = phoneZoom;
+        editorialWantedZoom = phoneZoom * zoom;
         return editorialHandles[(int)face][0] is { Available: true };
     }
 

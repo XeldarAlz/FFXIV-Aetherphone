@@ -9,11 +9,10 @@ namespace Aetherphone.Apps.Prism;
 internal static class PrismArt
 {
     public const float StripUnits = 46f;
-    public const float GutterUnits = 20f;
     public const float ButtonUnits = 30f;
     public const int Stars = 5;
 
-    private const float LabelRatio = 0.82f;
+    private const float LabelUnits = 13f;
     private const float ScoreDigitUnits = 24f;
     private const float ButtonPadUnits = 12f;
     private const float StitchInsetUnits = 4f;
@@ -35,20 +34,45 @@ internal static class PrismArt
     private const float GlowHaloAlpha = 0.55f;
     private const float GlowHaloLift = 0.25f;
     private const float GlowCoreLift = 0.7f;
+    private const float FogAlpha = 0.6f;
 
-    public static readonly Vector4 Black = new(0f, 0f, 0f, 1f);
-    public static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     public static readonly Vector4 Bone = new(0.957f, 0.945f, 0.918f, 1f);
     public static readonly Vector4 Ink = new(0.067f, 0.067f, 0.067f, 1f);
-    public static readonly Vector4 Muted = new(1f, 1f, 1f, 0.66f);
-    public static readonly Vector4 Faint = new(1f, 1f, 1f, 0.28f);
     public static readonly Vector4 InkMuted = new(0.067f, 0.067f, 0.067f, 0.62f);
 
+    private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 ShadeClear = new(0f, 0f, 0f, 0f);
     private static readonly Vector4 ShadeMid = new(0f, 0f, 0f, 0.72f);
     private static readonly Vector4 ShadeDeep = new(0f, 0f, 0f, 0.92f);
-    private static readonly Vector4 ShadeTop = new(0f, 0f, 0f, 0.55f);
     private static readonly Vector4 Stitch = new(0.067f, 0.067f, 0.067f, 0.35f);
+
+    private static readonly Inks PhotoInks = new(new Vector4(0f, 0f, 0f, 1f), White, new Vector4(1f, 1f, 1f, 0.66f),
+        new Vector4(1f, 1f, 1f, 0.28f), Ink, new Vector4(0f, 0f, 0f, FogAlpha));
+
+    private static Inks themeInks = PhotoInks;
+    private static Inks inks = PhotoInks;
+
+    private readonly record struct Inks(Vector4 Back, Vector4 Fore, Vector4 Muted, Vector4 Faint, Vector4 OnFore,
+        Vector4 Fog);
+
+    public static Vector4 PhotoFore => White;
+
+    public static Vector4 Back => inks.Back;
+
+    public static Vector4 Fore => inks.Fore;
+
+    public static Vector4 Muted => inks.Muted;
+
+    public static Vector4 Faint => inks.Faint;
+
+    public static void Follow(PhoneTheme theme)
+    {
+        themeInks = new Inks(theme.AppBackground, theme.TextStrong, theme.TextMuted, theme.Separator,
+            theme.AppBackground, Palette.WithAlpha(theme.AppBackground, FogAlpha));
+        inks = themeInks;
+    }
+
+    public static void OverPhoto(bool photo) => inks = photo ? PhotoInks : themeInks;
 
     private static readonly Vector4[] Spectrum =
     {
@@ -57,15 +81,16 @@ internal static class PrismArt
 
     private static readonly string[] Digits = { "1", "2", "3", "4", "5" };
 
-    public static float LabelPixels() => Typography.LineHeight(TextStyles.Caption1) * LabelRatio;
+    public static float LabelPixels() => LabelUnits * UiScale.Current;
 
-    public static float Gutter(float scale) => GutterUnits * scale;
+    public static float Gutter(float scale) => Metrics.Space.Lg * scale;
 
     public static void Shade(ImDrawListPtr drawList, Rect screen, float scale)
     {
         var top = new Vector2(screen.Max.X, screen.Min.Y + TopShadeUnits * scale);
-        drawList.AddRectFilledMultiColor(screen.Min, top, ImGui.GetColorU32(ShadeTop), ImGui.GetColorU32(ShadeTop),
-            ImGui.GetColorU32(ShadeClear), ImGui.GetColorU32(ShadeClear));
+        var fog = ImGui.GetColorU32(themeInks.Fog);
+        var clear = ImGui.GetColorU32(Palette.WithAlpha(themeInks.Fog, 0f));
+        drawList.AddRectFilledMultiColor(screen.Min, top, fog, fog, clear, clear);
         var fade = screen.Max.Y - screen.Height * ShadeShare;
         var settle = screen.Max.Y - screen.Height * ShadeSolidShare;
         drawList.AddRectFilledMultiColor(new Vector2(screen.Min.X, fade), new Vector2(screen.Max.X, settle),
@@ -97,8 +122,8 @@ internal static class PrismArt
         var hovered = enabled && UiInteract.Hover(rect.Min, rect.Max);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
         var alpha = enabled ? pressed ? PressedAlpha : 1f : Faint.W;
-        var fill = Palette.WithAlpha(White, alpha);
-        var text = filled ? Ink : Palette.WithAlpha(White, alpha);
+        var fill = Palette.WithAlpha(Fore, alpha);
+        var text = filled ? inks.OnFore : Palette.WithAlpha(Fore, alpha);
         if (filled)
         {
             drawList.AddRectFilled(rect.Min, rect.Max, ImGui.GetColorU32(fill));
@@ -136,7 +161,7 @@ internal static class PrismArt
         var min = new Vector2(topLeft.X, topLeft.Y - pad);
         var max = new Vector2(topLeft.X + size.X, topLeft.Y + size.Y + pad);
         var hovered = UiInteract.Hover(min, max);
-        PrismType.Draw(drawList, topLeft, label, hovered ? White : color, EditorialFace.Label, pixels);
+        PrismType.Draw(drawList, topLeft, label, hovered ? Fore : color, EditorialFace.Label, pixels);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -159,9 +184,9 @@ internal static class PrismArt
         var hitMin = new Vector2(topLeft.X, topLeft.Y - reach);
         var hitMax = new Vector2(max.X, max.Y + reach);
         var hovered = UiInteract.Hover(hitMin, hitMax);
-        drawList.AddRect(topLeft, max, ImGui.GetColorU32(hovered ? White : Faint), 0f, ImDrawFlags.None, 1f);
+        drawList.AddRect(topLeft, max, ImGui.GetColorU32(hovered ? Fore : Faint), 0f, ImDrawFlags.None, 1f);
         PrismType.Draw(drawList, new Vector2(topLeft.X + pad, topLeft.Y + (height - pixels) * 0.5f), label,
-            hovered ? White : Muted, EditorialFace.Label, pixels);
+            hovered ? Fore : Muted, EditorialFace.Label, pixels);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -183,15 +208,15 @@ internal static class PrismArt
             var hovered = enabled && UiInteract.Hover(min, max);
             var selected = chosen == index + 1;
             var share = selected ? fill : 0f;
-            drawList.AddRect(min, max, ImGui.GetColorU32(hovered || selected ? White : Faint), 0f, ImDrawFlags.None,
+            drawList.AddRect(min, max, ImGui.GetColorU32(hovered || selected ? Fore : Faint), 0f, ImDrawFlags.None,
                 1f);
             if (share > 0f)
             {
-                drawList.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(White, share)));
+                drawList.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(Fore, share)));
             }
 
             var size = PrismType.Measure(Digits[index], EditorialFace.Headline, digitPixels);
-            PrismType.Draw(drawList, (min + max) * 0.5f - size * 0.5f, Digits[index], Vector4.Lerp(White, Ink, share),
+            PrismType.Draw(drawList, (min + max) * 0.5f - size * 0.5f, Digits[index], Vector4.Lerp(Fore, inks.OnFore, share),
                 EditorialFace.Headline, digitPixels);
             if (hovered)
             {
@@ -319,7 +344,7 @@ internal static class PrismArt
             if (share > 0f)
             {
                 drawList.AddRectFilled(min, new Vector2(min.X + width * share, top + height),
-                    ImGui.GetColorU32(White));
+                    ImGui.GetColorU32(Fore));
             }
         }
     }

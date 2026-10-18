@@ -67,13 +67,18 @@ internal sealed partial class PrismApp
             DrawLook(drawList, full, cover.ImageUrl, false, 1f, zoom);
         }
 
-        PrismArt.Shade(drawList, full, scale);
+        if (cover is not null)
+        {
+            PrismArt.Shade(drawList, full, scale);
+        }
+
         var below = DrawMasthead(drawList, content, cover is null ? string.Empty : CreditLine(cover), scale);
         var buttons = PrismMotion.Mark(drawList);
         DrawCoverButtons(drawList, content, below, week, scale);
         PrismMotion.Rise(drawList, buttons, PrismMotion.At(screenAge, introDelay + CreditsDelay, Motion.PageSettle),
             0f);
         var strips = HasPrimary(week) || store.Results is not null ? 1 : 0;
+        PrismArt.OverPhoto(cover is not null);
         var steps = DrawCoverStory(drawList, content, week, strips, scale);
         var strip = PrismMotion.Mark(drawList);
         DrawCoverStrip(drawList, content, week, scale);
@@ -93,7 +98,7 @@ internal sealed partial class PrismApp
         var pixels = MastheadUnits * scale;
         var labelPixels = PrismArt.LabelPixels();
         var mark = PrismMotion.Mark(drawList);
-        PrismType.Draw(drawList, new Vector2(content.Min.X + gutter, top), DisplayName, PrismArt.White,
+        PrismType.Draw(drawList, new Vector2(content.Min.X + gutter, top), DisplayName, PrismArt.Fore,
             EditorialFace.Headline, pixels);
         var nameBottom = top + PrismType.Measure(DisplayName, EditorialFace.Headline, pixels).Y;
         var guide = Loc.T(L.Prism.HowItWorks);
@@ -166,7 +171,7 @@ internal sealed partial class PrismApp
         for (var index = 0; index < lines.Length; index++)
         {
             mark = PrismMotion.Mark(drawList);
-            PrismType.Draw(drawList, new Vector2(left, top), lines[index], PrismArt.White, EditorialFace.Headline,
+            PrismType.Draw(drawList, new Vector2(left, top), lines[index], PrismArt.Fore, EditorialFace.Headline,
                 pixels);
             RiseStep(drawList, mark, step++, scale);
             top += headlineLine;
@@ -191,7 +196,7 @@ internal sealed partial class PrismApp
         var top = topLeft.Y + Metrics.Space.Md * scale;
         PrismType.Draw(drawList, new Vector2(topLeft.X, top), label, PrismArt.Muted, EditorialFace.Label, labelPixels);
         PrismType.Draw(drawList, new Vector2(topLeft.X, top + PrismType.LineHeight(EditorialFace.Label, labelPixels)),
-            value, PrismArt.White, EditorialFace.Headline, StatUnits * scale);
+            value, PrismArt.Fore, EditorialFace.Headline, StatUnits * scale);
     }
 
     private static bool HasPrimary(PrismWeekDto week) =>

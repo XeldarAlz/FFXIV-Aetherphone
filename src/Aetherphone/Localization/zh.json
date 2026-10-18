@@ -5618,6 +5618,7 @@
   "prism.looksIn": "已投稿造型",
   "prism.done": "完成",
   "prism.submit": "投稿",
+  "prism.printHeading": "{0} 第 {1} 期",
   "prism.howItWorks": "玩法说明",
   "prism.guideEnterTitle": "投稿一套造型",
   "prism.guideEnterBody": "每周都会推出新主题。挑一张最契合主题的照片，模组也可以。",
