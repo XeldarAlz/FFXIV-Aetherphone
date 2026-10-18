@@ -35,6 +35,7 @@ internal static class PrismArt
     private const float GlowHaloLift = 0.25f;
     private const float GlowCoreLift = 0.7f;
     private const float FogAlpha = 0.6f;
+    private const float EditorialMarginUnits = 20f;
 
     public static readonly Vector4 Bone = new(0.957f, 0.945f, 0.918f, 1f);
     public static readonly Vector4 Ink = new(0.067f, 0.067f, 0.067f, 1f);
@@ -51,6 +52,7 @@ internal static class PrismArt
 
     private static Inks themeInks = PhotoInks;
     private static Inks inks = PhotoInks;
+    private static float sidePadding = Metrics.Space.Lg;
 
     private readonly record struct Inks(Vector4 Back, Vector4 Fore, Vector4 Muted, Vector4 Faint, Vector4 OnFore,
         Vector4 Fog);
@@ -70,6 +72,7 @@ internal static class PrismArt
         themeInks = new Inks(theme.AppBackground, theme.TextStrong, theme.TextMuted, theme.Separator,
             theme.AppBackground, Palette.WithAlpha(theme.AppBackground, FogAlpha));
         inks = themeInks;
+        sidePadding = theme.SidePadding;
     }
 
     public static void OverPhoto(bool photo) => inks = photo ? PhotoInks : themeInks;
@@ -82,6 +85,8 @@ internal static class PrismArt
     private static readonly string[] Digits = { "1", "2", "3", "4", "5" };
 
     public static float LabelPixels() => LabelUnits * UiScale.Current;
+
+    public static float Gutter(float scale) => (EditorialMarginUnits - sidePadding) * scale;
 
     public static float BottomMargin(float scale) => Metrics.Space.Lg * scale;
 

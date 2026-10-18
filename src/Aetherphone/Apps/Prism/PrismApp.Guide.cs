@@ -35,8 +35,9 @@ internal sealed partial class PrismApp
         using var surface = AppSurface.BeginEdgeToEdge(body);
         var list = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
-        var width = ScrollLayout.StableContentWidth();
-        var left = origin.X;
+        var gutter = PrismArt.Gutter(scale);
+        var width = ScrollLayout.StableContentWidth() - gutter * 2f;
+        var left = origin.X + gutter;
         var cursor = DrawSectionTitle(list, left, origin.Y, width, Loc.T(L.Prism.HowItWorks), scale);
         var indent = SectionIndexUnits * scale;
         var labelPixels = PrismArt.LabelPixels();

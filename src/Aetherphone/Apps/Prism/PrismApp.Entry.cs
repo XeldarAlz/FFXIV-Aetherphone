@@ -23,8 +23,9 @@ internal sealed partial class PrismApp
         }
 
         var top = DrawHeader(drawList, content, string.Empty, IssueLine(week.Issue), true, scale);
-        var width = content.Width;
-        var left = content.Min.X;
+        var gutter = PrismArt.Gutter(scale);
+        var width = content.Width - gutter * 2f;
+        var left = content.Min.X + gutter;
         var editable = week.Phase == PrismPhases.Entering;
         var labelPixels = PrismArt.LabelPixels();
         var stripHeight = PrismArt.StripUnits * scale;

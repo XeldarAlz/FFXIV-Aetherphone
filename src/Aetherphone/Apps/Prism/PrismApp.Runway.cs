@@ -120,8 +120,9 @@ internal sealed partial class PrismApp
         turnAge += delta;
         var turn = PrismMotion.At(turnAge, 0f, Motion.PageSettle);
         var look = looks[lookIndex];
-        var left = content.Min.X;
-        var width = content.Width;
+        var gutter = PrismArt.Gutter(scale);
+        var left = content.Min.X + gutter;
+        var width = content.Width - gutter * 2f;
         var top = DrawRunwayHeader(drawList, content, ballot, looks.Length, look.Id, scale);
         var row = new Rect(new Vector2(left, content.Max.Y - PrismArt.BottomMargin(scale) - ScoreRowUnits * scale),
             new Vector2(left + width, content.Max.Y - PrismArt.BottomMargin(scale)));
@@ -165,8 +166,9 @@ internal sealed partial class PrismApp
     private float DrawRunwayHeader(ImDrawListPtr drawList, Rect content, PrismBallotDto ballot, int total,
         string lookId, float scale)
     {
-        var left = content.Min.X;
-        var right = content.Max.X;
+        var gutter = PrismArt.Gutter(scale);
+        var left = content.Min.X + gutter;
+        var right = content.Max.X - gutter;
         var top = content.Min.Y + HeaderGapUnits * scale;
         PrismArt.StoryBars(drawList, left, right, top, total, lookIndex, 1f, scale);
         var row = top + HeaderGapUnits * scale;
@@ -284,10 +286,11 @@ internal sealed partial class PrismApp
         DrawNotice(drawList, content, Loc.T(L.Prism.HeatDoneTitle), Loc.T(L.Prism.HeatDoneHint), scale, strips);
         PrismMotion.Rise(drawList, notice, PrismMotion.At(screenAge, DoneTextDelay, Motion.PageSettle),
             PrismMotion.RiseUnits * scale);
+        var gutter = PrismArt.Gutter(scale);
         var count = DoneCounter(stars.Length);
-        var pixels = PrismType.Fit(count, PrismFace.Numerals, content.Width,
+        var pixels = PrismType.Fit(count, PrismFace.Numerals, content.Width - gutter * 2f,
             DoneNumeralUnits * scale, DoneNumeralMinUnits * scale, 1, out _);
-        DrawWipe(drawList, new Vector2(content.Min.X, top), count, PrismFace.Numerals, pixels,
+        DrawWipe(drawList, new Vector2(content.Min.X + gutter, top), count, PrismFace.Numerals, pixels,
             PrismMotion.At(screenAge, 0f, Motion.Sheet), PrismArt.Fore);
         var strip = PrismMotion.Mark(drawList);
         if (canJudge && PrismArt.Strip(drawList, StripRect(content, scale, 1), Loc.T(L.Prism.JudgeAnother),

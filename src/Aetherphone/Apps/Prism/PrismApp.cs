@@ -182,8 +182,9 @@ internal sealed partial class PrismApp : IResumableApp
 
     private float DrawHeader(ImDrawListPtr drawList, Rect content, string left, string right, bool back, float scale)
     {
+        var gutter = PrismArt.Gutter(scale);
         var top = content.Min.Y + HeaderGapUnits * scale;
-        var row = new Rect(new Vector2(content.Min.X, top), new Vector2(content.Max.X, top));
+        var row = new Rect(new Vector2(content.Min.X + gutter, top), new Vector2(content.Max.X - gutter, top));
         float height;
         if (back)
         {
@@ -268,7 +269,8 @@ internal sealed partial class PrismApp : IResumableApp
     private float DrawNotice(ImDrawListPtr drawList, Rect content, string title, string body, float scale,
         int strips = 1)
     {
-        var width = content.Width;
+        var gutter = PrismArt.Gutter(scale);
+        var width = content.Width - gutter * 2f;
         var pixels = PrismType.Fit(title, PrismFace.Headline, width, NoticeMaxUnits * scale,
             NoticeMinUnits * scale, NoticeLines, out var lines);
         var bodyHeight = body.Length > 0 ? Typography.MeasureWrappedBlock(body, TextStyles.Subheadline, width).Y : 0f;
@@ -276,11 +278,11 @@ internal sealed partial class PrismApp : IResumableApp
                      bodyHeight;
         var bottom = StripRect(content, scale, strips - 1).Min.Y - Metrics.Space.Xxl * scale;
         var top = bottom - height;
-        top += PrismType.DrawLines(drawList, new Vector2(content.Min.X, top), lines, PrismArt.Fore,
+        top += PrismType.DrawLines(drawList, new Vector2(content.Min.X + gutter, top), lines, PrismArt.Fore,
             PrismFace.Headline, pixels) + Metrics.Space.Lg * scale;
         if (body.Length > 0)
         {
-            Typography.DrawWrappedLeft(new Vector2(content.Min.X, top), body, PrismArt.Muted,
+            Typography.DrawWrappedLeft(new Vector2(content.Min.X + gutter, top), body, PrismArt.Muted,
                 TextStyles.Subheadline, width);
         }
 
@@ -289,9 +291,10 @@ internal sealed partial class PrismApp : IResumableApp
 
     private Rect StripRect(Rect content, float scale, int fromBottom = 0)
     {
+        var gutter = PrismArt.Gutter(scale);
         var height = PrismArt.StripUnits * scale;
         var bottom = content.Max.Y - PrismArt.BottomMargin(scale) - fromBottom * (height + Metrics.Space.Md * scale);
-        return new Rect(new Vector2(content.Min.X, bottom - height), new Vector2(content.Max.X, bottom));
+        return new Rect(new Vector2(content.Min.X + gutter, bottom - height), new Vector2(content.Max.X - gutter, bottom));
     }
 
     private void TickRefresh()
