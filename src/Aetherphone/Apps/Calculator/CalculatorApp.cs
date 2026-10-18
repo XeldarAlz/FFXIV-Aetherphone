@@ -12,7 +12,7 @@ using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Calculator;
 
-internal sealed partial class CalculatorApp : IPhoneApp
+internal sealed partial class CalculatorApp : IResumableApp
 {
     private const float KeyGap = 12f;
     private const float KeypadBottomGap = 8f;
@@ -57,6 +57,8 @@ internal sealed partial class CalculatorApp : IPhoneApp
         answerAppear.SnapTo(1f);
         scrollTapeToBottom = true;
     }
+
+    public void OnResumed() => gestureTracking = false;
 
     public void OnClosed()
     {

@@ -14,7 +14,7 @@ using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Jobs;
 
-internal sealed partial class JobsApp : IPhoneApp
+internal sealed partial class JobsApp : IResumableApp
 {
     private const float RefreshIntervalSeconds = 2f;
     private const float PendingEquipIntervalSeconds = 0.1f;
@@ -77,15 +77,15 @@ internal sealed partial class JobsApp : IPhoneApp
     public void OnOpened()
     {
         router.Reset();
+        snapshot = JobsSnapshot.Empty;
         loaded = false;
         ResetFills();
     }
 
+    public void OnResumed() => loaded = false;
+
     public void OnClosed()
     {
-        router.Reset();
-        snapshot = JobsSnapshot.Empty;
-        loaded = false;
         pendingGearsetId = -1;
         sincePendingEquip = 0f;
         menuGearsetId = -1;

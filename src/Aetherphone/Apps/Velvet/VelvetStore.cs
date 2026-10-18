@@ -434,6 +434,14 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
         return result?.Url;
     }
 
+    protected override async Task<ReadMarkOutcome> MarkThreadReadRequestAsync(string threadKey, CancellationToken token)
+    {
+        var failure = AepFailure.None;
+        var succeeded = await client.MarkThreadReadAsync(threadKey, token, reported => failure = reported)
+            .ConfigureAwait(false);
+        return ReadConfirmations.Classify(succeeded, failure, missingRouteIsUnsupported: true);
+    }
+
     protected override long MessageTimeOf(VelvetMessageDto message) => message.CreatedAtUnix;
 
     protected override int MessageEncVersionOf(VelvetMessageDto message) => message.EncVersion;
@@ -488,6 +496,8 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
     protected override long ThreadLastMessageAtOf(VelvetThreadDto thread) => thread.LastMessageAtUnix;
 
     protected override int ThreadUnreadCountOf(VelvetThreadDto thread) => thread.UnreadCount;
+
+    protected override string? ThreadLastMessageIdOf(VelvetThreadDto thread) => thread.LastMessageId;
 
     protected override VelvetThreadDto WithUnreadCleared(VelvetThreadDto thread) => thread with { UnreadCount = 0 };
 

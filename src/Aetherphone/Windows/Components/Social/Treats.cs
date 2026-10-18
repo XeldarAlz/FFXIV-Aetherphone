@@ -17,10 +17,7 @@ internal enum TreatSpot : byte
     ChirperDeep,
     AethergramFeed,
     AethergramDeep,
-    VelvetFeed,
-    VelvetDeep,
     Skywatcher,
-    EmptyState,
     Calendar,
     Clock,
     ChatWallpaper,
@@ -31,7 +28,8 @@ internal static class Treats
     public const int Total = 13;
     public const int NoSpot = -1;
 
-    private const int SpotCount = 13;
+    private const int NoReset = -1;
+    private const int SpotCount = 10;
     private const double MinimumWaitMilliseconds = 30 * 60 * 1000;
     private const double MaximumWaitMilliseconds = 60 * 60 * 1000;
     private const double CatchUpFactor = 0.3;
@@ -60,12 +58,16 @@ internal static class Treats
     private static int activeSpot = NoSpot;
     private static int lastSpot = NoSpot;
     private static bool devHunt;
+    private static int resetGeneration = NoReset;
 
-    public static bool VelvetBarred { get; set; }
+    public static int Found => HalloweenTreatCount.Merge(LocalFound, ServerFound, Total);
 
-    public static int Found => Plugin.Cfg.HalloweenTreatYear == DateTime.Today.Year
+    private static int LocalFound => Plugin.Cfg.HalloweenTreatYear == DateTime.Today.Year
         ? BitOperations.PopCount((uint)Plugin.Cfg.HalloweenTreats)
         : 0;
+
+    private static int ServerFound =>
+        badge is null || badge.Generation == resetGeneration ? 0 : badge.Found;
 
     public static bool HuntOpen => SeasonalTheme.Halloween && (SeasonalTheme.HalloweenByDate || devHunt);
 
@@ -77,7 +79,25 @@ internal static class Treats
 
     public static bool BadgeWaiting => badge?.Waiting == true;
 
-    public static void SyncBadge() => badge?.Report(Found);
+    public static void SyncBadge()
+    {
+        badge?.Refresh(LocalFound);
+        AdoptServerCount();
+    }
+
+    private static void AdoptServerCount()
+    {
+        var server = ServerFound;
+        if (server <= LocalFound)
+        {
+            return;
+        }
+
+        var configuration = Plugin.Cfg;
+        configuration.HalloweenTreatYear = DateTime.Today.Year;
+        configuration.HalloweenTreats = HalloweenTreatCount.Mask(Math.Min(server, Total));
+        configuration.Save();
+    }
 
     public static void Configure(AppInstaller appInstaller, AethernetSession aethernetSession,
         HalloweenBadgeStore badgeStore)
@@ -95,7 +115,7 @@ internal static class Treats
         activeSpot = NoSpot;
         lastSpot = NoSpot;
         devHunt = false;
-        VelvetBarred = false;
+        resetGeneration = NoReset;
     }
 
     public static void SummonNow()
@@ -110,9 +130,10 @@ internal static class Treats
         devHunt = true;
         var configuration = Plugin.Cfg;
         configuration.HalloweenTreatYear = DateTime.Today.Year;
-        configuration.HalloweenTreats = found ? (1 << Total) - 1 : 0;
+        configuration.HalloweenTreats = found ? HalloweenTreatCount.Mask(Total) : 0;
         configuration.HalloweenTreatDue = 0;
         configuration.Save();
+        resetGeneration = found || badge is null ? NoReset : badge.Generation;
         activeSpot = NoSpot;
     }
 
@@ -173,23 +194,19 @@ internal static class Treats
 
     private static bool Reachable(TreatSpot spot) => spot switch
     {
-        TreatSpot.HomeTop or TreatSpot.HomeLow or TreatSpot.EmptyState => true,
+        TreatSpot.HomeTop or TreatSpot.HomeLow => true,
         TreatSpot.ChirperFeed or TreatSpot.ChirperDeep => Installed("chirper") && SignedIn,
         TreatSpot.AethergramFeed or TreatSpot.AethergramDeep => Installed("aethergram") && SignedIn,
-        TreatSpot.VelvetFeed or TreatSpot.VelvetDeep => VelvetOpen,
         TreatSpot.Skywatcher => Installed("skywatcher"),
         TreatSpot.Calendar => Installed("calendar"),
         TreatSpot.Clock => Installed("clock"),
-        TreatSpot.ChatWallpaper => Installed("message") || Installed("messages"),
+        TreatSpot.ChatWallpaper => Installed("message"),
         _ => false,
     };
 
     private static bool Installed(string appId) => installer is not null && installer.IsInstalled(appId);
 
     public static bool SignedIn => session is not null && session.IsSignedIn;
-
-    private static bool VelvetOpen => !VelvetBarred && Installed("velvet") && SignedIn &&
-        Plugin.Cfg.VelvetAcknowledgedGate && Plugin.Cfg.IsVelvetOnboarded();
 
     private static int PickSpot()
     {
@@ -265,20 +282,13 @@ internal static class Treats
     private static void Collect(TreatSpot spot)
     {
         var configuration = Plugin.Cfg;
-        var year = DateTime.Today.Year;
-        if (configuration.HalloweenTreatYear != year)
-        {
-            configuration.HalloweenTreatYear = year;
-            configuration.HalloweenTreats = 0;
-        }
-
-        var treats = configuration.HalloweenTreats;
-        configuration.HalloweenTreats = treats | (~treats & (treats + 1));
+        var found = HalloweenTreatCount.Next(LocalFound, ServerFound, Total);
+        configuration.HalloweenTreatYear = DateTime.Today.Year;
+        configuration.HalloweenTreats = HalloweenTreatCount.Mask(found);
         activeSpot = NoSpot;
         lastSpot = (int)spot;
         configuration.HalloweenTreatDue = Now + Wait();
         configuration.Save();
-        var found = Found;
         badge?.Report(found);
         UiFeedback.Play(found >= Total ? UiSound.HalloweenFlare : UiSound.HalloweenSparkle);
         ShellToast.Show(found >= Total

@@ -355,6 +355,27 @@ internal sealed class CallHub : IDisposable
         }
     }
 
+    public bool AutoGain
+    {
+        get
+        {
+            lock (gate)
+            {
+                return audio.AutoGainLocked;
+            }
+        }
+    }
+
+    public void SetAutoGain(bool value)
+    {
+        lock (gate)
+        {
+            audio.SetAutoGainLocked(value);
+        }
+
+        configuration.Save();
+    }
+
     public void SelectInputDevice(string name)
     {
         if (configuration.CallInputDevice == name)

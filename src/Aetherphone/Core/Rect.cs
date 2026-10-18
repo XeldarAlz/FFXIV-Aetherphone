@@ -17,4 +17,10 @@ internal readonly record struct Rect(Vector2 Min, Vector2 Max)
     }
 
     public bool Contains(Vector2 point) => point.X >= Min.X && point.X <= Max.X && point.Y >= Min.Y && point.Y <= Max.Y;
+
+    public Rect Intersect(Rect other)
+    {
+        var min = Vector2.Max(Min, other.Min);
+        return new Rect(min, Vector2.Max(min, Vector2.Min(Max, other.Max)));
+    }
 }

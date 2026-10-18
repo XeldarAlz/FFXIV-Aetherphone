@@ -14,7 +14,7 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Shortcuts;
 
-internal sealed partial class ShortcutsApp : IPhoneApp
+internal sealed partial class ShortcutsApp : IResumableApp
 {
     private const int TabCount = 3;
 
@@ -60,6 +60,7 @@ internal sealed partial class ShortcutsApp : IPhoneApp
     public void OnOpened()
     {
         router.Reset();
+        ClearDraft();
         activeTab = ShortcutsTab.Library;
         catalog.Invalidate();
         pluginQuery = string.Empty;
@@ -67,10 +68,12 @@ internal sealed partial class ShortcutsApp : IPhoneApp
         CloseOverlays();
     }
 
-    public void OnClosed()
+    public void OnResumed() => catalog.Invalidate();
+
+    public void OnClosed() => CloseOverlays();
+
+    private void ClearDraft()
     {
-        router.Reset();
-        CloseOverlays();
         DiscardUnsavedIcon();
         draft = null;
         draftBaseline = null;
@@ -212,7 +215,5 @@ internal sealed partial class ShortcutsApp : IPhoneApp
 
     private static string Seconds(float value) => value.ToString("0.#", Loc.Culture);
 
-    public void Dispose()
-    {
-    }
+    public void Dispose() => DiscardUnsavedIcon();
 }

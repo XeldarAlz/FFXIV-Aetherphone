@@ -1901,6 +1901,10 @@ internal static class L
         public static readonly LocString AudioTitle = new("phone.audioTitle", "Call Audio");
         public static readonly LocString CallVolume = new("phone.callVolume", "Call volume");
         public static readonly LocString MicVolume = new("phone.micVolume", "Microphone volume");
+        public static readonly LocString AutoGain = new("phone.autoGain", "Automatic gain");
+        public static readonly LocString AutoGainHint = new("phone.autoGainHint", "Evens out your voice in calls and voice messages so quiet and loud speech reach others at a similar level.");
+        public static readonly LocString MicSensitivityHint = new("phone.micSensitivityHint", "With automatic gain on, the slider sets how loud you need to speak before others hear you.");
+        public static readonly LocString MicVolumeHint = new("phone.micVolumeHint", "The slider sets your microphone volume for calls.");
         public static readonly LocString MuteForMe = new("phone.muteForMe", "Mute for me");
         public static readonly LocString AudioDevicesHint = new("phone.audioDevicesHint", "Use headphones to avoid echo. Device and volume changes apply right away, even during a call.");
         public static readonly LocString IncomingCallBody = new("phone.incomingCallBody", "Incoming call");
@@ -2075,6 +2079,12 @@ internal static class L
         public static readonly LocString GameSoundsHint = new("settings.gameSoundsHint", "Sound effects in the arcade mini-games.");
         public static readonly LocString ImportSound = new("settings.importSound", "Import from PC");
         public static readonly LocString SoundImportHint = new("settings.soundImportHint", "Imported files appear in the list below and play at the volume set here, separate from the game's own sound settings.");
+        public static readonly LocString RemoveSound = new("settings.removeSound", "Remove Sound");
+        public static readonly LocString RemoveSoundMessage = new("settings.removeSoundMessage",
+            "Remove {0}? Apps that use it go back to the default sound.");
+        public static readonly LocString RemoveRingtoneMessage = new("settings.removeRingtoneMessage",
+            "Remove {0}? If it is your ringtone, the default ringtone takes its place.");
+        public static readonly LocString RemoveSoundConfirm = new("settings.removeSoundConfirm", "Remove");
         public static readonly LocString Language = new("settings.language", "Language");
         public static readonly LocString About = new("settings.about", "About");
         public static readonly LocString Plugin = new("settings.plugin", "Plugin");
@@ -2236,7 +2246,6 @@ internal static class L
         public static readonly LocString TreatsCount = new("seasonal.treatsCount", "{0} of {1}");
         public static readonly LocString TreatHidingIn = new("seasonal.treatHidingIn", "A treat is hiding in {0}");
         public static readonly LocString TreatHidingHome = new("seasonal.treatHidingHome", "A treat is hiding on the home screen");
-        public static readonly LocString TreatHidingEmpty = new("seasonal.treatHidingEmpty", "A treat is hiding on an empty screen");
         public static readonly LocString TreatLater = new("seasonal.treatLater", "Another treat will turn up later");
         public static readonly LocString TreatTomorrow = new("seasonal.treatTomorrow", "The next treat arrives tomorrow");
         public static readonly LocString TreatsBadgeUnlocked = new("seasonal.treatsBadgeUnlocked", "Pumpkin badge unlocked. Wear it from Items like any other badge.");
@@ -2277,92 +2286,176 @@ internal static class L
         public static readonly LocString SectionSounds = new("changelog.sectionSounds", "Sounds");
         public static readonly LocString SectionHalloween = new("changelog.sectionHalloween", "Halloween");
 
-        public static readonly LocString[] Release1311MogCast =
+        public static readonly LocString[] Release1321Chirper =
         {
-            new("changelog.r1311.12",
+            new("changelog.r1321.0",
+                "Added a Chirper widget with For You, Latest and Activity tabs, contributed by t3sco"),
+        };
+
+        public static readonly LocString[] Release1321Phone =
+        {
+            new("changelog.r1321.12",
+                "Added swiping paused music off the Dynamic Island: Music stops, and media playing on your PC stays hidden until it plays again, contributed by hellovvn"),
+            new("changelog.r1321.1",
+                "Added a confirmation before removing a Market price alert or withdrawing a Velvet intro, contributed by t3sco"),
+            new("changelog.r1321.2",
+                "Changed Home Screen edit mode to show its add and done buttons beside the Dynamic Island, so the icons no longer shift down, contributed by t3sco"),
+            new("changelog.r1321.3",
+                "Changed widgets to end level with the app names in their last row, contributed by t3sco"),
+            new("changelog.r1321.4",
+                "Changed the status bar clock to line up with screen titles, contributed by t3sco"),
+            new("changelog.r1321.5",
+                "Changed the status bar clock to leave out AM and PM, contributed by t3sco"),
+            new("changelog.r1321.6",
+                "Changed sheet, call, Dynamic Island and game buttons to act when you let go, so sliding off a press cancels it, contributed by t3sco"),
+            new("changelog.r1321.7",
+                "Changed small icon buttons to take taps over a larger area, contributed by t3sco"),
+            new("changelog.r1321.8",
+                "Changed photos you post or send in chats to upload at a higher quality, contributed by t3sco"),
+            new("changelog.r1321.9",
+                "Fixed the status bar clock moving when Do Not Disturb or Lock Position was turned on, contributed by t3sco"),
+            new("changelog.r1321.10",
+                "Fixed sheet, call and Dynamic Island buttons taking taps while they were still opening, contributed by t3sco"),
+            new("changelog.r1321.11",
+                "Fixed dock app names showing on top of the widget gallery and other sheets, contributed by t3sco"),
+        };
+
+        public static readonly LocString[] Release1320MogCast =
+        {
+            new("changelog.r1320.38",
+                "Added MogCast to the expanded Dynamic Island: the video's thumbnail, a bar you can drag, the time played and left, and play, pause and next, on your own or in a watch party"),
+            new("changelog.r1320.12",
                 "Fixed videos freezing on the first frame when the audio device stops taking sound: the video keeps playing without sound, says so, and sound returns on the next video, contributed by t3sco"),
-            new("changelog.r1311.13",
+            new("changelog.r1320.13",
                 "Fixed a stutter when pressing play: the player now starts and restarts in the background, contributed by t3sco"),
         };
 
-        public static readonly LocString[] Release1311Velvet =
+        public static readonly LocString[] Release1320Velvet =
         {
-            new("changelog.r1311.16",
+            new("changelog.r1320.16",
                 "Fixed posts, the feed, chats and intro requests sitting on loading or reading as empty after a failed fetch: they now say loading and offer a retry, contributed by t3sco"),
-            new("changelog.r1311.17",
+            new("changelog.r1320.17",
                 "Fixed onboarding marking you as set up before your profile had saved: it now waits for the save and shows an error if it fails, contributed by t3sco"),
         };
 
-        public static readonly LocString[] Release1311Games =
+        public static readonly LocString[] Release1320Games =
         {
-            new("changelog.r1311.18",
+            new("changelog.r1320.33",
+                "Changed online games to pick who goes first at random, then pass the first turn around the table each round"),
+            new("changelog.r1320.18",
                 "Fixed your ranks disappearing from the profile when they failed to load: a retry card shows instead, contributed by t3sco"),
+            new("changelog.r1320.42",
+                "Fixed games played sideways hiding the coin timer: it now sits next to the back button"),
+            new("changelog.r1320.43",
+                "Fixed leaving a game too early to earn coins saying nothing: a note now tells you the session was too short"),
+            new("changelog.r1320.44",
+                "Fixed game icons in the Library, the shelves, Profile and the leaderboards taking on the Home Screen icon style: every game keeps its own colours"),
         };
 
-        public static readonly LocString[] Release1311Photos =
+        public static readonly LocString[] Release1320Photos =
         {
-            new("changelog.r1311.19",
+            new("changelog.r1320.19",
                 "Fixed the first open of a large screenshot folder stalling the phone while every thumbnail decoded at once: thumbnails now load three at a time in the background, contributed by t3sco"),
         };
 
-        public static readonly LocString[] Release1311Gamba =
+        public static readonly LocString[] Release1320Gamba =
         {
-            new("changelog.r1311.0",
+            new("changelog.r1320.0",
                 "Fixed long names on a full seven-seat blackjack rail being cut short: a seat's plate now widens into the empty seats beside it"),
-            new("changelog.r1311.1",
+            new("changelog.r1320.1",
                 "Fixed the gil ledger missing trades once you had been away from your table page for 30 minutes or had reloaded the plugin: trades now record for 12 hours after you were last at your open gil table, across restarts, until you close the table"),
-            new("changelog.r1311.14",
+            new("changelog.r1320.32",
+                "Fixed tapping a Gamba notification after a restart opening an empty blackjack table: it now opens your table, and a trade notification opens that table's gil ledger"),
+            new("changelog.r1320.14",
                 "Fixed the lobby balance, cashier, floor feed and fairness panel reading as zero or empty while they were still loading, contributed by t3sco"),
-            new("changelog.r1311.15",
+            new("changelog.r1320.15",
                 "Fixed the Limits page sitting on a spinner when the casino state fails to load: it now offers a retry, contributed by t3sco"),
         };
 
-        public static readonly LocString[] Release1311Phone =
+        public static readonly LocString[] Release1320Phone =
         {
-            new("changelog.r1311.20",
-                "Added song progress to the expanded Dynamic Island: a bar you can drag, the time played and left, and previous and next buttons"),
-            new("changelog.r1311.4",
+            new("changelog.r1320.20",
+                "Added song progress to the expanded Dynamic Island: a bar you can drag, the time played and left, previous and next buttons, and shuffle and repeat, for Music and for media playing on your PC"),
+            new("changelog.r1320.39",
+                "Added automatic gain for your microphone in calls and voice messages, on by default: it evens out quiet and loud speech, the microphone slider then sets how loud you need to speak before others hear you, and a toggle in Settings and in the call's audio options turns it off"),
+            new("changelog.r1320.24",
+                "Changed the app switcher to keep every app you used in the last 10 minutes and reopen it where you left it; Games, Gamba and Camera keep a card too and open fresh on their first screen"),
+            new("changelog.r1320.4",
                 "Changed the scroll indicator while the phone position is locked: it dims when idle, brightens under the pointer, and a click on it no longer reaches what is underneath"),
-            new("changelog.r1311.8",
+            new("changelog.r1320.8",
                 "Changed the MogCast and Music setup button to say checking while it only checks, and installing once a download starts, contributed by t3sco"),
-            new("changelog.r1311.9",
+            new("changelog.r1320.25",
+                "Fixed the scroll bar and the mouse wheel not working beside the + button in Chirper, Aethergram, Velvet and MogCast"),
+            new("changelog.r1320.41",
+                "Fixed the call speaker list showing only System default on some PCs when one audio device could not be read"),
+            new("changelog.r1320.9",
                 "Fixed rows cutting off the word that told them apart, from tomestone names and forecast weather to district tiles and leaderboard ranks, contributed by t3sco"),
-            new("changelog.r1311.10",
+            new("changelog.r1320.10",
                 "Fixed a short hitch when an app opened with a sound after the phone had been quiet for a while, contributed by t3sco"),
-            new("changelog.r1311.11",
+            new("changelog.r1320.11",
                 "Fixed Gamba history, the Skywatcher sun arc, chess clocks, the inventory list and the call history doing more work every frame than they needed to, contributed by t3sco"),
         };
 
-        public static readonly LocString[] Release1311Fishing =
+        public static readonly LocString[] Release1320Fishing =
         {
-            new("changelog.r1311.2",
+            new("changelog.r1320.2",
                 "Added a lead time for fish alerts: a stepper under the alerts list sets how many minutes before a window the alert rings, 1 to 60, 5 by default"),
-            new("changelog.r1311.3",
+            new("changelog.r1320.26",
+                "Added a Teleport button to a fish's location that takes you to the aetheryte nearest its fishing hole"),
+            new("changelog.r1320.27",
+                "Added an Equip Fisher button to a fish's location when you are on another class and have a Fisher gear set"),
+            new("changelog.r1320.28",
+                "Added a tap on a fish's fishing hole that searches the Timed Fish tab for that hole"),
+            new("changelog.r1320.3",
                 "Changed the Timed Fish tab filters: the big fish and caught filters sit on their own row above the expansion chips"),
+            new("changelog.r1320.29",
+                "Fixed the bell in the alerts list turning an alert off when you clicked near it rather than on it"),
         };
 
-        public static readonly LocString[] Release1311Messaging =
+        public static readonly LocString[] Release1320Messaging =
         {
-            new("changelog.r1311.6",
+            new("changelog.r1320.6",
                 "Added the double tick to the chats list in ChocoChat, Aethergram and Velvet: a message you sent shows two ticks once it has been read"),
-            new("changelog.r1311.5",
+            new("changelog.r1320.40",
+                "Changed sending a photo in a chat: a photo you pick, import or share now waits above the message box so you can add a caption before you send it"),
+            new("changelog.r1320.5",
                 "Fixed a tall or narrow photo making its bubble narrow and cutting the caption short: the bubble keeps its full width and a tall photo is cropped to fit it"),
+            new("changelog.r1320.30",
+                "Fixed unread counts and app badges coming back in ChocoChat, Aethergram and Velvet after a chat had been read"),
         };
 
-        public static readonly LocString[] Release1311Chirper =
+        public static readonly LocString[] Release1320Chirper =
         {
-            new("changelog.r1311.22",
+            new("changelog.r1320.22",
                 "Changed the Chirper timeline to keep your place when you come back to the Home tab: new chirps wait behind a button at the top instead of moving the list"),
-            new("changelog.r1311.23",
+            new("changelog.r1320.23",
                 "Fixed a rechirped quote chirp showing the chirp it quoted as unavailable"),
         };
 
-        public static readonly LocString[] Release1311Skywatcher =
+        public static readonly LocString[] Release1320Sounds =
         {
-            new("changelog.r1311.7",
+            new("changelog.r1320.34",
+                "Added a way to remove a ringtone or notification sound you imported: anything that used it goes back to the default sound"),
+            new("changelog.r1320.35",
+                "Fixed short notification sounds losing their start on Bluetooth, USB and HDMI audio devices"),
+        };
+
+        public static readonly LocString[] Release1320Halloween =
+        {
+            new("changelog.r1320.36",
+                "Fixed the treats card saying a treat was hiding on an empty screen: treats now hide only where the card can name, and no longer in Velvet, contributed by t3sco"),
+            new("changelog.r1320.37",
+                "Fixed Halloween treat progress staying on one PC: the treats you found now follow your character to another PC once you sign in"),
+        };
+
+        public static readonly LocString[] Release1320Skywatcher =
+        {
+            new("changelog.r1320.7",
                 "Fixed the sky staying at the overridden time after resetting it in Skywatcher: the clock is handed back to the game over a second so the lighting follows"),
-            new("changelog.r1311.21",
+            new("changelog.r1320.21",
                 "Fixed the Skywatcher header shrinking in steps as you scroll: the title now resizes smoothly, its lines fade together and the cards fade under it"),
+            new("changelog.r1320.31",
+                "Fixed the hourly forecast cutting times short at large text sizes: the times shrink together, and fewer hours show when they still do not fit"),
         };
 
         public static readonly LocString[] Release1310Phone =
@@ -7154,6 +7247,8 @@ internal static class L
         public static readonly LocString ThreadEmpty = new("velvet.threadEmpty", "Say hello");
         public static readonly LocString Connect = new("velvet.connect", "Connect");
         public static readonly LocString Requested = new("velvet.requested", "Requested");
+        public static readonly LocString WithdrawIntro = new("velvet.withdrawIntro", "Withdraw");
+        public static readonly LocString WithdrawIntroConfirm = new("velvet.withdrawIntroConfirm", "Withdraw your intro to {0}?");
         public static readonly LocString Message = new("velvet.message", "Message");
         public static readonly LocString MessageHint = new("velvet.messageHint", "Write a message…");
         public static readonly LocString Send = new("velvet.send", "Send");
@@ -8261,6 +8356,9 @@ internal static class L
         public static readonly LocString CatchSection = new("fishing.catchSection", "How to catch");
         public static readonly LocString LocationSection = new("fishing.locationSection", "Location");
         public static readonly LocString ShowOnMap = new("fishing.showOnMap", "Show on map");
+        public static readonly LocString Teleport = new("fishing.teleport", "Teleport");
+        public static readonly LocString EquipFisher = new("fishing.equipFisher", "Equip Fisher");
+        public static readonly LocString SearchSpot = new("fishing.searchSpot", "Search this fishing hole");
     }
 
     internal static class Dailies
@@ -8829,6 +8927,7 @@ internal static class L
         public static readonly LocString AlertHitTitle = new("market.alertHitTitle", "Triggered Alerts");
         public static readonly LocString AlertHitNow = new("market.alertHitNow", "{0} · now {1}");
         public static readonly LocString RemoveAlert = new("market.removeAlert", "Remove alert");
+        public static readonly LocString RemoveAlertConfirm = new("market.removeAlertConfirm", "Remove the alert for {0}?");
         public static readonly LocString NewAlert = new("market.newAlert", "New Price Alert");
         public static readonly LocString GilPrice = new("market.gilPrice", "Price in gil");
         public static readonly LocString Lower = new("market.lower", "Lower");
@@ -14270,6 +14369,7 @@ internal static class L
         public static readonly LocString NotificationsDescription = new("widgetsPeople.notificationsDescription", "Your latest notifications at a glance.");
         public static readonly LocString NoNotifications = new("widgetsPeople.noNotifications", "No Notifications");
         public static readonly LocString CaughtUp = new("widgetsPeople.caughtUp", "You're all caught up.");
+        public static readonly LocString ChirperDescription = new("widgetsPeople.chirperDescription", "Your For You feed, the latest chirps and your Chirper activity, with tabs to switch.");
         public static readonly LocString SignInHint = new("widgetsPeople.signInHint", "Sign in to Aethernet to see this.");
         public static readonly LocString SampleMessage = new("widgetsPeople.sampleMessage", "See you at the Gold Saucer tonight?");
         public static readonly LocString SampleMessageRaid = new("widgetsPeople.sampleMessageRaid", "Raid starts at nine, bring food.");

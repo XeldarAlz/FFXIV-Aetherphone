@@ -12,7 +12,7 @@ using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Activity;
 
-internal sealed partial class ActivityApp : IPhoneApp
+internal sealed partial class ActivityApp : IResumableApp
 {
     private const float BottomBreathing = 28f;
     private const float WeekCardHeight = 92f;
@@ -62,9 +62,10 @@ internal sealed partial class ActivityApp : IPhoneApp
         ResetFills();
     }
 
+    public void OnResumed() => digest.Invalidate();
+
     public void OnClosed()
     {
-        router.Reset();
     }
 
     public void Draw(in PhoneContext context)

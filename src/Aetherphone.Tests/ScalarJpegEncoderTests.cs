@@ -164,6 +164,42 @@ public sealed class ScalarJpegEncoderTests
     }
 
     [Fact]
+    public void BuildsHuffmanTablesFromTheImage()
+    {
+        const int width = 24;
+        const int height = 24;
+        const int annexKSegmentLength = 418;
+        var source = BuildFlat(width, height, 40, 160, 220);
+
+        var encoded = ScalarJpegEncoder.Encode(source, width, height, Quality, JpegChromaSubsampling.Ratio420);
+        var marker = encoded.AsSpan().IndexOf(new byte[] { 0xFF, 0xC4 });
+
+        Assert.True(marker > 0);
+        Assert.True(((encoded[marker + 2] << 8) | encoded[marker + 3]) < annexKSegmentLength / 4);
+    }
+
+    [Fact]
+    public void RoundtripsNoiseAtFullQuality()
+    {
+        const int width = 96;
+        const int height = 80;
+        var source = new byte[width * height * 4];
+        new Random(7).NextBytes(source);
+        for (var index = 3; index < source.Length; index += 4)
+        {
+            source[index] = 255;
+        }
+
+        var encoded = ScalarJpegEncoder.Encode(source, width, height, ScalarJpegEncoder.MaxQuality,
+            JpegChromaSubsampling.Ratio444);
+        var (decoded, decodedWidth, decodedHeight) = Decode(encoded);
+
+        Assert.Equal(width, decodedWidth);
+        Assert.Equal(height, decodedHeight);
+        Assert.True(Psnr(source, decoded, width, height) >= 35d);
+    }
+
+    [Fact]
     public void RejectsABufferShorterThanTheImage()
     {
         var tooShort = new byte[8 * 8 * 4 - 1];

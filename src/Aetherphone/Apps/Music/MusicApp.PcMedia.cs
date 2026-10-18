@@ -42,6 +42,7 @@ internal sealed partial class MusicApp
     private MediaSessionSnapshot pcSheetSnapshot = MediaSessionSnapshot.Empty;
     private bool pcScrubbing;
     private float pcScrubValue;
+    private SeekHold pcSeekHold;
 
     private bool PcMediaCapturesPointer => pcMediaSheet.CapturesPointer;
 
@@ -161,6 +162,7 @@ internal sealed partial class MusicApp
         if (UiInteract.Click(min, max, hovered))
         {
             pcScrubbing = false;
+            pcSeekHold.Clear();
             pcSheetSnapshot = snapshot;
             pcMediaSheet.Open();
         }
@@ -348,7 +350,9 @@ internal sealed partial class MusicApp
         }
 
         var durationSeconds = snapshot.Duration.TotalSeconds;
-        var fraction = pcScrubbing ? pcScrubValue : PcMediaView.Progress(snapshot);
+        var now = Environment.TickCount64;
+        var shownSeconds = pcSeekHold.Shown((float)(PcMediaView.Progress(snapshot) * durationSeconds), now);
+        var fraction = pcScrubbing ? pcScrubValue : Math.Clamp((float)(shownSeconds / durationSeconds), 0f, 1f);
         if (!snapshot.CanSeek || !interactive)
         {
             pcScrubbing = false;
@@ -376,7 +380,9 @@ internal sealed partial class MusicApp
         else if (pcScrubbing)
         {
             pcScrubbing = false;
-            pcMedia.Seek(TimeSpan.FromSeconds(pcScrubValue * durationSeconds));
+            var targetSeconds = pcScrubValue * durationSeconds;
+            pcMedia.Seek(TimeSpan.FromSeconds(targetSeconds));
+            pcSeekHold.Begin((float)targetSeconds, now);
         }
 
         DrawPcTimes(drawList, track, labelTop, pcScrubbing ? pcScrubValue : fraction, durationSeconds, muted);

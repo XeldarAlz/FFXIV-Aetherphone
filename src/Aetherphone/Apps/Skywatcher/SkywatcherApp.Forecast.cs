@@ -12,6 +12,8 @@ namespace Aetherphone.Apps.Skywatcher;
 internal sealed partial class SkywatcherApp
 {
     private const int HourlyCount = 6;
+    private const int MinimumHourlyCount = 4;
+    private const float HourlyLabelGapUnits = 2f;
     private const int OccurrenceHorizonWindows = 220;
     private const int BellsPerDay = 24;
     private const int BellsPerWindow = 8;
@@ -135,33 +137,87 @@ internal sealed partial class SkywatcherApp
             UiAnchors.Report("skywatcher.forecast", card);
         }
 
-        WeatherCard.Panel(drawList, card, palette, sky.Density, scale);
+        DrawCardPanel(drawList, card, palette, scale);
         Typography.DrawWrappedLeft(new Vector2(card.Min.X + padding, card.Min.Y + padding), summaryText, palette.Ink,
             TextStyles.Subheadline, textWidth);
         WeatherCard.Divider(drawList, card, card.Min.Y + columnsTop - 8f * scale, palette, scale);
-        var count = Math.Min(forecast.Count, HourlyCount);
-        var columnWidth = textWidth / count;
+        var labelGap = HourlyLabelGapUnits * scale;
+        var count = HourlyColumns(forecast.Count, textWidth, WidestHourlyLabelAtFloor(), labelGap);
+        var columnWidth = textWidth / Math.Max(1, count);
+        var maxWidth = MathF.Max(1f, columnWidth - labelGap);
+        var topScale = HourlyRowScale(hourTopLabels, count, maxWidth, true);
+        var bottomStyle = TextStyles.SubheadlineEmphasized;
+        var bottomScale = HourlyRowScale(hourLabels, count, maxWidth, false);
         var behind = WeatherCard.Behind(palette, sky.Density);
         for (var index = 0; index < count; index++)
         {
             var window = forecast[index];
             var centerX = card.Min.X + padding + columnWidth * (index + 0.5f);
-            var maxWidth = MathF.Max(1f, columnWidth - 2f * scale);
-            var topStyle = window.IsCurrent ? TextStyles.FootnoteEmphasized : TextStyles.Footnote;
+            var topWeight = HourTopStyle(window).Weight;
             Typography.DrawCentered(drawList, new Vector2(centerX, card.Min.Y + columnsTop + 10f * scale),
-                Typography.FitText(hourTopLabels[index], maxWidth, topStyle), palette.Ink, topStyle.Scale,
-                topStyle.Weight);
+                Typography.FitText(hourTopLabels[index], maxWidth, topScale, topWeight), palette.Ink, topScale,
+                topWeight);
             var kind = WeatherSky.Classify(window.Weather.EnglishKey);
             WeatherCard.Glyph(drawList, kind, new Vector2(centerX, card.Min.Y + columnsTop + 40f * scale),
                 MathF.Min(13f * scale, columnWidth * 0.34f), IsDayWindow(window), behind);
-            var bottomStyle = TextStyles.SubheadlineEmphasized;
             Typography.DrawCentered(drawList, new Vector2(centerX, card.Min.Y + columnsTop + 68f * scale),
-                Typography.FitText(hourLabels[index], maxWidth, bottomStyle), palette.Ink, bottomStyle.Scale,
-                bottomStyle.Weight);
+                Typography.FitText(hourLabels[index], maxWidth, bottomScale, bottomStyle.Weight), palette.Ink,
+                bottomScale, bottomStyle.Weight);
         }
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height));
+    }
+
+    internal static int HourlyColumns(int windows, float textWidth, float widestLabel, float labelGap)
+    {
+        var most = Math.Min(windows, HourlyCount);
+        var fewest = Math.Min(most, MinimumHourlyCount);
+        for (var count = most; count > fewest; count--)
+        {
+            if (textWidth / count - labelGap >= widestLabel)
+            {
+                return count;
+            }
+        }
+
+        return fewest;
+    }
+
+    private static TextStyle HourTopStyle(in WeatherWindow window) =>
+        window.IsCurrent ? TextStyles.FootnoteEmphasized : TextStyles.Footnote;
+
+    private TextStyle HourlyRowStyle(int index, bool topRow) =>
+        topRow ? HourTopStyle(forecast[index]) : TextStyles.SubheadlineEmphasized;
+
+    private float WidestHourlyLabelAtFloor()
+    {
+        var widest = 0f;
+        var count = Math.Min(forecast.Count, HourlyCount);
+        for (var index = 0; index < count; index++)
+        {
+            var topStyle = HourlyRowStyle(index, true);
+            var bottomStyle = HourlyRowStyle(index, false);
+            widest = MathF.Max(widest, Typography.Measure(hourTopLabels[index],
+                topStyle.Scale * ForecastNameMinimumFit, topStyle.Weight).X);
+            widest = MathF.Max(widest, Typography.Measure(hourLabels[index],
+                bottomStyle.Scale * ForecastNameMinimumFit, bottomStyle.Weight).X);
+        }
+
+        return widest;
+    }
+
+    private float HourlyRowScale(string[] labels, int count, float maxWidth, bool topRow)
+    {
+        var rowScale = (topRow ? TextStyles.Footnote : TextStyles.SubheadlineEmphasized).Scale;
+        for (var index = 0; index < count; index++)
+        {
+            var style = HourlyRowStyle(index, topRow);
+            rowScale = MathF.Min(rowScale, Typography.FitScale(labels[index], maxWidth, style.Scale,
+                style.Scale * ForecastNameMinimumFit, style.Weight));
+        }
+
+        return rowScale;
     }
 
     private void DrawForecastCard(float width, in SkyPalette palette, float scale)
@@ -173,7 +229,7 @@ internal sealed partial class SkywatcherApp
         var headerHeight = WeatherCard.HeaderUnits * scale;
         var height = headerHeight + forecast.Count * rowHeight + 4f * scale;
         var card = new Rect(origin, origin + new Vector2(width, height));
-        WeatherCard.Panel(drawList, card, palette, sky.Density, scale);
+        DrawCardPanel(drawList, card, palette, scale);
         WeatherCard.Header(drawList, card, FontAwesomeIcon.CalendarAlt, Loc.T(L.Skywatcher.Forecast), palette, scale);
         var labelWidth = 0f;
         var longestName = 0f;
@@ -273,7 +329,7 @@ internal sealed partial class SkywatcherApp
 
     private void DrawSunTile(ImDrawListPtr drawList, Rect tile, in SkyPalette palette, float scale)
     {
-        WeatherCard.Panel(drawList, tile, palette, sky.Density, scale);
+        DrawCardPanel(drawList, tile, palette, scale);
         var header = WeatherCard.Header(drawList, tile, FontAwesomeIcon.Sun, Loc.T(L.Skywatcher.Sun), palette, scale);
         var padding = WeatherCard.PaddingUnits * scale;
         var innerWidth = tile.Width - padding * 2f;
@@ -343,7 +399,7 @@ internal sealed partial class SkywatcherApp
 
     private void DrawWindowTile(ImDrawListPtr drawList, Rect tile, in SkyPalette palette, float scale)
     {
-        WeatherCard.Panel(drawList, tile, palette, sky.Density, scale);
+        DrawCardPanel(drawList, tile, palette, scale);
         var header = WeatherCard.Header(drawList, tile, FontAwesomeIcon.HourglassHalf, Loc.T(L.Skywatcher.ThisWindow),
             palette, scale);
         var padding = WeatherCard.PaddingUnits * scale;
@@ -374,7 +430,7 @@ internal sealed partial class SkywatcherApp
         var headerHeight = WeatherCard.HeaderUnits * scale;
         var height = headerHeight + odds.Count * rowHeight + 2f * scale;
         var card = new Rect(origin, origin + new Vector2(width, height));
-        WeatherCard.Panel(drawList, card, palette, sky.Density, scale);
+        DrawCardPanel(drawList, card, palette, scale);
         WeatherCard.Header(drawList, card, FontAwesomeIcon.ChartBar, Loc.T(L.Skywatcher.WeatherOdds), palette, scale);
         var behind = WeatherCard.Behind(palette, sky.Density);
         var rightColumn = 86f * scale;

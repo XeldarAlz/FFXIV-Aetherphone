@@ -47,12 +47,14 @@ internal static class WeatherCard
     }
 
     public static void Panel(ImDrawListPtr drawList, Rect card, in SkyPalette palette, float density, float scale,
-        float radius = -1f)
+        float radius = -1f, float opacity = 1f)
     {
         var corner = radius < 0f ? Metrics.Radius.Grouped * scale : radius;
-        Squircle.Fill(drawList, card.Min, card.Max, corner, ImGui.GetColorU32(Fill(palette, density)));
+        var fill = Fill(palette, density);
+        Squircle.Fill(drawList, card.Min, card.Max, corner, ImGui.GetColorU32(fill with { W = fill.W * opacity }));
         Squircle.Stroke(drawList, card.Min, card.Max, corner,
-            ImGui.GetColorU32((palette.LightSky ? palette.Ink : White) with { W = StrokeAlpha }), 1f * scale);
+            ImGui.GetColorU32((palette.LightSky ? palette.Ink : White) with { W = StrokeAlpha * opacity }),
+            1f * scale);
     }
 
     public static float Header(ImDrawListPtr drawList, Rect card, FontAwesomeIcon icon, string title,

@@ -9,7 +9,7 @@ using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Clock;
 
-internal sealed partial class ClockApp : IPhoneApp, ITabRouteTarget
+internal sealed partial class ClockApp : IResumableApp, ITabRouteTarget
 {
     private const string WorldRoute = "clock.tab.world";
     private const string AlarmsRoute = "clock.tab.alarms";
@@ -72,13 +72,9 @@ internal sealed partial class ClockApp : IPhoneApp, ITabRouteTarget
         alarmsDirty = true;
     }
 
-    public void OnClosed()
-    {
-        router.Reset();
-        editingWorld = false;
-        editingAlarms = false;
-        EndCityDrag(false);
-    }
+    public void OnResumed() => alarmsDirty = true;
+
+    public void OnClosed() => EndCityDrag(false);
 
     public void Draw(in PhoneContext context)
     {

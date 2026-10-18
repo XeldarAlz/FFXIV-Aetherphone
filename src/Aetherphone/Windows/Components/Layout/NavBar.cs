@@ -8,6 +8,8 @@ internal readonly record struct NavBarButton(string Glyph, string Tooltip);
 
 internal readonly record struct NavBarStyle(Vector4 Ink, Vector4 Accent, Vector4 Background)
 {
+    public bool KeepTitleEnding { get; init; }
+
     public static NavBarStyle From(PhoneTheme theme) => new(theme.TextStrong, theme.Accent, theme.AppBackground);
 
     public static NavBarStyle From(AppSkin ui) => new(ui.TitleInk, ui.Ink.AccentInk, ui.Palette.BackdropTop);

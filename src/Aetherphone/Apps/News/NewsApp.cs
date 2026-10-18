@@ -14,7 +14,7 @@ using Dalamud.Interface.Textures.TextureWraps;
 
 namespace Aetherphone.Apps.News;
 
-internal sealed partial class NewsApp : IPhoneApp, ITabRouteTarget
+internal sealed partial class NewsApp : IResumableApp, ITabRouteTarget
 {
     private const string AppId = "news";
 
@@ -81,6 +81,21 @@ internal sealed partial class NewsApp : IPhoneApp, ITabRouteTarget
     {
         locale = gameData.LodestoneLocale();
         router.Reset();
+        imageReveal.Clear();
+        activeCategory = NewsCategory.Topics;
+        resetScroll = true;
+        articleTopDepth = NoArticleTop;
+    }
+
+    public void OnResumed()
+    {
+        locale = gameData.LodestoneLocale();
+        if (NewsCategories.AvailableFor(activeCategory, locale))
+        {
+            return;
+        }
+
+        router.Reset();
         activeCategory = NewsCategory.Topics;
         resetScroll = true;
         articleTopDepth = NoArticleTop;
@@ -88,8 +103,6 @@ internal sealed partial class NewsApp : IPhoneApp, ITabRouteTarget
 
     public void OnClosed()
     {
-        router.Reset();
-        imageReveal.Clear();
     }
 
     public void Draw(in PhoneContext context)

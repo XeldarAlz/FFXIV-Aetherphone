@@ -376,7 +376,7 @@ internal sealed partial class GamesApp
         var pad = CardPadding * scale;
         var icon = RankIconSize * scale;
         var iconMin = new Vector2(card.Min.X + pad, card.Min.Y + pad);
-        GameIconArt.Draw(drawList, game.Id, game.Accent, iconMin, iconMin + new Vector2(icon, icon), null, true);
+        GameIconArt.Draw(drawList, game.Id, game.Accent, iconMin, iconMin + new Vector2(icon, icon), true);
         var chipLeft = iconMin.X + icon + CardTextGap * scale;
         var chipWidth = MathF.Max(1f, card.Max.X - pad - chipLeft);
         var chipHeight = Typography.LineHeight(TextStyles.Title2);
@@ -501,8 +501,8 @@ internal sealed partial class GamesApp
         var icon = BestIconSize * scale;
         var iconMin = new Vector2(card.Min.X + pad, card.Min.Y + pad);
         iconRect = new Rect(iconMin, iconMin + new Vector2(icon, icon));
-        GameIconArt.Draw(drawList, library.IconIds[entryIndex], library.Accent(entryIndex), iconRect.Min, iconRect.Max,
-            null, true);
+        GameIconArt.Draw(drawList, library.IconIds[entryIndex], library.Accent(entryIndex), iconRect.Min,
+            iconRect.Max, true);
         var sideLeft = iconRect.Max.X + CardTextGap * scale;
         var sideWidth = MathF.Max(1f, card.Max.X - pad - sideLeft);
         var titleHeight = Typography.LineHeight(TextStyles.FootnoteEmphasized);

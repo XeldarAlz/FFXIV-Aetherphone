@@ -184,7 +184,7 @@ internal sealed class PosterCard
         var inset = ResumeInset * unit;
         var iconMin = card.Min + new Vector2(inset);
         GameIconArt.Draw(drawList, library.IconIds[entryIndex], accent, iconMin,
-            iconMin + new Vector2(ResumeIcon * unit), IconAppearance.Default, true);
+            iconMin + new Vector2(ResumeIcon * unit), true);
         var rank = library.RankLabel(entryIndex);
         var capsuleHeight = CapsuleHeight(ResumeCapsule * unit);
         if (rank.Length > 0)
@@ -236,8 +236,7 @@ internal sealed class PosterCard
         DrawBackground(drawList, card, preset, accent, EditorialTopScrim, EditorialScrim, scale);
         var iconSide = EditorialIcon * unit;
         var iconMin = card.Min + new Vector2(pad);
-        GameIconArt.Draw(drawList, library.IconIds[entryIndex], accent, iconMin, iconMin + new Vector2(iconSide),
-            IconAppearance.Default, true);
+        GameIconArt.Draw(drawList, library.IconIds[entryIndex], accent, iconMin, iconMin + new Vector2(iconSide), true);
         DrawEditorialHeading(drawList, library, entryIndex, card, iconMin, iconSide, pad, scale);
         DrawEditorialHook(drawList, library, entryIndex, slot, card, button, pad, scale);
         LivePreview.CoverCorners(drawList, card, HubMetrics.CardRadius * unit, ground, scale);

@@ -4,7 +4,9 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Fishing;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Media;
 using Aetherphone.Core.Muster;
+using Aetherphone.Core.Net;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Playback;
 using Aetherphone.Core.SystemMedia;
@@ -32,10 +34,8 @@ internal sealed partial class DynamicIsland
     private const float CompactTrailingInset = 11f;
     private const float CompactTrailingGap = 8f;
     private const float BubbleGap = 7f;
-    private const float ExpandedHalfWidth = 150f;
-    private const float ExpandedSideInset = 14f;
     private const float ExpandedLift = 2f;
-    private const float CardPadX = 18f;
+    private const float CardPadX = IslandActivities.CardPadUnits;
     private const float CardIconRadius = 22f;
     private const float CardControlRadius = 20f;
     private const float CardTextGap = 12f;
@@ -104,9 +104,12 @@ internal sealed partial class DynamicIsland
 
     public DynamicIsland(PlaybackHub playback, CallHub calls, Configuration configuration, AppInstaller installer,
         VideoSuite? video, MusterStore? musters, MusterLauncher? musterLauncher, PcMediaSource? pcMedia,
-        GameTimers? gameTimers = null, FishingAlerts? fishing = null)
+        GameTimers? gameTimers = null, FishingAlerts? fishing = null, RemoteImageCache? images = null,
+        HttpService? http = null)
     {
         this.installer = installer;
+        this.images = images;
+        this.http = http;
         this.gameTimers = gameTimers;
         this.fishing = fishing;
         this.playback = playback;
@@ -143,7 +146,7 @@ internal sealed partial class DynamicIsland
             return false;
         }
 
-        if (lastExpanded)
+        if (lastExpanded || swiping)
         {
             return true;
         }
@@ -159,7 +162,7 @@ internal sealed partial class DynamicIsland
     public void Draw(Rect screen, PhoneTheme theme, INavigator navigation, string? foregroundAppId)
     {
         var view = calls.Snapshot();
-        var signals = ReadSignals(view);
+        var signals = ReadSignals(view, foregroundAppId);
         var selected = IslandActivities.Select(signals);
         var primary = selected != IslandActivity.Call && ImGui.GetTime() < noticeUntil
             ? IslandActivity.Notice
@@ -184,6 +187,7 @@ internal sealed partial class DynamicIsland
         if (primary == IslandActivity.None && presenceValue < 0.02f && pulseValue < 0.01f)
         {
             expand.SnapTo(0f);
+            ResetSwipe();
             lastExpanded = false;
             lastBounds = StatusBar.BaseIsland(screen);
             lastBubbleVisible = false;
@@ -197,10 +201,12 @@ internal sealed partial class DynamicIsland
         }
     }
 
-    private IslandSignals ReadSignals(in CallView view)
+    private IslandSignals ReadSignals(in CallView view, string? foregroundAppId)
     {
         var call = view.State is CallState.Ringing or CallState.Dialing or CallState.Connecting or CallState.Active;
-        var session = Allows(IslandActivity.Session) && video is { } suite && suite.WatchAlong.InParty;
+        var music = Allows(IslandActivity.Playback);
+        var phonePlayback = music && playback.IsActive;
+        var session = ReadVideo(foregroundAppId, music && (playback.IsPlaying || PcMediaPlaying()));
         var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         upcomingMuster = Allows(IslandActivity.Muster) && musters is { } store
             ? IslandActivities.SoonestMuster(store.GoingMusters, store.Mine, nowUnix)
@@ -208,8 +214,6 @@ internal sealed partial class DynamicIsland
         upcomingGameTimer = Allows(IslandActivity.GameTimer) && gameTimers is { Enabled: true } timers
             ? TimerBoard.Tally(timers.Characters, timers.Workshops, nowUnix).Soonest
             : default;
-        var music = Allows(IslandActivity.Playback);
-        var phonePlayback = music && playback.IsActive;
         var pcMediaLive = music && ReadPcMedia(call || session || phonePlayback);
         var timer = Allows(IslandActivity.Timer) && TimerRemainingSeconds() > 0;
         var fishingLive = Allows(IslandActivity.Fishing) && fishing is { Island.Kind: not FishingIslandKind.None };
@@ -240,23 +244,27 @@ internal sealed partial class DynamicIsland
         }
 
         expand.Step(expanded ? 1f : 0f, Motion.Island, delta);
+        StepSwipe(delta, scale);
         var expandAmount = Math.Clamp(expand.Value, 0f, 1f);
-        var bounds = Swell(LerpRect(morphed, card, expandAmount), pulseValue * (1f - expandAmount));
+        var bounds = Shift(Swell(LerpRect(morphed, card, expandAmount), pulseValue * (1f - expandAmount)),
+            swipeOffset);
+        var swipeFade = SwipeFade(scale);
         lastBounds = bounds;
         lastExpanded = expandAmount > 0.5f;
         var hovered = UiInteract.Hover(bounds.Min, bounds.Max);
         var accent = AccentFor(shownKind);
-        var compactAlpha = Math.Clamp(presenceValue * 1.6f - 0.6f, 0f, 1f) * (1f - expandAmount);
+        var compactAlpha = Math.Clamp(presenceValue * 1.6f - 0.6f, 0f, 1f) * (1f - expandAmount) * swipeFade;
         var drawList = ImGui.GetWindowDrawList();
         DrawBubble(drawList, theme, navigation, bounds, scale, expandAmount);
-        var rounding = bounds.Height * 0.5f;
+        var rounding = IslandActivities.CornerRadius(bounds.Height, scale);
         if (expandAmount > 0.02f)
         {
             Elevation.Draw(drawList, bounds.Min, bounds.Max, rounding, scale, 5f + 6f * expandAmount, 3f,
                 0.24f * expandAmount);
         }
 
-        Squircle.Fill(drawList, bounds.Min, bounds.Max, rounding, ImGui.GetColorU32(theme.Glass));
+        Squircle.Fill(drawList, bounds.Min, bounds.Max, rounding,
+            ImGui.GetColorU32(Palette.WithAlpha(theme.Glass, theme.Glass.W * swipeFade)));
         if (expandAmount > 0.01f)
         {
             Material.LiquidGlass(drawList, bounds.Min, bounds.Max, rounding, scale, GlassTone.Dark, 0f, expandAmount);
@@ -270,15 +278,21 @@ internal sealed partial class DynamicIsland
 
         DrawCompact(drawList, bounds, scale, view, accent, compactAlpha);
         var overControl = DrawExpanded(drawList, bounds, scale, theme, navigation, view, accent, expandAmount);
-        HandleTap(navigation, bounds, hovered, overControl, expandAmount, presenceValue, suppress);
+        HandleTap(navigation, bounds, hovered, overControl, expandAmount, presenceValue, suppress, scale);
     }
 
     private void HandleTap(INavigator navigation, Rect bounds, bool hovered, bool overControl, float expandAmount,
-        float presenceValue, bool suppress)
+        float presenceValue, bool suppress, float scale)
     {
         if (expandAmount < 0.5f)
         {
-            if (suppress || shownKind == IslandActivity.Notice || !hovered || presenceValue < ControlThreshold)
+            if (suppress || shownKind == IslandActivity.Notice || presenceValue < ControlThreshold)
+            {
+                swiping = false;
+                return;
+            }
+
+            if (HandleSwipe(hovered, scale) || !hovered)
             {
                 return;
             }
@@ -457,28 +471,6 @@ internal sealed partial class DynamicIsland
         return viewersCachedText;
     }
 
-    private static string SessionTitle(VideoSuite suite)
-    {
-        var entry = suite.WatchAlong.IsViewing ? suite.WatchAlong.ViewingEntry : suite.Queue.Current;
-        return entry is { Title.Length: > 0 } ? entry.Title : Loc.T(L.Apps.AetherStream);
-    }
-
-    private string SessionStatus(VideoSuite suite)
-    {
-        if (suite.Player.State == VideoPlaybackState.Paused)
-        {
-            return Loc.T(L.Music.Paused);
-        }
-
-        var count = suite.WatchAlong.Roster.Count;
-        if (count > 1)
-        {
-            return ViewersText(count);
-        }
-
-        return suite.WatchAlong.IsHosting ? Loc.T(L.Island.Hosting) : Loc.T(L.Island.Watching);
-    }
-
     private void DrawCompact(ImDrawListPtr drawList, Rect bounds, float scale, in CallView view, Vector4 accent,
         float alpha)
     {
@@ -499,8 +491,8 @@ internal sealed partial class DynamicIsland
                     trailingMaxWidth, Ink, alpha);
                 break;
             case IslandActivity.Session:
-                DrawIconBubble(drawList, bubbleCenter, bubbleRadius, FontAwesomeIcon.Tv, accent, alpha);
-                DrawLiveLabel(drawList, trailingRight, bounds.Center.Y, trailingMaxWidth, scale, accent, alpha);
+                DrawSessionCompact(drawList, bubbleCenter, bubbleRadius, trailingRight, trailingMaxWidth, bounds,
+                    scale, accent, alpha);
                 break;
             case IslandActivity.Playback:
                 DrawPlaybackArt(drawList, CompactArtCenter(bubbleCenter, scale), bubbleRadius * CompactArtFraction,
@@ -638,7 +630,7 @@ internal sealed partial class DynamicIsland
         var controlCenter = new Vector2(bounds.Max.X - CardPadX * scale - controlRadius, centerY);
         var textLeft = iconCenter.X + iconRadius + CardTextGap * scale;
         var textWidth = MathF.Max(1f, controlCenter.X - controlRadius - CardTextGap * scale - textLeft);
-        var active = alpha > ControlThreshold;
+        var active = alpha > ControlThreshold && expanded && expand.Arrive(1f);
         var controlExtent = new Vector2(controlRadius, controlRadius);
         var overControl = active && UiInteract.Hover(controlCenter - controlExtent, controlCenter + controlExtent);
         var controlFill = Palette.WithAlpha(Ink, ControlFillAlpha);
@@ -667,23 +659,8 @@ internal sealed partial class DynamicIsland
                 break;
             }
             case IslandActivity.Session:
-            {
-                if (video is not { } suite)
-                {
-                    break;
-                }
-
-                DrawIconBubble(drawList, iconCenter, iconRadius, FontAwesomeIcon.Tv, accent, alpha);
-                DrawLines(drawList, SessionTitle(suite), TextStyles.Headline, Ink, SessionStatus(suite),
-                    TextStyles.Subheadline, accent, textLeft, textWidth, centerY, scale, alpha, true);
-                if (RoundButton(drawList, controlCenter, controlRadius, FontAwesomeIcon.ArrowRight, controlFill, Ink,
-                        alpha, active))
-                {
-                    OpenOwner(navigation);
-                }
-
+                overControl = DrawSessionExpanded(drawList, bounds, scale, accent, alpha, active);
                 break;
-            }
             case IslandActivity.Playback:
                 overControl = DrawPlaybackExpanded(drawList, bounds, scale, accent, alpha, active);
                 break;
@@ -826,8 +803,8 @@ internal sealed partial class DynamicIsland
     private static bool RoundButton(ImDrawListPtr drawList, Vector2 center, float radius, FontAwesomeIcon icon,
         Vector4 fill, Vector4 ink, float alpha, bool active)
     {
-        var hovered = active &&
-                      UiInteract.Hover(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        var extent = new Vector2(radius, radius);
+        var hovered = active && UiInteract.Hover(center - extent, center + extent);
         var color = hovered ? Palette.Mix(fill, Ink, 0.14f) : fill;
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(color, alpha * color.W)), 28);
         using (ImRaii.PushFont(UiBuilder.IconFont))
@@ -846,7 +823,7 @@ internal sealed partial class DynamicIsland
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(center - extent, center + extent, hovered);
     }
 
     private static Rect CompactBounds(Rect rest, float scale)
@@ -869,7 +846,8 @@ internal sealed partial class DynamicIsland
     private static Rect NoticeBounds(Rect screen, Rect rest, float scale)
     {
         var compact = CompactBounds(rest, scale);
-        var halfWidth = MathF.Min(screen.Width * 0.5f - ExpandedSideInset * scale, NoticeHalfWidth * scale);
+        var halfWidth = MathF.Min(screen.Width * 0.5f - IslandActivities.ExpandedSideInsetUnits * scale,
+            NoticeHalfWidth * scale);
         var centerX = rest.Center.X;
         return new Rect(new Vector2(MathF.Min(compact.Min.X, centerX - halfWidth), compact.Min.Y),
             new Vector2(MathF.Max(compact.Max.X, centerX + halfWidth), compact.Max.Y));
@@ -877,7 +855,7 @@ internal sealed partial class DynamicIsland
 
     private static Rect ExpandedBounds(Rect screen, Rect rest, float scale, float heightUnits)
     {
-        var halfWidth = MathF.Min(screen.Width * 0.5f - ExpandedSideInset * scale, ExpandedHalfWidth * scale);
+        var halfWidth = IslandActivities.ExpandedHalfWidth(screen.Width, scale);
         var top = rest.Min.Y - ExpandedLift * scale;
         var centerX = screen.Center.X;
         return new Rect(new Vector2(centerX - halfWidth, top),

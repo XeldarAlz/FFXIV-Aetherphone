@@ -15,7 +15,7 @@ using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Inventory;
 
-internal sealed partial class InventoryApp : IPhoneApp
+internal sealed partial class InventoryApp : IResumableApp
 {
     private const float TextRefreshSeconds = 30f;
     private const float PricePollSeconds = 1.5f;
@@ -87,16 +87,19 @@ internal sealed partial class InventoryApp : IPhoneApp
         appliedQuery = string.Empty;
         lowerNeedle = string.Empty;
         results.Clear();
-        builtRevision = -1;
         resetScroll = true;
-        sinceCompanyCheck = CompanyCheckSeconds;
         router.Reset();
+        OnResumed();
+    }
+
+    public void OnResumed()
+    {
+        builtRevision = -1;
+        sinceCompanyCheck = CompanyCheckSeconds;
     }
 
     public void OnClosed()
     {
-        query = string.Empty;
-        router.Reset();
     }
 
     public void Draw(in PhoneContext context)

@@ -90,7 +90,7 @@ Copy-on-write is the contract between store and view. `ChatThreadView` re-runs y
 
 ### The composer
 
-`ChatComposer` owns the draft and one reply or edit target. Its layouts are `Bar` (Velvet), `Pill` (Aethergram, Yellow Pages) and `Plus` (ChocoChat, with an attach menu); in each, an empty draft offers a voice note instead of send. Enter sends, Shift+Enter breaks the line, and `ChatThreadView.MessageMax` caps the text. The field is a soft-wrapping `SoftWrapEditor`, so never read the ImGui buffer as the message; [Linkpearl](linkpearl.md) explains that trap.
+`ChatComposer` owns the draft and one reply or edit target. Its layouts are `Bar` (Velvet), `Pill` (Aethergram, Yellow Pages) and `Plus` (ChocoChat, with an attach menu); in each, an empty draft offers a voice note instead of send. A photo from any source (the picker, Import from PC, a share from Photos, paste or drag) waits in a preview bar above the field, and send carries the typed text as its caption; while an edit is open the photo entry points hide. Enter sends, Shift+Enter breaks the line, and `ChatThreadView.MessageMax` caps the text. The field is a soft-wrapping `SoftWrapEditor`, so never read the ImGui buffer as the message; [Linkpearl](linkpearl.md) explains that trap.
 
 ### The menu and translation
 

@@ -12,7 +12,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Maps;
 
-internal sealed partial class MapsApp : IPhoneApp
+internal sealed partial class MapsApp : IResumableApp
 {
     private enum MapsPage : byte
     {
@@ -98,12 +98,14 @@ internal sealed partial class MapsApp : IPhoneApp
         SyncFavorites();
     }
 
+    public void OnResumed()
+    {
+        lifestreamAvailable = LifestreamBridge.IsAvailable();
+        SyncFavorites();
+    }
+
     public void OnClosed()
     {
-        search = string.Empty;
-        searchQuery = string.Empty;
-        openPlace = null;
-        pageDepth = 0;
     }
 
     public void Draw(in PhoneContext context)

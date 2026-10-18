@@ -95,8 +95,11 @@ internal static class TravelPlanner
                 : default;
         }
 
-        return territoryId != 0 ? ResolveNearestAetheryte(territoryId, targetCoordinate) ?? default : default;
+        return NearestAetheryte(territoryId, targetCoordinate);
     }
+
+    public static TravelDestination NearestAetheryte(uint territoryId, (float X, float Y) targetCoordinate) =>
+        territoryId != 0 ? ResolveNearestAetheryte(territoryId, targetCoordinate) ?? default : default;
 
     private static TravelDestination ResolveCore(uint territoryId, uint worldId, uint currentWorldId,
         uint currentTerritoryId, (float X, float Y)? targetCoordinate)

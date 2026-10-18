@@ -6,6 +6,7 @@ internal static class TimeText
 {
     private const string Pattern24Hour = "HH:mm";
     private const string Pattern12Hour = "h:mm tt";
+    private const string PatternCompact12Hour = "h:mm";
     private const string PatternHour12Hour = "h tt";
     private const int CacheLimit = 512;
     private const int HoursPerDay = 24;
@@ -71,6 +72,9 @@ internal static class TimeText
     public static string Clock(DateTime moment) => ClockOf(moment.Ticks, ClockPattern, moment, null);
 
     public static string Clock(DateTimeOffset moment) => ClockOf(moment.Ticks, ClockPattern, null, moment);
+
+    public static string CompactClock(DateTime moment) =>
+        moment.ToString(use24Hour ? Pattern24Hour : PatternCompact12Hour, Loc.Culture);
 
     private static string ClockOf(long ticks, string pattern, DateTime? local, DateTimeOffset? offset)
     {

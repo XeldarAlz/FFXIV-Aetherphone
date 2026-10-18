@@ -2,10 +2,13 @@ using System.Globalization;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Fishing;
+using Aetherphone.Core.Jobs;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Maps;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
+using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
@@ -27,6 +30,15 @@ internal sealed class FishDetailText
     public string Location = string.Empty;
     public string[] Badges = Array.Empty<string>();
     public string[] BaitLines = Array.Empty<string>();
+    public TravelDestination Teleport;
+    public string TeleportHint = string.Empty;
+}
+
+internal enum FishLocationAction : byte
+{
+    Map,
+    Teleport,
+    EquipFisher,
 }
 
 internal sealed partial class FishingApp
@@ -42,10 +54,18 @@ internal sealed partial class FishingApp
     private const float BaitIconSize = 26f;
     private const float WindowRowHeight = 40f;
     private const float MapButtonHeight = Button.RegularHeight;
-    private const float MapButtonWidth = 150f;
+    private const float LocationButtonGap = 8f;
+    private const float SpotSearchGlyphSize = 16f;
     private const float SectionInnerGap = 8f;
+    private const int LocationActionSlots = 3;
+    private const uint FisherClassJobId = 18;
+    private const string SpotSearchTooltipId = "fishing.detail.spotSearch";
+    private const string TeleportTooltipId = "fishing.detail.teleportTip";
 
     private readonly FishDetailText detailText = new();
+    private readonly FishLocationAction[] locationActions = new FishLocationAction[LocationActionSlots];
+    private readonly string[] locationLabels = new string[LocationActionSlots];
+    private readonly byte[] locationRowSpans = new byte[LocationActionSlots];
     private readonly FishWindow[] nextWindows = new FishWindow[NextWindowCount];
     private readonly CachedText[] nextWindowLines = new CachedText[NextWindowCount];
     private readonly CachedText[] nextWindowRelative = new CachedText[NextWindowCount];
@@ -156,6 +176,12 @@ internal sealed partial class FishingApp
             ? string.Empty
             : Loc.T(L.Fishing.Coordinates, entry.MapPosition.X.ToString("0.0", Loc.Culture),
                 entry.MapPosition.Y.ToString("0.0", Loc.Culture));
+        detailText.Teleport = entry.MapId == 0
+            ? default
+            : TravelPlanner.NearestAetheryte(entry.TerritoryId, (entry.MapPosition.X, entry.MapPosition.Y));
+        detailText.TeleportHint = detailText.Teleport.Kind == TravelKind.None
+            ? string.Empty
+            : TravelPlanner.Label(in detailText.Teleport);
         var badges = new List<string>(4);
         if (fish.IsBigFish)
         {
@@ -491,24 +517,26 @@ internal sealed partial class FishingApp
         var drawList = ImGui.GetWindowDrawList();
         var width = ImGui.GetContentRegionAvail().X;
         var pad = FishingArt.CardPadding * scale;
+        var inner = width - pad * 2f;
         var titleHeight = Typography.LineHeight(TextStyles.Headline);
         var subHeight = Typography.LineHeight(TextStyles.Subheadline);
-        var canMap = entry.MapId != 0;
-        var height = pad + titleHeight + LineGap * scale + subHeight +
-                     (detailText.Coordinates.Length > 0 ? LineGap * scale + subHeight : 0f) +
-                     (canMap ? RowGap * scale + MapButtonHeight * scale : 0f) + pad;
+        var fisherGearset = FisherGearsetToOffer();
+        var actionCount = CollectLocationActions(entry, fisherGearset);
+        var gap = LocationButtonGap * scale;
+        var buttonHeight = MapButtonHeight * scale;
+        var rowCount = PackLocationActions(actionCount, inner, gap);
+        var actionsHeight = rowCount > 0 ? RowGap * scale + rowCount * buttonHeight + (rowCount - 1) * gap : 0f;
+        var placeHeight = titleHeight + LineGap * scale + subHeight;
+        var height = pad + placeHeight +
+                     (detailText.Coordinates.Length > 0 ? LineGap * scale + subHeight : 0f) + actionsHeight + pad;
         var origin = ImGui.GetCursorScreenPos();
         var card = new Rect(origin, origin + new Vector2(width, height));
         ui.Card(drawList, card.Min, card.Max, Metrics.Radius.Grouped * scale);
         var left = card.Min.X + pad;
-        var inner = width - pad * 2f;
         var top = card.Min.Y + pad;
-        Typography.Draw(drawList, new Vector2(left, top), Typography.FitText(entry.SpotName, inner, TextStyles.Headline),
-            ui.TitleInk, TextStyles.Headline);
-        top += titleHeight + LineGap * scale;
-        Typography.Draw(drawList, new Vector2(left, top), Typography.FitText(entry.ZoneName, inner, TextStyles.Subheadline),
-            ui.MutedInk, TextStyles.Subheadline);
-        top += subHeight;
+        DrawSpotHeading(drawList, entry, new Rect(new Vector2(left, top), new Vector2(left + inner, top + placeHeight)),
+            scale);
+        top += placeHeight;
         if (detailText.Coordinates.Length > 0)
         {
             top += LineGap * scale;
@@ -517,22 +545,175 @@ internal sealed partial class FishingApp
             top += subHeight;
         }
 
-        if (canMap)
+        if (rowCount > 0)
         {
-            top += RowGap * scale;
-            var buttonWidth = MathF.Min(inner, MathF.Max(MapButtonWidth * scale,
-                Button.WidthFor(Loc.T(L.Fishing.ShowOnMap), ButtonSize.Regular)));
-            var button = new Rect(new Vector2(left, top), new Vector2(left + buttonWidth, top + MapButtonHeight * scale));
-            UiAnchors.Report("fishing.detail.map", button);
-            if (Button.Draw(button, Loc.T(L.Fishing.ShowOnMap), ui.Ink, id: "fishing.detail.map"))
-            {
-                UiFeedback.Play(UiSound.Tap);
-                OpenMap(entry);
-            }
+            DrawLocationActions(entry, fisherGearset, rowCount, left, top + RowGap * scale, inner, gap, buttonHeight);
         }
 
         ImGui.SetCursorScreenPos(card.Min);
         ImGui.Dummy(new Vector2(width, height + FishingArt.CardGap * scale));
+    }
+
+    private void DrawSpotHeading(ImDrawListPtr drawList, FishEntry entry, Rect place, float scale)
+    {
+        var titleHeight = Typography.LineHeight(TextStyles.Headline);
+        var searchable = entry.SpotName.Length > 0;
+        var hovered = searchable && UiInteract.Hover(place.Min, place.Max);
+        var glyph = SpotSearchGlyphSize * scale;
+        var titleWidth = searchable ? MathF.Max(1f, place.Width - glyph - RowGap * scale) : place.Width;
+        Typography.Draw(drawList, place.Min, Typography.FitText(entry.SpotName, titleWidth, TextStyles.Headline),
+            hovered ? ui.Accent : ui.TitleInk, TextStyles.Headline);
+        Typography.Draw(drawList, new Vector2(place.Min.X, place.Min.Y + titleHeight + LineGap * scale),
+            Typography.FitText(entry.ZoneName, place.Width, TextStyles.Subheadline), ui.MutedInk,
+            TextStyles.Subheadline);
+        if (!searchable)
+        {
+            return;
+        }
+
+        PhoneIcon.Draw(drawList, new Vector2(place.Max.X - glyph * 0.5f, place.Min.Y + titleHeight * 0.5f),
+            PhoneIcons.Search, hovered ? ui.Accent : ui.MutedInk, glyph);
+        HoverTooltip.Show(SpotSearchTooltipId, place, Loc.T(L.Fishing.SearchSpot), HoverLabelSide.Above);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        if (UiInteract.Click(place.Min, place.Max, hovered))
+        {
+            SearchFishingHole(entry);
+        }
+    }
+
+    private void SearchFishingHole(FishEntry entry)
+    {
+        search = entry.SpotName;
+        expansionFilter = -1;
+        patchFilter = -1;
+        activeTab = FishingTab.Fish;
+        scrollFishListToTop = true;
+        fishListDirty = true;
+        router.Pop();
+    }
+
+    private static int FisherGearsetToOffer()
+    {
+        var current = GearsetActions.CurrentClassJobId;
+        return current == 0 || current == FisherClassJobId
+            ? -1
+            : GearsetActions.FirstGearsetFor(FisherClassJobId);
+    }
+
+    private int CollectLocationActions(FishEntry entry, int fisherGearset)
+    {
+        var count = 0;
+        if (entry.MapId != 0)
+        {
+            locationActions[count] = FishLocationAction.Map;
+            locationLabels[count++] = Loc.T(L.Fishing.ShowOnMap);
+        }
+
+        if (detailText.Teleport.Kind != TravelKind.None)
+        {
+            locationActions[count] = FishLocationAction.Teleport;
+            locationLabels[count++] = Loc.T(L.Fishing.Teleport);
+        }
+
+        if (fisherGearset >= 0)
+        {
+            locationActions[count] = FishLocationAction.EquipFisher;
+            locationLabels[count++] = Loc.T(L.Fishing.EquipFisher);
+        }
+
+        return count;
+    }
+
+    private int PackLocationActions(int count, float inner, float gap)
+    {
+        var half = (inner - gap) * 0.5f;
+        var rows = 0;
+        var index = 0;
+        while (index < count)
+        {
+            var paired = index + 1 < count
+                         && Button.WidthFor(locationLabels[index], ButtonSize.Regular) <= half
+                         && Button.WidthFor(locationLabels[index + 1], ButtonSize.Regular) <= half;
+            var span = paired ? 2 : 1;
+            locationRowSpans[rows++] = (byte)span;
+            index += span;
+        }
+
+        return rows;
+    }
+
+    private void DrawLocationActions(FishEntry entry, int fisherGearset, int rowCount, float left, float top,
+        float inner, float gap, float buttonHeight)
+    {
+        var index = 0;
+        for (var row = 0; row < rowCount; row++)
+        {
+            var span = locationRowSpans[row];
+            var buttonWidth = (inner - gap * (span - 1)) / span;
+            for (var slot = 0; slot < span; slot++)
+            {
+                var x = left + slot * (buttonWidth + gap);
+                var button = new Rect(new Vector2(x, top), new Vector2(x + buttonWidth, top + buttonHeight));
+                DrawLocationAction(entry, locationActions[index], locationLabels[index], button, fisherGearset);
+                index++;
+            }
+
+            top += buttonHeight + gap;
+        }
+    }
+
+    private void DrawLocationAction(FishEntry entry, FishLocationAction action, string label, Rect button,
+        int fisherGearset)
+    {
+        switch (action)
+        {
+            case FishLocationAction.Map:
+                UiAnchors.Report("fishing.detail.map", button);
+                if (Button.Draw(button, label, ui.Ink, id: "fishing.detail.map"))
+                {
+                    UiFeedback.Play(UiSound.Tap);
+                    OpenMap(entry);
+                }
+
+                return;
+            case FishLocationAction.Teleport:
+                UiAnchors.Report("fishing.detail.teleport", button);
+                HoverTooltip.Show(TeleportTooltipId, button, detailText.TeleportHint, HoverLabelSide.Above);
+                if (Button.Draw(button, label, ui.Ink, id: "fishing.detail.teleport"))
+                {
+                    TeleportActions.Travel(in detailText.Teleport);
+                }
+
+                return;
+            default:
+                if (Button.Draw(button, label, ui.Ink, ButtonStyle.Tinted, id: "fishing.detail.equip"))
+                {
+                    EquipFisher(fisherGearset);
+                }
+
+                return;
+        }
+    }
+
+    private static void EquipFisher(int gearsetId)
+    {
+        switch (GearsetActions.Equip(gearsetId))
+        {
+            case GearsetEquipResult.Sent:
+                return;
+            case GearsetEquipResult.Busy:
+                UiFeedback.Play(UiSound.Blocked);
+                ShellToast.Show(Loc.T(L.Jobs.EquipBusy));
+                return;
+            default:
+                UiFeedback.Play(UiSound.Caution);
+                ShellToast.Show(Loc.T(L.Jobs.EquipFailed));
+                return;
+        }
     }
 
     private static void OpenMap(FishEntry entry)

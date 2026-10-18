@@ -365,6 +365,14 @@ internal sealed class AdInquiryStore : ChatThreadStoreBase<AdInquiryMessageDto, 
         return result?.Url;
     }
 
+    protected override async Task<ReadMarkOutcome> MarkThreadReadRequestAsync(string threadKey, CancellationToken token)
+    {
+        var failure = AepFailure.None;
+        var succeeded = await client.MarkInquiryReadAsync(threadKey, token, reported => failure = reported)
+            .ConfigureAwait(false);
+        return ReadConfirmations.Classify(succeeded, failure, missingRouteIsUnsupported: false);
+    }
+
     protected override long MessageTimeOf(AdInquiryMessageDto message) => message.CreatedAtUnix;
 
     protected override int MessageEncVersionOf(AdInquiryMessageDto message) => message.EncVersion;
@@ -477,6 +485,8 @@ internal sealed class AdInquiryStore : ChatThreadStoreBase<AdInquiryMessageDto, 
     protected override long ThreadLastMessageAtOf(AdInquiryDto thread) => thread.LastMessageAtUnix;
 
     protected override int ThreadUnreadCountOf(AdInquiryDto thread) => thread.UnreadCount;
+
+    protected override string? ThreadLastMessageIdOf(AdInquiryDto thread) => thread.LastMessageId;
 
     protected override AdInquiryDto WithUnreadCleared(AdInquiryDto thread) => thread with { UnreadCount = 0 };
 

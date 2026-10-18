@@ -15,7 +15,7 @@ using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Polls;
 
-internal sealed partial class PollsApp : IPhoneApp
+internal sealed partial class PollsApp : IResumableApp
 {
     private const float RefreshSeconds = 60f;
     private const float CardGap = 14f;
@@ -54,8 +54,14 @@ internal sealed partial class PollsApp : IPhoneApp
 
     public void OnOpened()
     {
+        orderedSource = null;
+        OnResumed();
+    }
+
+    public void OnResumed()
+    {
         sinceRefresh = 0f;
-        RefreshAll();
+        store.Refresh();
     }
 
     private void RefreshAll()

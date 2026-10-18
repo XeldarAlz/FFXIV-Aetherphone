@@ -14,7 +14,7 @@ using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Wallet;
 
-internal sealed partial class WalletApp : IPhoneApp
+internal sealed partial class WalletApp : IResumableApp
 {
     private const float BottomPad = 28f;
 
@@ -50,9 +50,12 @@ internal sealed partial class WalletApp : IPhoneApp
         PrimeMotion();
     }
 
+    public void OnResumed()
+    {
+    }
+
     public void OnClosed()
     {
-        router.Reset();
     }
 
     public void Draw(in PhoneContext context)

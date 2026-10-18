@@ -281,6 +281,9 @@ internal sealed class AppSwitcher
         return !card.FlyingOff && ReferenceEquals(card.App, navigation.Current);
     }
 
+    private bool ShowsLivePreview(Card card) =>
+        card.App is IResumableApp || ReferenceEquals(card.App, navigation.Current);
+
     private bool HasOpenApps()
     {
         for (var index = 0; index < cards.Count; index++)
@@ -372,7 +375,15 @@ internal sealed class AppSwitcher
 
             var transform = LayerTransform.Fit(screen, card.DrawRect, clip, card.Alpha);
             using var layer = ScreenLayer.Begin(card.LayerId, screen, true);
-            painter.PaintApp(screen, screenRadius, theme, card.App);
+            if (ShowsLivePreview(card))
+            {
+                painter.PaintApp(screen, screenRadius, theme, card.App);
+            }
+            else
+            {
+                painter.PaintLaunchCard(screen, screenRadius, card.App);
+            }
+
             layer.Transform(in transform);
         }
 
@@ -720,7 +731,7 @@ internal sealed class AppSwitcher
         var inset = (rect.Height - tile) * 0.5f;
         Material.LiquidGlass(drawList, rect.Min, rect.Max, rect.Height * 0.5f, scale, GlassTone.Light, 0f, alpha);
         var tileCenter = new Vector2(rect.Min.X + inset + tile * 0.5f, rect.Center.Y);
-        DrawLabelIcon(drawList, card, tileCenter, tile, alpha);
+        ShellScreenPainter.DrawAppIcon(drawList, card.App, tileCenter, tile, alpha);
         var textPosition = new Vector2(tileCenter.X + tile * 0.5f + LabelGapUnits * scale,
             rect.Center.Y - card.LabelTextSize.Y * 0.5f);
         Typography.Draw(drawList, textPosition, card.LabelText, Palette.WithAlpha(theme.TextStrong, alpha),
@@ -731,29 +742,6 @@ internal sealed class AppSwitcher
         {
             OpenCard(card);
         }
-    }
-
-    private static void DrawLabelIcon(ImDrawListPtr drawList, Card card, Vector2 center, float size, float alpha)
-    {
-        var half = new Vector2(size, size) * 0.5f;
-        var accent = card.App.Accent;
-        if (AppIconTile.TryDraw(drawList, card.App.Id, accent, center - half, center + half,
-                size * Metrics.Radius.TileFactor, alpha, false))
-        {
-            return;
-        }
-
-        var surface = IconTile.Surface(accent);
-        Squircle.Fill(drawList, center - half, center + half, size * Metrics.Radius.TileFactor,
-            ImGui.GetColorU32(Palette.WithAlpha(surface, alpha)));
-        var ink = AppAccents.InkFor(card.App.Id);
-        if (AppIconArt.TryDraw(drawList, card.App.Id, center, size * 0.9f, Palette.WithAlpha(ink, alpha),
-                Palette.WithAlpha(Palette.Mix(surface, ink, 0.28f), alpha)))
-        {
-            return;
-        }
-
-        drawList.AddCircleFilled(center, size * 0.16f, ImGui.GetColorU32(Palette.WithAlpha(ink, alpha)), 12);
     }
 
     private void DrawEmptyHint(ImDrawListPtr drawList, Rect screen, PhoneTheme theme, float opacity)

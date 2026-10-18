@@ -21,7 +21,7 @@ internal enum CalendarScreen : byte
     EditGroup,
 }
 
-internal sealed partial class CalendarApp : IPhoneApp
+internal sealed partial class CalendarApp : IResumableApp
 {
     private const int MonthsPerYear = 12;
 
@@ -73,11 +73,9 @@ internal sealed partial class CalendarApp : IPhoneApp
         events.Initialize();
     }
 
-    public void OnClosed()
-    {
-        router.Reset();
-        menu.Close();
-    }
+    public void OnResumed() => events.Initialize();
+
+    public void OnClosed() => menu.Close();
 
     public void Draw(in PhoneContext context)
     {

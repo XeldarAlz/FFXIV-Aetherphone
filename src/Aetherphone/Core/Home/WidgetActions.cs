@@ -116,6 +116,12 @@ internal sealed class WidgetActions
             case WidgetRouteKind.Venue when app is ISpotlightVenues venues && argument.Length > 0:
                 venues.RequestVenue(argument);
                 break;
+            case WidgetRouteKind.SocialPost when argument.Length > 0:
+                phone.SocialLauncher.Request(route.AppId, new SocialDeepLink(SocialLinkKind.Post, argument));
+                break;
+            case WidgetRouteKind.SocialProfile when argument.Length > 0:
+                phone.SocialLauncher.Request(route.AppId, new SocialDeepLink(SocialLinkKind.Profile, argument));
+                break;
         }
     }
 }

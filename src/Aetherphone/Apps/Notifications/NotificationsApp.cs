@@ -12,7 +12,7 @@ using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Notifications;
 
-internal sealed partial class NotificationsApp : IPhoneApp
+internal sealed partial class NotificationsApp : IResumableApp
 {
     private const float BottomPad = 28f;
     private const float BlockGap = 16f;
@@ -58,11 +58,16 @@ internal sealed partial class NotificationsApp : IPhoneApp
 
     public void OnOpened()
     {
-        services.SocialNotifications.AcknowledgeAll();
-        notifications.MarkAllRead();
         deck?.Reset();
         appFilter = null;
         filterRail.Reset();
+        OnResumed();
+    }
+
+    public void OnResumed()
+    {
+        services.SocialNotifications.AcknowledgeAll();
+        notifications.MarkAllRead();
         builtVersion = -1;
     }
 

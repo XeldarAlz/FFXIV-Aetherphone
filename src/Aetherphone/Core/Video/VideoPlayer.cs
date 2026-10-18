@@ -46,6 +46,8 @@ internal sealed class VideoPlayer : IDisposable
     internal bool HasMedia => State is VideoPlaybackState.Loading or VideoPlaybackState.Playing
         or VideoPlaybackState.Paused;
 
+    internal bool Unpaused => HasMedia && !Progress.Paused;
+
     internal bool HardwareDecoding
     {
         get => engine.HardwareDecoding;

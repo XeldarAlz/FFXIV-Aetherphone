@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+using Aetherphone.Core.Telephony.Audio;
 using NAudio.Wave;
 
 namespace Aetherphone.Core.Media;
@@ -9,7 +11,10 @@ internal sealed class VoiceNoteRecorder : IDisposable
     private const int BytesPerSecond = SampleRate * 2;
     private const int MaxBytes = BytesPerSecond * MaxSeconds;
 
+    private static float carriedGain = 1f;
     private readonly object gate = new();
+    private readonly AutoGain autoGain = new();
+    private bool autoGainEnabled;
     private MemoryStream? buffer;
     private WaveInEvent? waveIn;
     private DateTime startedUtc;
@@ -33,14 +38,14 @@ internal sealed class VoiceNoteRecorder : IDisposable
         }
     }
 
-    public bool Start(int deviceIndex)
+    public bool Start(VoiceInput input)
     {
         Cancel();
         try
         {
             var capture = new WaveInEvent
             {
-                DeviceNumber = deviceIndex,
+                DeviceNumber = input.Device,
                 WaveFormat = new WaveFormat(SampleRate, 16, 1),
                 BufferMilliseconds = 50,
                 NumberOfBuffers = 4,
@@ -49,6 +54,8 @@ internal sealed class VoiceNoteRecorder : IDisposable
             lock (gate)
             {
                 buffer = new MemoryStream();
+                autoGainEnabled = input.AutoGain;
+                autoGain.Reset(autoGainEnabled ? Volatile.Read(ref carriedGain) : 1f);
             }
 
             capture.StartRecording();
@@ -73,6 +80,7 @@ internal sealed class VoiceNoteRecorder : IDisposable
         {
             pcm = buffer?.ToArray() ?? Array.Empty<byte>();
             buffer = null;
+            CarryGain();
         }
 
         recording = false;
@@ -95,10 +103,19 @@ internal sealed class VoiceNoteRecorder : IDisposable
         lock (gate)
         {
             buffer = null;
+            CarryGain();
         }
 
         recording = false;
         level = 0f;
+    }
+
+    private void CarryGain()
+    {
+        if (autoGainEnabled)
+        {
+            Volatile.Write(ref carriedGain, autoGain.Gain);
+        }
     }
 
     private void StopCapture()
@@ -125,6 +142,7 @@ internal sealed class VoiceNoteRecorder : IDisposable
 
     private void OnData(object? sender, WaveInEventArgs args)
     {
+        float rms;
         lock (gate)
         {
             if (buffer is null || buffer.Length >= MaxBytes)
@@ -132,29 +150,14 @@ internal sealed class VoiceNoteRecorder : IDisposable
                 return;
             }
 
+            var pcm = MemoryMarshal.Cast<byte, short>(args.Buffer.AsSpan(0, args.BytesRecorded & ~1));
+            autoGain.Process(pcm, AutoGain.Rms(pcm), SampleRate, 1f, autoGainEnabled);
+            rms = AutoGain.Rms(pcm);
             var count = (int)Math.Min(args.BytesRecorded, MaxBytes - buffer.Length);
             buffer.Write(args.Buffer, 0, count);
         }
 
-        level = Rms(args.Buffer, args.BytesRecorded);
-    }
-
-    private static float Rms(byte[] bytes, int count)
-    {
-        var samples = count / 2;
-        if (samples == 0)
-        {
-            return 0f;
-        }
-
-        double sum = 0;
-        for (var index = 0; index < samples; index++)
-        {
-            double sample = BitConverter.ToInt16(bytes, index * 2);
-            sum += sample * sample;
-        }
-
-        return (float)(Math.Sqrt(sum / samples) / 32768.0);
+        level = rms;
     }
 
     private static byte[] WrapWav(byte[] pcm)

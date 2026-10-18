@@ -15,7 +15,7 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Coin;
 
-internal sealed partial class CoinApp : IPhoneApp, ITabRouteTarget
+internal sealed partial class CoinApp : IResumableApp, ITabRouteTarget
 {
     private const string WalletRoute = "coin.tab.wallet";
     private const string ShopRoute = "coin.tab.shop";
@@ -107,15 +107,16 @@ internal sealed partial class CoinApp : IPhoneApp, ITabRouteTarget
         activeTab = CoinTab.Wallet;
         historyFilter = CoinLedgerText.FilterAll;
         PrimeWallet();
+        OnResumed();
+    }
+
+    public void OnResumed()
+    {
         store.RefreshNow();
         quests.Watch();
     }
 
-    public void OnClosed()
-    {
-        router.Reset();
-        quests.Unwatch();
-    }
+    public void OnClosed() => quests.Unwatch();
 
     public void Draw(in PhoneContext context)
     {

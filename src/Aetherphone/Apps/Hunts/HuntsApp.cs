@@ -14,7 +14,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Hunts;
 
-internal sealed partial class HuntsApp : IPhoneApp, ITabRouteTarget
+internal sealed partial class HuntsApp : IResumableApp, ITabRouteTarget
 {
     private const string SetupIntent = "hunts.tab.settings";
     private const string AlertsIntent = "hunts.tab.alerts";
@@ -116,21 +116,33 @@ internal sealed partial class HuntsApp : IPhoneApp, ITabRouteTarget
 
     public void OnOpened()
     {
+        router.Reset();
+        activeTab = HuntsTab.Now;
+        OnResumed();
+    }
+
+    public void OnResumed()
+    {
         hunts.EnsureActive();
         boardDirty = true;
-        activeTab = HuntsTab.Now;
-        if (launcher.TryConsumeDetail(out var mobId, out var worldId, out var zoneInstance))
+        if (!launcher.TryConsumeDetail(out var mobId, out var worldId, out var zoneInstance))
         {
-            router.Reset();
-            OpenDetailFor(mobId, worldId, zoneInstance, DisplayName);
+            return;
         }
+
+        if (router.Current == new HuntsView(HuntsRoute.Detail, mobId, worldId, zoneInstance, DisplayName))
+        {
+            return;
+        }
+
+        router.Reset();
+        OpenDetailFor(mobId, worldId, zoneInstance, DisplayName);
     }
 
     public void OnClosed()
     {
         SaveAlertsIfDirty();
         SaveFiltersIfDirty();
-        router.Reset();
     }
 
     public void Draw(in PhoneContext context)

@@ -40,7 +40,7 @@ internal readonly record struct StoreView(StoreViewKind Kind, string AppId, Stor
     public static StoreView ForUpdates(int serial) => new(StoreViewKind.Updates, string.Empty, StoreCategory.Social, serial);
 }
 
-internal sealed partial class AppStoreApp : IPhoneApp, ISpotlightStoreApps
+internal sealed partial class AppStoreApp : IResumableApp, ISpotlightStoreApps
 {
     private const string StoreAppId = "appstore";
     private const float InstallSeconds = 0.9f;
@@ -124,11 +124,9 @@ internal sealed partial class AppStoreApp : IPhoneApp, ISpotlightStoreApps
         index.Invalidate();
     }
 
-    public void OnClosed()
-    {
-        FinishInstalls();
-        router.Reset();
-    }
+    public void OnResumed() => index.Invalidate();
+
+    public void OnClosed() => FinishInstalls();
 
     public void Dispose() => index.Dispose();
 

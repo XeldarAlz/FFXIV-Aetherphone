@@ -16,7 +16,7 @@ using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Announcements;
 
-internal sealed partial class AnnouncementsApp : IPhoneApp
+internal sealed partial class AnnouncementsApp : IResumableApp
 {
     private const float RefreshSeconds = 30f;
     private const string SettingsAppId = "settings";
@@ -69,18 +69,19 @@ internal sealed partial class AnnouncementsApp : IPhoneApp
     public void OnOpened()
     {
         router.Reset();
-        sinceRefresh = 0f;
         resetScroll = true;
         readingId = null;
         pendingSwapId = null;
         olderRequestedAt = -1;
         query = string.Empty;
         store.BeginVisit();
-        if (launcher.TryConsumeDetail(out var announcementId))
-        {
-            router.Push(AnnouncementsRoute.Detail(announcementId), false);
-        }
+        OnResumed();
+    }
 
+    public void OnResumed()
+    {
+        sinceRefresh = 0f;
+        ConsumeLaunch();
         store.Refresh();
         store.MarkAllSeen();
     }
@@ -93,8 +94,25 @@ internal sealed partial class AnnouncementsApp : IPhoneApp
             readingId = null;
         }
 
-        router.Reset();
         store.MarkAllSeen();
+    }
+
+    private void ConsumeLaunch()
+    {
+        if (!launcher.TryConsumeDetail(out var announcementId))
+        {
+            return;
+        }
+
+        var target = AnnouncementsRoute.Detail(announcementId);
+        if (router.Current == target)
+        {
+            return;
+        }
+
+        router.Reset();
+        pendingSwapId = null;
+        router.Push(target, false);
     }
 
     public void Draw(in PhoneContext context)

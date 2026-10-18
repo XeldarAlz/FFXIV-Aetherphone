@@ -358,6 +358,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public string CallOutputDevice { get; set; } = string.Empty;
     public float CallOutputVolume { get; set; } = 1f;
     public float CallInputGain { get; set; } = 1f;
+    public bool CallAutoGain { get; set; } = true;
     public Dictionary<string, float> CallPeerVolumes { get; set; } = new();
     public HashSet<string> CallPeerMuted { get; set; } = new();
     public List<CallLogEntry> CallLog { get; set; } = new();
@@ -753,6 +754,43 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
 
         return changed;
     }
+
+    public bool ForgetSound(SoundKind kind, string token)
+    {
+        if (kind == SoundKind.Ringtone)
+        {
+            if (!SameSound(RingtoneSound, token))
+            {
+                return false;
+            }
+
+            RingtoneSound = SoundLibrary.BundledRingtoneToken;
+            return true;
+        }
+
+        var changed = false;
+        if (SameSound(NotificationSound, token))
+        {
+            NotificationSound = SoundLibrary.BundledNotificationToken;
+            changed = true;
+        }
+
+        foreach (var pair in NotificationSettings)
+        {
+            if (!SameSound(pair.Value.Sound, token))
+            {
+                continue;
+            }
+
+            pair.Value.Sound = null;
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    private static bool SameSound(string? stored, string token) =>
+        string.Equals(stored, token, StringComparison.OrdinalIgnoreCase);
 
     public void MigrateRetiredWallpapers()
     {

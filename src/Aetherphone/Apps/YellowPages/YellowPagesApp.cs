@@ -26,7 +26,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.YellowPages;
 
-internal sealed partial class YellowPagesApp : IPhoneApp
+internal sealed partial class YellowPagesApp : IResumableApp
 {
     private const float CopiedSeconds = 1.6f;
     private const int TabCount = 4;
@@ -135,30 +135,57 @@ internal sealed partial class YellowPagesApp : IPhoneApp
     public void OnOpened()
     {
         router.Reset();
+        ResetDetailState();
+        ResetComposeForm();
         activeTab = YellowPagesTab.Browse;
+        OnResumed();
+    }
+
+    public void OnResumed()
+    {
         socialNotifications.MarkSeen(Id);
         lifestreamAvailable = LifestreamBridge.IsAvailable();
         if (launcher.TryConsumeInquiry(out var inquiryId))
         {
-            activeTab = YellowPagesTab.Inbox;
-            OpenThread(inquiryId, false);
+            ShowLaunchedThread(inquiryId);
         }
         else if (launcher.TryConsumeDetail(out var adId))
         {
-            ResetDetailState();
-            router.Push(YellowPagesRoute.Detail(adId), false);
+            ShowLaunchedDetail(adId);
         }
 
         store.SyncNow();
-        RefreshBrowse();
+        RefreshDirectoryForRoute();
         inquiries.RefreshThreads();
+    }
+
+    private void ShowLaunchedThread(string inquiryId)
+    {
+        activeTab = YellowPagesTab.Inbox;
+        if (router.Current == YellowPagesRoute.Thread(inquiryId))
+        {
+            return;
+        }
+
+        router.Reset();
+        OpenThread(inquiryId, false);
+    }
+
+    private void ShowLaunchedDetail(string adId)
+    {
+        var target = YellowPagesRoute.Detail(adId);
+        if (router.Current == target)
+        {
+            return;
+        }
+
+        router.Reset();
+        ResetDetailState();
+        router.Push(target, false);
     }
 
     public void OnClosed()
     {
-        router.Reset();
-        ResetDetailState();
-        ResetComposeForm();
         optionsMenu.Close();
         adSheet.Close();
         inboxSheet.Close();
@@ -414,6 +441,11 @@ internal sealed partial class YellowPagesApp : IPhoneApp
     private void RefreshCurrentList()
     {
         rootScrollTopPending = true;
+        RefreshDirectoryForRoute();
+    }
+
+    private void RefreshDirectoryForRoute()
+    {
         var route = router.Current;
         if (route.Screen == YellowPagesScreen.Category)
         {

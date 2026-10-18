@@ -538,7 +538,8 @@ internal sealed record VelvetThreadDto(
     int? UtcOffsetMinutes = null,
     int LastMessageEncVersion = 0,
     string LastMessageSenderId = "",
-    bool LastMessageSeen = false) : IIdentified;
+    bool LastMessageSeen = false,
+    string LastMessageId = "") : IIdentified;
 
 internal sealed record VelvetThreadPage(VelvetThreadDto[] Items, string? NextCursor);
 
@@ -748,7 +749,8 @@ internal sealed record ConversationDto(
     long? LastSeenAtUnix = null,
     string FrameId = "",
     string? Description = null,
-    bool LastMessageSeen = false) : IIdentified;
+    bool LastMessageSeen = false,
+    string LastMessageId = "") : IIdentified;
 
 internal sealed record ConversationMemberDto(
     string UserId,

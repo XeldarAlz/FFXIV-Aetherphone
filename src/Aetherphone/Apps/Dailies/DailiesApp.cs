@@ -12,7 +12,7 @@ using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Dailies;
 
-internal sealed partial class DailiesApp : IPhoneApp, ITabRouteTarget
+internal sealed partial class DailiesApp : IResumableApp, ITabRouteTarget
 {
     private const float BottomPad = 28f;
     private const int AddButton = 0;
@@ -58,6 +58,10 @@ internal sealed partial class DailiesApp : IPhoneApp, ITabRouteTarget
         menu.Close();
         PrimeChecks();
         PrimeTiles();
+    }
+
+    public void OnResumed()
+    {
     }
 
     public void OnClosed()

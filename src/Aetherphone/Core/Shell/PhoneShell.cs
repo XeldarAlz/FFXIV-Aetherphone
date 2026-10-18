@@ -81,7 +81,7 @@ internal sealed class PhoneShell : IDisposable
         session = services.AethernetSession;
         confirm = services.Confirm;
         suspensions = new SuspensionGate(services.AethernetSession);
-        navigation = new NavigationStack(apps, services.Installer, suspensions);
+        navigation = new NavigationStack(apps, services.Installer, suspensions, services.AethernetSession);
         notifications.AppAvailability = navigation.IsAvailable;
         director = new OnboardingDirector(navigation);
         navigation.AppOpened += director.OnAppOpened;
@@ -97,7 +97,8 @@ internal sealed class PhoneShell : IDisposable
         notifications.Vibration += OnVibration;
         island = new DynamicIsland(services.Playback, calls, configuration, services.Installer, bundle.Video,
             services.Musters,
-            services.MusterLauncher, services.PcMedia, services.GameTimers, services.FishingAlerts);
+            services.MusterLauncher, services.PcMedia, services.GameTimers, services.FishingAlerts,
+            services.RemoteImages, services.Http);
         var rateLimitPill = new RateLimitPill(services.Http, services.AethernetSession);
         shortcutPill = new ShortcutRunPill(services.ShortcutRunner);
         coinPill = new CoinEarnPill(services.Coins, configuration);
@@ -397,13 +398,14 @@ internal sealed class PhoneShell : IDisposable
         UiAnchors.Report("chrome.minimize", sideButtonRect);
         UiAnchors.Report("chrome.controlcenter",
             new Rect(screen.Min, new Vector2(screen.Max.X, screen.Min.Y + 44f * UiScale.Current)));
+        var homeEditing = HomeEditing;
         using (InputShield.Engage(state.ShieldBase || director.ShieldsPointer))
         {
             DrawContent(chassis, theme);
             DrawChrome(chassis, theme);
         }
 
-        overlays.DrawOverlays(chassis, theme, delta, state, !turn.Turning);
+        overlays.DrawOverlays(chassis, theme, delta, state, !turn.Turning, homeEditing);
         if (!turn.Turning)
         {
             DeviceChrome.DrawLiveBand(ImGui.GetForegroundDrawList(), chassis, UiScale.Current);
@@ -475,7 +477,8 @@ internal sealed class PhoneShell : IDisposable
         {
             DeviceChrome.MaskScreenCorners(ImGui.GetWindowDrawList(), chassis, theme, UiScale.Current);
             var ink = painter.SurfaceTheme(theme);
-            var statusAlpha = navigation.IsTransitioning && !appSwitcher.Overtakes ? transition.StatusBarAlpha : 1f;
+            var statusAlpha = navigation.IsTransitioning && !appSwitcher.Overtakes ? transition.StatusBarAlpha
+                : navigation.Current is null ? 1f - home.EditPresence : 1f;
             StatusBar.Draw(screen, ink, screen.IsLandscape(), statusAlpha);
             DrawHomeIndicator(screen, ink);
             if (turn.Turning)

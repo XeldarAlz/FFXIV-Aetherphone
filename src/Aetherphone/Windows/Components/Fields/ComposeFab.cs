@@ -31,7 +31,8 @@ internal static class ComposeFab
         var boxSize = box.Width;
         ImGui.SetCursorScreenPos(box.Min);
         using var overlay = ImRaii.Child(childId, new Vector2(boxSize, boxSize), false,
-            ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
+            ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
+            ImGuiWindowFlags.NoInputs);
         var center = box.Center;
         var fabRect = new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
         if (anchorKey is not null)

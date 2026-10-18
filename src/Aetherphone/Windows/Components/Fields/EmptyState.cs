@@ -22,7 +22,6 @@ internal static class EmptyState
     private const float GhostPerch = 0.62f;
     private const float GhostBob = 2.5f;
     private const float GhostBobSpeed = 1.6f;
-    private const float TreatSize = 6f;
 
     public static void Draw(Rect body, AppSkin ui, FontAwesomeIcon icon, string title, string hint) =>
         DrawBody(body, ui, IconGlyph.Of(icon), title, hint, 0f);
@@ -104,10 +103,7 @@ internal static class EmptyState
     {
         var time = (float)ImGui.GetTime();
         var reach = IconRadius * GhostPerch * scale;
-        var perch = iconCenter + new Vector2(reach, -reach);
-        var center = perch + new Vector2(0f, MathF.Sin(time * GhostBobSpeed) * GhostBob * scale);
-        Treats.OfferAt(drawList, TreatSpot.EmptyState, perch + new Vector2(GhostSize * 1.5f, GhostSize * 0.6f) * scale,
-            TreatSize * scale);
+        var center = iconCenter + new Vector2(reach, MathF.Sin(time * GhostBobSpeed) * GhostBob * scale - reach);
         Spooks.DrawGhost(drawList, center, GhostSize * scale, ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.2f)),
             ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.34f)),
             ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.7f)), time * 2f, -0.12f);

@@ -42,7 +42,7 @@ internal enum StreamTab : byte
     Library,
 }
 
-internal sealed partial class AetherStreamApp : IPhoneApp
+internal sealed partial class AetherStreamApp : IResumableApp
 {
     private const int TabCount = 3;
     private const float HeaderIconSize = 20f;
@@ -120,6 +120,12 @@ internal sealed partial class AetherStreamApp : IPhoneApp
 
     public void OnOpened()
     {
+        router.Reset();
+        OnResumed();
+    }
+
+    public void OnResumed()
+    {
         watchAlong.RequestNearbyStreams();
         if (!launcher.TryConsumeUpNext())
         {
@@ -137,7 +143,6 @@ internal sealed partial class AetherStreamApp : IPhoneApp
     {
         FlushScreenSave();
         ExitTheater();
-        router.Reset();
         CloseSheets();
     }
 

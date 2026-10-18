@@ -165,8 +165,7 @@ internal sealed class ShelfColumns
         var iconCenter = new Vector2(cell.Min.X + iconHalf, cell.Center.Y);
         var half = new Vector2(iconHalf * press);
         icon = new Rect(iconCenter - half, iconCenter + half);
-        GameIconArt.Draw(drawList, library.IconIds[entryIndex], library.Accent(entryIndex), icon.Min, icon.Max, null,
-            true);
+        GameIconArt.Draw(drawList, library.IconIds[entryIndex], library.Accent(entryIndex), icon.Min, icon.Max, true);
         DrawText(drawList, ui, library, entryIndex, cell, button.Min.X, scale);
         if (divided)
         {

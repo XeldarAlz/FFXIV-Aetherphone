@@ -164,7 +164,7 @@ internal sealed class ShellOverlayCoordinator
     }
 
     public void DrawOverlays(in ChassisGeometry chassis, PhoneTheme theme, float delta, in ShellOverlayState state,
-        bool seals)
+        bool seals, bool homeEditing)
     {
         var screen = chassis.Screen;
         if (state.SetupActive)
@@ -239,7 +239,7 @@ internal sealed class ShellOverlayCoordinator
         controlCenter.Draw(screen, theme, delta,
             !navigation.IsTransitioning && !director.CapturesPointer && !state.IslandCaptures &&
             !banOverlay.IsActive && navigation.Current?.Id != "camera" && !landscapeHeld &&
-            !appSwitcher.IsActive,
+            !appSwitcher.IsActive && !homeEditing,
             !director.CapturesPointer);
 
         ShellToast.Draw(screen, theme);

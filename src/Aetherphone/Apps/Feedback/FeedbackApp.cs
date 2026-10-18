@@ -20,7 +20,7 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Feedback;
 
-internal sealed partial class FeedbackApp : IPhoneApp
+internal sealed partial class FeedbackApp : IResumableApp
 {
     private const long CooldownSeconds = 60;
     private const int SendIdle = 0;
@@ -88,12 +88,7 @@ internal sealed partial class FeedbackApp : IPhoneApp
         router.Reset();
         photoViewer.Close();
         deviceInfo.Capture(gameData, configuration);
-        if (store.IsSignedIn && launcher.TryConsumeDetail(out var feedbackId))
-        {
-            router.Push(FindHistoryItem(feedbackId) is null ? FeedbackRoute.History : FeedbackRoute.Detail(feedbackId),
-                false);
-        }
-        else if (resumeCompose && !draft.IsEmpty)
+        if (!ConsumeLaunch() && resumeCompose && !draft.IsEmpty)
         {
             router.Push(FeedbackRoute.Compose, false);
         }
@@ -103,12 +98,38 @@ internal sealed partial class FeedbackApp : IPhoneApp
         store.RefreshHistory();
     }
 
+    public void OnResumed()
+    {
+        deviceInfo.Capture(gameData, configuration);
+        ConsumeLaunch();
+        resumeCompose = false;
+        store.ResetHistorySupport();
+        store.RefreshHistory();
+    }
+
     public void OnClosed()
     {
         var current = router.Current.Screen;
         resumeCompose = current is FeedbackScreen.Compose or FeedbackScreen.Photos;
-        router.Reset();
         photoViewer.Close();
+    }
+
+    private bool ConsumeLaunch()
+    {
+        if (!store.IsSignedIn || !launcher.TryConsumeDetail(out var feedbackId))
+        {
+            return false;
+        }
+
+        var target = FindHistoryItem(feedbackId) is null ? FeedbackRoute.History : FeedbackRoute.Detail(feedbackId);
+        if (router.Current == target)
+        {
+            return true;
+        }
+
+        router.Reset();
+        router.Push(target, false);
+        return true;
     }
 
     public void Draw(in PhoneContext context)

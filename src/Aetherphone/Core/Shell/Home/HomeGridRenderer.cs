@@ -342,7 +342,7 @@ internal sealed class HomeGridRenderer
             var pointer = interaction.Pointer(tile, rect.Center, rect.Width);
             HomeTileView.DrawApp(rect.Center + jiggle, rect.Width, tile.App!, theme, pointer.Scale, 0f, true, 0f,
                 configuration, motion.Zoom, pointer);
-            if (!interaction.Editing && dragTile is null)
+            if (interaction.WidgetsInteractive(motion))
             {
                 HoverTooltip.Show(string.Concat("dock:", tile.Key), rect, tile.App!.DisplayName,
                     HoverLabelSide.Above);
@@ -387,7 +387,7 @@ internal sealed class HomeGridRenderer
             var size = page >= 0 && index < layout.Placements(page).Count
                 ? metrics.TileRect(page, pager.Value, layout.Placements(page)[index], tile).Size
                 : new Vector2(metrics.CellWidth * tile.ColumnSpan - (metrics.CellWidth - metrics.IconSize),
-                    metrics.CellHeight * tile.RowSpan - HomeMetrics.LabelBandUnits * metrics.Scale);
+                    metrics.WidgetHeight(tile.RowSpan));
             var half = size * 0.5f * scale;
             var rect = new Rect(position - half, position + half);
             Elevation.Floating(drawList, rect.Min, rect.Max, WidgetChrome.Radius(metrics.Scale), metrics.Scale);

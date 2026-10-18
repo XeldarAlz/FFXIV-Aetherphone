@@ -19,7 +19,7 @@ internal enum SkywatcherTab : byte
     Control,
 }
 
-internal sealed partial class SkywatcherApp : IPhoneApp
+internal sealed partial class SkywatcherApp : IResumableApp
 {
     private const int WindowCount = 10;
     private const float MaxFrameSeconds = 0.1f;
@@ -59,10 +59,15 @@ internal sealed partial class SkywatcherApp : IPhoneApp
     {
         activeTab = SkywatcherTab.Forecast;
         viewedTerritory = 0;
-        scrubbing = false;
         editingZones = false;
         zoneQuery = string.Empty;
         resetScroll = true;
+        OnResumed();
+    }
+
+    public void OnResumed()
+    {
+        scrubbing = false;
         Refresh();
         sky.Snap();
     }
@@ -140,7 +145,7 @@ internal sealed partial class SkywatcherApp : IPhoneApp
         DrawBody(body, screen, palette, daylight, hasData, showHero, scale);
         if (showHero)
         {
-            DrawHero(body, screen, palette, scale);
+            DrawHero(body, palette, scale);
         }
 
         DrawTabBar(content, scale);
@@ -171,7 +176,8 @@ internal sealed partial class SkywatcherApp : IPhoneApp
         scrollY = ImGui.GetScrollY();
         var clipTop = showHero ? body.Min.Y + HeroVisibleHeight(scale) : body.Min.Y;
         ImGui.PushClipRect(new Vector2(body.Min.X, clipTop), body.Max, true);
-        DrawTab(screen, palette, daylight, hasData, showHero, scale);
+        DrawTab(screen, palette, daylight, hasData, showHero, clipTop, scale);
+        EndCardFade(ImGui.GetWindowDrawList());
         ImGui.PopClipRect();
         ImGui.Dummy(new Vector2(0f, TabBar.ContentInset(scale) + SectionGapUnits * scale));
         if (scrubbing)
@@ -180,7 +186,8 @@ internal sealed partial class SkywatcherApp : IPhoneApp
         }
     }
 
-    private void DrawTab(Rect screen, in SkyPalette palette, float daylight, bool hasData, bool showHero, float scale)
+    private void DrawTab(Rect screen, in SkyPalette palette, float daylight, bool hasData, bool showHero,
+        float heroEdge, float scale)
     {
         switch (activeTab)
         {
@@ -201,6 +208,7 @@ internal sealed partial class SkywatcherApp : IPhoneApp
         if (showHero)
         {
             ImGui.Dummy(new Vector2(0f, HeroExpandedUnits * scale));
+            BeginCardFade(heroEdge, scale);
         }
 
         DrawForecast(palette, scale);

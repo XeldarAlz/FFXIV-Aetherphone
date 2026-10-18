@@ -14,7 +14,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Collections;
 
-internal sealed partial class CollectionsApp : IPhoneApp
+internal sealed partial class CollectionsApp : IResumableApp
 {
     private const float IconFadeSeconds = 0.22f;
     private const float SpinnerRadius = 9f;
@@ -67,23 +67,15 @@ internal sealed partial class CollectionsApp : IPhoneApp
     {
         router.Reset();
         ResetCategoryState();
+        iconFade.Clear();
         rootQuery = string.Empty;
         sortSheet.Close();
-        tracking = IsPresent();
-        lodestoneId = ResolveLocalId();
-        catalog.ResetOwned();
-        catalog.ResetSummaries();
-        if (tracking)
-        {
-            catalog.RequestSummary(lodestoneId);
-        }
-
+        Track(IsPresent(), ResolveLocalId());
         for (var index = 0; index < CollectionCategories.All.Length; index++)
         {
             catalog.RequestCatalog(CollectionCategories.All[index]);
         }
 
-        digest.Invalidate();
         heroFill.SnapTo(0f);
         for (var index = 0; index < tileFills.Length; index++)
         {
@@ -91,13 +83,21 @@ internal sealed partial class CollectionsApp : IPhoneApp
         }
     }
 
-    public void OnClosed()
+    public void OnResumed()
     {
-        router.Reset();
-        sortSheet.Close();
-        iconFade.Clear();
-        ResetCategoryState();
+        var present = IsPresent();
+        var localId = present ? ResolveLocalId() : null;
+        var switchedCharacter = localId is not null && !string.Equals(localId, lodestoneId, StringComparison.Ordinal);
+        if (present != tracking || switchedCharacter)
+        {
+            Track(present, localId);
+            return;
+        }
+
+        digest.Invalidate();
     }
+
+    public void OnClosed() => sortSheet.Close();
 
     public void Draw(in PhoneContext context)
     {
@@ -147,8 +147,13 @@ internal sealed partial class CollectionsApp : IPhoneApp
             return;
         }
 
+        Track(present, present ? ResolveLocalId() : null);
+    }
+
+    private void Track(bool present, string? localId)
+    {
         tracking = present;
-        lodestoneId = present ? ResolveLocalId() : null;
+        lodestoneId = localId;
         catalog.ResetOwned();
         catalog.ResetSummaries();
         if (present)

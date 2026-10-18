@@ -460,7 +460,7 @@ internal sealed class CasinoTradeSync : IDisposable
     private void Notify(string tableId, string title, string body)
     {
         notifications.Notify(new PhoneNotification(CasinoTurnNotifier.AppId, title, body, DateTime.Now, accent,
-            string.Concat(CasinoTurnNotifier.GroupPrefix, tableId))
+            tableId.Length > 0 ? CasinoLauncher.LedgerGroupKey(tableId) : CasinoTurnNotifier.GroupPrefix)
         {
             CreatedAtUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
         });

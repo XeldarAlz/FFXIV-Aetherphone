@@ -88,7 +88,7 @@ Aethernet opened on 2 July 2026. By the end of the season, players on 113 worlds
       <ul>
         <li>Message players on any world or data center</li>
         <li>Voice notes, photos and group chats</li>
-        <li>Paste or drag in a photo and add a caption before it sends</li>
+        <li>Pick, paste or drag in a photo and add a caption before it sends</li>
         <li>Voice calls, one-on-one or in groups</li>
         <li>End-to-end encrypted</li>
       </ul>

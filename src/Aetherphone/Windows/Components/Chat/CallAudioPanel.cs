@@ -5,6 +5,7 @@ using Aetherphone.Core.Telephony.Audio;
 using Aetherphone.Core.Telephony.Contracts;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 
 namespace Aetherphone.Windows.Components;
 
@@ -106,15 +107,24 @@ internal sealed class CallAudioPanel
     {
         SettingsSection.Header(Loc.T(L.Phone.MicVolume), theme);
         var live = view.InCall;
-        var card = GroupCard.Begin(theme, GroupCard.DefaultRowHeight + (live ? MeterRowHeight : 0f));
+        var card = GroupCard.Begin(theme, GroupCard.DefaultRowHeight * 2f + (live ? MeterRowHeight : 0f));
+        var autoGain = calls.AutoGain;
+        var autoGainNext = SettingsRow.Bool(card.NextRow(GroupCard.DefaultRowHeight), Loc.T(L.Phone.AutoGain), autoGain,
+            theme, "call.autoGain", Loc.T(L.Phone.AutoGainHint));
         var result = VolumeSlider.Draw("##call.micGain", card.NextRow(GroupCard.DefaultRowHeight), calls.InputGain,
-            theme, AudioCapture.MaximumGain);
+            theme, AudioCapture.MaximumGain, autoGain ? FontAwesomeIcon.Microphone : null);
         if (live)
         {
             DrawMeter(card.NextRow(MeterRowHeight), view.Muted ? 0f : view.MicLevel, theme);
         }
 
         card.End();
+        SettingsSection.Hint(Loc.T(autoGain ? L.Phone.MicSensitivityHint : L.Phone.MicVolumeHint), theme);
+        if (autoGainNext != autoGain)
+        {
+            calls.SetAutoGain(autoGainNext);
+        }
+
         if (result.Dragging || result.Released)
         {
             calls.SetInputGain(result.Value);

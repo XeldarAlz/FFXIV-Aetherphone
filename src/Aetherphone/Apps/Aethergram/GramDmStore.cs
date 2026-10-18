@@ -335,6 +335,14 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
         return result?.Url;
     }
 
+    protected override async Task<ReadMarkOutcome> MarkThreadReadRequestAsync(string threadKey, CancellationToken token)
+    {
+        var failure = AepFailure.None;
+        var succeeded = await client.MarkThreadReadAsync(threadKey, token, reported => failure = reported)
+            .ConfigureAwait(false);
+        return ReadConfirmations.Classify(succeeded, failure, missingRouteIsUnsupported: true);
+    }
+
     protected override long MessageTimeOf(GramMessageDto message) => message.CreatedAtUnix;
 
     protected override int MessageEncVersionOf(GramMessageDto message) => message.EncVersion;
@@ -389,6 +397,8 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
     protected override long ThreadLastMessageAtOf(GramThreadDto thread) => thread.LastMessageAtUnix;
 
     protected override int ThreadUnreadCountOf(GramThreadDto thread) => thread.UnreadCount;
+
+    protected override string? ThreadLastMessageIdOf(GramThreadDto thread) => thread.LastMessageId;
 
     protected override GramThreadDto WithUnreadCleared(GramThreadDto thread) => thread with { UnreadCount = 0 };
 

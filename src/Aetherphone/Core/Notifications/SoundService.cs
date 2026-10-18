@@ -9,6 +9,9 @@ internal sealed class SoundService : IDisposable
     private const string AlarmFile = "alarm.wav";
     private const string TimerFile = "timer.wav";
     private const float RingbackVolume = 0.5f;
+    private const int DeleteAttempts = 10;
+    private const int DeleteRetryMilliseconds = 100;
+    private static readonly TimeSpan NotificationLeadIn = TimeSpan.FromMilliseconds(250);
 
     private readonly Configuration configuration;
     private readonly SoundLibrary ringtones;
@@ -50,14 +53,60 @@ internal sealed class SoundService : IDisposable
 
     public string AddUserFile(SoundKind kind, string sourcePath) => For(kind).AddUserFile(sourcePath);
 
-    public void PlayNotification(string appId)
+    public bool CanRemove(SoundKind kind, string token) => For(kind).IsUserFile(token);
+
+    public void RemoveUserFile(SoundKind kind, string token)
     {
-        if (configuration.SilentMode || !configuration.NotificationSoundsEnabled)
+        var library = For(kind);
+        if (!library.IsUserFile(token) || !library.TryUserPath(token, out var path))
         {
             return;
         }
 
-        Play(SoundKind.Notification, configuration.ResolveNotificationToken(appId), configuration.NotificationVolume);
+        var wasRinging = player.Release(path);
+        if (configuration.ForgetSound(kind, token))
+        {
+            configuration.Save();
+        }
+
+        if (wasRinging && kind == SoundKind.Ringtone)
+        {
+            StartCallRing();
+        }
+
+        _ = DeleteWhenReleasedAsync(library, path);
+    }
+
+    public bool TryPlayNotification(string appId, out string detail)
+    {
+        if (configuration.SilentMode)
+        {
+            detail = "silent mode";
+            return false;
+        }
+
+        if (!configuration.NotificationSoundsEnabled)
+        {
+            detail = "notification sounds off";
+            return false;
+        }
+
+        var token = configuration.ResolveNotificationToken(appId);
+        if (SoundTokens.IsSilent(notifications.Resolve(token)))
+        {
+            detail = "silent sound chosen";
+            return false;
+        }
+
+        if (!TryResolvePath(SoundKind.Notification, token, out var path))
+        {
+            detail = $"no playable file for {token}";
+            return false;
+        }
+
+        player.PlayOnce(path, configuration.NotificationVolume, NotificationLeadIn);
+        detail = Path.GetFileName(path);
+        return true;
     }
 
     public void StartCallRing()
@@ -100,6 +149,29 @@ internal sealed class SoundService : IDisposable
     public void StopCallRing() => player.StopLoop();
 
     private SoundLibrary For(SoundKind kind) => kind == SoundKind.Ringtone ? ringtones : notifications;
+
+    private static async Task DeleteWhenReleasedAsync(SoundLibrary library, string path)
+    {
+        try
+        {
+            for (var attempt = 0; attempt < DeleteAttempts; attempt++)
+            {
+                if (SoundLibrary.TryDelete(path))
+                {
+                    library.Refresh();
+                    return;
+                }
+
+                await Task.Delay(DeleteRetryMilliseconds).ConfigureAwait(false);
+            }
+
+            AepLog.Warning($"[Sound] could not remove {Path.GetFileName(path)}: the file is still in use");
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning(exception, $"[Sound] removing {Path.GetFileName(path)} failed");
+        }
+    }
 
     private void Play(SoundKind kind, string? token, float volume)
     {

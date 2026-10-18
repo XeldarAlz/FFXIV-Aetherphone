@@ -16,7 +16,7 @@ using Dalamud.Interface.Textures.TextureWraps;
 
 namespace Aetherphone.Apps.Photos;
 
-internal sealed partial class PhotosApp : IPhoneApp
+internal sealed partial class PhotosApp : IResumableApp
 {
     private const int DefaultColumns = 3;
     private const int MinColumns = 2;
@@ -110,11 +110,14 @@ internal sealed partial class PhotosApp : IPhoneApp
         Refresh();
     }
 
+    public void OnResumed()
+    {
+    }
+
     public void OnClosed()
     {
         editSession.Close();
         CloseSheets();
-        router.Reset();
     }
 
     private void CloseSheets()

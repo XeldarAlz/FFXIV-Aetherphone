@@ -92,9 +92,9 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
         var tutorials = new TutorialsPage(configuration);
         callsPage = new CallsPage(calls, configuration);
         var nameplatePage = new NameplateTitlePage(services.NameplateTitles, configuration, this, services.PcMedia);
-        var notificationSoundPage = new SoundSettingsPage(sound, SoundKind.Notification, L.Settings.NotificationSound,
-            FontAwesomeIcon.Bell, new Vector4(0.98f, 0.27f, 0.25f, 1f), "settings.notificationVolume",
-            () => configuration.NotificationSound, token =>
+        var notificationSoundPage = new SoundSettingsPage(sound, confirm, SoundKind.Notification,
+            L.Settings.NotificationSound, FontAwesomeIcon.Bell, new Vector4(0.98f, 0.27f, 0.25f, 1f),
+            "settings.notificationVolume", () => configuration.NotificationSound, token =>
             {
                 configuration.NotificationSound = token;
                 configuration.Save();
@@ -108,8 +108,8 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
             services.PcMedia);
         notificationsPage = new NotificationsPage(configuration, this, installedApps, appSettingsPages);
         var appsPage = new AppsPage(installedApps, appSettingsPages, this, configuration);
-        var ringtonePage = new SoundSettingsPage(sound, SoundKind.Ringtone, L.Settings.Ringtone, FontAwesomeIcon.Music,
-            new Vector4(0.95f, 0.40f, 0.65f, 1f), "settings.ringtoneVolume",
+        var ringtonePage = new SoundSettingsPage(sound, confirm, SoundKind.Ringtone, L.Settings.Ringtone,
+            FontAwesomeIcon.Music, new Vector4(0.95f, 0.40f, 0.65f, 1f), "settings.ringtoneVolume",
             () => configuration.RingtoneSound, token =>
             {
                 configuration.RingtoneSound = token;

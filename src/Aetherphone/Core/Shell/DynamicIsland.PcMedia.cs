@@ -7,8 +7,6 @@ namespace Aetherphone.Core.Shell;
 
 internal sealed partial class DynamicIsland
 {
-    private const float PcControlRadius = 15f;
-    private const float PcControlStride = 31f;
     private const float ArtRadiusFraction = 0.22f;
     private const float CompactArtFraction = 0.84f;
     private const float CompactArtShiftX = 5f;
@@ -26,7 +24,18 @@ internal sealed partial class DynamicIsland
         ref readonly var current = ref pcMedia.Current;
         if (!PcMediaSource.IsLive(current))
         {
+            pcMediaSwipedAway = false;
             return false;
+        }
+
+        if (pcMediaSwipedAway)
+        {
+            if (!current.IsPlaying)
+            {
+                return false;
+            }
+
+            pcMediaSwipedAway = false;
         }
 
         pcSnapshot = current;
@@ -58,43 +67,13 @@ internal sealed partial class DynamicIsland
             return false;
         }
 
-        var side = CardIconRadius * 2f * scale;
-        var artMin = new Vector2(bounds.Min.X + CardPadX * scale, bounds.Center.Y - side * 0.5f);
-        PcMediaView.DrawArt(drawList, artMin, side, side * ArtRadiusFraction, pcMedia.Artwork(pcSnapshot, side),
-            pcSnapshot, accent, alpha);
-        var radius = PcControlRadius * scale;
-        var stride = PcControlStride * scale;
-        var nextCenter = new Vector2(bounds.Max.X - CardPadX * scale - radius, bounds.Center.Y);
-        var playCenter = nextCenter - new Vector2(stride, 0f);
-        var previousCenter = playCenter - new Vector2(stride, 0f);
-        var textLeft = artMin.X + side + CardTextGap * scale;
-        var textWidth = MathF.Max(1f, previousCenter.X - radius - CardTextGap * scale - textLeft);
-        DrawLines(drawList, PcMediaView.Title(pcSnapshot), TextStyles.Headline, Ink, PcMediaView.Subtitle(pcSnapshot),
-            TextStyles.Subheadline, accent, textLeft, textWidth, bounds.Center.Y, scale, alpha, true);
-        var extent = new Vector2(radius, radius);
-        var overControl = active && UiInteract.Hover(previousCenter - extent, nextCenter + extent);
-        if (pcSnapshot.CanPrevious && TransportButton.Draw(previousCenter, radius, TransportAction.Previous, accent,
-                Ink, alpha, active, drawList))
-        {
-            pcMedia.Previous();
-        }
-
-        drawList.AddCircleFilled(playCenter, radius,
-            ImGui.GetColorU32(Palette.WithAlpha(Ink, ControlFillAlpha * alpha)), 32);
-        var playAlpha = pcSnapshot.CanPlayPause ? alpha : alpha * 0.4f;
-        if (TransportButton.Draw(playCenter, radius,
-                pcSnapshot.IsPlaying ? TransportAction.Pause : TransportAction.Play, accent, Ink, playAlpha,
-                active && pcSnapshot.CanPlayPause, drawList))
-        {
-            pcMedia.TogglePlayPause(pcSnapshot);
-        }
-
-        if (pcSnapshot.CanNext && TransportButton.Draw(nextCenter, radius, TransportAction.Next, accent, Ink, alpha,
-                active, drawList))
-        {
-            pcMedia.Next();
-        }
-
-        return overControl;
+        var media = IslandMedia.ForSession(pcSnapshot, PcMediaView.Title(pcSnapshot),
+            PcMediaView.Subtitle(pcSnapshot), DateTime.UtcNow.Ticks);
+        var artCenter = MediaArtCenter(bounds, scale);
+        var radius = CardIconRadius * scale;
+        var side = radius * 2f;
+        PcMediaView.DrawArt(drawList, artCenter - new Vector2(radius, radius), side, side * ArtRadiusFraction,
+            pcMedia.Artwork(pcSnapshot, side), pcSnapshot, accent, alpha);
+        return DrawMediaCard(drawList, bounds, artCenter, media, IslandMediaSource.Pc, scale, accent, alpha, active);
     }
 }

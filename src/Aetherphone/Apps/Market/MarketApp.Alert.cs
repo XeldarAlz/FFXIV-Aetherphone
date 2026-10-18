@@ -205,13 +205,10 @@ internal sealed partial class MarketApp
                 alert.Enabled ? ink : muted, TextStyles.Body);
         }
 
-        if (removed is null)
+        if (removed is not null)
         {
-            return;
+            AskRemoveAlert(removed);
         }
-
-        UiFeedback.Play(UiSound.ToggleOff);
-        alerts.Remove(removed);
     }
 
     private void CreateAlert(long threshold)

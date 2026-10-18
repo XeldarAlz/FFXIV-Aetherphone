@@ -9,7 +9,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Timers;
 
-internal sealed partial class TimersApp : IPhoneApp
+internal sealed partial class TimersApp : IResumableApp
 {
     private const float BottomPad = 28f;
 
@@ -41,6 +41,10 @@ internal sealed partial class TimersApp : IPhoneApp
     public void OnOpened()
     {
         heroPrimed = false;
+    }
+
+    public void OnResumed()
+    {
     }
 
     public void OnClosed()

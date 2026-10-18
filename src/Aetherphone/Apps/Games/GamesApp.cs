@@ -353,7 +353,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     public void OnClosed()
     {
         ResetLaunch();
-        CloseCurrentGame();
+        CloseCurrentGame(false);
         gameRooms.Exit();
         AppLandscape.Release(Id);
         TourHolds.Release(Id);
@@ -413,7 +413,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
 
         if (!router.IsTransitioning && !LaunchActive && currentGame is not null && !GamesStack.HoldsGame(router))
         {
-            CloseCurrentGame();
+            CloseCurrentGame(true);
         }
 
         var award = coinSessions.TakeAward(out _);
@@ -425,7 +425,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
                 coinFloats.Spawn(Loc.T(L.Coin.CheckInReward, NumberText.Group(award.Amount)), anchor);
                 coins.AbsorbLocalAward(award.Balance);
             }
-            else if (award.Reason == "too_short")
+            else if (award.Reason == Core.Coins.CoinGameSessionTracker.TooShortReason)
             {
                 coinFloats.Spawn(Loc.T(L.Coin.SessionTooShort), anchor, true);
             }
@@ -902,29 +902,37 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             }
         }
 
-        if (landscape)
+        var rightEdge = landscape ? 0f : DrawPauseChip(drawList, full, theme, radius, scale);
+        var chip = BuildCoinSessionChip();
+        if (!chip.Visible)
         {
             return;
         }
 
-        var pauseCenter = StageLayout.PauseChipCenter(full, scale);
-        var showPause = session.State is StageFlow.Playing or StageFlow.Countdown or StageFlow.Paused;
+        if (landscape)
+        {
+            rightEdge = StageLayout.LandscapeCoinChipLeft(full, scale) + CoinSessionChipWidth(chip, scale);
+        }
+
+        var rowCenterY = StageLayout.BackChipCenter(full, scale).Y;
+        chrome.RecordCoinChip(DrawCoinSessionChip(chip, rightEdge, rowCenterY, backdrop.Ink, scale));
+    }
+
+    private float DrawPauseChip(ImDrawListPtr drawList, Rect full, PhoneTheme theme, float radius, float scale)
+    {
         var rightEdge = full.Max.X - Metrics.Space.Md * scale;
-        if (showPause)
+        if (session.State is not (StageFlow.Playing or StageFlow.Countdown or StageFlow.Paused))
         {
-            if (chrome.PauseChip(drawList, pauseCenter, radius, theme, scale, session.State == StageFlow.Paused))
-            {
-                TogglePause();
-            }
-
-            rightEdge = pauseCenter.X - radius - StageLayout.CoinChipGap * scale;
+            return rightEdge;
         }
 
-        var chip = BuildCoinSessionChip();
-        if (chip.Visible)
+        var pauseCenter = StageLayout.PauseChipCenter(full, scale);
+        if (chrome.PauseChip(drawList, pauseCenter, radius, theme, scale, session.State == StageFlow.Paused))
         {
-            chrome.RecordCoinChip(DrawCoinSessionChip(chip, rightEdge, pauseCenter.Y, backdrop.Ink, scale));
+            TogglePause();
         }
+
+        return pauseCenter.X - radius - StageLayout.CoinChipGap * scale;
     }
 
     private void TogglePause()
@@ -997,8 +1005,8 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         var accent = chip.CoolingDown ? muted : AppAccents.For("coin");
         var ringRadius = CoinChipRingRadius * scale;
         var thickness = Metrics.Stroke.Ring * scale;
-        var textSize = chip.Label.Length > 0 ? Typography.Measure(chip.Label, TextStyles.Caption1) : Vector2.Zero;
-        var labelSpan = chip.Label.Length > 0 ? textSize.X + CoinChipGap * scale : 0f;
+        var textSize = CoinChipTextSize(chip);
+        var labelSpan = CoinChipLabelSpan(chip, textSize.X, scale);
         var ringCenter = new Vector2(right - labelSpan - ringRadius, rowCenterY);
         ProgressRing.Track(ringCenter, ringRadius, thickness, Palette.WithAlpha(accent, 0.28f));
         ProgressRing.Fill(ringCenter, ringRadius, thickness, chip.Fraction, accent);
@@ -1030,6 +1038,16 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             chip.Label, chip.CoolingDown ? muted : StageInks.StrongOn(tone), TextStyles.Caption1);
         return hoverRect;
     }
+
+    private static float CoinSessionChipWidth(in CoinSessionChip chip, float scale) =>
+        CoinChipLabelSpan(chip, CoinChipTextSize(chip).X, scale) +
+        (CoinChipRingRadius * 2f + Metrics.Stroke.Ring) * scale;
+
+    private static Vector2 CoinChipTextSize(in CoinSessionChip chip) =>
+        chip.Label.Length > 0 ? Typography.Measure(chip.Label, TextStyles.Caption1) : Vector2.Zero;
+
+    private static float CoinChipLabelSpan(in CoinSessionChip chip, float textWidth, float scale) =>
+        chip.Label.Length > 0 ? textWidth + CoinChipGap * scale : 0f;
 
     private static string CoinChipHint(in CoinSessionChip chip)
     {
@@ -1153,7 +1171,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         session.Settle();
     }
 
-    private void CloseCurrentGame()
+    private void CloseCurrentGame(bool playerWatching)
     {
         AppLandscape.Release(Id);
         if (currentGame is null)
@@ -1164,7 +1182,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         SettleRun();
         currentGame.Close();
         currentGame = null;
-        coinSessions.GameClosed();
+        coinSessions.GameClosed(playerWatching);
         library.Rebuild();
     }
 }

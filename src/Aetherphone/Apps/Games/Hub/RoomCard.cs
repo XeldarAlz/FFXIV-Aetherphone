@@ -63,7 +63,7 @@ internal static class RoomCard
         var iconSize = IconSize * scale;
         var iconMin = new Vector2(card.Min.X + pad, card.Center.Y - iconSize * 0.5f);
         var iconMax = new Vector2(iconMin.X + iconSize, iconMin.Y + iconSize);
-        GameIconArt.Draw(drawList, info.AccentId, accent, iconMin, iconMax, null, true);
+        GameIconArt.Draw(drawList, info.AccentId, accent, iconMin, iconMax, true);
         DrawOwner(drawList, ui, iconMax, monogram, scale);
         var chevron = ChevronSize * scale;
         var chevronCenter = new Vector2(card.Max.X - pad - chevron * 0.5f, card.Center.Y);

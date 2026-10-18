@@ -1,4 +1,5 @@
 using Dalamud.Game.ClientState.Conditions;
+using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 
 namespace Aetherphone.Core.Jobs;
@@ -22,6 +23,36 @@ internal static unsafe class GearsetActions
                    !condition[ConditionFlag.BetweenAreas51] && !condition[ConditionFlag.WatchingCutscene] &&
                    !condition[ConditionFlag.OccupiedInCutSceneEvent] && !condition[ConditionFlag.Casting];
         }
+    }
+
+    public static uint CurrentClassJobId
+    {
+        get
+        {
+            var playerState = PlayerState.Instance();
+            return playerState is null || !playerState->IsLoaded ? 0u : playerState->CurrentClassJobId;
+        }
+    }
+
+    public static int FirstGearsetFor(uint classJobId)
+    {
+        var module = RaptureGearsetModule.Instance();
+        if (module is null)
+        {
+            return -1;
+        }
+
+        var entries = module->Entries;
+        for (var index = 0; index < entries.Length; index++)
+        {
+            ref var entry = ref entries[index];
+            if ((entry.Flags & RaptureGearsetModule.GearsetFlag.Exists) != 0 && entry.ClassJob == classJobId)
+            {
+                return entry.Id;
+            }
+        }
+
+        return -1;
     }
 
     public static GearsetEquipResult Equip(int gearsetId)

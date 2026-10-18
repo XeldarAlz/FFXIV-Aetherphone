@@ -15,13 +15,13 @@ internal sealed partial class SkywatcherApp
     private const float HeroCollapsedUnits = 70f;
     private const float HeroTopInsetUnits = 6f;
     private const float CompactLineGapUnits = 10f;
-    private const float ScrimUnits = 18f;
+    private const float CardFadeUnits = 18f;
+    private const float CardFadeRampUnits = 8f;
     private const float CaptionFadeEnd = 0.2f;
     private const float BlockFadeEnd = 0.42f;
     private const float BlockParallax = 0.6f;
     private const float CompactFadeStart = 0.5f;
     private const float CompactFadeEnd = 0.8f;
-    private const float ScrimFadeStart = 0.7f;
     private const float ZoneMinimumFit = 0.62f;
     private const float CompactZoneScale = 1.20f;
     private static readonly TextStyle ZoneStyle = new(1.65f, FontWeight.Medium);
@@ -29,18 +29,48 @@ internal sealed partial class SkywatcherApp
     private static readonly TextStyle ConditionStyle = new(1.20f, FontWeight.Medium);
     private CachedText heroClock;
     private CachedText compactLine;
+    private CardFade cardFade;
+    private int cardFadeFrom;
 
     private float HeroVisibleHeight(float scale) =>
         MathF.Max(HeroCollapsedUnits * scale, HeroExpandedUnits * scale - scrollY);
 
-    private void DrawHero(Rect body, Rect screen, in SkyPalette palette, float scale)
+    private float HeroCollapse(float scale) =>
+        Math.Clamp(scrollY / ((HeroExpandedUnits - HeroCollapsedUnits) * scale), 0f, 1f);
+
+    private void BeginCardFade(float edge, float scale)
+    {
+        cardFade = CardFade.Under(edge, ImGui.GetCursorScreenPos().Y, CardFadeUnits * scale,
+            CardFadeRampUnits * scale);
+        cardFadeFrom = ImGui.GetWindowDrawList().VtxBuffer.Size;
+    }
+
+    private void DrawCardPanel(ImDrawListPtr drawList, Rect card, in SkyPalette palette, float scale)
+    {
+        FlushCardFade(drawList);
+        cardFade.Panel(drawList, card, palette, sky.Density, scale);
+        cardFadeFrom = drawList.VtxBuffer.Size;
+    }
+
+    private void FlushCardFade(ImDrawListPtr drawList)
+    {
+        cardFade.Apply(drawList, cardFadeFrom);
+        cardFadeFrom = drawList.VtxBuffer.Size;
+    }
+
+    private void EndCardFade(ImDrawListPtr drawList)
+    {
+        FlushCardFade(drawList);
+        cardFade = default;
+    }
+
+    private void DrawHero(Rect body, in SkyPalette palette, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
         var top = body.Min.Y;
         var centerX = body.Center.X;
         var maxWidth = body.Width - 2f * SidePaddingUnits * scale;
-        var travel = (HeroExpandedUnits - HeroCollapsedUnits) * scale;
-        var collapse = Math.Clamp(scrollY / travel, 0f, 1f);
+        var collapse = HeroCollapse(scale);
         var visible = HeroVisibleHeight(scale);
         if (UiAnchors.Recording)
         {
@@ -89,9 +119,6 @@ internal sealed partial class SkywatcherApp
                 Typography.FitText(CompactLine(), maxWidth, TextStyles.Subheadline), palette.InkSoft,
                 TextStyles.Subheadline, compactAlpha, palette, scale);
         }
-
-        var scrimAlpha = Math.Clamp((collapse - ScrimFadeStart) / (1f - ScrimFadeStart), 0f, 1f);
-        DrawScrim(drawList, body, screen, top + visible, scrimAlpha, palette, scale);
     }
 
     private void DrawExpandedLines(ImDrawListPtr drawList, float centerX, float top, float maxWidth, float alpha,
@@ -143,22 +170,6 @@ internal sealed partial class SkywatcherApp
             style.Scale, style.Weight);
         Typography.DrawCentered(drawList, center, text, color with { W = color.W * alpha }, style.Scale,
             style.Weight);
-    }
-
-    private static void DrawScrim(ImDrawListPtr drawList, Rect body, Rect screen, float edge, float alpha,
-        in SkyPalette palette, float scale)
-    {
-        if (alpha <= 0.01f)
-        {
-            return;
-        }
-
-        var depth = Math.Clamp((edge - screen.Min.Y) / MathF.Max(1f, screen.Height), 0f, 1f);
-        var sky = Vector4.Lerp(palette.Top, palette.Bottom, depth);
-        var solid = ImGui.GetColorU32(sky with { W = sky.W * alpha });
-        var clear = ImGui.GetColorU32(sky with { W = 0f });
-        drawList.AddRectFilledMultiColor(new Vector2(body.Min.X, edge),
-            new Vector2(body.Max.X, edge + ScrimUnits * scale), solid, solid, clear, clear);
     }
 
     private static void DrawCaption(ImDrawListPtr drawList, Vector2 center, float alpha, in SkyPalette palette,

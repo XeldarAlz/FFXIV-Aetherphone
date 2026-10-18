@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
@@ -11,6 +12,7 @@ namespace Aetherphone.Apps.Settings.Pages;
 internal sealed class SoundSettingsPage : ISettingsPage
 {
     private readonly SoundService sound;
+    private readonly ConfirmService confirm;
     private readonly SoundKind kind;
     private readonly LocString title;
     private readonly FontAwesomeIcon icon;
@@ -21,12 +23,15 @@ internal sealed class SoundSettingsPage : ISettingsPage
     private readonly Func<float> getVolume;
     private readonly Action<float> setVolume;
     private readonly SoundImport import = new();
+    private readonly Action<string?> select;
+    private readonly Action<string> askRemove;
 
-    public SoundSettingsPage(SoundService sound, SoundKind kind, LocString title, FontAwesomeIcon icon,
-        Vector4 tint, string sliderId, Func<string> getToken, Action<string> setToken,
+    public SoundSettingsPage(SoundService sound, ConfirmService confirm, SoundKind kind, LocString title,
+        FontAwesomeIcon icon, Vector4 tint, string sliderId, Func<string> getToken, Action<string> setToken,
         Func<float> getVolume, Action<float> setVolume)
     {
         this.sound = sound;
+        this.confirm = confirm;
         this.kind = kind;
         this.title = title;
         this.icon = icon;
@@ -36,6 +41,8 @@ internal sealed class SoundSettingsPage : ISettingsPage
         this.setToken = setToken;
         this.getVolume = getVolume;
         this.setVolume = setVolume;
+        select = Select;
+        askRemove = AskRemove;
     }
 
     public string Title => Loc.T(title);
@@ -55,7 +62,7 @@ internal sealed class SoundSettingsPage : ISettingsPage
         using (var surface = AppSurface.Begin(body))
         {
             SettingsSection.Header(Loc.T(L.Settings.Sound), theme, Loc.T(L.Settings.SoundImportHint));
-            SoundOptionList.Draw(theme, sound, kind, getToken(), false, Select);
+            SoundOptionList.Draw(theme, sound, kind, getToken(), false, select, askRemove);
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
             SettingsSection.Header(Loc.T(L.Settings.Volume), theme);
             var volumeCard = GroupCard.Begin(theme, 1);
@@ -93,6 +100,20 @@ internal sealed class SoundSettingsPage : ISettingsPage
 
         setToken(token);
         sound.Preview(kind, token, getVolume());
+    }
+
+    private void AskRemove(string token)
+    {
+        confirm.Ask(new ConfirmRequest
+        {
+            Title = Loc.T(L.Settings.RemoveSound),
+            Message = Loc.T(kind == SoundKind.Ringtone ? L.Settings.RemoveRingtoneMessage : L.Settings.RemoveSoundMessage,
+                sound.Label(kind, token)),
+            ConfirmLabel = Loc.T(L.Settings.RemoveSoundConfirm),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Danger = true,
+            Confirm = () => sound.RemoveUserFile(kind, token),
+        });
     }
 
     private void TryImport(string path)

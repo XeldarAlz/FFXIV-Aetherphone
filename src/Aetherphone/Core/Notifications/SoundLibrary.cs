@@ -9,6 +9,7 @@ internal sealed class SoundLibrary
     private readonly DirectoryInfo bundledDirectory;
     private readonly DirectoryInfo userDirectory;
     private IReadOnlyList<string> options = Array.Empty<string>();
+    private HashSet<string> userTokens = new(StringComparer.OrdinalIgnoreCase);
     private string defaultToken = SoundTokens.Silent;
 
     public SoundLibrary(DirectoryInfo bundledDirectory, DirectoryInfo userDirectory)
@@ -27,12 +28,53 @@ internal sealed class SoundLibrary
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var built = new List<string>();
-        AddFiles(bundledDirectory, seen, built);
+        var imported = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        AddFiles(ListFiles(bundledDirectory), seen, built, null);
         var bundledCount = built.Count;
-        AddFiles(userDirectory, seen, built);
+        AddFiles(ListFiles(userDirectory), seen, built, imported);
         defaultToken = bundledCount > 0 ? built[0] : SoundTokens.Silent;
         built.Add(SoundTokens.Silent);
         options = built;
+        userTokens = imported;
+    }
+
+    public bool IsUserFile(string token) => userTokens.Contains(token);
+
+    public bool TryUserPath(string token, out string path)
+    {
+        if (SoundTokens.TryFile(token, out var fileName))
+        {
+            var safe = Path.GetFileName(fileName);
+            if (!string.IsNullOrEmpty(safe))
+            {
+                path = Path.Combine(userDirectory.FullName, safe);
+                return true;
+            }
+        }
+
+        path = string.Empty;
+        return false;
+    }
+
+    public static bool TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+
+            return true;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     public string Resolve(string? token)
@@ -91,27 +133,38 @@ internal sealed class SoundLibrary
         return string.IsNullOrEmpty(stem) ? fileName : stem.Replace('_', ' ').Replace('-', ' ').Trim();
     }
 
-    private static void AddFiles(DirectoryInfo directory, HashSet<string> seen, List<string> built)
+    private static List<string> ListFiles(DirectoryInfo directory)
     {
+        var files = new List<string>();
+        directory.Refresh();
         if (!directory.Exists)
         {
-            return;
+            return files;
         }
 
-        var files = new List<string>();
         for (var index = 0; index < FilePatterns.Length; index++)
         {
             files.AddRange(Directory.GetFiles(directory.FullName, FilePatterns[index]));
         }
 
         files.Sort(static (left, right) => string.CompareOrdinal(Path.GetFileName(left), Path.GetFileName(right)));
+        return files;
+    }
+
+    private static void AddFiles(List<string> files, HashSet<string> seen, List<string> built,
+        HashSet<string>? imported)
+    {
         for (var index = 0; index < files.Count; index++)
         {
             var fileName = Path.GetFileName(files[index]);
-            if (seen.Add(fileName))
+            if (!seen.Add(fileName))
             {
-                built.Add(SoundTokens.File(fileName));
+                continue;
             }
+
+            var token = SoundTokens.File(fileName);
+            built.Add(token);
+            imported?.Add(token);
         }
     }
 }

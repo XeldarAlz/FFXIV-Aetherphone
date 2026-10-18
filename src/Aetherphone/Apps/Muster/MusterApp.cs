@@ -26,7 +26,7 @@ internal enum MusterTab : byte
     Plans,
 }
 
-internal sealed partial class MusterApp : IPhoneApp
+internal sealed partial class MusterApp : IResumableApp
 {
     private const string StartAnchor = "muster.start";
     private const string PlansAnchor = "muster.tab.plans";
@@ -83,7 +83,14 @@ internal sealed partial class MusterApp : IPhoneApp
     public void OnOpened()
     {
         router.Reset();
+        ResetDetailState();
+        ResetManageState();
         activeTab = MusterTab.Discover;
+        OnResumed();
+    }
+
+    public void OnResumed()
+    {
         sections.Invalidate();
         store.SyncNow();
         store.RefreshDirectory();
@@ -91,9 +98,6 @@ internal sealed partial class MusterApp : IPhoneApp
 
     public void OnClosed()
     {
-        router.Reset();
-        ResetDetailState();
-        ResetManageState();
     }
 
     private void ConsumeLaunch()

@@ -454,7 +454,7 @@ internal sealed class OnlineHub
         var iconSize = HostIconSize * scale;
         var iconMin = new Vector2(card.Min.X + pad, card.Min.Y + pad);
         var iconMax = new Vector2(iconMin.X + iconSize, iconMin.Y + iconSize);
-        GameIconArt.Draw(drawList, info.AccentId, accent, iconMin, iconMax, IconAppearance.Default, true);
+        GameIconArt.Draw(drawList, info.AccentId, accent, iconMin, iconMax, true);
         if (pending)
         {
             var spinner = SpinnerRadius * scale;

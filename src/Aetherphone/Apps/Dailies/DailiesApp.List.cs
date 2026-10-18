@@ -20,7 +20,7 @@ internal sealed partial class DailiesApp
 {
     private const float RowWashRadius = 12f;
     private const float EditButtonRadius = RoundButton.SmallRadius;
-    private const float EditHitRadius = 20f;
+    private const float EditHitRadius = Metrics.Size.TapTarget * 0.5f;
     private const float EditGlyph = 13f;
     private const float HiddenAlpha = 0.45f;
     private const float UnavailableAlpha = 0.6f;

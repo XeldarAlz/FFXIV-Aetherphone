@@ -72,6 +72,12 @@ internal sealed class GramDmClient
         return net.SendAsync(HttpMethod.Post, $"/gram/threads/{Uri.EscapeDataString(otherId)}/accept", token, null, onFailure);
     }
 
+    public Task<bool> MarkThreadReadAsync(string otherId, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.SendAsync(HttpMethod.Post, $"/gram/threads/{Uri.EscapeDataString(otherId)}/read", token, null, onFailure);
+    }
+
     public Task<bool> DeleteThreadAsync(string otherId, CancellationToken token,
         Action<AepFailure>? onFailure = null)
     {

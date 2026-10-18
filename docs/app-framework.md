@@ -63,7 +63,7 @@ stateDiagram-v2
 
 An app that should reopen where the user left it implements `IResumableApp` and adds `OnResumed`. Each close stamps the time. An open within ten minutes of that close calls `OnResumed` instead of `OnOpened`, and Back into a resumable app always resumes. A resumed visit keeps its scroll position, and the App Switcher lists every resumable app inside the window; swiping a card away forgets the stamp.
 
-Make an app resumable when users dip in and out of it (chat, feeds, Settings, Notes). Leave it plain when a fresh start is expected, such as a tool or a game. A resumable app follows three rules:
+Every app is resumable by default. Leave an app plain only when leaving it has to end a live session: Games closes the running game and leaves its rooms, Casino resets its machines and cashier, and Camera releases its capture hooks and the landscape turn. A new app follows the same rule, and `ResumableAppsTests` pins the three that stay plain. A plain app still gets an App Switcher card inside the same window, drawn as its icon and name rather than a live preview, and the card opens it fresh through `OnOpened`. A resumable app follows three rules:
 
 - Reset its router in `OnOpened` only, so a resume lands on the same screen.
 - Consume launcher intents and shares in both `OnOpened` and `OnResumed`, or in `Draw`. MessageApp routes both through one method.

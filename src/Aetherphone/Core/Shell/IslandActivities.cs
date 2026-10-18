@@ -31,9 +31,35 @@ internal static class IslandActivities
     public const long MusterStartedGraceSeconds = 300;
     public const float CardHeightUnits = 96f;
     public const float PlaybackCardHeightUnits = 136f;
+    public const float ExpandedHalfWidthUnits = 150f;
+    public const float ExpandedSideInsetUnits = 14f;
+    public const float CardPadUnits = 18f;
+    public const float TransportStrideUnits = 44f;
+    public const float ModeStrideUnits = TransportStrideUnits * 2f;
+    public const float SideControlRadiusUnits = 15f;
+    public const float ModeRadiusUnits = SideControlRadiusUnits;
+    public const float SwipeDismissUnits = 48f;
+    public const float SwipeDismissVelocityUnits = 700f;
+
+    public static bool Swipeable(IslandActivity activity, bool playing) =>
+        !playing && activity is IslandActivity.Playback or IslandActivity.PcMedia;
+
+    public static bool SwipeDismisses(float offset, float velocity, float scale) =>
+        offset >= SwipeDismissUnits * scale || (offset > 0f && velocity >= SwipeDismissVelocityUnits * scale);
 
     public static float ExpandedHeightUnits(IslandActivity activity) =>
-        activity == IslandActivity.Playback ? PlaybackCardHeightUnits : CardHeightUnits;
+        activity is IslandActivity.Playback or IslandActivity.PcMedia or IslandActivity.Session
+            ? PlaybackCardHeightUnits
+            : CardHeightUnits;
+
+    public static bool VideoLive(bool inParty, bool videoLoaded, bool videoPlaying, bool musicPlaying) =>
+        inParty || (videoLoaded && (videoPlaying || !musicPlaying));
+
+    public static float CornerRadius(float height, float scale) =>
+        MathF.Min(height * 0.5f, CardHeightUnits * 0.5f * scale);
+
+    public static float ExpandedHalfWidth(float screenWidth, float scale) =>
+        MathF.Min(screenWidth * 0.5f - ExpandedSideInsetUnits * scale, ExpandedHalfWidthUnits * scale);
 
     public static int RemainingSeconds(float positionSeconds, float durationSeconds)
     {

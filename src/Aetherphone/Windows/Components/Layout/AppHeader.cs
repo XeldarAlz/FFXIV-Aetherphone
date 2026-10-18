@@ -194,13 +194,13 @@ internal static class AppHeader
                 : NavBarMetrics.ButtonsWidth(buttonCount, scale) + Metrics.Space.GlassInset * scale;
             DrawLargeTitle(drawList, content, frame.TitleBandTop,
                 frame.Body.Min.Y - NavBarMetrics.TitleGap * scale, titleReserve, title, style.Ink, scrollY, progress,
-                scale);
+                style.KeepTitleEnding, scale);
             var leftReserve = onBack is null
                 ? 0f
                 : DrawBackControl(drawList, content, backTitle, style.Accent, inlineHeight, scale, out backPressed);
             var rightReserve = NavBarMetrics.ButtonsWidth(buttonCount, scale);
             DrawInlineTitle(drawList, content, title, style.Ink, progress, MathF.Max(leftReserve, rightReserve),
-                inlineHeight, scale);
+                inlineHeight, style.KeepTitleEnding, scale);
             pressedButton = DrawButtons(drawList, id, content, buttons, buttonCount, style.Ink, theme, inlineHeight,
                 scale);
         }
@@ -264,7 +264,7 @@ internal static class AppHeader
     }
 
     private static void DrawLargeTitle(ImDrawListPtr drawList, Rect content, float titleBandTop, float bandBottom,
-        float rightReserve, string title, Vector4 ink, float scrollY, float progress, float scale)
+        float rightReserve, string title, Vector4 ink, float scrollY, float progress, bool keepEnding, float scale)
     {
         var alpha = NavBarMetrics.LargeTitleAlpha(progress);
         if (alpha <= 0.001f)
@@ -274,7 +274,7 @@ internal static class AppHeader
 
         var bandTop = content.Min.Y + titleBandTop;
         var maxWidth = MathF.Max(1f, content.Width - rightReserve);
-        var fitted = Typography.FitText(title, maxWidth, TextStyles.LargeTitle);
+        var fitted = FitTitle(title, maxWidth, TextStyles.LargeTitle, keepEnding);
         var size = Typography.Measure(fitted, TextStyles.LargeTitle);
         var position = new Vector2(content.Min.X,
             (bandTop + bandBottom - size.Y) * 0.5f - scrollY);
@@ -284,7 +284,7 @@ internal static class AppHeader
     }
 
     private static void DrawInlineTitle(ImDrawListPtr drawList, Rect content, string title, Vector4 ink,
-        float progress, float sideReserve, float inlineHeight, float scale)
+        float progress, float sideReserve, float inlineHeight, bool keepEnding, float scale)
     {
         var alpha = NavBarMetrics.InlineTitleAlpha(progress);
         if (alpha <= 0.001f)
@@ -294,10 +294,13 @@ internal static class AppHeader
 
         var reserve = sideReserve + (Metrics.Space.GlassInset + InlineTitleMargin) * scale;
         var maxWidth = MathF.Max(1f, content.Width - reserve * 2f);
-        var fitted = Typography.FitText(title, maxWidth, TextStyles.Headline);
+        var fitted = FitTitle(title, maxWidth, TextStyles.Headline, keepEnding);
         Typography.DrawCentered(drawList, new Vector2(content.Center.X, content.Min.Y + inlineHeight * 0.5f), fitted,
             ink with { W = ink.W * alpha }, TextStyles.Headline);
     }
+
+    private static string FitTitle(string title, float maxWidth, in TextStyle style, bool keepEnding) =>
+        keepEnding ? Typography.FitTextMiddle(title, maxWidth, style) : Typography.FitText(title, maxWidth, style);
 
     private static float DrawBackControl(ImDrawListPtr drawList, Rect content, string backTitle, Vector4 accent,
         float inlineHeight, float scale, out bool pressed)

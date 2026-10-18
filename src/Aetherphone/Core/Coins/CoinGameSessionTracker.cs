@@ -6,6 +6,7 @@ namespace Aetherphone.Core.Coins;
 
 internal sealed class CoinGameSessionTracker : IDisposable
 {
+    public const string TooShortReason = "too_short";
     private const int UnloadEndTimeoutMilliseconds = 2000;
     private const string CooldownReason = "cooldown";
     private const long MinimumRetryMilliseconds = 1000;
@@ -18,6 +19,8 @@ internal sealed class CoinGameSessionTracker : IDisposable
     private readonly CoinsClient coins;
     private readonly StoreWork work = new("CoinGames");
     private readonly SemaphoreSlim gate = new(1, 1);
+    private readonly Func<CancellationToken, Task> endQuietly;
+    private readonly Func<CancellationToken, Task> endWatched;
 
     private volatile string? openSessionId;
     private volatile string? openGameId;
@@ -36,6 +39,8 @@ internal sealed class CoinGameSessionTracker : IDisposable
         this.configuration = configuration;
         this.session = session;
         this.coins = coins;
+        endQuietly = token => EndPendingAsync(false, token);
+        endWatched = token => EndPendingAsync(true, token);
         session.Changed += OnSessionChanged;
         OnSessionChanged();
     }
@@ -114,7 +119,7 @@ internal sealed class CoinGameSessionTracker : IDisposable
         work.Run("session start", token => StartAsync(gameId, ticket, token));
     }
 
-    public void GameClosed()
+    public void GameClosed(bool playerWatching)
     {
         var gameId = openGameId;
         Interlocked.Increment(ref generation);
@@ -128,7 +133,7 @@ internal sealed class CoinGameSessionTracker : IDisposable
         }
 
         lastAwardGameId = gameId;
-        work.Run("session end", EndPendingAsync);
+        work.Run("session end", playerWatching ? endWatched : endQuietly);
     }
 
     private void OnSessionChanged()
@@ -138,7 +143,7 @@ internal sealed class CoinGameSessionTracker : IDisposable
             return;
         }
 
-        work.Run("session recover", EndPendingAsync);
+        work.Run("session recover", endQuietly);
     }
 
     private async Task StartAsync(string gameId, int ticket, CancellationToken token)
@@ -170,7 +175,7 @@ internal sealed class CoinGameSessionTracker : IDisposable
                 return 0;
             }
 
-            await EndPendingLockedAsync(token).ConfigureAwait(false);
+            await EndPendingLockedAsync(false, token).ConfigureAwait(false);
             var issued = await coins.StartGameSessionAsync(gameId, token).ConfigureAwait(false);
             if (issued is null)
             {
@@ -243,12 +248,12 @@ internal sealed class CoinGameSessionTracker : IDisposable
         return alreadyElapsed > 0 ? startTicks - alreadyElapsed * 1000 : startTicks;
     }
 
-    private async Task EndPendingAsync(CancellationToken token)
+    private async Task EndPendingAsync(bool playerWatching, CancellationToken token)
     {
         await gate.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await EndPendingLockedAsync(token).ConfigureAwait(false);
+            await EndPendingLockedAsync(playerWatching, token).ConfigureAwait(false);
         }
         finally
         {
@@ -256,7 +261,7 @@ internal sealed class CoinGameSessionTracker : IDisposable
         }
     }
 
-    private async Task EndPendingLockedAsync(CancellationToken token)
+    private async Task EndPendingLockedAsync(bool playerWatching, CancellationToken token)
     {
         var pending = configuration.PendingCoinGameSession;
         if (pending.Length == 0)
@@ -271,11 +276,14 @@ internal sealed class CoinGameSessionTracker : IDisposable
         }
 
         ClearPending(pending);
-        if (award.Granted)
+        if (Reports(award, playerWatching))
         {
             Interlocked.Exchange(ref lastAward, award);
         }
     }
+
+    internal static bool Reports(CoinAwardDto award, bool playerWatching) =>
+        award.Granted || (playerWatching && string.Equals(award.Reason, TooShortReason, StringComparison.Ordinal));
 
     private void RememberPending(string sessionId)
     {

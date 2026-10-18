@@ -45,6 +45,9 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     private readonly AccountIdentityTracker accountIdentity = new();
     private readonly object messagesLock = new();
     private readonly ConcurrentDictionary<string, InboxMark> inboxMarks = new();
+    private readonly ConcurrentDictionary<string, ReadMark> readThrough = new(StringComparer.Ordinal);
+    private readonly ReadConfirmations readConfirmations = new();
+    private int accountGeneration;
     private static readonly TimeSpan MediaUrlFailureRetryFor = TimeSpan.FromMinutes(2);
     private readonly ConcurrentDictionary<string, string> dmMediaUrls = new();
     private readonly ConcurrentDictionary<string, byte> dmMediaLoading = new();
@@ -137,7 +140,10 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
 
         lastAccountId = accountId;
         accountIdentity.Track(user);
+        Interlocked.Increment(ref accountGeneration);
         inboxMarks.Clear();
+        readThrough.Clear();
+        readConfirmations.Reset();
         threadList = Array.Empty<TThread>();
         threadListCursor = null;
         threadListLoaded = false;
@@ -157,6 +163,8 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         vaultRefreshRequested = false;
         OnAccountSwitched();
     }
+
+    private readonly record struct ReadMark(ReadThrough Through, int Account);
 
     protected readonly record struct MessagePage(TMessage[] Items, string? NextCursor);
 
@@ -240,6 +248,8 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
 
     protected abstract int ThreadUnreadCountOf(TThread thread);
 
+    protected virtual string? ThreadLastMessageIdOf(TThread thread) => null;
+
     protected abstract TThread WithUnreadCleared(TThread thread);
 
     protected abstract PhoneNotification BuildInboxNotification(TThread thread);
@@ -273,6 +283,9 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     }
 
     protected virtual Task PrefetchThreadAsync(string threadId, CancellationToken token) => Task.CompletedTask;
+
+    protected virtual Task<ReadMarkOutcome> MarkThreadReadRequestAsync(string threadKey, CancellationToken token) =>
+        Task.FromResult(ReadMarkOutcome.Unsupported);
 
     protected virtual void DisposeCore()
     {
@@ -460,6 +473,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
 
     private void ClearLocalUnread(string threadKey)
     {
+        var account = Volatile.Read(ref accountGeneration);
         var snapshot = threadList;
         for (var index = 0; index < snapshot.Length; index++)
         {
@@ -474,8 +488,76 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             Array.Copy(snapshot, updated, snapshot.Length);
             updated[index] = WithUnreadCleared(thread);
             threadList = updated;
+            var through = new ReadThrough(ThreadLastMessageAtOf(thread), ThreadUnreadCountOf(thread),
+                ThreadLastMessageIdOf(thread));
+            readThrough[threadKey] = new ReadMark(through, account);
+            readConfirmations.Request(threadKey, DateTime.UtcNow, ReadConfirmations.SettleDelay, account);
             return;
         }
+    }
+
+    protected void RequestReadConfirmation(string threadKey)
+    {
+        readConfirmations.Request(threadKey, DateTime.UtcNow, TimeSpan.Zero, Volatile.Read(ref accountGeneration));
+    }
+
+    private TThread[] HonourReadWatermarks(TThread[] incoming)
+    {
+        if (readThrough.IsEmpty)
+        {
+            return incoming;
+        }
+
+        var account = Volatile.Read(ref accountGeneration);
+        TThread[]? adjusted = null;
+        for (var index = 0; index < incoming.Length; index++)
+        {
+            var thread = incoming[index];
+            var key = ThreadKeyOf(thread);
+            if (!readThrough.TryGetValue(key, out var mark))
+            {
+                continue;
+            }
+
+            if (mark.Account != account
+                || ReadWatermark.Judge(mark.Through, ThreadLastMessageIdOf(thread), ThreadLastMessageAtOf(thread),
+                    ThreadUnreadCountOf(thread)) != ReadWatermarkVerdict.Hold)
+            {
+                readThrough.TryRemove(new KeyValuePair<string, ReadMark>(key, mark));
+                continue;
+            }
+
+            adjusted ??= (TThread[])incoming.Clone();
+            adjusted[index] = WithUnreadCleared(thread);
+        }
+
+        return adjusted ?? incoming;
+    }
+
+    private void DrainReadConfirmations(DateTime now)
+    {
+        if (!readConfirmations.TryTakeDue(now, out var key, out var generation, out var account))
+        {
+            return;
+        }
+
+        if (account != Volatile.Read(ref accountGeneration))
+        {
+            readConfirmations.Complete(key, generation, ReadMarkOutcome.Rejected, now);
+            return;
+        }
+
+        var outcome = ReadMarkOutcome.Failed;
+        work.Run("mark read", async token =>
+        {
+            if (account != Volatile.Read(ref accountGeneration))
+            {
+                outcome = ReadMarkOutcome.Rejected;
+                return;
+            }
+
+            outcome = await MarkThreadReadRequestAsync(key, token).ConfigureAwait(false);
+        }, () => readConfirmations.Complete(key, generation, outcome, DateTime.UtcNow));
     }
 
     private void OnFrameworkTick(IFramework framework)
@@ -506,6 +588,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         EnsureCurrentThreadKeysFresh(now);
         ResumePendingThreadOpen(now);
         ConsumePendingThreadRefresh(now);
+        DrainReadConfirmations(now);
 
         if (!tracksInbox || inboxPolling || !inboxCadence.Due(now))
         {
@@ -627,7 +710,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             if (page is not null)
             {
                 var sealedItems = page.Value.Items;
-                var decorated = DecorateThreadList(sealedItems);
+                var decorated = HonourReadWatermarks(DecorateThreadList(sealedItems));
                 AcceptThreadListHead(decorated, page.Value.NextCursor);
                 RaiseInboxNotifications(sealedItems, decorated);
             }
@@ -670,7 +753,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
                 return;
             }
 
-            var decorated = DecorateThreadList(page.Value.Items);
+            var decorated = HonourReadWatermarks(DecorateThreadList(page.Value.Items));
             threadList = IdentifiedMerge.MergeById(threadList, decorated, CompareThreadsByRecency);
             threadListCursor = page.Value.NextCursor;
         }, () => loadingMoreThreads = false);
@@ -739,6 +822,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             inboxMarks[key] = new InboxMark(lastMessageAt, unread);
             if (IsBeingViewed(key))
             {
+                NoteSkippedWhileViewed();
                 continue;
             }
 
@@ -756,11 +840,18 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         }
 
         inboxMarks[key] = new InboxMark(lastMessageAt, unread);
-        if (!IsBeingViewed(key))
+        if (IsBeingViewed(key))
         {
-            notifications.Notify(arrival);
+            NoteSkippedWhileViewed();
+            return;
         }
+
+        notifications.Notify(arrival);
     }
+
+    private void NoteSkippedWhileViewed() =>
+        AepLog.Info($"[Notifications] {NotificationAppId} skipped: the chat is on screen " +
+            $"or was left under {ViewingMark.Grace.TotalSeconds:0} s ago");
 
     protected void RefreshThreadListCore()
     {
@@ -784,7 +875,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             }
 
             threadListFailureBox = null;
-            AcceptThreadListHead(DecorateThreadList(page.Value.Items), page.Value.NextCursor);
+            AcceptThreadListHead(HonourReadWatermarks(DecorateThreadList(page.Value.Items)), page.Value.NextCursor);
         }, () =>
         {
             loadingThreadList = false;
@@ -848,8 +939,14 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
                 currentKeyStatus = status;
             }
 
+            var readGeneration = readConfirmations.GenerationOf(id);
             var page = await FetchMessagesPageAsync(id, null, token).ConfigureAwait(false);
             NotePollResult(page is not null);
+            if (page is not null)
+            {
+                readConfirmations.Satisfy(id, readGeneration);
+            }
+
             if (currentThreadId == id && page is not null)
             {
                 messages = DecorateMessages(id, page.Value.Items);
@@ -957,8 +1054,14 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         refreshingThread = true;
         work.Run("thread refresh", async token =>
         {
+            var readGeneration = readConfirmations.GenerationOf(current);
             var page = await FetchMessagesPageAsync(current, null, token).ConfigureAwait(false);
             NotePollResult(page is not null);
+            if (page is not null)
+            {
+                readConfirmations.Satisfy(current, readGeneration);
+            }
+
             if (currentThreadId == current && page is not null)
             {
                 var decorated = DecorateMessages(current, page.Value.Items);
@@ -1216,7 +1319,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             }
             else
             {
-                var baked = ImageProcessor.BakeJpeg(sourcePath, DmImageMaxDimension);
+                var baked = ImageProcessor.BakeJpeg(sourcePath, DmImageMaxDimension, ImageProcessor.UploadJpegQuality);
                 plainBytes = baked.Bytes;
                 width = baked.Width;
                 height = baked.Height;

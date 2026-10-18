@@ -1,5 +1,8 @@
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Shell;
+using Aetherphone.Core.Songs;
+using Aetherphone.Core.SystemMedia;
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Xunit;
 
@@ -9,22 +12,231 @@ public sealed class IslandActivityTests
 {
     private const long Now = 1_800_000_000L;
     private const long Minute = 60L;
+    private const long UpdatedTicks = 638_000_000_000_000_000L;
 
     [Fact]
-    public void PlaybackCardIsTheOnlyTallerCard()
+    public void OnlyPausedMediaSwipesAway()
+    {
+        Assert.True(IslandActivities.Swipeable(IslandActivity.Playback, false));
+        Assert.True(IslandActivities.Swipeable(IslandActivity.PcMedia, false));
+        Assert.False(IslandActivities.Swipeable(IslandActivity.Playback, true));
+        Assert.False(IslandActivities.Swipeable(IslandActivity.PcMedia, true));
+        for (var activity = IslandActivity.None; activity <= IslandActivity.Fishing; activity++)
+        {
+            if (activity is IslandActivity.Playback or IslandActivity.PcMedia)
+            {
+                continue;
+            }
+
+            Assert.False(IslandActivities.Swipeable(activity, false));
+        }
+    }
+
+    [Theory]
+    [InlineData(48f, 0f, 1f, true)]
+    [InlineData(47f, 0f, 1f, false)]
+    [InlineData(20f, 700f, 1f, true)]
+    [InlineData(20f, 699f, 1f, false)]
+    [InlineData(0f, 900f, 1f, false)]
+    [InlineData(60f, 0f, 1.5f, false)]
+    [InlineData(72f, 0f, 1.5f, true)]
+    public void ASwipeDismissesOnDistanceOrAFlick(float offset, float velocity, float scale, bool dismisses)
+    {
+        Assert.Equal(dismisses, IslandActivities.SwipeDismisses(offset, velocity, scale));
+    }
+
+    [Fact]
+    public void MediaCardsAreTheOnlyTallerCards()
     {
         Assert.Equal(IslandActivities.PlaybackCardHeightUnits,
             IslandActivities.ExpandedHeightUnits(IslandActivity.Playback));
+        Assert.Equal(IslandActivities.PlaybackCardHeightUnits,
+            IslandActivities.ExpandedHeightUnits(IslandActivity.PcMedia));
+        Assert.Equal(IslandActivities.PlaybackCardHeightUnits,
+            IslandActivities.ExpandedHeightUnits(IslandActivity.Session));
         Assert.True(IslandActivities.PlaybackCardHeightUnits > IslandActivities.CardHeightUnits);
         for (var activity = IslandActivity.None; activity <= IslandActivity.Fishing; activity++)
         {
-            if (activity == IslandActivity.Playback)
+            if (activity is IslandActivity.Playback or IslandActivity.PcMedia or IslandActivity.Session)
             {
                 continue;
             }
 
             Assert.Equal(IslandActivities.CardHeightUnits, IslandActivities.ExpandedHeightUnits(activity));
         }
+    }
+
+    [Theory]
+    [InlineData(true, false, false, true, true)]
+    [InlineData(false, true, true, true, true)]
+    [InlineData(false, true, false, false, true)]
+    [InlineData(false, true, false, true, false)]
+    [InlineData(false, false, false, false, false)]
+    public void VideoShowsWhenPlayingInAPartyOrWhenNoMusicPlays(bool inParty, bool loaded, bool playing,
+        bool musicPlaying, bool expected)
+    {
+        Assert.Equal(expected, IslandActivities.VideoLive(inParty, loaded, playing, musicPlaying));
+    }
+
+    [Fact]
+    public void PlayingVideoOutranksPhoneMusic()
+    {
+        var session = IslandActivities.VideoLive(false, true, true, true);
+
+        Assert.Equal(IslandActivity.Session,
+            IslandActivities.Select(new IslandSignals(false, session, true, false, false)));
+    }
+
+    [Fact]
+    public void PausedVideoGivesWayToPlayingMusic()
+    {
+        var session = IslandActivities.VideoLive(false, true, false, true);
+
+        Assert.Equal(IslandActivity.Playback,
+            IslandActivities.Select(new IslandSignals(false, session, true, false, false)));
+    }
+
+    [Fact]
+    public void DrivableVideoCarriesSeekPlayPauseAndNext()
+    {
+        var media = IslandMedia.ForVideo("Video", "Site", 30f, 600f, true, true, true, true);
+
+        Assert.True(media.HasTimeline);
+        Assert.True(media.Has(IslandMediaControls.Playing | IslandMediaControls.PlayPause |
+                              IslandMediaControls.Seek | IslandMediaControls.Next));
+        Assert.False(media.Has(IslandMediaControls.Previous));
+        Assert.False(media.Has(IslandMediaControls.Shuffle));
+        Assert.False(media.Has(IslandMediaControls.Repeat));
+    }
+
+    [Fact]
+    public void GuestWithoutControlSeesAReadOnlyTimeline()
+    {
+        var media = IslandMedia.ForVideo("Video", "Party", 30f, 600f, true, true, false, true);
+
+        Assert.True(media.HasTimeline);
+        Assert.Equal(IslandMediaControls.Playing, media.Controls);
+    }
+
+    [Fact]
+    public void LiveStreamHidesTheTimelineButKeepsPlayPause()
+    {
+        var media = IslandMedia.ForVideo("Stream", "Site", 42f, 0f, true, true, true, false);
+
+        Assert.False(media.HasTimeline);
+        Assert.Equal(0f, media.Position);
+        Assert.True(media.Has(IslandMediaControls.PlayPause));
+        Assert.False(media.Has(IslandMediaControls.Seek));
+        Assert.False(media.Has(IslandMediaControls.Next));
+    }
+
+    [Fact]
+    public void PartyWithoutAVideoOffersNoControls()
+    {
+        var media = IslandMedia.ForVideo("MogCast", "Hosting", 0f, 0f, false, false, true, true);
+
+        Assert.False(media.HasTimeline);
+        Assert.Equal(IslandMediaControls.None, media.Controls);
+    }
+
+    [Fact]
+    public void VideoPositionStaysInsideItsDuration()
+    {
+        Assert.Equal(600f, IslandMedia.ForVideo("Video", "Site", 640f, 600f, true, true, true, false).Position);
+        Assert.Equal(0f, IslandMedia.ForVideo("Video", "Site", -3f, 600f, true, true, true, false).Position);
+    }
+
+    [Theory]
+    [InlineData((byte)PhoneCaseKind.Art)]
+    [InlineData((byte)PhoneCaseKind.Color)]
+    public void ShuffleTransportAndRepeatFitTheExpandedCard(byte kind)
+    {
+        var screenWidth = BetDeckLayoutTests.ScreenWidth((PhoneCaseKind)kind);
+        var halfWidth = IslandActivities.ExpandedHalfWidth(screenWidth, 1f);
+        var reach = IslandActivities.ModeStrideUnits + IslandActivities.ModeRadiusUnits;
+
+        Assert.True(reach <= halfWidth - IslandActivities.CardPadUnits, $"{reach} > {halfWidth}");
+        Assert.True(IslandActivities.ModeStrideUnits - IslandActivities.ModeRadiusUnits >=
+                    IslandActivities.TransportStrideUnits + IslandActivities.SideControlRadiusUnits);
+    }
+
+    [Fact]
+    public void PhoneSongCarriesTimelineShuffleAndRepeat()
+    {
+        var media = IslandMedia.ForPhone("Song", "Artist", 30f, 200f, true, true, true, SongRepeatMode.One);
+
+        Assert.True(media.HasTimeline);
+        Assert.True(media.Has(IslandMediaControls.Playing | IslandMediaControls.Seek));
+        Assert.True(media.Has(IslandMediaControls.Shuffle | IslandMediaControls.ShuffleActive));
+        Assert.True(media.Has(IslandMediaControls.Repeat | IslandMediaControls.RepeatActive |
+                              IslandMediaControls.RepeatOne));
+    }
+
+    [Fact]
+    public void PhoneRadioKeepsTheTransportButHidesTimelineAndModes()
+    {
+        var media = IslandMedia.ForPhone("Station", "Now playing", 0f, 0f, true, false, true, SongRepeatMode.All);
+
+        Assert.False(media.HasTimeline);
+        Assert.True(media.Has(IslandMediaControls.Previous | IslandMediaControls.PlayPause |
+                              IslandMediaControls.Next));
+        Assert.False(media.Has(IslandMediaControls.Shuffle));
+        Assert.False(media.Has(IslandMediaControls.Repeat));
+    }
+
+    [Fact]
+    public void SessionThatRefusesSeekStillShowsItsTimes()
+    {
+        var media = IslandMedia.ForSession(Session(MediaSessionControls.PlayPauseToggle, 200d), "Song", "Artist",
+            UpdatedTicks);
+
+        Assert.True(media.HasTimeline);
+        Assert.False(media.Has(IslandMediaControls.Seek));
+    }
+
+    [Fact]
+    public void SessionWithoutDurationHidesTheTimeline()
+    {
+        var media = IslandMedia.ForSession(Session(MediaSessionControls.Seek, 0d), "Song", "Artist", UpdatedTicks);
+
+        Assert.False(media.HasTimeline);
+        Assert.False(media.Has(IslandMediaControls.Seek));
+        Assert.Equal(0f, media.Position);
+    }
+
+    [Fact]
+    public void SessionPositionAdvancesWhilePlaying()
+    {
+        var media = IslandMedia.ForSession(Session(MediaSessionControls.Seek, 200d), "Song", "Artist",
+            UpdatedTicks + TimeSpan.FromSeconds(5).Ticks);
+
+        Assert.True(media.Has(IslandMediaControls.Seek));
+        Assert.Equal(15f, media.Position, 3);
+        Assert.Equal(200f, media.Duration, 3);
+    }
+
+    [Fact]
+    public void SessionModesFollowWhatTheAppSupports()
+    {
+        var supported = IslandMedia.ForSession(
+            Session(MediaSessionControls.Shuffle | MediaSessionControls.Repeat, 200d, true, MediaSessionRepeat.Track),
+            "Song", "Artist", UpdatedTicks);
+        var unsupported = IslandMedia.ForSession(Session(MediaSessionControls.None, 200d, true,
+            MediaSessionRepeat.List), "Song", "Artist", UpdatedTicks);
+
+        Assert.True(supported.Has(IslandMediaControls.Shuffle | IslandMediaControls.ShuffleActive));
+        Assert.True(supported.Has(IslandMediaControls.Repeat | IslandMediaControls.RepeatActive |
+                                  IslandMediaControls.RepeatOne));
+        Assert.Equal(IslandMediaControls.Playing, unsupported.Controls);
+    }
+
+    [Fact]
+    public void CornerRadiusRoundsPillsFullyAndCapsTallCards()
+    {
+        Assert.Equal(18f, IslandActivities.CornerRadius(36f, 1f));
+        Assert.Equal(48f, IslandActivities.CornerRadius(IslandActivities.CardHeightUnits, 1f));
+        Assert.Equal(48f, IslandActivities.CornerRadius(IslandActivities.PlaybackCardHeightUnits, 1f));
+        Assert.Equal(96f, IslandActivities.CornerRadius(IslandActivities.PlaybackCardHeightUnits * 2f, 2f));
     }
 
     [Fact]
@@ -194,6 +406,12 @@ public sealed class IslandActivityTests
     {
         Assert.Equal(expected, StatusIcons.WifiArcs(bars, latency));
     }
+
+    private static MediaSessionSnapshot Session(MediaSessionControls controls, double durationSeconds,
+        bool shuffleActive = false, MediaSessionRepeat repeat = MediaSessionRepeat.None) =>
+        new("app", "App", "Song", "Artist", string.Empty, MediaSessionPlayback.Playing, controls,
+            TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(durationSeconds), UpdatedTicks, null, 0, shuffleActive,
+            repeat, MediaSessionSnapshot.NoVolume);
 
     private static MusterDto Muster(string id, long startsAtUnix) =>
         new(id, "host", "Host Character", "Phoenix", 0, string.Empty, 0, 0, 0f, 0f, 0, 0, 0, 0, string.Empty, 0, 0,

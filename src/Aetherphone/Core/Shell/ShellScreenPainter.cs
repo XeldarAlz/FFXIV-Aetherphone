@@ -11,6 +11,7 @@ namespace Aetherphone.Core.Shell;
 internal sealed class ShellScreenPainter
 {
     public const string HomeLayerId = "home";
+    private const float LaunchIconUnits = 72f;
 
     private readonly ThemeProvider themes;
     private readonly NavigationStack navigation;
@@ -112,6 +113,56 @@ internal sealed class ShellScreenPainter
             AepLog.Error(exception, $"[shell] app-draw {app.Id} threw");
             DrawAppFailure(contentRect, content);
         }
+    }
+
+    public void PaintLaunchCard(Rect screen, float screenRadius, IPhoneApp app)
+    {
+        var underBackdrop = WallpaperBackdrop.Snapshot();
+        WallpaperBackdrop.Clear();
+        try
+        {
+            var content = themes.ForApp(app.WantsSystemTheme);
+            DeviceChrome.FillScreen(screen, screenRadius, content.AppBackground);
+            WallpaperBackdrop.RecordAppGround(screen, content.AppBackground, content.AppBackground);
+            var scale = UiScale.Current;
+            var drawList = ImGui.GetWindowDrawList();
+            var iconSize = LaunchIconUnits * scale;
+            var iconCenter = new Vector2(screen.Center.X, screen.Center.Y - iconSize * 0.5f);
+            DrawAppIcon(drawList, app, iconCenter, iconSize, 1f);
+            var name = Typography.FitText(app.DisplayName, screen.Width - 2f * Metrics.Space.Xl * scale,
+                TextStyles.Title3);
+            var nameHeight = Typography.Measure(name, TextStyles.Title3).Y;
+            var nameCenterY = iconCenter.Y + iconSize * 0.5f + Metrics.Space.Md * scale + nameHeight * 0.5f;
+            Typography.DrawCentered(drawList, new Vector2(screen.Center.X, nameCenterY), name, content.TextStrong,
+                TextStyles.Title3);
+        }
+        finally
+        {
+            WallpaperBackdrop.Restore(underBackdrop);
+        }
+    }
+
+    public static void DrawAppIcon(ImDrawListPtr drawList, IPhoneApp app, Vector2 center, float size, float alpha)
+    {
+        var half = new Vector2(size, size) * 0.5f;
+        var accent = app.Accent;
+        if (AppIconTile.TryDraw(drawList, app.Id, accent, center - half, center + half,
+                size * Metrics.Radius.TileFactor, alpha, false))
+        {
+            return;
+        }
+
+        var surface = IconTile.Surface(accent);
+        Squircle.Fill(drawList, center - half, center + half, size * Metrics.Radius.TileFactor,
+            ImGui.GetColorU32(Palette.WithAlpha(surface, alpha)));
+        var ink = AppAccents.InkFor(app.Id);
+        if (AppIconArt.TryDraw(drawList, app.Id, center, size * 0.9f, Palette.WithAlpha(ink, alpha),
+                Palette.WithAlpha(Palette.Mix(surface, ink, 0.28f), alpha)))
+        {
+            return;
+        }
+
+        drawList.AddCircleFilled(center, size * 0.16f, ImGui.GetColorU32(Palette.WithAlpha(ink, alpha)), 12);
     }
 
     private static void DrawAppFailure(Rect content, PhoneTheme theme)

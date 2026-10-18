@@ -12,7 +12,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Strats;
 
-internal sealed partial class StratsApp : IPhoneApp, ISpotlightFights
+internal sealed partial class StratsApp : IResumableApp, ISpotlightFights
 {
     private enum StratsScreen : byte
     {
@@ -80,13 +80,18 @@ internal sealed partial class StratsApp : IPhoneApp, ISpotlightFights
         manifestStore.EnsureFresh(false);
     }
 
+    public void OnResumed() => manifestStore.EnsureFresh(false);
+
     public void OnClosed()
     {
         PersistSelection();
         AppLandscape.Release(Id);
         contentsSheet.CloseImmediately();
-        router.Reset();
         zoom.Reset();
+        if (router.Current.Screen == StratsScreen.Viewer)
+        {
+            router.Pop(false);
+        }
     }
 
     public void RequestFight(string fightKey) => pendingFightKey = fightKey;

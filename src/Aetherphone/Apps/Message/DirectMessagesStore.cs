@@ -76,8 +76,7 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
             return;
         }
 
-        work.Run("mark read", async token =>
-            await client.MarkReadAsync(message.ConversationId, token).ConfigureAwait(false));
+        RequestReadConfirmation(message.ConversationId);
     }
 
     public ConversationDto[] Conversations => ThreadListItems;
@@ -175,6 +174,14 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
         return result is null ? null : result.TypingUserIds.Length > 0;
     }
 
+    protected override async Task<ReadMarkOutcome> MarkThreadReadRequestAsync(string threadKey, CancellationToken token)
+    {
+        var failure = AepFailure.None;
+        var succeeded = await client.MarkReadAsync(threadKey, token, reported => failure = reported)
+            .ConfigureAwait(false);
+        return ReadConfirmations.Classify(succeeded, failure, missingRouteIsUnsupported: false);
+    }
+
     protected override async Task<string?> FetchMediaUrlRequestAsync(string messageId, CancellationToken token)
     {
         var result = await client.DmMediaUrlAsync(messageId, token).ConfigureAwait(false);
@@ -237,6 +244,8 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
     protected override long ThreadLastMessageAtOf(ConversationDto thread) => thread.LastMessageAtUnix;
 
     protected override int ThreadUnreadCountOf(ConversationDto thread) => thread.UnreadCount;
+
+    protected override string? ThreadLastMessageIdOf(ConversationDto thread) => thread.LastMessageId;
 
     protected override ConversationDto WithUnreadCleared(ConversationDto thread) => thread with { UnreadCount = 0 };
 

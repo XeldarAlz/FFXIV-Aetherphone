@@ -13,7 +13,7 @@ using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Fishing;
 
-internal sealed partial class FishingApp : IPhoneApp
+internal sealed partial class FishingApp : IResumableApp
 {
     private const float BottomPad = 24f;
     private const int TabCount = 2;
@@ -53,6 +53,11 @@ internal sealed partial class FishingApp : IPhoneApp
     public void OnOpened()
     {
         router.Reset();
+        OnResumed();
+    }
+
+    public void OnResumed()
+    {
         RefreshVoyages();
         catalog.EnsureLoaded();
         fishListDirty = true;
@@ -60,7 +65,6 @@ internal sealed partial class FishingApp : IPhoneApp
 
     public void OnClosed()
     {
-        router.Reset();
     }
 
     public void Draw(in PhoneContext context)

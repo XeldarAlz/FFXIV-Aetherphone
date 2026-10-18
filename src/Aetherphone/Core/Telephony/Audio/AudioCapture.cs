@@ -8,8 +8,8 @@ internal sealed class AudioCapture : IDisposable
 {
     private const int Bitrate = 28000;
     public const float GateOpenRms = 0.018f;
+    public const float GateCloseRms = 0.010f;
     public const float MaximumGain = 2f;
-    private const float GateCloseRms = 0.010f;
     private const int HangoverFrames = 12;
     private readonly object gate = new();
     private readonly object deviceGate = new();
@@ -17,12 +17,14 @@ internal sealed class AudioCapture : IDisposable
     private readonly byte[] accumulator = new byte[OpusAudio.FrameBytes * 4];
     private readonly byte[] packet = new byte[OpusAudio.MaxPacketBytes];
     private readonly List<byte[]> pending = new(4);
+    private readonly AutoGain autoGain = new();
     private int accumulated;
     private int hangover;
     private bool gateOpen;
     private WaveInEvent? waveIn;
     private volatile bool muted;
     private volatile float gain = 1f;
+    private volatile bool autoGainEnabled = true;
     private bool closed;
     private volatile float level;
 
@@ -45,6 +47,12 @@ internal sealed class AudioCapture : IDisposable
     {
         get => gain;
         set => gain = Math.Clamp(value, 0f, MaximumGain);
+    }
+
+    public bool AutoGainEnabled
+    {
+        get => autoGainEnabled;
+        set => autoGainEnabled = value;
     }
 
     public void Start(int deviceIndex)
@@ -92,6 +100,7 @@ internal sealed class AudioCapture : IDisposable
             accumulated = 0;
             hangover = 0;
             gateOpen = false;
+            autoGain.Reset();
         }
 
         if (toStop is null)
@@ -164,10 +173,9 @@ internal sealed class AudioCapture : IDisposable
     private void EncodeFrame()
     {
         var pcm = MemoryMarshal.Cast<byte, short>(accumulator.AsSpan(0, OpusAudio.FrameBytes));
-        ApplyGain(pcm, gain);
-        var rms = Rms(pcm);
-        level = rms;
-        UpdateGate(rms);
+        var gateLevel = Condition(pcm, autoGain, gain, autoGainEnabled);
+        level = gateLevel;
+        UpdateGate(gateLevel);
         if (muted || !gateOpen)
         {
             return;
@@ -182,6 +190,13 @@ internal sealed class AudioCapture : IDisposable
         var frame = new byte[written];
         Array.Copy(packet, frame, written);
         pending.Add(frame);
+    }
+
+    public static float Condition(Span<short> pcm, AutoGain autoGain, float trim, bool autoGainEnabled)
+    {
+        var rawRms = AutoGain.Rms(pcm);
+        autoGain.Process(pcm, rawRms, OpusAudio.SampleRate, trim, autoGainEnabled);
+        return rawRms * trim;
     }
 
     private void UpdateGate(float rms)
@@ -201,36 +216,6 @@ internal sealed class AudioCapture : IDisposable
                 gateOpen = false;
             }
         }
-    }
-
-    private static void ApplyGain(Span<short> pcm, float factor)
-    {
-        if (factor == 1f)
-        {
-            return;
-        }
-
-        for (var index = 0; index < pcm.Length; index++)
-        {
-            pcm[index] = (short)Math.Clamp(pcm[index] * factor, short.MinValue, short.MaxValue);
-        }
-    }
-
-    private static float Rms(ReadOnlySpan<short> pcm)
-    {
-        if (pcm.Length == 0)
-        {
-            return 0f;
-        }
-
-        double sum = 0;
-        for (var index = 0; index < pcm.Length; index++)
-        {
-            double sample = pcm[index];
-            sum += sample * sample;
-        }
-
-        return (float)(Math.Sqrt(sum / pcm.Length) / 32768.0);
     }
 
     public void Dispose()

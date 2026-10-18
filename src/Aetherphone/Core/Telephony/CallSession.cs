@@ -12,7 +12,7 @@ internal sealed class CallSession : IDisposable
     private ushort sequence;
 
     public CallSession(Guid callId, RealtimeConnection connection, int inputDevice, string outputDevice,
-        float outputVolume, float inputGain)
+        float outputVolume, float inputGain, bool autoGain)
     {
         this.callId = callId;
         this.connection = connection;
@@ -20,6 +20,7 @@ internal sealed class CallSession : IDisposable
         mixer = new VoiceMixer();
         capture.FrameEncoded = OnFrameEncoded;
         capture.Gain = inputGain;
+        capture.AutoGainEnabled = autoGain;
         connection.MediaReceived += OnMediaReceived;
         mixer.Start(outputDevice, outputVolume);
         capture.Start(inputDevice);
@@ -43,6 +44,12 @@ internal sealed class CallSession : IDisposable
     {
         get => capture.Gain;
         set => capture.Gain = value;
+    }
+
+    public bool AutoGain
+    {
+        get => capture.AutoGainEnabled;
+        set => capture.AutoGainEnabled = value;
     }
 
     public void SwitchInput(string deviceName) =>

@@ -48,7 +48,7 @@ internal sealed partial class MessageApp
             return;
         }
 
-        store.SendImageMessage(target.Id, path, string.Empty, _ => { });
+        threadView.StageImage(target.Id, path);
         forwardOpenPending = target.Id;
     }
 }

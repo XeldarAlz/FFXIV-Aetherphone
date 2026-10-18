@@ -178,7 +178,7 @@ internal sealed class NotificationRouter
         else if (notification.AppId == CasinoAppId && notification.GroupKey is { } tableKey
                  && tableKey.StartsWith(CasinoGroupPrefix, StringComparison.Ordinal))
         {
-            casinoLauncher.RequestTable(tableKey[CasinoGroupPrefix.Length..]);
+            casinoLauncher.RequestNotification(tableKey);
         }
         else if (notification.AppId == AetherStreamAppId && notification.GroupKey == StreamSuggestionNotifier.GroupKey)
         {

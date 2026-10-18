@@ -67,6 +67,7 @@ internal sealed class CasinoTablesStore : IDisposable
     private volatile CasinoQuickSeatDto? quickSeat;
     private volatile CasinoTableRowDto? hostedTable;
     private volatile CasinoTableRowDto? resolvedTable;
+    private readonly CasinoLaunchResolve launchResolve = new();
     private volatile bool loading;
     private volatile bool loaded;
     private volatile bool intentInFlight;
@@ -952,15 +953,68 @@ internal sealed class CasinoTablesStore : IDisposable
 
     private void Resolved(CasinoTableRowDto table, string doorReason)
     {
+        Admit(table, doorReason);
+        Interlocked.Exchange(ref resolvedTable, table);
+    }
+
+    private void Admit(CasinoTableRowDto table, string doorReason)
+    {
         HoldCard(table);
         if (doorReason.Length > 0)
         {
             knock = new CasinoKnockStatus(table.TableId, CasinoKnocks.FromDecline(doorReason), doorReason);
             Interlocked.Exchange(ref knockReadAtTick, Environment.TickCount64);
         }
-
-        Interlocked.Exchange(ref resolvedTable, table);
     }
+
+    public bool ResolveLaunch(string tableId)
+    {
+        if (tableId.Length == 0 || !Begin())
+        {
+            return false;
+        }
+
+        var asked = launchResolve.Begin();
+        Interlocked.Exchange(ref tableMissing, 0);
+        work.Run("resolve launched table", async token =>
+        {
+            var answer = await casino.TableAsync(tableId, tableStatusSink, token).ConfigureAwait(false);
+            if (answer is null)
+            {
+                var reason = Interlocked.Exchange(ref tableMissing, 0) != 0
+                    ? CasinoReasons.TableClosed
+                    : CasinoReasons.Unreachable;
+                launchResolve.Complete(asked, new CasinoLaunchAnswer(tableId, null, reason));
+                return;
+            }
+
+            if (!answer.Admitted && !Owns(answer) && !CasinoKnocks.AtTheDoor(answer.Reason))
+            {
+                launchResolve.Complete(asked, new CasinoLaunchAnswer(tableId, null, Named(answer.Reason)));
+                return;
+            }
+
+            launchResolve.Complete(asked, new CasinoLaunchAnswer(tableId, answer, string.Empty));
+        }, EndIntent);
+        return true;
+    }
+
+    public bool TryTakeLaunchAnswer(out CasinoLaunchAnswer answer)
+    {
+        if (!launchResolve.TryTake(out answer))
+        {
+            return false;
+        }
+
+        if (answer.Table is { } table)
+        {
+            Admit(table, table.Admitted ? string.Empty : table.Reason);
+        }
+
+        return true;
+    }
+
+    public void ForgetLaunch() => launchResolve.Forget();
 
     public void JoinByCode(string raw)
     {
@@ -1408,6 +1462,7 @@ internal sealed class CasinoTablesStore : IDisposable
         Interlocked.Exchange(ref quickSeat, null);
         Interlocked.Exchange(ref hostedTable, null);
         Interlocked.Exchange(ref resolvedTable, null);
+        launchResolve.Forget();
         Interlocked.Exchange(ref seatOutcome, null);
         Interlocked.Exchange(ref noticeOutcome, null);
         Interlocked.Exchange(ref closedTableId, string.Empty);

@@ -1281,7 +1281,7 @@ internal sealed class ChatTranscript
                     HoverLabelSide.Above);
                 if (UiInteract.Click(travelMin, travelMax, true, false))
                 {
-                    StartTravel(in destination);
+                    TeleportActions.Travel(in destination);
                 }
             }
         }
@@ -1309,24 +1309,6 @@ internal sealed class ChatTranscript
 
         var chipRow = DrawReactionChips(drawList, message, mine, bubbleMin, bubbleMax, fx.Alpha, model, scale);
         ImGui.SetCursorScreenPos(new Vector2(start.X, start.Y + bubbleHeight + chipRow + BubbleGap * scale));
-    }
-
-    private static void StartTravel(in TravelDestination destination)
-    {
-        var outcome = TravelPlanner.Go(in destination);
-        if (outcome == LifestreamOutcome.Started)
-        {
-            return;
-        }
-
-        if (outcome == LifestreamOutcome.NotInstalled)
-        {
-            ImGui.SetClipboardText(TravelPlanner.Command(in destination));
-            ShellToast.Show();
-            return;
-        }
-
-        ShellToast.Show(TravelPlanner.Notice(outcome, in destination));
     }
 
     private void DrawMusterBubble(TranscriptMessage message, int index, string musterId, in ChatTranscriptModel model)
@@ -1938,7 +1920,7 @@ internal sealed class ChatTranscript
         var captionLayout = caption.Length > 0 ? LinkText.LayoutFor(caption, frameWidth / CaptionTextScale) : null;
         var captionTextHeight = captionLayout is not null
             ? captionLayout.Size.Y * CaptionTextScale
-            : Typography.Measure(caption, CaptionTextScale).Y;
+            : Typography.MeasureWrapped(caption, frameWidth, CaptionTextScale);
         var captionHeight = caption.Length > 0 ? captionTextHeight + 6f * scale : 0f;
         var stampRowHeight = caption.Length > 0 ? stamp.Height + 3f * scale : 0f;
         var forwardLabel = MeasureForwardLabel(message, scale);
@@ -2004,7 +1986,6 @@ internal sealed class ChatTranscript
             var ink = BubbleInk(mine, model);
             var captionTop = imageMax.Y + 4f * scale * fx.Pop;
             var captionLeft = scaledMin.X + padding * fx.Pop;
-            var captionMaxWidth = frameWidth * fx.Pop;
             if (captionLayout is not null)
             {
                 LinkText.Draw(drawList, captionLayout, new Vector2(captionLeft, captionTop), CaptionTextScale * fx.Pop,
@@ -2012,10 +1993,14 @@ internal sealed class ChatTranscript
             }
             else
             {
-                Marquee.DrawLeftAuto(new MarqueeId("chattranscript.caption.", message.Id), caption, captionLeft,
-                    captionTop, captionMaxWidth, new TextStyle(CaptionTextScale * fx.Pop, FontWeight.Regular),
-                    Palette.WithAlpha(ink, fx.Alpha));
+                using (Plugin.Fonts.Push(CaptionTextScale, FontWeight.Regular))
+                {
+                    drawList.AddText(ImGui.GetFont(), ImGui.GetFontSize() * fx.Pop,
+                        new Vector2(captionLeft, captionTop),
+                        ImGui.GetColorU32(Palette.WithAlpha(ink, ink.W * fx.Alpha)), caption, frameWidth * fx.Pop);
+                }
             }
+
             var timeColor = mine
                 ? new Vector4(1f, 1f, 1f, 0.72f)
                 : Palette.WithAlpha(model.MutedInk, 0.95f);

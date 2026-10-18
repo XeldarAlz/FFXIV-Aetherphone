@@ -15,7 +15,7 @@ using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Housing;
 
-internal sealed partial class HousingApp : IPhoneApp
+internal sealed partial class HousingApp : IResumableApp
 {
     private const int TabCount = 4;
     private const float BottomPad = 24f;
@@ -89,6 +89,11 @@ internal sealed partial class HousingApp : IPhoneApp
         activeTab = HousingTab.Overview;
         CloseOverlays();
         worldSearch = string.Empty;
+        OnResumed();
+    }
+
+    public void OnResumed()
+    {
         housing.SetForeground(true);
         housing.EnsureStarted();
         InvalidateCache();

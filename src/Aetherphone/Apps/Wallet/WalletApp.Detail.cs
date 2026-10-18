@@ -69,8 +69,8 @@ internal sealed partial class WalletApp
             ReserveTo(origin, width, cursorY + BottomPad * scale);
         }
 
-        AppHeader.EndLargeTitle(in navBar, context, "wallet.detail.nav", entry.Name, NavBarStyle.From(ui),
-            ReadOnlySpan<NavBarButton>.Empty, backTitle, back);
+        AppHeader.EndLargeTitle(in navBar, context, "wallet.detail.nav", entry.Name,
+            NavBarStyle.From(ui) with { KeepTitleEnding = true }, ReadOnlySpan<NavBarButton>.Empty, backTitle, back);
     }
 
     private float DrawDetailHero(ImDrawListPtr drawList, Vector2 origin, float width, WalletEntry entry, float scale)

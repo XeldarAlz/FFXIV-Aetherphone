@@ -318,8 +318,7 @@ internal sealed class NowWatchingWidget : IHomeWidget
         }
 
         var player = video.Player;
-        var paused = player.Progress.Paused || player.State != VideoPlaybackState.Playing;
-        var icon = upNext || paused && !sample ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause;
+        var icon = upNext || !player.Unpaused && !sample ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause;
         if (!WidgetControls.Button(context, ink, PlayControlId, center, diameter, icon, AppAccents.For(StreamAppId)))
         {
             return;
