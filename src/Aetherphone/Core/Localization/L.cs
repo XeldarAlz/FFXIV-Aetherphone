@@ -55,6 +55,7 @@ internal static class L
         public static readonly LocString NoPhotos = new("common.noPhotos", "No photos in your gallery yet");
         public static readonly LocString AddPhoto = new("common.addPhoto", "Add a photo");
         public static readonly LocString PasteImage = new("common.pasteImage", "Paste image");
+        public static readonly LocString PasteOrDropImage = new("common.pasteOrDropImage", "Or paste or drop an image here");
         public static readonly LocString PasteFailed = new("common.pasteFailed", "That image can't be pasted");
         public static readonly LocString GifTooLarge = new("common.gifTooLarge", "GIF is too large (max 4 MB)");
         public static readonly LocString GifRidesAlone = new("common.gifRidesAlone", "A GIF has to be posted on its own, without other photos.");

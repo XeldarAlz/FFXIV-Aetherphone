@@ -164,6 +164,7 @@
   "common.noPhotos": "Galerinde henüz fotoğraf yok",
   "common.addPhoto": "Fotoğraf ekle",
   "common.pasteImage": "Görseli yapıştır",
+  "common.pasteOrDropImage": "Ya da buraya bir görsel yapıştır veya bırak",
   "common.pasteFailed": "Bu görsel yapıştırılamıyor",
   "common.gifTooLarge": "GIF çok büyük (en fazla 4 MB)",
   "common.gifRidesAlone": "GIF tek başına paylaşılır, başka fotoğraflarla birleştirilemez.",
