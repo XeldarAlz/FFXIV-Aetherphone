@@ -30,7 +30,7 @@ internal sealed partial class DynamicIsland
     {
         if (swipedAway)
         {
-            if (shownKind != swipedKind)
+            if (shownKind != swipedKind || !SwipeableNow())
             {
                 ResetSwipe();
                 return;
