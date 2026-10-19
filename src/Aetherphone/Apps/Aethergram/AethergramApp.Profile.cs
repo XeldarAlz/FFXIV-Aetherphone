@@ -199,7 +199,7 @@ internal sealed partial class AethergramApp
             }
 
             DrawPostGrid(store.TaggedPosts, L.PhotoTag.NoTagged, store.HasMoreTagged, store.TaggedLoadingMore,
-                SquareGrid, PostSource.Tagged);
+                ProfileGrid, PostSource.Tagged);
         }
     }
 
@@ -531,7 +531,7 @@ internal sealed partial class AethergramApp
         if (posts.Length > 0 || !user.IsMe || store.ProfileLoading)
         {
             DrawPostGrid(posts, L.Aethergram.Empty, store.HasMoreProfilePosts, store.ProfileLoadingMore,
-                SquareGrid, PostSource.Profile);
+                ProfileGrid, PostSource.Profile);
             return;
         }
 

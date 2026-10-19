@@ -29,6 +29,7 @@ internal sealed partial class VelvetShell
     private const float ProfileActionHeight = Button.RegularHeight;
     private const float ProfileBottomPad = 14f;
     private const float ProfileGridGap = 1.5f;
+    private const float ProfileTileAspect = 4f / 3f;
     private const float ProfileTabUnderline = 2f;
     private const float ProfileAboutLead = 4f;
     private const int ProfileColumns = 3;
