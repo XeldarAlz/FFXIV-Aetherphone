@@ -22,17 +22,12 @@ internal sealed partial class PrismApp
     private const float InspectZoom = 2.2f;
     private const float InspectHoldSeconds = 0.18f;
     private const string MoreGlyph = "•••";
-    private const int JudgingCoins = 5;
-    private const int CoinBallotsPerWeek = 4;
-    private const int ViewedLooksForCoins = 3;
-    private const int ViewedMinimumMs = 600;
     private const int OutcomePending = 0;
     private const int OutcomeSent = 1;
     private const int OutcomeFailed = 2;
 
     private static readonly string[] Padded = BuildDigits("00");
     private static readonly string[] Plain = BuildDigits("0");
-    private static readonly string JudgingCoinText = "+" + Plain[JudgingCoins];
 
     private PrismStarDto[] stars = Array.Empty<PrismStarDto>();
     private PrismBallotDto? ratingBallot;
@@ -47,10 +42,12 @@ internal sealed partial class PrismApp
     private float inspectHold;
     private Vector2 inspectFocus;
     private Spring scoreFill = new(0f);
-    private int heatCoins;
+    private long heatCoins;
     private CachedText lookCounter;
     private CachedText heatTitle;
     private CachedText doneCounter;
+    private CachedText coinCounter;
+    private CachedText rewardText;
 
     private bool HeatInProgress => store.Ballot is { } ballot && ReferenceEquals(ratingBallot, ballot) &&
                                    lookIndex > 0 && lookIndex < stars.Length;
@@ -136,8 +133,9 @@ internal sealed partial class PrismApp
         var anchorTop = content.Max.Y - PrismArt.BottomMargin(scale) - labelLine;
         var rowBottom = anchorTop - Metrics.Space.Xs * scale;
         var row = new Rect(new Vector2(left, rowBottom - ScoreRowUnits * scale), new Vector2(left + width, rowBottom));
-        var failure = store.ActionFailed ? store.ActionFailureText : string.Empty;
-        var prompt = store.ActionFailed
+        var submitFailed = store.Failed(PrismAction.Submit);
+        var failure = submitFailed ? store.ActionFailureText : string.Empty;
+        var prompt = submitFailed
             ? failure.Length > 0 ? failure : Loc.T(L.Common.LoadFailedHint)
             : Loc.T(L.Prism.RateHint);
         var pixels = PrismType.Fit(prompt, PrismFace.Headline, width, QuestionUnits * scale,
@@ -247,22 +245,8 @@ internal sealed partial class PrismApp
         }
 
         ballotOutcome = OutcomePending;
-        heatCoins = EarnsJudgingCoins(store.Week?.BallotsCast ?? 0) ? JudgingCoins : 0;
+        heatCoins = 0;
         store.SubmitBallot(stars, ballotSettled);
-    }
-
-    private bool EarnsJudgingCoins(int ballotsBefore)
-    {
-        var viewed = 0;
-        for (var index = 0; index < stars.Length; index++)
-        {
-            if (stars[index].ViewedMs >= ViewedMinimumMs)
-            {
-                viewed++;
-            }
-        }
-
-        return viewed >= ViewedLooksForCoins && ballotsBefore < CoinBallotsPerWeek;
     }
 
     private void SettleBallot(bool succeeded)
@@ -281,6 +265,7 @@ internal sealed partial class PrismApp
         ballotOutcome = OutcomePending;
         if (outcome == OutcomeSent)
         {
+            heatCoins = store.LastBallotCoins;
             heatDone = true;
             UiFeedback.Play(heatCoins > 0 ? UiSound.Payout : UiSound.Success);
             Go(PrismScreen.Runway, 0);
@@ -292,7 +277,7 @@ internal sealed partial class PrismApp
 
     private void DrawBallotPending(ImDrawListPtr drawList, Rect content, float scale)
     {
-        if (store.Busy || !store.ActionFailed)
+        if (store.Busy || !store.Failed(PrismAction.Ballot))
         {
             DrawCenteredLabel(drawList, content, Loc.T(L.Common.Loading));
             return;
@@ -317,17 +302,32 @@ internal sealed partial class PrismApp
         PrismMotion.Rise(drawList, notice, PrismMotion.At(screenAge, DoneTextDelay, Motion.PageSettle),
             PrismMotion.RiseUnits * scale);
         var gutter = PrismArt.Gutter(scale);
-        var count = heatCoins > 0 ? JudgingCoinText : DoneCounter(stars.Length);
-        var pixels = PrismType.Fit(count, PrismFace.Numerals, content.Width - gutter * 2f,
-            DoneNumeralUnits * scale, DoneNumeralMinUnits * scale, 1, out _);
+        var width = content.Width - gutter * 2f;
+        var count = heatCoins > 0 ? CoinCounter(heatCoins) : DoneCounter(stars.Length);
+        var pixels = PrismType.Fit(count, PrismFace.Numerals, width, DoneNumeralUnits * scale,
+            DoneNumeralMinUnits * scale, 1, out _);
         var reveal = PrismMotion.At(screenAge, 0f, Motion.Sheet);
-        DrawWipe(drawList, new Vector2(content.Min.X + gutter, top), count, PrismFace.Numerals, pixels, reveal,
-            PrismArt.Fore);
+        var left = content.Min.X + gutter;
+        DrawWipe(drawList, new Vector2(left, top), count, PrismFace.Numerals, pixels, reveal, PrismArt.Fore);
+        var cursor = top + PrismType.Snap(PrismFace.Numerals, pixels);
         if (heatCoins > 0)
         {
-            DrawWipe(drawList, new Vector2(content.Min.X + gutter, top + PrismType.Snap(PrismFace.Numerals, pixels)),
-                Loc.T(L.Prism.JudgingCoinLabel), PrismFace.Label, PrismArt.LabelPixels(), reveal, PrismArt.Muted);
+            var labelPixels = PrismArt.LabelPixels();
+            DrawWipe(drawList, new Vector2(left, cursor), Loc.T(L.Prism.JudgingCoinLabel), PrismFace.Label,
+                labelPixels, reveal, PrismArt.Muted);
+            cursor += PrismType.LineHeight(PrismFace.Label, labelPixels);
         }
+
+        var reward = RewardLine(store.Week?.JudgeReward);
+        if (reward.Length > 0)
+        {
+            var rewardMark = PrismMotion.Mark(drawList);
+            Typography.DrawWrappedLeft(new Vector2(left, cursor + Metrics.Space.Sm * scale), reward, PrismArt.Muted,
+                TextStyles.Subheadline, width);
+            PrismMotion.Rise(drawList, rewardMark, PrismMotion.At(screenAge, DoneTextDelay, Motion.PageSettle),
+                PrismMotion.RiseUnits * scale);
+        }
+
         var strip = PrismMotion.Mark(drawList);
         if (canJudge && PrismArt.Strip(drawList, StripRect(content, scale, 1), Loc.T(L.Prism.JudgeAnother),
                 "→", true))
@@ -364,6 +364,36 @@ internal sealed partial class PrismApp
             ? lookCounter.Value
             : lookCounter.Store(key, Loc.T(L.Prism.LookCount, Plain[Math.Min(current, Plain.Length - 1)],
                 Plain[Math.Min(total, Plain.Length - 1)]));
+    }
+
+    private string CoinCounter(long coins)
+    {
+        var key = HashCode.Combine(coins, Loc.Current.Code);
+        return coinCounter.IsCurrent(key)
+            ? coinCounter.Value
+            : coinCounter.Store(key, string.Concat("+", coins.ToString("N0", Loc.Culture)));
+    }
+
+    private string RewardLine(PrismJudgeRewardDto? reward)
+    {
+        var line = PrismRewards.LineFor(reward);
+        var amount = reward?.Amount ?? 0;
+        var left = reward?.LeftThisWeek ?? 0;
+        var key = HashCode.Combine(line, amount, left, Loc.Current.Code);
+        if (rewardText.IsCurrent(key))
+        {
+            return rewardText.Value;
+        }
+
+        var coins = amount.ToString("N0", Loc.Culture);
+        var text = line switch
+        {
+            PrismRewardLine.Each => Loc.T(L.Prism.JudgeRewardEach, coins),
+            PrismRewardLine.Left => Loc.T(L.Prism.JudgeRewardLeft, coins, left.ToString("N0", Loc.Culture)),
+            PrismRewardLine.Spent => Loc.T(L.Prism.JudgeRewardSpent),
+            _ => string.Empty,
+        };
+        return rewardText.Store(key, text);
     }
 
     private string DoneCounter(int total)

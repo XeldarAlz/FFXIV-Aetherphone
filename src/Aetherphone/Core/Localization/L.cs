@@ -10737,6 +10737,9 @@ internal static class L
         public static readonly LocString GuideRevealTitle = new("prism.guideRevealTitle", "The reveal");
         public static readonly LocString GuideRevealBody = new("prism.guideRevealBody",
             "Results play out as a countdown to first place. The podium and active judges earn Aether Coin.");
+        public static readonly LocString JudgeRewardEach = new("prism.judgeRewardEach", "+{0} Aether Coin for every heat you judge");
+        public static readonly LocString JudgeRewardLeft = new("prism.judgeRewardLeft", "+{0} Aether Coin a heat, {1} left this week");
+        public static readonly LocString JudgeRewardSpent = new("prism.judgeRewardSpent", "No judging Aether Coin left this week");
     }
 
     internal static class Announcements
@@ -10841,6 +10844,16 @@ internal static class L
         public static readonly LocString RuleGramHint = new("coin.ruleGramHint", "A gram that stays up for an hour, once a week");
         public static readonly LocString RuleStoryHint = new("coin.ruleStoryHint", "A story that runs its full day without being taken down, once a week");
         public static readonly LocString RuleCommentHint = new("coin.ruleCommentHint", "A comment on someone else's post that stays up for an hour, once a week");
+        public static readonly LocString RulePrismJudge = new("coin.rulePrismJudge", "Prism judging");
+        public static readonly LocString RulePrismHeatFirst = new("coin.rulePrismHeatFirst", "Prism heat, 1st place");
+        public static readonly LocString RulePrismHeatSecond = new("coin.rulePrismHeatSecond", "Prism heat, 2nd place");
+        public static readonly LocString RulePrismHeatThird = new("coin.rulePrismHeatThird", "Prism heat, 3rd place");
+        public static readonly LocString RulePrismFinalFirst = new("coin.rulePrismFinalFirst", "Prism final, 1st place");
+        public static readonly LocString RulePrismFinalSecond = new("coin.rulePrismFinalSecond", "Prism final, 2nd place");
+        public static readonly LocString RulePrismFinalThird = new("coin.rulePrismFinalThird", "Prism final, 3rd place");
+        public static readonly LocString RulePrismJudgeHint = new("coin.rulePrismJudgeHint", "Score every look in a Prism heat or the final");
+        public static readonly LocString RulePrismHeatHint = new("coin.rulePrismHeatHint", "Finish in the top three of your Prism heat");
+        public static readonly LocString RulePrismFinalHint = new("coin.rulePrismFinalHint", "Finish in the top three of the Prism final");
         public static readonly LocString EarnHeader = new("coin.earnHeader", "How to earn");
         public static readonly LocString SessionTooShort = new("coin.sessionTooShort", "Played too short to pay");
         public static readonly LocString HistoryEmptyTitle = new("coin.historyEmptyTitle", "Nothing earned yet");

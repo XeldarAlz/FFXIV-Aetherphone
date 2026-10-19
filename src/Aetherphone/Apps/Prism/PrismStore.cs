@@ -26,6 +26,15 @@ internal static class PrismPhases
     public static bool Judgeable(string phase) => phase is Judging or Final;
 }
 
+internal enum PrismAction : byte
+{
+    None,
+    Enter,
+    Withdraw,
+    Ballot,
+    Submit,
+}
+
 internal sealed class PrismStore : IDisposable
 {
     private const int EntryBaseSize = 1080;
@@ -46,7 +55,8 @@ internal sealed class PrismStore : IDisposable
     private volatile bool loadedOnce;
     private volatile bool weekFailed;
     private volatile bool busy;
-    private volatile bool actionFailed;
+    private volatile PrismAction failedAction;
+    private long lastBallotCoins;
 
     public PrismStore(AethernetSession session, AethernetApi api)
     {
@@ -78,9 +88,11 @@ internal sealed class PrismStore : IDisposable
 
     public bool Busy => busy;
 
-    public bool ActionFailed => actionFailed;
-
     public string ActionFailureText => actionFailure.Text();
+
+    public long LastBallotCoins => Interlocked.Read(ref lastBallotCoins);
+
+    public bool Failed(PrismAction action) => failedAction == action && action != PrismAction.None;
 
     public void Refresh()
     {
@@ -143,7 +155,7 @@ internal sealed class PrismStore : IDisposable
             if (upload is null || !await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, baked.ContentType,
                     token, received => failure = received).ConfigureAwait(false))
             {
-                return Fail(failure);
+                return Fail(PrismAction.Enter, failure);
             }
 
             var request = new PrismEntryRequest(upload.Key, baked.Width, baked.Height);
@@ -151,7 +163,7 @@ internal sealed class PrismStore : IDisposable
                 .ConfigureAwait(false);
             if (entry is null)
             {
-                return Fail(failure);
+                return Fail(PrismAction.Enter, failure);
             }
 
             week = current with { MyEntry = entry };
@@ -171,7 +183,7 @@ internal sealed class PrismStore : IDisposable
             var failure = AepFailure.None;
             if (!await client.WithdrawAsync(current.Id, token, received => failure = received).ConfigureAwait(false))
             {
-                return Fail(failure);
+                return Fail(PrismAction.Withdraw, failure);
             }
 
             week = current with { MyEntry = null };
@@ -193,7 +205,7 @@ internal sealed class PrismStore : IDisposable
                 .ConfigureAwait(false);
             if (fetched is null)
             {
-                return Fail(failure);
+                return Fail(PrismAction.Ballot, failure);
             }
 
             ballot = fetched;
@@ -208,6 +220,7 @@ internal sealed class PrismStore : IDisposable
             return;
         }
 
+        Interlocked.Exchange(ref lastBallotCoins, 0);
         work.Run("submit ballot", async token =>
         {
             var failure = AepFailure.None;
@@ -215,9 +228,10 @@ internal sealed class PrismStore : IDisposable
                 received => failure = received).ConfigureAwait(false);
             if (updated is null)
             {
-                return Fail(failure);
+                return Fail(PrismAction.Submit, failure);
             }
 
+            Interlocked.Exchange(ref lastBallotCoins, Math.Max(0, updated.BallotCoins));
             week = updated;
             ballot = null;
             return true;
@@ -242,9 +256,20 @@ internal sealed class PrismStore : IDisposable
         }
 
         busy = true;
-        actionFailed = false;
+        failedAction = PrismAction.None;
         actionFailure.Clear();
         return true;
+    }
+
+    public void ClearFailure()
+    {
+        if (busy)
+        {
+            return;
+        }
+
+        failedAction = PrismAction.None;
+        actionFailure.Clear();
     }
 
     private void EndAction()
@@ -252,10 +277,10 @@ internal sealed class PrismStore : IDisposable
         busy = false;
     }
 
-    private bool Fail(AepFailure failure)
+    private bool Fail(PrismAction action, AepFailure failure)
     {
         actionFailure.Set(failure.Failed ? failure : AepFailure.Transport(AepFailureKind.Offline));
-        actionFailed = true;
+        failedAction = action;
         return false;
     }
 

@@ -8,6 +8,13 @@ internal sealed record PrismEntryDto(
     string Status = "",
     string RejectReason = "");
 
+internal sealed record PrismJudgeRewardDto(
+    long Amount = 0,
+    int PerWeek = 0,
+    int LeftThisWeek = 0,
+    int MinLooks = 0,
+    int MinViewedMs = 0);
+
 internal sealed record PrismWeekDto(
     string Id = "",
     string Title = "",
@@ -21,7 +28,9 @@ internal sealed record PrismWeekDto(
     int BallotsCast = 0,
     string PreviousWeekId = "",
     int Issue = 0,
-    int EntryCount = 0);
+    int EntryCount = 0,
+    PrismJudgeRewardDto? JudgeReward = null,
+    long BallotCoins = 0);
 
 internal sealed record PrismEntryRequest(string MediaKey, int Width, int Height);
 

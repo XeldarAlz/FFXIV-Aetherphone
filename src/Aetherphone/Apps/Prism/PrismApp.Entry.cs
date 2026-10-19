@@ -38,8 +38,9 @@ internal sealed partial class PrismApp
         var actionsTop = done.Min.Y;
         var pixels = PrismType.Fit(Loc.T(StatusTitle(entry.Status)), PrismFace.Headline, width,
             StatusMaxUnits * scale, StatusMinUnits * scale, 2, out var lines);
-        var failure = store.ActionFailed && !store.Busy ? store.ActionFailureText : string.Empty;
-        var hint = store.ActionFailed && !store.Busy
+        var entryFailed = !store.Busy && (store.Failed(PrismAction.Enter) || store.Failed(PrismAction.Withdraw));
+        var failure = entryFailed ? store.ActionFailureText : string.Empty;
+        var hint = entryFailed
             ? failure.Length > 0 ? failure : Loc.T(L.Common.LoadFailedHint)
             : entry.Status == PrismPhases.StatusRejected
                 ? entry.RejectReason

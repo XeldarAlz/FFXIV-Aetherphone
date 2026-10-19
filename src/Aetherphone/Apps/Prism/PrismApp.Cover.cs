@@ -151,21 +151,21 @@ internal sealed partial class PrismApp
         var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var statPixels = StatUnits * scale;
         var statHeight = Metrics.Space.Md * scale + labelLine + PrismType.LineHeight(PrismFace.Headline, statPixels);
-        var pixels = PrismType.Fit(PrismType.Title(week.Title), PrismFace.Headline, width, HeadlineMaxUnits * scale,
+        var pixels = PrismType.Fit(week.Title, PrismFace.Headline, width, HeadlineMaxUnits * scale,
             HeadlineMinUnits * scale, HeadlineLines, out var lines);
         var headlineLine = PrismType.LineHeight(PrismFace.Headline, pixels);
         var eyebrowGap = Metrics.Space.Xs * scale;
         var bottom = (strips > 0 ? StripRect(content, scale, strips - 1).Min.Y : content.Max.Y - PrismArt.BottomMargin(scale)) -
                      Metrics.Space.Xl * scale;
         var top = bottom - statHeight - Metrics.Space.Xl * scale - lines.Length * headlineLine -
-                  eyebrowGap - labelPixels;
+                  eyebrowGap - labelLine;
         var left = content.Min.X + gutter;
         var step = 0;
         var mark = PrismMotion.Mark(drawList);
         PrismType.Draw(drawList, new Vector2(left, top), Loc.T(L.Prism.ThemeLabel), PrismArt.Muted,
             PrismFace.Label, labelPixels);
         RiseStep(drawList, mark, step++, scale);
-        top += labelPixels + eyebrowGap;
+        top += labelLine + eyebrowGap;
         for (var index = 0; index < lines.Length; index++)
         {
             mark = PrismMotion.Mark(drawList);

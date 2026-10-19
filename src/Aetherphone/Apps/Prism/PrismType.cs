@@ -1,5 +1,4 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -22,8 +21,6 @@ internal static class PrismType
     private const float BalanceFloor = 0.5f;
     private const int BalanceSteps = 10;
 
-    private static readonly Dictionary<string, string> TitleCache = new(StringComparer.Ordinal);
-    private static string titleLanguage = string.Empty;
     private static readonly Dictionary<WrapKey, string[]> WrapCache = new();
     private static readonly List<string> Scratch = new();
     private static readonly Dictionary<BalanceKey, float> BalanceCache = new();
@@ -31,29 +28,6 @@ internal static class PrismType
     private readonly record struct WrapKey(string Text, PrismFace Face, int Pixels, int Width);
 
     private readonly record struct BalanceKey(string Text, float Scale, FontWeight Weight, int Width);
-
-    public static string Title(string text)
-    {
-        if (!string.Equals(titleLanguage, Loc.Current.Code, StringComparison.Ordinal))
-        {
-            TitleCache.Clear();
-            titleLanguage = Loc.Current.Code;
-        }
-
-        if (TitleCache.TryGetValue(text, out var cached))
-        {
-            return cached;
-        }
-
-        if (TitleCache.Count >= CacheLimit)
-        {
-            TitleCache.Clear();
-        }
-
-        var title = Loc.Culture.TextInfo.ToTitleCase(text);
-        TitleCache[text] = title;
-        return title;
-    }
 
     public static float Snap(PrismFace face, float pixels) =>
         Tier(face, pixels) * UiBuilder.DefaultFontSizePx * UiScale.Current * Plugin.Fonts.Zoom;

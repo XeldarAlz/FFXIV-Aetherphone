@@ -1,7 +1,10 @@
 using System.Text.Json;
+using Aetherphone.Apps.Prism;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Coins;
+using Aetherphone.Core.Localization;
 using Xunit;
 
 namespace Aetherphone.Tests;
@@ -53,6 +56,61 @@ public sealed class PrismWireContractTests
         Assert.Equal(0, week.BallotsCast);
         Assert.Equal(0, week.Issue);
         Assert.Equal(0, week.EntryCount);
+        Assert.Null(week.JudgeReward);
+        Assert.Equal(0, week.BallotCoins);
+    }
+
+    [Fact]
+    public void WeekCarriesTheLiveJudgeRewardAndWhatTheBallotEarned()
+    {
+        const string json = "{\"id\":\"w_1\",\"phase\":\"judging\",\"ballotsCast\":1,"
+            + "\"judgeReward\":{\"amount\":8,\"perWeek\":2,\"leftThisWeek\":1,\"minLooks\":3,\"minViewedMs\":600},"
+            + "\"ballotCoins\":8}";
+        var week = JsonSerializer.Deserialize(json, AethernetJsonContext.Default.PrismWeekDto);
+
+        Assert.NotNull(week);
+        Assert.NotNull(week.JudgeReward);
+        Assert.Equal(8, week.JudgeReward.Amount);
+        Assert.Equal(2, week.JudgeReward.PerWeek);
+        Assert.Equal(1, week.JudgeReward.LeftThisWeek);
+        Assert.Equal(3, week.JudgeReward.MinLooks);
+        Assert.Equal(600, week.JudgeReward.MinViewedMs);
+        Assert.Equal(8, week.BallotCoins);
+    }
+
+    [Fact]
+    public void AnUnlimitedRewardReadsAsEachHeat()
+    {
+        var week = JsonSerializer.Deserialize(
+            "{\"id\":\"w_1\",\"judgeReward\":{\"amount\":5,\"perWeek\":0,\"leftThisWeek\":-1}}",
+            AethernetJsonContext.Default.PrismWeekDto);
+
+        Assert.NotNull(week);
+        Assert.Equal(PrismRewardLine.Each, PrismRewards.LineFor(week.JudgeReward));
+    }
+
+    [Fact]
+    public void TheRewardLineFollowsWhatTheServerSends()
+    {
+        Assert.Equal(PrismRewardLine.Hidden, PrismRewards.LineFor(null));
+        Assert.Equal(PrismRewardLine.Hidden, PrismRewards.LineFor(new PrismJudgeRewardDto(0, 4, 4)));
+        Assert.Equal(PrismRewardLine.Left, PrismRewards.LineFor(new PrismJudgeRewardDto(5, 4, 3)));
+        Assert.Equal(PrismRewardLine.Spent, PrismRewards.LineFor(new PrismJudgeRewardDto(5, 4, 0)));
+        Assert.Equal(PrismRewardLine.Each, PrismRewards.LineFor(new PrismJudgeRewardDto(5, 0, -1)));
+    }
+
+    [Theory]
+    [InlineData("prism.judge")]
+    [InlineData("prism.heat.first")]
+    [InlineData("prism.heat.second")]
+    [InlineData("prism.heat.third")]
+    [InlineData("prism.final.first")]
+    [InlineData("prism.final.second")]
+    [InlineData("prism.final.third")]
+    public void PrismPayoutsHaveTheirOwnCoinLabelAndHint(string ruleId)
+    {
+        Assert.NotEqual(L.Coin.RuleGeneric.Key, CoinRuleLabels.For(ruleId).Key);
+        Assert.True(CoinRuleLabels.TryHint(ruleId, out _));
     }
 
     [Fact]

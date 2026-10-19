@@ -180,7 +180,7 @@ internal sealed partial class PrismApp
         else
         {
             var note = PrismMotion.Mark(drawList);
-            DrawNotice(drawList, content, PrismType.Title(results.Title), CountLine(results.EntryCount), scale, 2);
+            DrawNotice(drawList, content, results.Title, CountLine(results.EntryCount), scale, 2);
             PrismMotion.Rise(drawList, note, PrismMotion.At(screenAge, PrintDelay, Motion.PageSettle),
                 PrismMotion.RiseUnits * scale);
         }
@@ -262,7 +262,7 @@ internal sealed partial class PrismApp
             creditTop), world, PrismFace.Label, labelPixels, credit, PrismArt.Fore);
         var pixels = RevealNumeralUnits * scale;
         var numeral = Plain[Math.Clamp(placing.Rank, 0, Plain.Length - 1)];
-        var numeralTop = creditTop - Metrics.Space.Lg * scale - pixels;
+        var numeralTop = creditTop - Metrics.Space.Lg * scale - PrismType.Snap(PrismFace.Numerals, pixels);
         DrawWipe(drawList, new Vector2(content.Min.X + gutter, numeralTop), numeral, PrismFace.Numerals, pixels,
             PrismMotion.At(screenAge, NumeralDelay, Motion.PageSettle), PrismArt.Fore);
         DrawWipe(drawList, new Vector2(content.Min.X + gutter, numeralTop - labelLine), Loc.T(L.Prism.PlaceLabel),
@@ -311,7 +311,7 @@ internal sealed partial class PrismApp
         var width = ScrollLayout.StableContentWidth() - gutter * 2f;
         var left = origin.X + gutter;
         var cursor = origin.Y;
-        cursor = DrawSectionTitle(list, left, cursor, width, PrismType.Title(results.Title), scale);
+        cursor = DrawSectionTitle(list, left, cursor, width, results.Title, scale);
         if (finalOrder.Count > 0)
         {
             cursor = DrawPodium(list, left, cursor, width, scale);

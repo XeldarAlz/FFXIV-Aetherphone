@@ -176,6 +176,11 @@ internal sealed partial class PrismApp : IResumableApp
 
     private void Go(PrismScreen next, int direction = 1)
     {
+        if (next != screen)
+        {
+            store.ClearFailure();
+        }
+
         screen = next;
         enterDirection = direction;
         screenAge = 0f;

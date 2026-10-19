@@ -44,7 +44,7 @@ internal sealed partial class PrismApp
         pickIntake.AcceptDrop(content, library, PrismArt.Fore);
         var week = store.Week;
         var top = DrawHeader(drawList, content, string.Empty,
-            week is null ? Loc.T(L.Prism.EnterLook) : PrismType.Title(week.Title), true, scale);
+            week is null ? Loc.T(L.Prism.EnterLook) : week.Title, true, scale);
         if (week is { Brief.Length: > 0 })
         {
             var gutter = PrismArt.Gutter(scale);
@@ -68,7 +68,7 @@ internal sealed partial class PrismApp
         }
 
         var gridBottom = strip.Min.Y - Metrics.Space.Lg * scale;
-        if (store.ActionFailed && !store.Busy)
+        if (store.Failed(PrismAction.Enter) && !store.Busy)
         {
             var reason = store.ActionFailureText;
             var text = reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint);

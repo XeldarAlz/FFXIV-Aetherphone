@@ -30,6 +30,13 @@ internal static class CoinRuleLabels
         [Casino.CasinoLedgerRules.CashOut] = L.Coin.RuleCasinoCashOut,
         [Casino.CasinoLedgerRules.Refund] = L.Coin.RuleCasinoRefund,
         [Casino.CasinoLedgerRules.Daily] = L.Coin.RuleCasinoDaily,
+        ["prism.judge"] = L.Coin.RulePrismJudge,
+        ["prism.heat.first"] = L.Coin.RulePrismHeatFirst,
+        ["prism.heat.second"] = L.Coin.RulePrismHeatSecond,
+        ["prism.heat.third"] = L.Coin.RulePrismHeatThird,
+        ["prism.final.first"] = L.Coin.RulePrismFinalFirst,
+        ["prism.final.second"] = L.Coin.RulePrismFinalSecond,
+        ["prism.final.third"] = L.Coin.RulePrismFinalThird,
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
     private static readonly FrozenDictionary<string, LocString> Hints = new Dictionary<string, LocString>
@@ -50,6 +57,13 @@ internal static class CoinRuleLabels
         ["comment.daily"] = L.Coin.RuleCommentsDailyHint,
         ["quest.daily"] = L.Coin.RuleQuestHint,
         [Casino.CasinoLedgerRules.Daily] = L.Coin.RuleCasinoDailyHint,
+        ["prism.judge"] = L.Coin.RulePrismJudgeHint,
+        ["prism.heat.first"] = L.Coin.RulePrismHeatHint,
+        ["prism.heat.second"] = L.Coin.RulePrismHeatHint,
+        ["prism.heat.third"] = L.Coin.RulePrismHeatHint,
+        ["prism.final.first"] = L.Coin.RulePrismFinalHint,
+        ["prism.final.second"] = L.Coin.RulePrismFinalHint,
+        ["prism.final.third"] = L.Coin.RulePrismFinalHint,
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
     public static LocString For(string ruleId)
