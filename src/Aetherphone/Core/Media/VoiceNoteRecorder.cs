@@ -10,10 +10,13 @@ internal sealed class VoiceNoteRecorder : IDisposable
     private const int SampleRate = 16000;
     private const int BytesPerSecond = SampleRate * 2;
     private const int MaxBytes = BytesPerSecond * MaxSeconds;
+    private const int BufferMilliseconds = 50;
+    private const int BlockSamples = SampleRate * BufferMilliseconds / 1000;
+    private const float NoGate = 0f;
 
     private static float carriedGain = 1f;
     private readonly object gate = new();
-    private readonly AutoGain autoGain = new();
+    private readonly AutoGain autoGain = new(NoGate);
     private bool autoGainEnabled;
     private MemoryStream? buffer;
     private WaveInEvent? waveIn;
@@ -47,7 +50,7 @@ internal sealed class VoiceNoteRecorder : IDisposable
             {
                 DeviceNumber = input.Device,
                 WaveFormat = new WaveFormat(SampleRate, 16, 1),
-                BufferMilliseconds = 50,
+                BufferMilliseconds = BufferMilliseconds,
                 NumberOfBuffers = 4,
             };
             capture.DataAvailable += OnData;
@@ -80,6 +83,11 @@ internal sealed class VoiceNoteRecorder : IDisposable
         {
             pcm = buffer?.ToArray() ?? Array.Empty<byte>();
             buffer = null;
+            if (autoGainEnabled)
+            {
+                autoGain.Level(MemoryMarshal.Cast<byte, short>(pcm.AsSpan(0, pcm.Length & ~1)), SampleRate, BlockSamples);
+            }
+
             CarryGain();
         }
 
@@ -151,8 +159,13 @@ internal sealed class VoiceNoteRecorder : IDisposable
             }
 
             var pcm = MemoryMarshal.Cast<byte, short>(args.Buffer.AsSpan(0, args.BytesRecorded & ~1));
-            autoGain.Process(pcm, AutoGain.Rms(pcm), SampleRate, 1f, autoGainEnabled);
             rms = AutoGain.Rms(pcm);
+            if (autoGainEnabled)
+            {
+                autoGain.Observe(rms, pcm.Length, SampleRate);
+                rms *= autoGain.Gain;
+            }
+
             var count = (int)Math.Min(args.BytesRecorded, MaxBytes - buffer.Length);
             buffer.Write(args.Buffer, 0, count);
         }

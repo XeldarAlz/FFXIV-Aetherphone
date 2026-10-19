@@ -385,11 +385,8 @@ internal sealed class NameplateTitleService : IDisposable
                 return Compose(status, NameplateValues.Empty with { Code = PartyCode.Display(party.RoomCode) });
             case NameplateStatus.Jam when jam.IsHost && jam.DisplayCode.Length > 0:
                 return Compose(status, NameplateValues.Empty with { Code = jam.DisplayCode, Name = jam.Title });
-            case NameplateStatus.RadioOnAir when radioRooms.Room is { IsDj: true, IsLive: true }:
-                return Compose(status, NameplateValues.Empty with
-                {
-                    Station = playback.RadioActive ? playback.Radio.CurrentStation : string.Empty,
-                });
+            case NameplateStatus.RadioOnAir when radioRooms.Room is { IsDj: true, IsLive: true } room:
+                return Compose(status, NameplateValues.Empty with { Station = room.StationName });
             case NameplateStatus.Muster when HostedMusterLive() is { } muster:
                 return Compose(status, NameplateValues.Empty with
                 {

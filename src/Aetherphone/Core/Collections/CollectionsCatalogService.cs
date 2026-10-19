@@ -552,7 +552,8 @@ internal sealed class CollectionsCatalogService : IDisposable
             total++;
             if (unlockState.IsGlassesUnlocked(row))
             {
-                ids.Add((int)row.RowId);
+                // FFXIVCollect numbers facewear by GlassesStyle row id plus one, not by Glasses row id.
+                ids.Add((int)row.Style.RowId + 1);
             }
         }
 

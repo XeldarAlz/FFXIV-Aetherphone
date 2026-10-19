@@ -16,10 +16,16 @@ internal sealed class AutoGain
     private const float QuietestNoise = NoiseFloorRms / SpeechOverNoise;
     private const float OnsetSeconds = 0.06f;
     private const float SampleScale = 1f / 32768f;
+    private readonly float gateOpenRms;
     private float gain = 1f;
     private float noise = NoiseFloorRms;
     private float voicedSeconds;
     private float appliedGain = float.NaN;
+
+    public AutoGain(float gateOpenRms = AudioCapture.GateOpenRms)
+    {
+        this.gateOpenRms = gateOpenRms;
+    }
 
     public float Gain => gain;
 
@@ -55,6 +61,31 @@ internal sealed class AutoGain
         Apply(pcm, fromGain, outputGain);
     }
 
+    public void Observe(float rawRms, int samples, int sampleRate)
+    {
+        if (samples <= 0 || sampleRate <= 0)
+        {
+            return;
+        }
+
+        Adapt(rawRms, rawRms, samples / (float)sampleRate);
+    }
+
+    public void Level(Span<short> pcm, int sampleRate, int blockSamples)
+    {
+        if (blockSamples <= 0)
+        {
+            return;
+        }
+
+        Reset(gain);
+        for (var start = 0; start < pcm.Length; start += blockSamples)
+        {
+            var block = pcm.Slice(start, Math.Min(blockSamples, pcm.Length - start));
+            Process(block, Rms(block), sampleRate, 1f, true);
+        }
+    }
+
     public static float Rms(ReadOnlySpan<short> pcm)
     {
         if (pcm.IsEmpty)
@@ -75,7 +106,7 @@ internal sealed class AutoGain
     private void Adapt(float rms, float gateLevel, float seconds)
     {
         TrackNoise(rms, seconds);
-        if (gateLevel < AudioCapture.GateOpenRms)
+        if (gateLevel < gateOpenRms)
         {
             voicedSeconds = 0f;
             return;

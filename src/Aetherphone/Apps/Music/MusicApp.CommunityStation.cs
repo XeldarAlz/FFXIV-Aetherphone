@@ -21,7 +21,6 @@ internal sealed partial class MusicApp
     private const float StationPlayRadius = 26f;
     private const float OnAirCardHeight = 52f;
     private const float StageFollowHeight = 30f;
-    private const float StageHostRadius = 10f;
     private const float StageStripHeight = 46f;
     private const float SegmentRowHeight = 40f;
     private const int TwitchLinkKind = 0;
@@ -30,6 +29,9 @@ internal sealed partial class MusicApp
     private const float TrackRowHeight = 44f;
     private const float TrackSquareSize = 26f;
     private const double TrackStampRefreshSeconds = 30.0;
+
+    private static readonly TextStyle StageHostCaptionStyle = TextStyles.Caption2;
+    private static readonly TextStyle StageHostNameStyle = TextStyles.Caption1;
 
     private static readonly string[] LinkLabels =
     {
@@ -45,8 +47,7 @@ internal sealed partial class MusicApp
     private readonly string[] hostSegments = new string[4];
     private readonly RadioStationText stageText = new();
     private readonly RadioCountLabel stageLiveLabel = new();
-    private readonly RadioCountLabel stageHostLabel = new();
-    private readonly RadioFittedText stageHostFit = new();
+    private readonly RadioFittedText stageHostCaptionFit = new();
     private readonly RadioFittedText stageStatusFit = new();
     private readonly RadioFittedText stageCaptionFit = new();
     private readonly RadioWrappedText aboutScheduleText = new();
@@ -100,7 +101,7 @@ internal sealed partial class MusicApp
         }
 
         community.EnsureTracks(station.Id);
-        VisitStationRoom(station.Id);
+        VisitStationRoom(station);
         var body = frame.Body;
         var stageBottom = DrawStationStage(body, station, scale);
         var inset = Metrics.Space.Lg * scale;
@@ -204,20 +205,22 @@ internal sealed partial class MusicApp
         }
 
         var hostTop = top + pillHeight + Metrics.Space.Xs * scale;
-        DrawHost(drawList, station, infoLeft, hostTop, infoWidth, scale);
-        DrawStageFollow(station, new Vector2(infoLeft, artMax.Y - StageFollowHeight * scale), infoWidth, live, scale);
+        var hostBottom = DrawHost(drawList, station, infoLeft, hostTop, infoWidth, scale);
+        var followTop = RadioStageLayout.FollowTop(artMax.Y, StageFollowHeight * scale, hostBottom,
+            Metrics.Space.Xs * scale);
+        var followBottom = DrawStageFollow(station, new Vector2(infoLeft, followTop), infoWidth, live, scale);
         DrawStagePlay(station, playCenter, radius, live);
-        return DrawStageStrip(new Rect(new Vector2(body.Min.X + inset, artMax.Y + Metrics.Space.Md * scale),
-            new Vector2(body.Max.X - inset, artMax.Y + Metrics.Space.Md * scale + StageStripHeight * scale)), station,
-            live, scale);
+        var stripTop = RadioStageLayout.ColumnBottom(artMax.Y, hostBottom, followBottom) + Metrics.Space.Md * scale;
+        return DrawStageStrip(new Rect(new Vector2(body.Min.X + inset, stripTop),
+            new Vector2(body.Max.X - inset, stripTop + StageStripHeight * scale)), station, live, scale);
     }
 
-    private void DrawStageFollow(CommunityStationDto station, Vector2 origin, float maxWidth, bool live, float scale)
+    private float DrawStageFollow(CommunityStationDto station, Vector2 origin, float maxWidth, bool live, float scale)
     {
         var owned = community.Mine is { } mine && string.Equals(mine.Station.Id, station.Id, StringComparison.Ordinal);
         if (owned)
         {
-            return;
+            return 0f;
         }
 
         var label = station.IsFollowing
@@ -233,6 +236,8 @@ internal sealed partial class MusicApp
         {
             community.ToggleFollow(station);
         }
+
+        return rect.Max.Y;
     }
 
     private void DrawStagePlay(CommunityStationDto station, Vector2 center, float radius, bool live)
@@ -385,20 +390,19 @@ internal sealed partial class MusicApp
         return hostDisplay;
     }
 
-    private void DrawHost(ImDrawListPtr drawList, CommunityStationDto station, float left, float top, float width,
+    private float DrawHost(ImDrawListPtr drawList, CommunityStationDto station, float left, float top, float width,
         float scale)
     {
         var display = HostDisplay(station);
         if (display.Length == 0)
         {
-            return;
+            return top;
         }
 
-        var label = stageHostLabel.Format(L.Music.HostedBy, display);
-        var radius = StageHostRadius * scale;
-        var gap = 7f * scale;
-        var available = MathF.Max(1f, width - radius * 2f - gap);
-        var fitted = stageHostFit.Fit(label, available, TextStyles.Caption1);
+        var captionHeight = Typography.LineHeight(StageHostCaptionStyle);
+        var radius = (captionHeight + Typography.LineHeight(StageHostNameStyle)) * 0.5f;
+        var textLeft = left + radius * 2f + Metrics.Space.Sm * scale;
+        var available = MathF.Max(1f, left + width - textLeft);
         var center = new Vector2(left + radius, top + radius);
         if (station.OwnerAvatarUrl.Length > 0 && images.Sized(station.OwnerAvatarUrl, radius * 2f) is { } avatar)
         {
@@ -411,9 +415,11 @@ internal sealed partial class MusicApp
             drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(ui.FieldSurface), 24);
         }
 
-        UserName.DrawAuto(drawList, "music.station.host", fitted, station.OwnerBadges, station.OwnerBadgeIds,
-            left + radius * 2f + gap, top + radius - Typography.LineHeight(TextStyles.Caption1) * 0.5f,
-            available, TextStyles.Caption1, ui.MutedInk, theme);
+        var caption = stageHostCaptionFit.Fit(Loc.T(L.Music.HostCaption), available, StageHostCaptionStyle);
+        Typography.Draw(drawList, new Vector2(textLeft, top), caption, ui.MutedInk, StageHostCaptionStyle);
+        UserName.DrawAuto(drawList, "music.station.host", display, station.OwnerBadges, station.OwnerBadgeIds,
+            textLeft, top + captionHeight, available, StageHostNameStyle, ui.BodyInk, theme);
+        return top + radius * 2f;
     }
 
     private static string StationHeaderStatus(CommunityStationDto station)

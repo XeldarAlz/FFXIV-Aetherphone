@@ -132,6 +132,9 @@ internal static class L
         public static readonly LocString FollowingTitle = new("social.followingTitle", "Following");
         public static readonly LocString LikedByTitle = new("social.likedByTitle", "Liked by");
         public static readonly LocString ListEmpty = new("social.listEmpty", "No one here yet");
+        public static readonly LocString ListSearchHint = new("social.listSearchHint", "Search by name or handle");
+        public static readonly LocString ListSearchNoMatches = new("social.listSearchNoMatches", "No one matches that name");
+        public static readonly LocString ListSearchCapped = new("social.listSearchCapped", "Searched the first {0} people");
         public static readonly LocString MutualsTitle = new("social.mutualsTitle", "Followed by");
         public static readonly LocString FollowsYou = new("social.followsYou", "Follows you");
         public static readonly LocString FollowedByOne = new("social.followedByOne", "Followed by {0}");
@@ -2287,38 +2290,82 @@ internal static class L
         public static readonly LocString SectionSounds = new("changelog.sectionSounds", "Sounds");
         public static readonly LocString SectionHalloween = new("changelog.sectionHalloween", "Halloween");
 
-        public static readonly LocString[] Release1321Chirper =
+        public static readonly LocString[] Release1330Chirper =
         {
-            new("changelog.r1321.0",
+            new("changelog.r1330.0",
                 "Added a Chirper widget with For You, Latest and Activity tabs, contributed by t3sco"),
         };
 
-        public static readonly LocString[] Release1321Phone =
+        public static readonly LocString[] Release1330Phone =
         {
-            new("changelog.r1321.12",
+            new("changelog.r1330.12",
                 "Added swiping paused music off the Dynamic Island: Music stops, and media playing on your PC stays hidden until it plays again, contributed by hellovvn"),
-            new("changelog.r1321.1",
+            new("changelog.r1330.1",
                 "Added a confirmation before removing a Market price alert or withdrawing a Velvet intro, contributed by t3sco"),
-            new("changelog.r1321.2",
+            new("changelog.r1330.2",
                 "Changed Home Screen edit mode to show its add and done buttons beside the Dynamic Island, so the icons no longer shift down, contributed by t3sco"),
-            new("changelog.r1321.3",
+            new("changelog.r1330.3",
                 "Changed widgets to end level with the app names in their last row, contributed by t3sco"),
-            new("changelog.r1321.4",
+            new("changelog.r1330.4",
                 "Changed the status bar clock to line up with screen titles, contributed by t3sco"),
-            new("changelog.r1321.5",
+            new("changelog.r1330.5",
                 "Changed the status bar clock to leave out AM and PM, contributed by t3sco"),
-            new("changelog.r1321.6",
+            new("changelog.r1330.6",
                 "Changed sheet, call, Dynamic Island and game buttons to act when you let go, so sliding off a press cancels it, contributed by t3sco"),
-            new("changelog.r1321.7",
+            new("changelog.r1330.7",
                 "Changed small icon buttons to take taps over a larger area, contributed by t3sco"),
-            new("changelog.r1321.8",
+            new("changelog.r1330.8",
                 "Changed photos you post or send in chats to upload at a higher quality, contributed by t3sco"),
-            new("changelog.r1321.9",
+            new("changelog.r1330.9",
                 "Fixed the status bar clock moving when Do Not Disturb or Lock Position was turned on, contributed by t3sco"),
-            new("changelog.r1321.10",
+            new("changelog.r1330.10",
                 "Fixed sheet, call and Dynamic Island buttons taking taps while they were still opening, contributed by t3sco"),
-            new("changelog.r1321.11",
+            new("changelog.r1330.11",
                 "Fixed dock app names showing on top of the widget gallery and other sheets, contributed by t3sco"),
+        };
+
+        public static readonly LocString[] Release1330Collections =
+        {
+            new("changelog.r1330.13",
+                "Fixed the Owned filter in Facewear listing the wrong styles, contributed by jambalong"),
+        };
+
+        public static readonly LocString[] Release1330Messaging =
+        {
+            new("changelog.r1330.16",
+                "Fixed voice messages recorded with Automatic gain on reaching the other person too quietly, mostly from quiet microphones"),
+        };
+
+        public static readonly LocString[] Release1330Music =
+        {
+            new("changelog.r1330.17",
+                "Fixed long host names getting cut off on a radio station's page"),
+            new("changelog.r1330.18",
+                "Fixed a radio station's chat opening at the oldest message instead of the newest when you come back to it"),
+        };
+
+        public static readonly LocString[] Release1330Skywatcher =
+        {
+            new("changelog.r1330.19",
+                "Fixed Reset in Control jumping the sky to the wrong time of day a second after it returned to the real sky"),
+        };
+
+        public static readonly LocString[] Release1330Settings =
+        {
+            new("changelog.r1330.20",
+                "Fixed the Radio on air status in Nameplate Title leaving out your station's name"),
+        };
+
+        public static readonly LocString[] Release1330Sounds =
+        {
+            new("changelog.r1330.14",
+                "Fixed notification sounds staying silent on most audio devices, contributed by t3sco"),
+        };
+
+        public static readonly LocString[] Release1330Social =
+        {
+            new("changelog.r1330.15",
+                "Added search to the Followers, Following and Followed by lists, matching names and handles, contributed by hellovvn"),
         };
 
         public static readonly LocString[] Release1320MogCast =
@@ -6060,7 +6107,7 @@ internal static class L
         public static readonly LocString ListeningCount = new("music.listeningCount", "{0} listening");
         public static readonly LocString WatchOnTwitch = new("music.watchOnTwitch", "Watch on Twitch");
         public static readonly LocString OffAir = new("music.offAir", "Off air");
-        public static readonly LocString HostedBy = new("music.hostedBy", "Hosted by {0}");
+        public static readonly LocString HostCaption = new("music.hostCaption", "Host");
         public static readonly LocString ReportStation = new("music.reportStation", "Report station");
         public static readonly LocString ReportStationTitle = new("music.reportStationTitle",
             "Report this station");

@@ -22,7 +22,19 @@ internal readonly record struct EorzeaTime(int Hour, int Minute)
         }
 
         var clock = framework->ClientTime;
-        return clock.IsEorzeaTimeOverridden ? clock.EorzeaTimeOverride : clock.EorzeaTime;
+        return RenderedSeconds(clock.EorzeaTime, clock.EorzeaTimeOverride, clock.IsEorzeaTimeOverridden);
+    }
+
+    public static long RenderedSeconds(long naturalSeconds, long overrideSeconds, bool overridden) =>
+        overridden ? overrideSeconds : naturalSeconds + overrideSeconds;
+
+    public static bool HasStrayOverrideOffset(long overrideSeconds, bool overridden) =>
+        !overridden && overrideSeconds != 0;
+
+    public static void ReleaseOverride(ref long overrideSeconds, ref bool overridden)
+    {
+        overrideSeconds = 0;
+        overridden = false;
     }
 
     public static int CurrentMinuteOfDay() => (int)(CurrentSeconds() % SecondsPerDay / 60);

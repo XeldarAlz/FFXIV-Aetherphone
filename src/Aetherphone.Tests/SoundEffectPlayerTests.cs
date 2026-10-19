@@ -37,6 +37,22 @@ public sealed class SoundEffectPlayerTests
         Assert.True(reader.Read(buffer, 0, buffer.Length) > 0);
     }
 
+    [Fact]
+    public void LeadInEndingOnAReadBoundaryStillPlaysTheSound()
+    {
+        var leadIn = TimeSpan.FromMilliseconds(250);
+        var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "tone.mp3");
+        using var reader = SoundEffectPlayer.OpenReader(path);
+        var source = SoundEffectPlayer.WithLeadIn(reader.ToSampleProvider(), leadIn);
+        var format = source.WaveFormat;
+        var buffer = new float[(int)(leadIn.TotalSeconds * format.SampleRate) * format.Channels];
+
+        Assert.Equal(buffer.Length, source.Read(buffer, 0, buffer.Length));
+        Assert.Equal(0f, UiSoundDecodeTests.Peak(buffer));
+        Assert.True(source.Read(buffer, 0, buffer.Length) > 0);
+        Assert.True(UiSoundDecodeTests.Peak(buffer) > 0.01f);
+    }
+
     private static void WriteSilentPcmWav(string path)
     {
         const int sampleRate = 8000;

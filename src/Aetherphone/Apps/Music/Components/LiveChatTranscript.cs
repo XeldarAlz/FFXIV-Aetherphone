@@ -88,6 +88,11 @@ internal sealed class LiveChatTranscript
         rowsVersion = feed.Version;
         rowStamp++;
         rowCount = Math.Min(feed.Count, rows.Length);
+        if (rowCount == 0)
+        {
+            follow.Reset();
+        }
+
         for (var index = 0; index < rowCount; index++)
         {
             var entry = feed.At(index);
@@ -143,6 +148,11 @@ internal sealed class LiveChatTranscript
         using (AppSurface.ReserveBottom(0f))
         {
             using var surface = AppSurface.Begin(list);
+            if (surface.FreshVisit)
+            {
+                follow.RequestJump();
+            }
+
             var tailId = rows[rowCount - 1]!.Entry.MessageId;
             var newer = CountNewerThan(follow.SeenTailId);
             if (follow.Update(ImGui.GetScrollY(), ImGui.GetScrollMaxY(), FollowTolerance * scale, list.Height,
