@@ -28,6 +28,7 @@ internal abstract class SocialFeedStore : IDisposable
     private const int CommentImageDimension = 1280;
     private const string CommentUploadScope = "comment";
     private const long BadgeProgressRefreshMilliseconds = 60_000;
+    private const int UserListSearchCap = 2000;
 
     protected readonly AethernetSession session;
     protected readonly AccountClient account;
@@ -83,6 +84,7 @@ internal abstract class SocialFeedStore : IDisposable
     private volatile bool userListLoadingMore;
     private volatile bool userListLoading;
     private volatile bool userListFailed;
+    private volatile bool userListMoreFailed;
     private UserListKind userListKind;
     private volatile string? userListSourceId;
     private volatile Dictionary<string, int>? userListReactionKinds;
@@ -179,6 +181,7 @@ internal abstract class SocialFeedStore : IDisposable
         userListCursor = null;
         userListLoading = false;
         userListFailed = false;
+        userListMoreFailed = false;
         userListReactionKinds = null;
         userListReactionCounts = null;
         userListReactionFilter = -1;
@@ -364,6 +367,10 @@ internal abstract class SocialFeedStore : IDisposable
     public int[]? UserListReactionCounts => userListReactionCounts;
     public int UserListReactionFilter => userListReactionFilter;
     public int UserListTotal => userListTotal;
+    public int UserListSearchLimit => UserListSearchCap;
+    public bool UserListSearchCapped => userListCursor is not null && userListResults.Length >= UserListSearchCap;
+    public bool UserListSearchFilling => userListCursor is not null && !userListMoreFailed
+        && userListResults.Length < UserListSearchCap;
 
     public int ReactionKindOf(string userId)
     {
@@ -1617,6 +1624,7 @@ internal abstract class SocialFeedStore : IDisposable
 
         userListCursor = null;
         userListFailed = false;
+        userListMoreFailed = false;
         userListLoading = true;
         work.Run("user list", async token =>
         {
@@ -1666,15 +1674,30 @@ internal abstract class SocialFeedStore : IDisposable
         work.Run("user list more", async token =>
         {
             var page = await FetchUserListPageAsync(kind, sourceId, cursor, token).ConfigureAwait(false);
-            if (page is null || Volatile.Read(ref userListGeneration) != generation)
+            if (Volatile.Read(ref userListGeneration) != generation)
             {
+                return;
+            }
+
+            if (page is null)
+            {
+                userListMoreFailed = true;
                 return;
             }
 
             userListResults = CopyOnWrite.AppendPageById(userListResults, page.Items);
             userListCursor = page.NextCursor;
+            userListMoreFailed = false;
             userListReactionKinds = MergeReactionKinds(userListReactionKinds, page.ReactionKinds);
         }, () => userListLoadingMore = false);
+    }
+
+    public void FillUserListForSearch()
+    {
+        if (UserListSearchFilling)
+        {
+            LoadMoreUserList();
+        }
     }
 
     private static Dictionary<string, int>? MergeReactionKinds(Dictionary<string, int>? existing,
