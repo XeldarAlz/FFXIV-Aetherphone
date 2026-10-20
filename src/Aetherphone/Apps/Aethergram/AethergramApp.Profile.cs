@@ -671,7 +671,7 @@ internal sealed partial class AethergramApp
                 OpenFollowRequests();
                 break;
             case ProfileMenuAction.Encryption:
-                router.Push(AethergramRoute.Encryption);
+                router.Push(AethergramRoute.Dm(SocialDmScreen.Encryption));
                 break;
             case ProfileMenuAction.Rules:
                 conduct.ShowRules(Id);

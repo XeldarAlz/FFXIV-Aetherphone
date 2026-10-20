@@ -192,6 +192,18 @@ internal static class SocialChrome
         ImGui.Dummy(new Vector2(width, ListSection.OverlineHeight + 12f * scale));
     }
 
+    public static void DrawHint(string text, SocialInk ink, in TextStyle style)
+    {
+        var scale = UiScale.Current;
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ScrollLayout.StableContentWidth();
+        var padX = CellPadX * scale;
+        var height = Typography.DrawWrappedLeft(new Vector2(origin.X + padX, origin.Y + 10f * scale), text,
+            ink.MutedInk, style, width - padX * 2f);
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height + 16f * scale));
+    }
+
     public static void DrawMetaChip(ImDrawListPtr drawList, ref float cursorX, float right, float centerY,
         string glyph, string label, SocialInk ink, in TextStyle style)
     {

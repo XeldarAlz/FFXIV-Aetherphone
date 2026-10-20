@@ -33,6 +33,12 @@ internal sealed class ChatRowSheet
 
     public bool IsOpen => sheet.IsOpen;
 
+    public int ArchivedCount => archived.Count;
+
+    public bool IsPinned(string id) => pinned.Contains(id);
+
+    public bool IsArchived(string id) => archived.Contains(id);
+
     public void Gate() => sheet.Gate();
 
     public void Close() => sheet.Close();

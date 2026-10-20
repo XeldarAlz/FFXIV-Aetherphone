@@ -1,17 +1,15 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Social;
-using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
-namespace Aetherphone.Apps.Aethergram;
+namespace Aetherphone.Windows.Components;
 
-internal readonly record struct InboxPreviewLine(long At, string Source, string SenderId, long Minute, string Line,
+internal readonly record struct DmPreviewLine(long At, string Source, string SenderId, long Minute, string Line,
     int StampLength);
 
-internal sealed partial class AethergramApp
+internal sealed partial class SocialDms
 {
     private const float InboxRowHeight = 72f;
     private const float InboxAvatarRadius = 28f;
@@ -36,7 +34,7 @@ internal sealed partial class AethergramApp
 
     private readonly List<DmThreadDto> inboxPinned = new();
     private readonly List<DmThreadDto> inboxFiltered = new();
-    private readonly Dictionary<string, InboxPreviewLine> inboxPreviews = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, DmPreviewLine> inboxPreviews = new(StringComparer.Ordinal);
     private readonly Dictionary<string, RichLineFit> inboxPreviewFits = new(StringComparer.Ordinal);
     private DmThreadDto[] inboxFilterSource = Array.Empty<DmThreadDto>();
     private string inboxFilterQuery = string.Empty;
@@ -53,31 +51,31 @@ internal sealed partial class AethergramApp
     private void DrawInbox(Rect area)
     {
         var scale = UiScale.Current;
-        if (!dmStore.ThreadsLoaded && !dmStore.LoadingThreads)
+        if (!dm.ThreadsLoaded && !dm.LoadingThreads)
         {
-            dmStore.RefreshThreads();
+            dm.RefreshThreads();
         }
 
-        var title = store.Me is { } me && me.Handle.Length > 0 ? me.Handle : Loc.T(L.Aethergram.InboxTitle);
+        var title = store.Me is { } me && me.Handle.Length > 0 ? me.Handle : Loc.T(labels.InboxTitle);
         DrawScreenHeader(area, title, 1);
         if (DrawHeaderIcon(ImGui.GetWindowDrawList(), SocialChrome.HeaderSlot(area, 0), PhoneIcons.Edit,
-                Loc.T(L.Aethergram.NewMessage)))
+                Loc.T(labels.NewMessage), Ink))
         {
             OpenNewMessage();
         }
 
         var listRect = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-        var threads = dmStore.Threads;
+        var threads = dm.Threads;
         using (AppSurface.BeginEdgeToEdge(listRect))
         {
             var searchOrigin = ImGui.GetCursorScreenPos();
             var width = ScrollLayout.StableContentWidth();
             DrawInboxSearchPill(new Rect(new Vector2(searchOrigin.X + CellPadX * scale, searchOrigin.Y),
                 new Vector2(searchOrigin.X + width - CellPadX * scale, searchOrigin.Y + InboxSearchHeight * scale)),
-                "##aethergramInboxSearch", Loc.T(L.Common.Search), ref inboxDraft);
-            DrawInboxHeading(dmStore.RequestCount);
+                "##dmInboxSearch", Loc.T(L.Common.Search), ref inboxDraft);
+            DrawInboxHeading(dm.RequestCount);
             RefreshInboxFilter(threads, false);
-            if (!inboxShowRequests && inboxFilterQuery.Length == 0 && configuration.AethergramArchivedThreads.Count > 0)
+            if (!inboxShowRequests && inboxFilterQuery.Length == 0 && rowSheet.ArchivedCount > 0)
             {
                 DrawInboxArchivedRow();
             }
@@ -98,24 +96,24 @@ internal sealed partial class AethergramApp
                 DrawInboxRow(inboxFiltered[index], false);
             }
 
-            if (dmStore.LoadingMoreThreads)
+            if (dm.LoadingMoreThreads)
             {
                 InfiniteScroll.DrawLoadingRow(listRect.Center.X, Ink.MutedInk);
             }
-            else if (dmStore.HasMoreThreads && InfiniteScroll.ReachedBottom())
+            else if (dm.HasMoreThreads && InfiniteScroll.ReachedBottom())
             {
-                dmStore.LoadMoreThreads();
+                dm.LoadMoreThreads();
             }
 
             ImGui.Dummy(new Vector2(0f, 24f * scale));
         }
     }
 
-    private static void DrawInboxSearchPill(Rect bar, string id, string hint, ref string draft)
+    private void DrawInboxSearchPill(Rect bar, string id, string hint, ref string draft)
     {
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth();
-        SearchField.Draw(bar, id, hint, ref draft, AethergramInk.CurrentPalette);
+        SearchField.Draw(bar, id, hint, ref draft, host.SearchPalette);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, bar.Max.Y - origin.Y));
     }
@@ -129,8 +127,8 @@ internal sealed partial class AethergramApp
         var height = InboxHeadingHeight * scale;
         var centerY = origin.Y + height * 0.5f;
         var pad = CellPadX * scale;
-        var heading = Loc.T(inboxShowRequests ? L.Aethergram.Requests : L.Aethergram.InboxTitle);
-        var link = inboxShowRequests ? Loc.T(L.Aethergram.InboxTitle) : RequestsLinkLabel(requestCount);
+        var heading = Loc.T(inboxShowRequests ? labels.Requests : labels.InboxTitle);
+        var link = inboxShowRequests ? Loc.T(labels.InboxTitle) : RequestsLinkLabel(requestCount);
         var linkSize = Typography.Measure(link, InboxLinkStyle);
         var linkMin = new Vector2(origin.X + width - pad - linkSize.X, centerY - linkSize.Y * 0.5f);
         var linkMax = new Vector2(origin.X + width - pad, centerY + linkSize.Y * 0.5f);
@@ -160,13 +158,13 @@ internal sealed partial class AethergramApp
     {
         if (requestCount <= 0)
         {
-            return Loc.T(L.Aethergram.Requests);
+            return Loc.T(labels.Requests);
         }
 
         if (inboxRequestsLabelCount != requestCount)
         {
             inboxRequestsLabelCount = requestCount;
-            inboxRequestsLabel = Loc.T(L.Aethergram.RequestsCount, requestCount);
+            inboxRequestsLabel = Loc.T(labels.RequestsCount, requestCount);
         }
 
         return inboxRequestsLabel;
@@ -196,7 +194,7 @@ internal sealed partial class AethergramApp
                 continue;
             }
 
-            if (configuration.AethergramArchivedThreads.Contains(thread.OtherUserId) != archivedView)
+            if (rowSheet.IsArchived(thread.OtherUserId) != archivedView)
             {
                 continue;
             }
@@ -206,7 +204,7 @@ internal sealed partial class AethergramApp
                 continue;
             }
 
-            if (!archivedView && configuration.AethergramPinnedThreads.Contains(thread.OtherUserId))
+            if (!archivedView && rowSheet.IsPinned(thread.OtherUserId))
             {
                 inboxPinned.Add(thread);
             }
@@ -226,7 +224,7 @@ internal sealed partial class AethergramApp
         var glyphCenter = new Vector2(cell.Bounds.Min.X + pad + InboxAvatarRadius * scale, cell.Bounds.Center.Y);
         PhoneIcon.Draw(drawList, glyphCenter, PhoneIcons.Archive, Ink.MutedInk, InboxArchiveGlyph * scale);
         var textLeft = glyphCenter.X + InboxAvatarRadius * scale + InboxTextGap * scale;
-        var count = configuration.AethergramArchivedThreads.Count;
+        var count = rowSheet.ArchivedCount;
         if (inboxArchivedCountValue != count)
         {
             inboxArchivedCountValue = count;
@@ -242,7 +240,7 @@ internal sealed partial class AethergramApp
             Loc.T(L.Social.ArchivedChats), Ink.TitleInk, InboxNameStyle);
         if (cell.Tapped)
         {
-            router.Push(AethergramRoute.InboxArchived);
+            host.PushDm(SocialDmScreen.Archived);
         }
 
         FeedCell.End(drawList, cell, Ink.Hairline, false);
@@ -253,7 +251,7 @@ internal sealed partial class AethergramApp
         var scale = UiScale.Current;
         DrawScreenHeader(area, Loc.T(L.Social.ArchivedChats));
         var listRect = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-        var threads = dmStore.Threads;
+        var threads = dm.Threads;
         using (AppSurface.BeginEdgeToEdge(listRect))
         {
             RefreshInboxFilter(threads, true);
@@ -279,7 +277,7 @@ internal sealed partial class AethergramApp
     private void DrawInboxEmptyState(Rect listRect, int totalThreads)
     {
         var area = new Rect(new Vector2(listRect.Min.X, ImGui.GetCursorScreenPos().Y), listRect.Max);
-        if (dmStore.LoadingThreads && totalThreads == 0)
+        if (dm.LoadingThreads && totalThreads == 0)
         {
             DrawEmptyState(area, Loc.T(L.Common.Loading), string.Empty);
             return;
@@ -293,11 +291,11 @@ internal sealed partial class AethergramApp
 
         if (inboxShowRequests)
         {
-            DrawEmptyState(area, Loc.T(L.Aethergram.RequestsEmpty), string.Empty);
+            DrawEmptyState(area, Loc.T(labels.RequestsEmpty), string.Empty);
             return;
         }
 
-        DrawEmptyState(area, Loc.T(L.Aethergram.InboxEmpty), Loc.T(L.Aethergram.InboxEmptyHint));
+        DrawEmptyState(area, Loc.T(labels.InboxEmpty), Loc.T(labels.InboxEmptyHint));
     }
 
     private void DrawInboxRow(DmThreadDto thread, bool pinned)
@@ -311,7 +309,7 @@ internal sealed partial class AethergramApp
         var pad = CellPadX * scale;
         var avatarRadius = InboxAvatarRadius * scale;
         var avatarCenter = new Vector2(origin.X + pad + avatarRadius, origin.Y + rowHeight * 0.5f);
-        AvatarView.Draw(drawList, avatarCenter, avatarRadius, Accent,
+        AvatarView.Draw(drawList, avatarCenter, avatarRadius, host.Accent,
             Monogram(thread.OtherDisplayName, thread.OtherHandle), 0.95f,
             images.Avatar(thread.OtherAvatarUrl, avatarRadius * 2f), 40);
         var dotInset = avatarRadius * 0.72f;
@@ -341,7 +339,7 @@ internal sealed partial class AethergramApp
         var previewLeft = textLeft;
         var previewWidth = textWidth;
         if (thread.LastMessagePreview.Length > 0
-            && string.Equals(thread.LastMessageSenderId, dmStore.MyUserId, StringComparison.Ordinal))
+            && string.Equals(thread.LastMessageSenderId, dm.MyUserId, StringComparison.Ordinal))
         {
             var tick = InboxTickGlyph * scale;
             PhoneIcon.Draw(drawList, new Vector2(previewLeft + tick * 0.5f, previewTop + previewHeight * 0.5f),
@@ -369,7 +367,7 @@ internal sealed partial class AethergramApp
 
         if (cell.Hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
         {
-            inboxRowSheet.Open(thread.OtherUserId, SocialIdentity.Name(thread.OtherDisplayName, thread.OtherHandle));
+            rowSheet.Open(thread.OtherUserId, SocialIdentity.Name(thread.OtherDisplayName, thread.OtherHandle));
         }
         else if (cell.Tapped)
         {
@@ -393,10 +391,10 @@ internal sealed partial class AethergramApp
         }
 
         var body = string.IsNullOrEmpty(thread.LastMessagePreview)
-            ? Loc.T(L.Aethergram.ThreadEmpty)
+            ? Loc.T(labels.ThreadEmpty)
             : ChatText.ListPreview(thread.LastMessagePreview);
         var mine = thread.LastMessagePreview.Length > 0
-            && string.Equals(thread.LastMessageSenderId, dmStore.MyUserId, StringComparison.Ordinal);
+            && string.Equals(thread.LastMessageSenderId, dm.MyUserId, StringComparison.Ordinal);
         if (mine)
         {
             body = $"{Loc.T(L.Message.You)}: {body}";
@@ -411,67 +409,8 @@ internal sealed partial class AethergramApp
             stampLength = stamp.Length;
         }
 
-        inboxPreviews[thread.OtherUserId] = new InboxPreviewLine(thread.LastMessageAtUnix, thread.LastMessagePreview,
+        inboxPreviews[thread.OtherUserId] = new DmPreviewLine(thread.LastMessageAtUnix, thread.LastMessagePreview,
             thread.LastMessageSenderId, minute, line, stampLength);
         return line;
-    }
-
-    private void DrawInboxRowSheet(Rect screen)
-    {
-        if (inboxRowSheet.IsOpen
-            && router.Current.Screen is not (AethergramScreen.Inbox or AethergramScreen.InboxArchived))
-        {
-            inboxRowSheet.Close();
-        }
-
-        inboxRowSheet.Draw(screen, ui);
-    }
-
-    private void AskDeleteConversation(string otherId)
-    {
-        confirm.Ask(new ConfirmRequest
-        {
-            Title = Loc.T(L.Aethergram.DeleteConversation),
-            Message = Loc.T(L.Aethergram.DeleteConversationMessage),
-            ConfirmLabel = Loc.T(L.Aethergram.DeleteConfirm),
-            CancelLabel = Loc.T(L.Aethergram.DeleteCancel),
-            Sheet = true,
-            Danger = true,
-            Confirm = () => DeleteConversation(otherId),
-        });
-    }
-
-    private void DeleteConversation(string otherId)
-    {
-        var current = router.Current;
-        var threadOpen = current.Screen == AethergramScreen.Thread && current.Id == otherId;
-        inboxRowSheet.Forget(otherId);
-        dmStore.DeleteThread(otherId);
-        if (threadOpen)
-        {
-            router.Pop();
-        }
-    }
-
-    private void OpenInbox()
-    {
-        ResetInboxState();
-        router.Push(AethergramRoute.Inbox);
-    }
-
-    private void ResetInboxState()
-    {
-        inboxDraft = string.Empty;
-        inboxShowRequests = false;
-    }
-
-    private void OpenThread(string userId)
-    {
-        if (string.IsNullOrEmpty(userId))
-        {
-            return;
-        }
-
-        router.Push(AethergramRoute.Thread(userId));
     }
 }
