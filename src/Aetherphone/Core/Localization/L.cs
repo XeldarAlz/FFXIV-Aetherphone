@@ -10824,6 +10824,18 @@ internal static class L
         public static readonly LocString JudgeRewardEach = new("prism.judgeRewardEach", "+{0} Aether Coin for every heat you judge");
         public static readonly LocString JudgeRewardLeft = new("prism.judgeRewardLeft", "+{0} Aether Coin a heat, {1} left this week");
         public static readonly LocString JudgeRewardSpent = new("prism.judgeRewardSpent", "No judging Aether Coin left this week");
+        public static readonly LocString VanillaCameraOnly = new("prism.vanillaCameraOnly",
+            "Vanilla only takes photos from the phone camera. Take one with Camera, or enter this one in Modded.");
+        public static readonly LocString VanillaPenumbra = new("prism.vanillaPenumbra",
+            "Penumbra mods were on your character when this photo was taken.");
+        public static readonly LocString VanillaAppearance = new("prism.vanillaAppearance",
+            "Your character didn't match your equipped glamour when this photo was taken, as if Glamourer or a similar tool was on.");
+        public static readonly LocString VanillaBodyScaling = new("prism.vanillaBodyScaling",
+            "A Customize+ profile was on when this photo was taken.");
+        public static readonly LocString VanillaPosing = new("prism.vanillaPosing",
+            "A posing tool (Brio or Ktisis) was running when this photo was taken.");
+        public static readonly LocString VanillaUnchecked = new("prism.vanillaUnchecked",
+            "The mod check couldn't run when this photo was taken.");
         public static readonly LocString TrackVanilla = new("prism.trackVanilla", "Vanilla");
         public static readonly LocString TrackModded = new("prism.trackModded", "Modded");
         public static readonly LocString ChooseTrack = new("prism.chooseTrack", "Which contest?");

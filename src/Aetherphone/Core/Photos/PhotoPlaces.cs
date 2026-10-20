@@ -23,7 +23,7 @@ internal static class PhotoPlaces
     public static bool CopyStamp(Dictionary<string, uint> places, string source, string target) =>
         Stamp(places, target, TerritoryOf(places, source));
 
-    public static bool Prune(Dictionary<string, uint> places, HashSet<string> keptNames)
+    public static bool Prune<TValue>(Dictionary<string, TValue> places, HashSet<string> keptNames)
     {
         if (places.Count == 0)
         {

@@ -4,6 +4,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Coins;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Xunit;
 
@@ -226,6 +227,21 @@ public sealed class PrismWireContractTests
         Assert.Equal(string.Empty, PrismTracks.Choose(week, "modded"));
         Assert.Same(week, PrismTracks.Project(week, string.Empty));
         Assert.Equal("e_1", PrismTracks.WithEntry(week, string.Empty, new PrismEntryDto(Id: "e_1")).MyEntry?.Id);
+    }
+
+    [Fact]
+    public void VanillaTakesOnlyCleanCameraShots()
+    {
+        var stamps = new Dictionary<string, byte>();
+        ModScan.Stamp(stamps, @"C:\photos\clean.png", ModSigns.None);
+        ModScan.Stamp(stamps, @"C:\photos\posed.png", ModSigns.Posing | ModSigns.BodyScaling);
+
+        Assert.Null(PrismTracks.VanillaBlock(ModScan.Stamped(stamps, @"D:\elsewhere\clean.png")));
+        Assert.Equal(L.Prism.VanillaCameraOnly.Key, PrismTracks.VanillaBlock(ModScan.Stamped(stamps, "pasted.png"))?.Key);
+        Assert.Equal(L.Prism.VanillaBodyScaling.Key, PrismTracks.VanillaBlock(ModScan.Stamped(stamps, "posed.png"))?.Key);
+        Assert.Equal(L.Prism.VanillaPenumbra.Key,
+            PrismTracks.VanillaBlock(ModSigns.Penumbra | ModSigns.Appearance)?.Key);
+        Assert.Equal(L.Prism.VanillaUnchecked.Key, PrismTracks.VanillaBlock(ModSigns.Unchecked)?.Key);
     }
 
     [Fact]

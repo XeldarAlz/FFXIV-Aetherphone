@@ -462,6 +462,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public Dictionary<string, List<string>> CustomAlbumPhotos { get; set; } = new();
     public List<string> PhotoFavorites { get; set; } = new();
     public Dictionary<string, uint> PhotoPlaces { get; set; } = new();
+    public Dictionary<string, byte> PhotoModSigns { get; set; } = new();
     public const int VelvetGateVersion = 1;
     public const int VelvetOnboardVersion = 3;
     public bool VelvetAcknowledgedGate { get; set; }
