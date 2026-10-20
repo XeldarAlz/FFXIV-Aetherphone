@@ -163,10 +163,10 @@ internal sealed partial class PrismApp
             scoreFill.SnapTo(0f);
         }
 
-        PrismType.Draw(drawList, new Vector2(left, anchorTop), Loc.T(L.Prism.ScoreLow), PrismArt.ScoreHue(1),
+        PrismType.Draw(drawList, new Vector2(left, anchorTop), Loc.T(L.Prism.ScoreLow), PrismArt.ScoreLowInk,
             PrismFace.Label, labelPixels);
         PrismType.DrawRight(drawList, new Vector2(left + width, anchorTop), Loc.T(L.Prism.ScoreHigh),
-            PrismArt.ScoreHue(PrismArt.Stars), PrismFace.Label, labelPixels);
+            PrismArt.ScoreHighInk, PrismFace.Label, labelPixels);
 
         if (chosen > 0 && fill >= ScoreDone)
         {
