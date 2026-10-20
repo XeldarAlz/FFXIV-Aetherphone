@@ -141,7 +141,11 @@ internal sealed partial class AethergramApp
         protected override void OpenEncryptionInfo(string threadId) => app.router.Push(AethergramRoute.Encryption);
 
         protected override void BeginReply(string messageId) =>
-            BeginReplyTo(messageId, app.ThreadTitle(store.CurrentThreadId ?? messageId));
+            composer.BeginReply(FindMessage(messageId), MyUserId, app.ThreadTitle(store.CurrentThreadId ?? messageId));
+
+        protected override ChatMenuModel BuildMenuModel() =>
+            ChatMenuModel.Direct(ui, store.MyReactionTo, store.SetReaction, BeginReply, CopyMessage, BeginEdit,
+                AskDeleteMessage, OpenReportMessage, TranslateMessage);
 
         protected override void DrawAboveTranscript(ref Rect listRect, string threadId)
         {

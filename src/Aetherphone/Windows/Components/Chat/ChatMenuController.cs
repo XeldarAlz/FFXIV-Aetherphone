@@ -32,6 +32,35 @@ internal struct ChatMenuModel
     public Action<string> OnReport;
     public Action<string> OnTranslate;
     public Action<string, string> OnReact;
+
+    public static ChatMenuModel Direct(AppSkin ui, Func<string, string> myReactionTo, Action<string, string> react,
+        Action<string> reply, Action<string> copy, Action<string> edit, Action<string> delete, Action<string> report,
+        Action<string> translate)
+    {
+        return new ChatMenuModel
+        {
+            Ui = ui,
+            ShowReactions = true,
+            CanReply = true,
+            CanCopy = true,
+            CanEdit = true,
+            CanDelete = true,
+            CanReport = true,
+            CanTranslate = true,
+            IsStarred = static _ => false,
+            MyReactionTo = myReactionTo,
+            OnReply = reply,
+            OnForward = static _ => { },
+            OnCopy = copy,
+            OnStar = static _ => { },
+            OnEdit = edit,
+            OnInfo = static _ => { },
+            OnDelete = delete,
+            OnReport = report,
+            OnTranslate = translate,
+            OnReact = react,
+        };
+    }
 }
 
 internal sealed class ChatMenuController

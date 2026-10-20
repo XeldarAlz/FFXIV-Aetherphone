@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Notifications;
@@ -151,6 +152,17 @@ internal sealed class ChatComposer : IDisposable
         replyBarName = senderName;
         replyBarPreview = preview;
         focus = true;
+    }
+
+    public void BeginReply(IDirectMessage? message, string myUserId, string otherName)
+    {
+        if (message is null || message.Deleted)
+        {
+            return;
+        }
+
+        BeginReply(message.Id, message.SenderId == myUserId ? Loc.T(L.Message.You) : otherName,
+            ChatText.QuotePreview(message.Body, message.Kind));
     }
 
     public void BeginEdit(string messageId, string body)
