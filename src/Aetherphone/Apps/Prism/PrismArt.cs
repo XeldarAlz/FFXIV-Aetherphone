@@ -16,6 +16,10 @@ internal static class PrismArt
     private const float ScoreDigitUnits = 24f;
     private const float ScorePitchLow = 0.84f;
     private const float ScorePitchStep = 0.08f;
+    private const float ScoreTintAlpha = 0.14f;
+    private const float ScoreEdgeAlpha = 0.6f;
+    private const float ScoreEdgeUnits = 2f;
+    private const float ScoreInkLuminance = 0.6f;
     private const float ButtonPadUnits = 12f;
     private const float StitchInsetUnits = 4f;
     private const float StitchDashUnits = 5f;
@@ -87,6 +91,14 @@ internal static class PrismArt
     };
 
     private static readonly string[] Digits = { "1", "2", "3", "4", "5" };
+
+    private static readonly Vector4[] ScoreHues =
+    {
+        AccentRing.Red, AccentRing.Orange, AccentRing.Gold, Palette.Mix(AccentRing.Gold, AccentRing.Green, 0.5f),
+        AccentRing.Green,
+    };
+
+    public static Vector4 ScoreHue(int stars) => ScoreHues[Math.Clamp(stars, 1, Stars) - 1];
 
     public static float LabelPixels() => LabelUnits * UiScale.Current;
 
@@ -221,15 +233,19 @@ internal static class PrismArt
             var hovered = enabled && UiInteract.Hover(min, max);
             var selected = chosen == index + 1;
             var share = selected ? fill : 0f;
-            drawList.AddRect(min, max, ImGui.GetColorU32(hovered || selected ? Fore : Faint), 0f, ImDrawFlags.None,
-                1f);
+            var hue = ScoreHues[index];
+            var lit = hovered || selected;
+            drawList.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(hue, ScoreTintAlpha)));
+            drawList.AddRect(min, max, ImGui.GetColorU32(lit ? hue : Palette.WithAlpha(hue, ScoreEdgeAlpha)), 0f,
+                ImDrawFlags.None, lit ? MathF.Max(1f, ScoreEdgeUnits * scale) : 1f);
             if (share > 0f)
             {
-                drawList.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(Fore, share)));
+                drawList.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(hue, share)));
             }
 
+            var onHue = Palette.Luminance(hue) > ScoreInkLuminance ? Ink : White;
             var size = PrismType.Measure(Digits[index], PrismFace.Headline, digitPixels);
-            PrismType.Draw(drawList, (min + max) * 0.5f - size * 0.5f, Digits[index], Vector4.Lerp(Fore, inks.OnFore, share),
+            PrismType.Draw(drawList, (min + max) * 0.5f - size * 0.5f, Digits[index], Vector4.Lerp(Fore, onHue, share),
                 PrismFace.Headline, digitPixels);
             if (hovered)
             {

@@ -143,9 +143,9 @@ internal sealed class PrismStore : IDisposable
         }
     }
 
-    private static bool StillCurrent(PrismResultsDto held, PrismWeekDto current) =>
-        held.WeekId == current.PreviousWeekId ||
-        (held.WeekId == current.Id && held.Revision == current.ResultsRevision);
+    internal static bool StillCurrent(PrismResultsDto held, PrismWeekDto current) =>
+        (held.WeekId == current.PreviousWeekId || held.WeekId == current.Id) &&
+        held.Revision == current.ResultsRevision;
 
     private static bool ResultsOut(PrismWeekDto week) =>
         week.Id.Length > 0 && (week.Phase == PrismPhases.Results || (week.ResultsAtUnix > 0 &&

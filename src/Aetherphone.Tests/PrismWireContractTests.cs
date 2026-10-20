@@ -162,4 +162,38 @@ public sealed class PrismWireContractTests
         Assert.Equal("B", results.HeatLabel);
         Assert.Equal(2, results.Revision);
     }
+
+    [Fact]
+    public void ServerRevisionsAreMillisecondsAndStillParse()
+    {
+        var week = JsonSerializer.Deserialize("{\"id\":\"2026-W43\",\"phase\":\"results\",\"previousWeekId\":\"2026-W43\","
+            + "\"resultsRevision\":1792440123456,\"finalistCount\":6,\"prizes\":{\"heat\":[30,20,10],"
+            + "\"final\":[2000,1500,1000],\"minHeatSize\":4}}", AethernetJsonContext.Default.PrismWeekDto);
+        Assert.NotNull(week);
+        Assert.Equal(1792440123456L, week.ResultsRevision);
+        Assert.Equal(6, week.FinalistCount);
+        Assert.NotNull(week.Prizes);
+        Assert.Equal(new long[] { 2000, 1500, 1000 }, week.Prizes.Final);
+        Assert.Equal(4, week.Prizes.MinHeatSize);
+
+        var results = JsonSerializer.Deserialize("{\"weekId\":\"2026-W43\",\"revision\":1792440123456,\"finalistCount\":6}",
+            AethernetJsonContext.Default.PrismResultsDto);
+        Assert.NotNull(results);
+        Assert.Equal(1792440123456L, results.Revision);
+        Assert.Null(results.Prizes);
+    }
+
+    [Fact]
+    public void AReplacedRoundWithTheSameWeekIdDropsTheHeldResults()
+    {
+        var held = new PrismResultsDto(WeekId: "2026-W43", Revision: 1000);
+        var replaced = new PrismWeekDto(Id: "2026-W43", PreviousWeekId: "2026-W43", ResultsRevision: 2000);
+        var same = replaced with { ResultsRevision = 1000 };
+        var older = new PrismWeekDto(Id: "2026-W43", PreviousWeekId: "2026-W42");
+
+        Assert.False(PrismStore.StillCurrent(held, replaced));
+        Assert.True(PrismStore.StillCurrent(held, same));
+        Assert.False(PrismStore.StillCurrent(held, older));
+        Assert.True(PrismStore.StillCurrent(new PrismResultsDto(WeekId: "2026-W42"), older));
+    }
 }

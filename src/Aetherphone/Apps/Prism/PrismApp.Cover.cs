@@ -22,7 +22,12 @@ internal sealed partial class PrismApp
     private const float StoryDelay = 0.08f;
     private const float IntroSeconds = 0.9f;
     private const float IntroStoryShare = 1.35f;
+    private const int BriefMaxLines = 3;
 
+    private static readonly TextStyle BriefStyle = TextStyles.Subheadline;
+
+    private string[] briefShown = Array.Empty<string>();
+    private int briefKey;
     private CachedText deadlineText;
     private CachedText judgedText;
     private CachedText issueText;
@@ -75,9 +80,10 @@ internal sealed partial class PrismApp
         DrawCoverButtons(drawList, content, below, week, scale);
         PrismMotion.Rise(drawList, buttons, PrismMotion.At(screenAge, introDelay + CreditsDelay, Motion.PageSettle),
             0f);
+        var ceiling = below + (HasEntryButton(week) ? (PrismArt.ButtonUnits + Metrics.Space.Md) * scale : 0f);
         var strips = HasPrimary(week) || store.Results is not null ? 1 : 0;
         PrismArt.OverPhoto(backdrop.Length > 0);
-        var steps = DrawCoverStory(drawList, content, week, strips, scale);
+        var steps = DrawCoverStory(drawList, content, week, strips, ceiling, scale);
         var strip = PrismMotion.Mark(drawList);
         DrawCoverStrip(drawList, content, week, scale);
         RiseStep(drawList, strip, steps, scale);
@@ -135,7 +141,7 @@ internal sealed partial class PrismApp
 
     private void DrawCoverButtons(ImDrawListPtr drawList, Rect content, float top, PrismWeekDto week, float scale)
     {
-        if (week.MyEntry is not null && week.Phase != PrismPhases.Entering &&
+        if (HasEntryButton(week) &&
             PrismArt.Button(drawList, new Vector2(content.Min.X + PrismArt.Gutter(scale), top), Loc.T(L.Prism.YourLook),
                 scale, out _))
         {
@@ -143,7 +149,11 @@ internal sealed partial class PrismApp
         }
     }
 
-    private int DrawCoverStory(ImDrawListPtr drawList, Rect content, PrismWeekDto week, int strips, float scale)
+    private static bool HasEntryButton(PrismWeekDto week) =>
+        week.MyEntry is not null && week.Phase != PrismPhases.Entering;
+
+    private int DrawCoverStory(ImDrawListPtr drawList, Rect content, PrismWeekDto week, int strips, float ceiling,
+        float scale)
     {
         var gutter = PrismArt.Gutter(scale);
         var width = content.Width - gutter * 2f;
@@ -157,8 +167,12 @@ internal sealed partial class PrismApp
         var eyebrowGap = Metrics.Space.Xs * scale;
         var bottom = (strips > 0 ? StripRect(content, scale, strips - 1).Min.Y : content.Max.Y - PrismArt.BottomMargin(scale)) -
                      Metrics.Space.Xl * scale;
-        var top = bottom - statHeight - Metrics.Space.Xl * scale - lines.Length * headlineLine -
-                  eyebrowGap - labelLine;
+        var headTop = bottom - statHeight - Metrics.Space.Xl * scale - lines.Length * headlineLine -
+                      eyebrowGap - labelLine;
+        var briefLine = Typography.LineHeight(BriefStyle);
+        var briefGap = Metrics.Space.Sm * scale;
+        var brief = BriefLines(week.Brief, width, headTop - ceiling - briefGap, briefLine);
+        var top = brief.Length > 0 ? headTop - briefGap - brief.Length * briefLine : headTop;
         var left = content.Min.X + gutter;
         var step = 0;
         var mark = PrismMotion.Mark(drawList);
@@ -173,6 +187,19 @@ internal sealed partial class PrismApp
                 pixels);
             RiseStep(drawList, mark, step++, scale);
             top += headlineLine;
+        }
+
+        if (brief.Length > 0)
+        {
+            top += briefGap;
+            mark = PrismMotion.Mark(drawList);
+            for (var index = 0; index < brief.Length; index++)
+            {
+                Typography.Draw(drawList, new Vector2(left, top), brief[index], PrismArt.Muted, BriefStyle);
+                top += briefLine;
+            }
+
+            RiseStep(drawList, mark, step++, scale);
         }
 
         mark = PrismMotion.Mark(drawList);
@@ -190,6 +217,35 @@ internal sealed partial class PrismApp
             scale);
         RiseStep(drawList, mark, step++, scale);
         return step;
+    }
+
+    private string[] BriefLines(string brief, float width, float room, float lineHeight)
+    {
+        if (string.IsNullOrWhiteSpace(brief) || lineHeight <= 0f || room < lineHeight)
+        {
+            return Array.Empty<string>();
+        }
+
+        var allowed = Math.Min(BriefMaxLines, (int)(room / lineHeight));
+        var key = HashCode.Combine(brief, allowed, (int)MathF.Round(width), (int)MathF.Round(lineHeight * 100f));
+        if (briefKey == key && briefShown.Length > 0)
+        {
+            return briefShown;
+        }
+
+        var wrapped = Typography.WrapText(brief, BriefStyle, width);
+        if (wrapped.Length > allowed)
+        {
+            var shown = new string[allowed];
+            Array.Copy(wrapped, shown, allowed - 1);
+            shown[allowed - 1] = Typography.FitText(string.Join(' ', wrapped, allowed - 1, wrapped.Length - allowed + 1),
+                width, BriefStyle);
+            wrapped = shown;
+        }
+
+        briefKey = key;
+        briefShown = wrapped;
+        return wrapped;
     }
 
     private static void DrawStat(ImDrawListPtr drawList, Vector2 topLeft, float width, string label, string value,
