@@ -7250,6 +7250,7 @@ internal static class L
         public static readonly LocString Unavailable = new("chirper.unavailable", "This chirp is unavailable");
         public static readonly LocString NewChirps = new("chirper.newChirps", "New chirps");
         public static readonly LocPlural NewChirpsCount = new("chirper.newChirpsCount", "{0} new chirp", "{0} new chirps");
+        public static readonly LocString SharedChirp = new("chirper.sharedChirp", "Shared a chirp");
     }
 
     internal static class Aethergram

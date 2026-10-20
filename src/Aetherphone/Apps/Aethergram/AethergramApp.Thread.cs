@@ -32,7 +32,7 @@ internal sealed partial class AethergramApp
     private string handleLabelSource = string.Empty;
     private string handleLabel = string.Empty;
 
-    private sealed class ThreadView : ChatThreadView<GramMessageDto, GramThreadDto>, IChatTranscriptPostCards,
+    private sealed class ThreadView : ChatThreadView<DmMessageDto, DmThreadDto>, IChatTranscriptPostCards,
         IChatTranscriptStoryReplies
     {
         private readonly AethergramApp app;
@@ -114,17 +114,17 @@ internal sealed partial class AethergramApp
             return true;
         }
 
-        protected override bool IsDeleted(GramMessageDto message) => message.Deleted;
+        protected override bool IsDeleted(DmMessageDto message) => message.Deleted;
 
-        protected override string SenderIdOf(GramMessageDto message) => message.SenderId;
+        protected override string SenderIdOf(DmMessageDto message) => message.SenderId;
 
-        protected override int KindOf(GramMessageDto message) => message.Kind;
+        protected override int KindOf(DmMessageDto message) => message.Kind;
 
-        protected override string? BodyOf(GramMessageDto message) => message.Body;
+        protected override string? BodyOf(DmMessageDto message) => message.Body;
 
-        protected override int EncVersionOf(GramMessageDto message) => message.EncVersion;
+        protected override int EncVersionOf(DmMessageDto message) => message.EncVersion;
 
-        protected override byte[]? DecryptSealed(GramMessageDto message, string? threadId, byte[] sealedBytes) =>
+        protected override byte[]? DecryptSealed(DmMessageDto message, string? threadId, byte[] sealedBytes) =>
             threadId is null ? null : app.dmStore.DecryptMedia(message, sealedBytes, threadId);
 
         protected override void OpenImageView(string messageId) =>
@@ -307,7 +307,7 @@ internal sealed partial class AethergramApp
             return 3;
         }
 
-        protected override TranscriptMessage[] MapTranscript(GramMessageDto[] source) =>
+        protected override TranscriptMessage[] MapTranscript(DmMessageDto[] source) =>
             DirectTranscript.Map(store, source, MyUserId,
                 store.CurrentThreadId is { } threadId ? app.ThreadTitle(threadId) : string.Empty);
     }

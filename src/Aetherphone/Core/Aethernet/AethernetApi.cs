@@ -15,7 +15,8 @@ internal sealed class AethernetApi
         Chats = new ChatClient(net);
         Social = new SocialClient(net);
         Grams = new GramClient(net);
-        GramDm = new GramDmClient(net);
+        GramDm = new DmClient(net, "gram");
+        ChirperDm = new DmClient(net, "chirper");
         Velvet = new VelvetClient(net);
         Media = new MediaClient(net);
         Safety = new SafetyClient(net, session.Blocks);
@@ -41,7 +42,8 @@ internal sealed class AethernetApi
     public ChatClient Chats { get; }
     public SocialClient Social { get; }
     public GramClient Grams { get; }
-    public GramDmClient GramDm { get; }
+    public DmClient GramDm { get; }
+    public DmClient ChirperDm { get; }
     public VelvetClient Velvet { get; }
     public MediaClient Media { get; }
     public SafetyClient Safety { get; }

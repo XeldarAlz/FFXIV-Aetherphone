@@ -12,7 +12,7 @@ internal sealed partial class AethergramApp
     private const float SharePillWidth = 76f;
 
     private readonly Dictionary<string, UserDto> shareThreadUsers = new(StringComparer.Ordinal);
-    private GramThreadDto[] shareThreadSource = Array.Empty<GramThreadDto>();
+    private DmThreadDto[] shareThreadSource = Array.Empty<DmThreadDto>();
     private DmSearchDebounce shareSearch = new();
 
     private void OpenShare(string postId)
@@ -111,7 +111,7 @@ internal sealed partial class AethergramApp
         ImGui.Dummy(new Vector2(0f, 24f * scale));
     }
 
-    private void RefreshShareThreadUsers(GramThreadDto[] threads)
+    private void RefreshShareThreadUsers(DmThreadDto[] threads)
     {
         if (ReferenceEquals(threads, shareThreadSource))
         {

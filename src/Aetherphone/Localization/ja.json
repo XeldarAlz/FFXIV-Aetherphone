@@ -3017,6 +3017,7 @@
   "chirper.chirpsToday.other": "本日 {0} 件のチャープ",
   "chirper.searchHint": "ユーザーや #タグ を検索",
   "chirper.hashtagsTitle": "ハッシュタグ",
+  "chirper.sharedChirp": "チャープをシェアしました",
   "aethergram.setUpAccount": "設定でアカウントをセットアップしてください",
   "aethergram.openSettings": "設定を開く",
   "story.yourStory": "あなたのストーリー",

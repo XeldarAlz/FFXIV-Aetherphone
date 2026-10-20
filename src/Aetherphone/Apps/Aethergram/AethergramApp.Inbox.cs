@@ -34,11 +34,11 @@ internal sealed partial class AethergramApp
     private static readonly TextStyle InboxPreviewUnreadStyle = TextStyles.SubheadlineEmphasized;
     private static readonly TextStyle InboxPreviewStyle = TextStyles.Subheadline;
 
-    private readonly List<GramThreadDto> inboxPinned = new();
-    private readonly List<GramThreadDto> inboxFiltered = new();
+    private readonly List<DmThreadDto> inboxPinned = new();
+    private readonly List<DmThreadDto> inboxFiltered = new();
     private readonly Dictionary<string, InboxPreviewLine> inboxPreviews = new(StringComparer.Ordinal);
     private readonly Dictionary<string, RichLineFit> inboxPreviewFits = new(StringComparer.Ordinal);
-    private GramThreadDto[] inboxFilterSource = Array.Empty<GramThreadDto>();
+    private DmThreadDto[] inboxFilterSource = Array.Empty<DmThreadDto>();
     private string inboxFilterQuery = string.Empty;
     private bool inboxFilterRequests;
     private bool inboxFilterArchived;
@@ -172,7 +172,7 @@ internal sealed partial class AethergramApp
         return inboxRequestsLabel;
     }
 
-    private void RefreshInboxFilter(GramThreadDto[] threads, bool archivedView)
+    private void RefreshInboxFilter(DmThreadDto[] threads, bool archivedView)
     {
         var query = inboxDraft.Trim();
         if (!inboxFilterDirty && ReferenceEquals(threads, inboxFilterSource) && inboxFilterRequests == inboxShowRequests
@@ -272,7 +272,7 @@ internal sealed partial class AethergramApp
         }
     }
 
-    private static bool InboxRowMatches(GramThreadDto thread, string query) =>
+    private static bool InboxRowMatches(DmThreadDto thread, string query) =>
         thread.OtherDisplayName.Contains(query, StringComparison.OrdinalIgnoreCase)
         || thread.OtherHandle.Contains(query, StringComparison.OrdinalIgnoreCase);
 
@@ -300,7 +300,7 @@ internal sealed partial class AethergramApp
         DrawEmptyState(area, Loc.T(L.Aethergram.InboxEmpty), Loc.T(L.Aethergram.InboxEmptyHint));
     }
 
-    private void DrawInboxRow(GramThreadDto thread, bool pinned)
+    private void DrawInboxRow(DmThreadDto thread, bool pinned)
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
@@ -379,7 +379,7 @@ internal sealed partial class AethergramApp
         FeedCell.End(drawList, cell, Ink.Hairline, false);
     }
 
-    private string InboxPreview(GramThreadDto thread, out int stampLength)
+    private string InboxPreview(DmThreadDto thread, out int stampLength)
     {
         var minute = Environment.TickCount64 / MinuteTicks;
         if (inboxPreviews.TryGetValue(thread.OtherUserId, out var cached)

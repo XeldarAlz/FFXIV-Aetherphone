@@ -105,7 +105,7 @@ internal sealed partial class VelvetStore
         work.Run("intro", async token =>
         {
             await client.ConnectAsync(userId, trimmed, token).ConfigureAwait(false);
-            var status = await keys.EnsureVelvetKeysAsync(userId, MyUserId, token).ConfigureAwait(false);
+            var status = await keys.EnsurePairKeysAsync("velvet", userId, MyUserId, token).ConfigureAwait(false);
             var scope = ScopeFor(userId);
             var encoded = default(EncryptedOutbound);
             var encrypted = status.CanEncrypt

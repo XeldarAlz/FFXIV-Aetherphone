@@ -13,6 +13,7 @@ using Aetherphone.Core.Honorific;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Message;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
@@ -149,7 +150,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     private readonly InfoSheet feedExplainer = new();
     private readonly string[] feedExplainerParagraphs = new string[4];
     private readonly AethergramStore store;
-    private readonly GramDmStore dmStore;
+    private readonly SocialDmStore dmStore;
     private readonly AccountClient account;
     private readonly SocialLauncher launcher;
     private readonly GramDmLauncher dmLauncher;
@@ -264,8 +265,8 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         store.SetFeedRegions(SocialRegion.FilterCsv(configuration.AethergramFeedRegionMask));
         store.SetFeedSensitive(configuration.AethergramShowSensitivePosts, activeScope);
         account = net.Account;
-        dmStore = new GramDmStore(session, net.GramDm, net.Social, net.Safety, net.Media, notifications, keyVault,
-            conversationKeys, chatHistory, visibility, realtimeSignals, installer);
+        dmStore = new SocialDmStore(SocialDmSurface.Aethergram, session, net.GramDm, net.Social, net.Safety, net.Media,
+            notifications, keyVault, conversationKeys, chatHistory, visibility, realtimeSignals, installer);
         composeMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         editPostMentions = new MentionAutocomplete(store.NewMentionSuggestions());

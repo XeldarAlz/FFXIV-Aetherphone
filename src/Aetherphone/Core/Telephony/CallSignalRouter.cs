@@ -80,7 +80,10 @@ internal sealed class CallSignalRouter : IDisposable
                 signals.PublishVelvet();
                 return;
             case SignalType.GramPing:
-                signals.PublishGram();
+                signals.PublishDm("gram");
+                return;
+            case SignalType.ChirperPing:
+                signals.PublishDm("chirper");
                 return;
             case SignalType.AdPing:
                 signals.PublishAds();
@@ -91,6 +94,7 @@ internal sealed class CallSignalRouter : IDisposable
             case SignalType.ChatTyping:
             case SignalType.VelvetTyping:
             case SignalType.GramTyping:
+            case SignalType.ChirperTyping:
             case SignalType.AdTyping:
                 if (message.ContentId is { Length: > 0 } typingThreadId)
                 {
