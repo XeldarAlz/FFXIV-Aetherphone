@@ -33,7 +33,8 @@ internal sealed record PrismWeekDto(
     long BallotCoins = 0,
     long ResultsRevision = 0,
     int FinalistCount = 0,
-    PrismPrizesDto? Prizes = null);
+    PrismPrizesDto? Prizes = null,
+    long NextWeekAtUnix = 0);
 
 internal sealed record PrismPrizesDto(long[]? Heat = null, long[]? Final = null, int MinHeatSize = 0);
 

@@ -40,6 +40,8 @@ internal static class PrismArt
     private const float GlowCoreLift = 0.7f;
     private const float FogAlpha = 0.6f;
     private const float EditorialMarginUnits = 20f;
+    private const float SwatchStrength = 0.6f;
+    private const float SwatchShadeShare = 0.45f;
 
     public static readonly Vector4 Bone = new(0.957f, 0.945f, 0.918f, 1f);
     public static readonly Vector4 Ink = new(0.067f, 0.067f, 0.067f, 1f);
@@ -70,6 +72,8 @@ internal static class PrismArt
     public static Vector4 Muted => inks.Muted;
 
     public static Vector4 Faint => inks.Faint;
+
+    public static Vector4 OnFore => inks.OnFore;
 
     public static void Follow(PhoneTheme theme)
     {
@@ -248,6 +252,16 @@ internal static class PrismArt
         }
 
         return picked;
+    }
+
+    public static void Swatch(ImDrawListPtr drawList, Rect rect, int tint)
+    {
+        var from = ImGui.GetColorU32(Vector4.Lerp(Back, Spectrum[tint % Spectrum.Length], SwatchStrength));
+        var to = ImGui.GetColorU32(Vector4.Lerp(Back, Spectrum[(tint + 2) % Spectrum.Length], SwatchStrength));
+        drawList.AddRectFilledMultiColor(rect.Min, rect.Max, from, from, to, to);
+        var fade = new Vector2(rect.Min.X, rect.Max.Y - rect.Height * SwatchShadeShare);
+        drawList.AddRectFilledMultiColor(fade, rect.Max, ImGui.GetColorU32(ShadeClear), ImGui.GetColorU32(ShadeClear),
+            ImGui.GetColorU32(ShadeMid), ImGui.GetColorU32(ShadeMid));
     }
 
     public static void SpectrumRule(ImDrawListPtr drawList, float left, float right, float y, float scale)

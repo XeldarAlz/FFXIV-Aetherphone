@@ -10821,6 +10821,14 @@ internal static class L
         public static readonly LocString GuideRevealTitle = new("prism.guideRevealTitle", "The reveal");
         public static readonly LocString GuideRevealBody = new("prism.guideRevealBody",
             "Results play out as a countdown to first place. The podium and active judges earn Aether Coin.");
+        public static readonly LocString GuideIntroTitle = new("prism.guideIntroTitle", "Welcome to Prism");
+        public static readonly LocString GuideIntroBody = new("prism.guideIntroBody", "A weekly glamour contest. Dress for the theme, judge other players' glams and see who makes the podium.");
+        public static readonly LocString GetStarted = new("prism.getStarted", "Get started");
+        public static readonly LocString Skip = new("prism.skip", "Skip");
+        public static readonly LocString ResultsOut = new("prism.resultsOut", "Results are in");
+        public static readonly LocString JudgingClosed = new("prism.judgingClosed", "Judging closed");
+        public static readonly LocString WonBy = new("prism.wonBy", "Won by {0}");
+        public static readonly LocString NextTheme = new("prism.nextTheme", "Next theme");
         public static readonly LocString JudgeRewardEach = new("prism.judgeRewardEach", "+{0} Aether Coin for every heat you judge");
         public static readonly LocString JudgeRewardLeft = new("prism.judgeRewardLeft", "+{0} Aether Coin a heat, {1} left this week");
         public static readonly LocString JudgeRewardSpent = new("prism.judgeRewardSpent", "No judging Aether Coin left this week");

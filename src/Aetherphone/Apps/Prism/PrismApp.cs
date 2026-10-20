@@ -97,7 +97,7 @@ internal sealed partial class PrismApp : IResumableApp
         {
             configuration.PrismGuideSeen = true;
             configuration.Save();
-            Go(PrismScreen.Guide);
+            StartGuide();
         }
         else
         {

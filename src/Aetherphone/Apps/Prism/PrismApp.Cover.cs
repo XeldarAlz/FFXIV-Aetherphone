@@ -27,6 +27,7 @@ internal sealed partial class PrismApp
     private CachedText judgedText;
     private CachedText issueText;
     private CachedText creditText;
+    private CachedText wonText;
     private CachedText countText;
     private CachedText totalText;
     private float introDelay;
@@ -57,10 +58,17 @@ internal sealed partial class PrismApp
         {
             DrawMasthead(drawList, content, string.Empty, scale);
             DrawNotice(drawList, content, Loc.T(L.Prism.NoWeekTitle), Loc.T(L.Prism.NoWeekHint), scale);
+            if (store.Results is { } last &&
+                PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(ResultsLabel(last)), "→", true))
+            {
+                OpenResults();
+            }
+
             return;
         }
 
         var cover = CoverPlacing(store.Results);
+        var won = cover is not null && week.Phase == PrismPhases.Results && store.Results?.WeekId == week.Id;
         var backdrop = cover?.ImageUrl ?? week.MyEntry?.ImageUrl ?? string.Empty;
         if (backdrop.Length > 0)
         {
@@ -70,14 +78,14 @@ internal sealed partial class PrismApp
             onPhoto = true;
         }
 
-        var below = DrawMasthead(drawList, content, cover is null ? string.Empty : CreditLine(cover), scale);
+        var below = DrawMasthead(drawList, content, cover is null || won ? string.Empty : CreditLine(cover), scale);
         var buttons = PrismMotion.Mark(drawList);
         DrawCoverButtons(drawList, content, below, week, scale);
         PrismMotion.Rise(drawList, buttons, PrismMotion.At(screenAge, introDelay + CreditsDelay, Motion.PageSettle),
             0f);
         var strips = HasPrimary(week) || store.Results is not null ? 1 : 0;
         PrismArt.OverPhoto(backdrop.Length > 0);
-        var steps = DrawCoverStory(drawList, content, week, strips, scale);
+        var steps = DrawCoverStory(drawList, content, week, won ? WonLine(cover!) : string.Empty, strips, scale);
         var strip = PrismMotion.Mark(drawList);
         DrawCoverStrip(drawList, content, week, scale);
         RiseStep(drawList, strip, steps, scale);
@@ -104,7 +112,7 @@ internal sealed partial class PrismApp
         if (PrismArt.Button(drawList, new Vector2(content.Max.X - gutter - PrismArt.ButtonWidth(guide, scale),
                 buttonTop), guide, scale, out _))
         {
-            Go(PrismScreen.Guide);
+            StartGuide();
         }
 
         var rule = top + PrismType.LineHeight(PrismFace.Headline, pixels) + HeaderGapUnits * scale;
@@ -143,7 +151,8 @@ internal sealed partial class PrismApp
         }
     }
 
-    private int DrawCoverStory(ImDrawListPtr drawList, Rect content, PrismWeekDto week, int strips, float scale)
+    private int DrawCoverStory(ImDrawListPtr drawList, Rect content, PrismWeekDto week, string winner, int strips,
+        float scale)
     {
         var gutter = PrismArt.Gutter(scale);
         var width = content.Width - gutter * 2f;
@@ -157,12 +166,13 @@ internal sealed partial class PrismApp
         var eyebrowGap = Metrics.Space.Xs * scale;
         var bottom = (strips > 0 ? StripRect(content, scale, strips - 1).Min.Y : content.Max.Y - PrismArt.BottomMargin(scale)) -
                      Metrics.Space.Xl * scale;
-        var top = bottom - statHeight - Metrics.Space.Xl * scale - lines.Length * headlineLine -
+        var winnerHeight = winner.Length > 0 ? eyebrowGap + labelLine : 0f;
+        var top = bottom - statHeight - Metrics.Space.Xl * scale - lines.Length * headlineLine - winnerHeight -
                   eyebrowGap - labelLine;
         var left = content.Min.X + gutter;
         var step = 0;
         var mark = PrismMotion.Mark(drawList);
-        PrismType.Draw(drawList, new Vector2(left, top), Loc.T(L.Prism.ThemeLabel), PrismArt.Muted,
+        PrismType.Draw(drawList, new Vector2(left, top), Loc.T(Eyebrow(week.Phase)), PrismArt.Muted,
             PrismFace.Label, labelPixels);
         RiseStep(drawList, mark, step++, scale);
         top += labelLine + eyebrowGap;
@@ -175,14 +185,22 @@ internal sealed partial class PrismApp
             top += headlineLine;
         }
 
+        if (winner.Length > 0)
+        {
+            mark = PrismMotion.Mark(drawList);
+            PrismType.Draw(drawList, new Vector2(left, top + eyebrowGap), winner, PrismArt.Fore, PrismFace.Label,
+                labelPixels);
+            RiseStep(drawList, mark, step++, scale);
+        }
+
         mark = PrismMotion.Mark(drawList);
         var statTop = bottom - statHeight;
         var column = (width - Metrics.Space.Lg * scale) * 0.5f;
         var totalLeft = left;
-        if (week.Phase != PrismPhases.Results)
+        var deadline = DeadlineValue(week);
+        if (deadline.Length > 0)
         {
-            DrawStat(drawList, new Vector2(left, statTop), column, Loc.T(DeadlineLabel(week.Phase)),
-                DeadlineValue(week), scale);
+            DrawStat(drawList, new Vector2(left, statTop), column, Loc.T(DeadlineLabel(week.Phase)), deadline, scale);
             totalLeft += column + Metrics.Space.Lg * scale;
         }
 
@@ -213,9 +231,8 @@ internal sealed partial class PrismApp
         var strip = store.Results is null ? row : new Rect(row.Min, new Vector2(row.Min.X + half, row.Max.Y));
         if (store.Results is { } results)
         {
-            var seen = Revealed(results);
             var slot = HasPrimary(week) ? new Rect(new Vector2(row.Max.X - half, row.Min.Y), row.Max) : row;
-            if (PrismArt.Strip(drawList, slot, Loc.T(seen ? L.Prism.LastResults : L.Prism.ResultsIn), "→", false))
+            if (PrismArt.Strip(drawList, slot, Loc.T(ResultsLabel(results)), "→", !HasPrimary(week)))
             {
                 OpenResults();
             }
@@ -320,8 +337,19 @@ internal sealed partial class PrismApp
         PrismPhases.Entering => L.Prism.EntriesClose,
         PrismPhases.Judging => L.Prism.JudgingCloses,
         PrismPhases.Final => L.Prism.FinalCloses,
+        PrismPhases.Results => L.Prism.NextTheme,
         _ => L.Prism.ResultsAt,
     };
+
+    private static LocString Eyebrow(string phase) => phase switch
+    {
+        PrismPhases.Results => L.Prism.ResultsOut,
+        PrismPhases.Tallying => L.Prism.JudgingClosed,
+        _ => L.Prism.ThemeLabel,
+    };
+
+    private LocString ResultsLabel(PrismResultsDto results) =>
+        Revealed(results) ? L.Prism.LastResults : L.Prism.ResultsIn;
 
     private string DeadlineValue(PrismWeekDto week)
     {
@@ -330,6 +358,7 @@ internal sealed partial class PrismApp
             PrismPhases.Entering => week.EntriesCloseAtUnix,
             PrismPhases.Judging => week.JudgingCloseAtUnix,
             PrismPhases.Final => week.FinalCloseAtUnix,
+            PrismPhases.Results => week.NextWeekAtUnix,
             _ => week.ResultsAtUnix,
         };
         if (unix <= 0)
@@ -367,6 +396,14 @@ internal sealed partial class PrismApp
         return creditText.IsCurrent(key)
             ? creditText.Value
             : creditText.Store(key, Loc.T(L.Prism.CoverCredit, cover.DisplayName));
+    }
+
+    private string WonLine(PrismPlacingDto winner)
+    {
+        var key = HashCode.Combine(winner.DisplayName, Loc.Current.Code);
+        return wonText.IsCurrent(key)
+            ? wonText.Value
+            : wonText.Store(key, Loc.T(L.Prism.WonBy, winner.DisplayName));
     }
 
     private string CountLine(int count)
