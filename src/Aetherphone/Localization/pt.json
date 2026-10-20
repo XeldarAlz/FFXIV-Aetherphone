@@ -2887,6 +2887,7 @@
   "character.awardLevelsHint": "O maior número de níveis ganhos em um único dia.",
   "camera.modeSquare": "QUADRADO",
   "camera.modePhoto": "FOTO",
+  "camera.modeScreen": "TELA",
   "camera.showGameUi": "Mostrar a interface do jogo",
   "camera.hideGameUi": "Ocultar a interface do jogo",
   "camera.flashOn": "Flash ligado",

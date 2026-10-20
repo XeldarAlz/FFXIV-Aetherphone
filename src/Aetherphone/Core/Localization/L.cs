@@ -7147,6 +7147,7 @@ internal static class L
     {
         public static readonly LocString ModeSquare = new("camera.modeSquare", "SQUARE");
         public static readonly LocString ModePhoto = new("camera.modePhoto", "PHOTO");
+        public static readonly LocString ModeScreen = new("camera.modeScreen", "SCREEN");
         public static readonly LocString ShowGameUi = new("camera.showGameUi", "Show game UI");
         public static readonly LocString HideGameUi = new("camera.hideGameUi", "Hide game UI");
         public static readonly LocString FlashOn = new("camera.flashOn", "Flash On");

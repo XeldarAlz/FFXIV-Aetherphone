@@ -2887,6 +2887,7 @@
   "character.awardLevelsHint": "Die meisten Stufen, die du an einem Tag aufgestiegen bist.",
   "camera.modeSquare": "QUADRAT",
   "camera.modePhoto": "FOTO",
+  "camera.modeScreen": "BILDSCHIRM",
   "camera.showGameUi": "Spiel-UI anzeigen",
   "camera.hideGameUi": "Spiel-UI ausblenden",
   "camera.flashOn": "Blitz an",

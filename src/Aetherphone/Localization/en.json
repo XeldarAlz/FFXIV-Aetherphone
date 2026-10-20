@@ -2887,6 +2887,7 @@
   "character.awardLevelsHint": "Your most levels gained in a single day.",
   "camera.modeSquare": "SQUARE",
   "camera.modePhoto": "PHOTO",
+  "camera.modeScreen": "SCREEN",
   "camera.showGameUi": "Show game UI",
   "camera.hideGameUi": "Hide game UI",
   "camera.flashOn": "Flash On",

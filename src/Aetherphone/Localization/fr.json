@@ -2887,6 +2887,7 @@
   "character.awardLevelsHint": "Le plus de niveaux gagnés en une seule journée.",
   "camera.modeSquare": "CARRÉ",
   "camera.modePhoto": "PHOTO",
+  "camera.modeScreen": "ÉCRAN",
   "camera.showGameUi": "Afficher l'interface du jeu",
   "camera.hideGameUi": "Masquer l'interface du jeu",
   "camera.flashOn": "Flash activé",

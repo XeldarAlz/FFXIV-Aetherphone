@@ -2887,6 +2887,7 @@
   "character.awardLevelsHint": "El mayor número de niveles que subiste en un solo día.",
   "camera.modeSquare": "CUADRADO",
   "camera.modePhoto": "FOTO",
+  "camera.modeScreen": "PANTALLA",
   "camera.showGameUi": "Mostrar la interfaz del juego",
   "camera.hideGameUi": "Ocultar la interfaz del juego",
   "camera.flashOn": "Flash activado",

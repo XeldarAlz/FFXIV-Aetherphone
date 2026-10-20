@@ -2887,6 +2887,7 @@
   "character.awardLevelsHint": "1日に上がったレベル数の最高記録。",
   "camera.modeSquare": "スクエア",
   "camera.modePhoto": "写真",
+  "camera.modeScreen": "全画面",
   "camera.showGameUi": "ゲームのUIを表示",
   "camera.hideGameUi": "ゲームのUIを非表示",
   "camera.flashOn": "フラッシュ オン",
