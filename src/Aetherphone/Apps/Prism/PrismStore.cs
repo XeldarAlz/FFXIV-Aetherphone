@@ -16,6 +16,7 @@ internal static class PrismPhases
     public const string Judging = "judging";
     public const string Final = "final";
     public const string Tallying = "tallying";
+    public const string Results = "results";
 
     public const string StatusRejected = "rejected";
 
@@ -136,15 +137,19 @@ internal sealed class PrismStore : IDisposable
             return;
         }
 
-        if (results is { } held && held.WeekId != current.Id && held.WeekId != current.PreviousWeekId)
+        if (results is { } held && !StillCurrent(held, current))
         {
             results = null;
         }
     }
 
+    private static bool StillCurrent(PrismResultsDto held, PrismWeekDto current) =>
+        held.WeekId == current.PreviousWeekId ||
+        (held.WeekId == current.Id && held.Revision == current.ResultsRevision);
+
     private static bool ResultsOut(PrismWeekDto week) =>
-        week.Id.Length > 0 && week.ResultsAtUnix > 0 &&
-        DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= week.ResultsAtUnix;
+        week.Id.Length > 0 && (week.Phase == PrismPhases.Results || (week.ResultsAtUnix > 0 &&
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= week.ResultsAtUnix));
 
     public void Enter(string sourcePath, WallpaperCrop crop, Action<bool> onComplete)
     {

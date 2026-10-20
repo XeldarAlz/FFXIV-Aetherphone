@@ -60,6 +60,18 @@ internal static class PrismType
         return width;
     }
 
+    public static string FitLabel(string text, float pixels, float width)
+    {
+        var tier = Tier(PrismFace.Label, pixels);
+        float fontSize;
+        using (Plugin.Fonts.Push(tier, FontWeight.Medium))
+        {
+            fontSize = ImGui.GetFontSize();
+        }
+
+        return Typography.FitText(text, width * fontSize / Snap(PrismFace.Label, pixels), tier, FontWeight.Medium);
+    }
+
     public static float LineHeight(PrismFace face, float pixels) =>
         Snap(face, pixels) * (face == PrismFace.Label ? LabelLeading : HeadlineLeading);
 

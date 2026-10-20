@@ -149,12 +149,9 @@ internal sealed partial class PrismApp
         var counter = LookCounter(lookIndex + 1, looks.Length);
         PrismType.Draw(drawList, new Vector2(left, countTop), counter, PrismArt.Muted, PrismFace.Label, labelPixels);
         var aside = lookIndex == 0 && chosen == 0 ? Loc.T(L.Prism.InspectHint) : store.Week?.Title ?? string.Empty;
-        if (PrismType.Measure(aside, PrismFace.Label, labelPixels).X <= width -
-            PrismType.Measure(counter, PrismFace.Label, labelPixels).X - Metrics.Space.Lg * scale)
-        {
-            PrismType.DrawRight(drawList, new Vector2(left + width, countTop), aside, PrismArt.Muted,
-                PrismFace.Label, labelPixels);
-        }
+        var room = width - PrismType.Measure(counter, PrismFace.Label, labelPixels).X - Metrics.Space.Lg * scale;
+        PrismType.DrawRight(drawList, new Vector2(left + width, countTop), PrismType.FitLabel(aside, labelPixels, room),
+            PrismArt.Muted, PrismFace.Label, labelPixels);
 
         PrismType.DrawLines(drawList, new Vector2(left, questionTop), lines, PrismArt.Fore, PrismFace.Headline,
             pixels);
