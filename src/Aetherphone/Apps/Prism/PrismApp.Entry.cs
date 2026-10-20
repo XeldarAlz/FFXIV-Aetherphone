@@ -45,6 +45,7 @@ internal sealed partial class PrismApp
             : entry.Status == PrismPhases.StatusRejected
                 ? entry.RejectReason
                 : entry.Status == PrismPhases.StatusLive ? string.Empty : Loc.T(L.Prism.StatusReviewHint);
+        hint = PrismType.Sentences(hint, TextStyles.Subheadline, width);
         var hintWidth = PrismType.BalancedWidth(hint, TextStyles.Subheadline, width);
         var hintHeight = hint.Length > 0
             ? Typography.MeasureWrappedBlock(hint, TextStyles.Subheadline, hintWidth).Y + Metrics.Space.Sm * scale
