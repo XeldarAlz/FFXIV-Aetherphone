@@ -63,6 +63,7 @@ Aethernet ging am 2. Juli 2026 an den Start. Bis zum Ende der Saison haben Spiel
         <li>Fotos, GIFs und dreizehn Reaktionen</li>
         <li>Füge ein Bild mit Strg+V ein oder zieh eins aus dem Datei-Explorer hinein</li>
         <li>Chirps in anderen Sprachen mit einem Tipp übersetzt</li>
+        <li>Verschlüsselte Direktnachrichten mit Fotos, Sprachnachrichten und geteilten Chirps</li>
       </ul>
     </td>
     <td width="50%" valign="top">

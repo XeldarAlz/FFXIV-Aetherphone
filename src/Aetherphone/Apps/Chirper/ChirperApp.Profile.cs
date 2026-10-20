@@ -402,6 +402,18 @@ internal sealed partial class ChirperApp
             return;
         }
 
+        if (user.CanMessage)
+        {
+            var messageCenter = new Vector2(pillRight - moreRadius, rowCenterY);
+            if (RoundButton.Icon(drawList, messageCenter, moreRadius, PhoneIcons.MessageCircle, ui.Ink,
+                    ButtonStyle.Gray, Loc.T(L.Chirper.MessageButton)))
+            {
+                dms.OpenThread(user.Id);
+            }
+
+            pillRight = messageCenter.X - moreRadius - 8f * scale;
+        }
+
         var state = SocialFeedStore.FollowStateOf(user);
         var followLabel = state switch
         {
@@ -657,6 +669,7 @@ internal sealed partial class ChirperApp
         {
             AddSheetItem(PostSheetAction.BadgeProgress, Loc.T(L.Social.BadgeProgress), false);
             AddSheetItem(PostSheetAction.Rules, Loc.T(L.Conduct.Eyebrow), false);
+            AddSheetItem(PostSheetAction.MessagePrivacy, Loc.T(L.Chirper.MessagePrivacy), false);
         }
         else
         {
@@ -691,6 +704,9 @@ internal sealed partial class ChirperApp
                 break;
             case PostSheetAction.BadgeProgress:
                 router.Push(ChirperRoute.BadgeProgress);
+                break;
+            case PostSheetAction.MessagePrivacy:
+                router.Push(ChirperRoute.Dm(SocialDmScreen.Privacy));
                 break;
         }
     }

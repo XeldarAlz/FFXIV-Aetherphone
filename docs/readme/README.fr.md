@@ -63,6 +63,7 @@ Aethernet a ouvert ses portes le 2 juillet 2026. À la fin de la saison, les jou
         <li>Photos, GIF et treize réactions</li>
         <li>Collez une image avec Ctrl+V ou faites-en glisser une depuis l'Explorateur de fichiers</li>
         <li>Les chirps dans d'autres langues traduits d'un geste</li>
+        <li>Messages privés chiffrés avec photos, messages vocaux et chirps partagés</li>
       </ul>
     </td>
     <td width="50%" valign="top">

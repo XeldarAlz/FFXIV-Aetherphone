@@ -7251,6 +7251,30 @@ internal static class L
         public static readonly LocString NewChirps = new("chirper.newChirps", "New chirps");
         public static readonly LocPlural NewChirpsCount = new("chirper.newChirpsCount", "{0} new chirp", "{0} new chirps");
         public static readonly LocString SharedChirp = new("chirper.sharedChirp", "Shared a chirp");
+        public static readonly LocString InboxTitle = new("chirper.inboxTitle", "Messages");
+        public static readonly LocString InboxEmpty = new("chirper.inboxEmpty", "No messages yet");
+        public static readonly LocString InboxEmptyHint = new("chirper.inboxEmptyHint", "Message someone from their profile");
+        public static readonly LocString ThreadEmpty = new("chirper.threadEmpty", "Say hello");
+        public static readonly LocString MessageHint = new("chirper.messageHint", "Message…");
+        public static readonly LocString NewMessage = new("chirper.newMessage", "New message");
+        public static readonly LocString NewMessageHint = new("chirper.newMessageHint", "To: name or @username");
+        public static readonly LocString NewMessageEmpty = new("chirper.newMessageEmpty", "Search for someone to message");
+        public static readonly LocString CannotMessage = new("chirper.cannotMessage", "Can't message");
+        public static readonly LocString ActiveNow = new("chirper.activeNow", "Active now");
+        public static readonly LocString Requests = new("chirper.requests", "Requests");
+        public static readonly LocString RequestsCount = new("chirper.requestsCount", "Requests ({0})");
+        public static readonly LocString RequestsEmpty = new("chirper.requestsEmpty", "No message requests");
+        public static readonly LocString RequestBanner = new("chirper.requestBanner", "{0} wants to send you messages");
+        public static readonly LocString AcceptRequest = new("chirper.acceptRequest", "Accept");
+        public static readonly LocString DeleteConversation = new("chirper.deleteConversation", "Delete conversation");
+        public static readonly LocString DeleteConversationMessage = new("chirper.deleteConversationMessage", "This deletes the conversation for you. This can't be undone.");
+        public static readonly LocString SendTo = new("chirper.sendTo", "Send to");
+        public static readonly LocString Send = new("chirper.send", "Send");
+        public static readonly LocString Sent = new("chirper.sent", "Sent");
+        public static readonly LocString MessageButton = new("chirper.message", "Message");
+        public static readonly LocString MessagesAudienceHint = new("chirper.messagesAudienceHint", "Controls who can start a new conversation with you on Chirper. People you have replied to can always message you.");
+        public static readonly LocString MessagePrivacy = new("chirper.messagePrivacy", "Message privacy");
+        public static readonly LocString SendInMessage = new("chirper.sendInMessage", "Send in a message");
     }
 
     internal static class Aethergram

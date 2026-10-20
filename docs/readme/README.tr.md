@@ -63,6 +63,7 @@ Aethernet 2 Temmuz 2026'da açıldı. Sezon sonuna kadar 113 dünyadaki oyuncula
         <li>Fotoğraflar, GIF'ler ve on üç tepki</li>
         <li>Ctrl+V ile görsel yapıştır ya da Dosya Gezgini'nden sürükleyip bırak</li>
         <li>Başka dillerdeki chirp'ler tek dokunuşla çevrilir</li>
+        <li>Fotoğraf, sesli mesaj ve paylaşılan chirp'lerle şifreli özel mesajlar</li>
       </ul>
     </td>
     <td width="50%" valign="top">

@@ -63,6 +63,7 @@ O Aethernet abriu em 2 de julho de 2026. Até o fim da temporada, jogadores de 1
         <li>Fotos, GIFs e treze reações</li>
         <li>Cole uma imagem com Ctrl+V ou arraste uma do Explorador de Arquivos</li>
         <li>Chirps em outros idiomas traduzidos com um toque</li>
+        <li>Mensagens diretas criptografadas com fotos, mensagens de voz e chirps compartilhados</li>
       </ul>
     </td>
     <td width="50%" valign="top">

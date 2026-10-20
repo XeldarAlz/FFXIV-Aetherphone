@@ -175,7 +175,7 @@ Audio goes out through `AudioCapture` (microphone, automatic gain capped at -3 d
 
 ## End-to-end encryption
 
-Direct conversations (ChocoChat chats, Velvet DMs, Aethergram DMs) are encrypted on the PC once every member has published a key, and the server then stores only ciphertext. Until then a conversation is plaintext and labeled Not encrypted. Yellow Pages inquiries are always sealed: their composer stays blocked until it can encrypt. Once a conversation is encrypted, a plaintext send is refused with 409 `thread_encrypted`, so `EncryptedSendPolicy` holds a send until the key status is known. Attachments and voice notes use the same key. Posts, comments, and profiles are public.
+Direct conversations (ChocoChat chats, Velvet, Aethergram and Chirper DMs) are encrypted on the PC once every member has published a key, and the server then stores only ciphertext. Until then a conversation is plaintext and labeled Not encrypted. Yellow Pages inquiries are always sealed: their composer stays blocked until it can encrypt. Once a conversation is encrypted, a plaintext send is refused with 409 `thread_encrypted`, so `EncryptedSendPolicy` holds a send until the key status is known. Attachments and voice notes use the same key. Posts, comments, and profiles are public.
 
 Three prefixes mark encrypted data on the wire:
 

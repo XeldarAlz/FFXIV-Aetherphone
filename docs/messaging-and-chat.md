@@ -1,6 +1,6 @@
 # Messaging and chat
 
-This page explains the shared chat stack behind every server-backed conversation in Aetherphone: ChocoChat (the Message app) and its pop-out windows, Velvet, Aethergram DMs, and Yellow Pages inquiries. Read it before you change one of those screens or build a new one. The in-game chat app has its own page, [Linkpearl](linkpearl.md); the HTTP client, the realtime socket and the cryptography live in [Networking](networking.md).
+This page explains the shared chat stack behind every server-backed conversation in Aetherphone: ChocoChat (the Message app) and its pop-out windows, Velvet, Aethergram and Chirper DMs, and Yellow Pages inquiries. Read it before you change one of those screens or build a new one. The in-game chat app has its own page, [Linkpearl](linkpearl.md); the HTTP client, the realtime socket and the cryptography live in [Networking](networking.md).
 
 The UI is Dear ImGui, an immediate mode library: every screen is redrawn each frame, and a "component" here is a class whose `Draw` method you call every frame. Keep work off that per-frame path.
 
@@ -37,7 +37,7 @@ The Music app's `LiveChatTranscript` (radio and jam lobby chat) is a third, smal
 | ChocoChat (`message`) | `ThreadView` in Apps/Message/MessageApp.Thread.cs | `DirectMessagesStore` |
 | ChocoChat pop-outs | `PopoutThreadView` in Apps/Message/MessagePopoutWindow.cs | One detached `DirectMessagesStore` per window |
 | Velvet (`velvet`) | `ThreadView` in Apps/Velvet/VelvetShell.Thread.cs | `VelvetStore` |
-| Aethergram (`aethergram`) | `ThreadView` in Apps/Aethergram/AethergramApp.Thread.cs | `GramDmStore` |
+| Aethergram (`aethergram`) and Chirper (`chirper`) | `ThreadView` in Windows/Components/Social/SocialDms.Thread.cs | `SocialDmStore`, one per `SocialDmSurface` |
 | Yellow Pages (`yellowpages`) | `ThreadView` in Apps/YellowPages/YellowPagesApp.Thread.cs | `AdInquiryStore` in Core/YellowPages |
 
 ChocoChat is the Message app's user-facing name; code and localization keys say `message` and `MessageApp`. `MessageThreadViewBase` holds what its phone screen and pop-outs share: the DTO mapping, saved drafts, the wallpaper, the composer layout and group sender avatars.

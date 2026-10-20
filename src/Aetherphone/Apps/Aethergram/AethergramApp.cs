@@ -152,7 +152,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     private readonly AethergramStore store;
     private readonly SocialDmStore dmStore;
     private readonly SocialLauncher launcher;
-    private readonly GramDmLauncher dmLauncher;
+    private readonly SocialDmLauncher dmLauncher;
     private readonly GameData gameData;
     private readonly Configuration configuration;
     private readonly LodestoneService lodestone;
@@ -246,7 +246,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     private readonly SocialDms dms;
 
     public AethergramApp(AethernetSession session, AethernetApi net, LodestoneService lodestone,
-        RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, GramDmLauncher dmLauncher,
+        RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, SocialDmLauncher dmLauncher,
         GameData gameData, Configuration configuration, SocialNotificationService social,
         NotificationService notifications, HttpService http, KeyVault keyVault,
         ConversationKeyStore conversationKeys, DecryptedHistoryStore chatHistory,
@@ -396,7 +396,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             stories.RefreshTray();
         }
 
-        if (store.IsSignedIn && dmLauncher.TryConsume(out var threadUserId, out var threadDraft))
+        if (store.IsSignedIn && dmLauncher.TryConsume(Id, out var threadUserId, out var threadDraft))
         {
             ShowLaunchedThread(threadUserId);
             if (!string.IsNullOrEmpty(threadDraft))

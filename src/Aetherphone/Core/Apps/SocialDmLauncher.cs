@@ -1,19 +1,21 @@
 namespace Aetherphone.Core.Apps;
 
-internal sealed class GramDmLauncher
+internal sealed class SocialDmLauncher
 {
+    private string? pendingAppId;
     private string? pendingUserId;
     private string? pendingDraft;
 
-    public void Request(string userId, string? draft = null)
+    public void Request(string appId, string userId, string? draft = null)
     {
+        pendingAppId = appId;
         pendingUserId = userId;
         pendingDraft = draft;
     }
 
-    public bool TryConsume(out string userId, out string? draft)
+    public bool TryConsume(string appId, out string userId, out string? draft)
     {
-        if (pendingUserId is null)
+        if (pendingUserId is null || pendingAppId != appId)
         {
             userId = string.Empty;
             draft = null;
@@ -22,6 +24,7 @@ internal sealed class GramDmLauncher
 
         userId = pendingUserId;
         draft = pendingDraft;
+        pendingAppId = null;
         pendingUserId = null;
         pendingDraft = null;
         return true;

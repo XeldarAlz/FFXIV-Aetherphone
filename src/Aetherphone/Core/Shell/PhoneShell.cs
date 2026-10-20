@@ -87,7 +87,7 @@ internal sealed class PhoneShell : IDisposable
         navigation.AppOpened += director.OnAppOpened;
         navigation.AppOpened += services.Conduct.NotifyAppOpened;
         var router = new NotificationRouter(navigation, notifications, services.SocialNotifications,
-            services.LinkpearlLauncher, services.VelvetLauncher, services.DmLauncher, services.GramDmLauncher,
+            services.LinkpearlLauncher, services.VelvetLauncher, services.DmLauncher, services.SocialDmLauncher,
             services.SocialLauncher, services.MusterLauncher, services.YellowPagesLauncher,
             services.AnnouncementsLauncher, services.SafetyLauncher, services.EncryptionSetup, services.RadioLauncher,
             services.CasinoLauncher, services.AetherStreamLauncher, services.HuntsLauncher, services.JamLauncher, services.FeedbackLauncher);

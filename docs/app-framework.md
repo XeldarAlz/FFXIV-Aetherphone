@@ -152,7 +152,7 @@ Apps never call into each other. To deep-link, a source writes an intent into a 
 | Launcher | Opens |
 | --- | --- |
 | `DmLauncher` | ChocoChat to a user, a conversation or the Calls tab |
-| `GramDmLauncher` | An Aethergram direct message, optionally with a draft |
+| `SocialDmLauncher` | An Aethergram or Chirper direct message (keyed by app id), optionally with a draft |
 | `SocialLauncher` | A profile, post or requests screen in a social app |
 | `VelvetLauncher` | Velvet to a user |
 | `SettingsLauncher` | Settings to the Notifications, Privacy, Calls or Changelog page, or to one app's own page |

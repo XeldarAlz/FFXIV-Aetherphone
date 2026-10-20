@@ -477,6 +477,8 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public List<string> VelvetArchivedThreads { get; set; } = new();
     public List<string> AethergramPinnedThreads { get; set; } = new();
     public List<string> AethergramArchivedThreads { get; set; } = new();
+    public List<string> ChirperPinnedThreads { get; set; } = new();
+    public List<string> ChirperArchivedThreads { get; set; } = new();
     public List<string> MessagePinnedChats { get; set; } = new();
     public List<string> MessageArchivedChats { get; set; } = new();
     public List<string> MessageFavoriteContacts { get; set; } = new();

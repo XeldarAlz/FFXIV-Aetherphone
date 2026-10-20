@@ -133,7 +133,7 @@ internal sealed partial class NotificationsApp : IResumableApp
 
     private NotificationRouter CreateRouter(INavigator navigator) =>
         new(navigator, notifications, services.SocialNotifications, services.LinkpearlLauncher,
-            services.VelvetLauncher, services.DmLauncher, services.GramDmLauncher, services.SocialLauncher,
+            services.VelvetLauncher, services.DmLauncher, services.SocialDmLauncher, services.SocialLauncher,
             services.MusterLauncher, services.YellowPagesLauncher, services.AnnouncementsLauncher,
             services.SafetyLauncher, services.EncryptionSetup, services.RadioLauncher, services.CasinoLauncher,
             services.AetherStreamLauncher, services.HuntsLauncher, services.JamLauncher, services.FeedbackLauncher);

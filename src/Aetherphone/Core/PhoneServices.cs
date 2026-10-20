@@ -89,7 +89,7 @@ internal sealed class PhoneServices : IDisposable
     public required LinkpearlLauncher LinkpearlLauncher { get; init; }
     public required VelvetLauncher VelvetLauncher { get; init; }
     public required DmLauncher DmLauncher { get; init; }
-    public required GramDmLauncher GramDmLauncher { get; init; }
+    public required SocialDmLauncher SocialDmLauncher { get; init; }
     public required SocialLauncher SocialLauncher { get; init; }
     public required LinkpearlNotificationGate LinkpearlNotificationGate { get; init; }
     public required GameChat.ChatLog ChatLog { get; init; }
@@ -279,7 +279,7 @@ internal sealed class PhoneServices : IDisposable
         var linkpearlLauncher = new LinkpearlLauncher();
         var velvetLauncher = new VelvetLauncher();
         var dmLauncher = new DmLauncher();
-        var gramDmLauncher = new GramDmLauncher();
+        var socialDmLauncher = new SocialDmLauncher();
         var socialLauncher = new SocialLauncher();
         var chatLog = new GameChat.ChatLog();
         var chatSend = new GameChat.ChatSend();
@@ -520,7 +520,7 @@ internal sealed class PhoneServices : IDisposable
             LinkpearlLauncher = linkpearlLauncher,
             VelvetLauncher = velvetLauncher,
             DmLauncher = dmLauncher,
-            GramDmLauncher = gramDmLauncher,
+            SocialDmLauncher = socialDmLauncher,
             SocialLauncher = socialLauncher,
             LinkpearlNotificationGate = linkpearlNotificationGate,
             ChatLog = chatLog,
