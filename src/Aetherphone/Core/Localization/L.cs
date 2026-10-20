@@ -10761,9 +10761,6 @@ internal static class L
         public static readonly LocString WithdrawTitle = new("prism.withdrawTitle", "Withdraw your glam?");
         public static readonly LocString WithdrawBody = new("prism.withdrawBody",
             "Your photo leaves this week's contest. You can enter again until entries close.");
-        public static readonly LocString StatusReview = new("prism.statusReview", "In review");
-        public static readonly LocString StatusReviewHint = new("prism.statusReviewHint",
-            "A moderator checks every glam before judging starts.");
         public static readonly LocString StatusLive = new("prism.statusLive", "In the running");
         public static readonly LocString StatusRejected = new("prism.statusRejected", "Not accepted");
         public static readonly LocString JudgeHeat = new("prism.judgeHeat", "Judge a heat");
@@ -10798,7 +10795,6 @@ internal static class L
         public static readonly LocString YourPlacing = new("prism.yourPlacing", "Your placing");
         public static readonly LocString TapHint = new("prism.tapHint", "Tap for the next glam");
         public static readonly LocString InspectHint = new("prism.inspectHint", "Hold to look closer");
-        public static readonly LocString StatusReviewTitle = new("prism.statusReviewTitle", "Your glam is in review");
         public static readonly LocString StatusLiveTitle = new("prism.statusLiveTitle", "Your glam is in the running");
         public static readonly LocString StatusRejectedTitle =
             new("prism.statusRejectedTitle", "Your glam wasn't accepted");

@@ -17,8 +17,6 @@ internal static class PrismPhases
     public const string Final = "final";
     public const string Tallying = "tallying";
 
-    public const string StatusReview = "review";
-    public const string StatusLive = "live";
     public const string StatusRejected = "rejected";
 
     public const string StageFinal = "final";

@@ -379,10 +379,6 @@ internal sealed partial class PrismApp
         return totalText.IsCurrent(key) ? totalText.Value : totalText.Store(key, count.ToString("N0", Loc.Culture));
     }
 
-    private static LocString StatusName(string status) => status switch
-    {
-        PrismPhases.StatusLive => L.Prism.StatusLive,
-        PrismPhases.StatusRejected => L.Prism.StatusRejected,
-        _ => L.Prism.StatusReview,
-    };
+    private static LocString StatusName(string status) =>
+        status == PrismPhases.StatusRejected ? L.Prism.StatusRejected : L.Prism.StatusLive;
 }
