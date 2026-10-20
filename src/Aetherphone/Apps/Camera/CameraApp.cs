@@ -46,6 +46,7 @@ internal sealed class CameraApp : IPhoneApp
     private const int CaptureWatchdogTicks = 30;
     private const int ShortTimerSeconds = 3;
     private const int LongTimerSeconds = 10;
+    private const int ScreenCountdownSeconds = 3;
     private const float RequestedShotSettleSeconds = 0.6f;
     private static readonly LocString[] Modes = { L.Camera.ModeSquare, L.Camera.ModePhoto, L.Camera.ModeScreen };
     private static readonly string[] ModeAnchors = { "camera.mode.square", "camera.mode.photo", "camera.mode.screen" };
@@ -160,11 +161,15 @@ internal sealed class CameraApp : IPhoneApp
         var drawList = ImGui.GetWindowDrawList();
         UiAnchors.Report("camera.viewfinder", viewfinder);
         HandleFocusTap(viewfinder);
-        CameraChrome.Viewfinder(drawList, viewfinder, captureRect, configuration.CameraGrid, scale);
-        if (modeIndex == ScreenModeIndex)
+        var screenMode = modeIndex == ScreenModeIndex;
+        CameraChrome.Viewfinder(drawList, viewfinder, captureRect, configuration.CameraGrid && !screenMode, scale);
+        if (screenMode)
         {
             var whole = WholeScreen();
-            CameraChrome.Viewfinder(ImGui.GetForegroundDrawList(), whole, whole, configuration.CameraGrid, scale);
+            var foreground = ImGui.GetForegroundDrawList();
+            CameraChrome.ScreenNote(drawList, viewfinder, Loc.T(L.Camera.ScreenTitle), Loc.T(L.Camera.ScreenHint), scale);
+            CameraChrome.Viewfinder(foreground, whole, whole, configuration.CameraGrid, scale);
+            CameraChrome.ScreenCorners(foreground, whole, scale);
         }
 
         CameraChrome.Reticle(drawList, reticleAge, ReticleDuration, reticlePosition, scale);
@@ -181,7 +186,15 @@ internal sealed class CameraApp : IPhoneApp
         }
 
         DrawFlight(drawList, delta, scale);
-        CameraChrome.Flash(drawList, screen, flashAge, FlashDuration, rounding);
+        if (screenMode)
+        {
+            CameraChrome.Flash(ImGui.GetForegroundDrawList(), WholeScreen(), flashAge, FlashDuration, 0f);
+        }
+        else
+        {
+            CameraChrome.Flash(drawList, screen, flashAge, FlashDuration, rounding);
+        }
+
         TakeRequestedShot(captureRect, delta);
     }
 
@@ -435,6 +448,12 @@ internal sealed class CameraApp : IPhoneApp
             UiFeedback.Play(UiSound.Tap);
         }
 
+        if (modeIndex == ScreenModeIndex)
+        {
+            CameraChrome.Countdown(ImGui.GetForegroundDrawList(), WholeScreen().Center, Digits(shown), scale);
+            return;
+        }
+
         CameraChrome.Countdown(drawList, captureRect.Center, Digits(shown), scale);
     }
 
@@ -512,6 +531,12 @@ internal sealed class CameraApp : IPhoneApp
 
         pendingCaptureRect = ShotRect(captureRect);
         var seconds = configuration.CameraTimerSeconds;
+        if (modeIndex == ScreenModeIndex)
+        {
+            seconds = Math.Max(seconds, ScreenCountdownSeconds);
+            PhoneAside.Request(Id);
+        }
+
         if (seconds > 0)
         {
             timerShown = 0;
@@ -713,6 +738,7 @@ internal sealed class CameraApp : IPhoneApp
 
     private void DetachCaptureHooks()
     {
+        PhoneAside.Release(Id);
         captureCountdown = 0;
         if (!captureHooksAttached)
         {

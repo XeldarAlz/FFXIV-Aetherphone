@@ -2888,6 +2888,8 @@
   "camera.modeSquare": "QUADRADO",
   "camera.modePhoto": "FOTO",
   "camera.modeScreen": "TELA",
+  "camera.screenTitle": "Captura a tela inteira",
+  "camera.screenHint": "O celular sai da frente, faz uma contagem regressiva e tira a foto sem aparecer nela.",
   "camera.showGameUi": "Mostrar a interface do jogo",
   "camera.hideGameUi": "Ocultar a interface do jogo",
   "camera.flashOn": "Flash ligado",

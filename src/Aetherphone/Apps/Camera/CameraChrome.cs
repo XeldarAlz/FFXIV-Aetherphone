@@ -28,6 +28,10 @@ internal static class CameraChrome
     private const float ReticleStroke = 1.6f;
     private const float CountdownShadowDrop = 3f;
     private const float FlashPeakAlpha = 0.85f;
+    private const float CornerLength = 28f;
+    private const float CornerInset = 14f;
+    private const float CornerStroke = 2f;
+    private const float NoteWidthShare = 0.78f;
 
     public static readonly Vector4 Yellow = new(0.98f, 0.79f, 0.20f, 1f);
     public static readonly Vector4 Dark = new(0.08f, 0.07f, 0.04f, 1f);
@@ -42,6 +46,7 @@ internal static class CameraChrome
     private static readonly Vector4 WellEmpty = new(0.16f, 0.17f, 0.20f, 1f);
     private static readonly Vector4 WellStroke = new(1f, 1f, 1f, 0.22f);
     private static readonly Vector4 Shadow = new(0f, 0f, 0f, 0.5f);
+    private static readonly Vector4 NoteBody = new(1f, 1f, 1f, 0.75f);
 
     public static void Band(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding, ImDrawFlags corners,
         bool tray) =>
@@ -67,6 +72,41 @@ internal static class CameraChrome
         {
             DrawThirds(drawList, captureRect, ImGui.GetColorU32(GridInk), Metrics.Stroke.Hairline * scale);
         }
+    }
+
+    public static void ScreenNote(ImDrawListPtr drawList, Rect viewfinder, string title, string body, float scale)
+    {
+        drawList.AddRectFilled(viewfinder.Min, viewfinder.Max, ImGui.GetColorU32(BarTint));
+        var width = viewfinder.Width * NoteWidthShare;
+        var titleHeight = Typography.MeasureWrappedBlock(title, TextStyles.Headline, width).Y;
+        var bodyHeight = Typography.MeasureWrappedBlock(body, TextStyles.Subheadline, width).Y;
+        var gap = Metrics.Space.Sm * scale;
+        var top = viewfinder.Center.Y - (titleHeight + gap + bodyHeight) * 0.5f;
+        Typography.DrawWrappedCentered(drawList, title, TextStyles.Headline, White,
+            new Vector2(viewfinder.Center.X, top), width);
+        Typography.DrawWrappedCentered(drawList, body, TextStyles.Subheadline, NoteBody,
+            new Vector2(viewfinder.Center.X, top + titleHeight + gap), width);
+    }
+
+    public static void ScreenCorners(ImDrawListPtr drawList, Rect screen, float scale)
+    {
+        var inset = CornerInset * scale;
+        var length = CornerLength * scale;
+        var stroke = CornerStroke * scale;
+        var color = ImGui.GetColorU32(White);
+        var min = screen.Min + new Vector2(inset, inset);
+        var max = screen.Max - new Vector2(inset, inset);
+        Corner(drawList, min, new Vector2(1f, 1f), length, color, stroke);
+        Corner(drawList, new Vector2(max.X, min.Y), new Vector2(-1f, 1f), length, color, stroke);
+        Corner(drawList, new Vector2(min.X, max.Y), new Vector2(1f, -1f), length, color, stroke);
+        Corner(drawList, max, new Vector2(-1f, -1f), length, color, stroke);
+    }
+
+    private static void Corner(ImDrawListPtr drawList, Vector2 point, Vector2 direction, float length, uint color,
+        float stroke)
+    {
+        drawList.AddLine(point, point + new Vector2(direction.X * length, 0f), color, stroke);
+        drawList.AddLine(point, point + new Vector2(0f, direction.Y * length), color, stroke);
     }
 
     public static void Reticle(ImDrawListPtr drawList, float age, float duration, Vector2 position, float scale)

@@ -2888,6 +2888,8 @@
   "camera.modeSquare": "KARE",
   "camera.modePhoto": "FOTO",
   "camera.modeScreen": "EKRAN",
+  "camera.screenTitle": "Tüm ekranı çeker",
+  "camera.screenHint": "Telefon kenara çekilir, geri sayar ve kendisi görünmeden fotoğrafı çeker.",
   "camera.showGameUi": "Oyun arayüzünü göster",
   "camera.hideGameUi": "Oyun arayüzünü gizle",
   "camera.flashOn": "Flaş Açık",

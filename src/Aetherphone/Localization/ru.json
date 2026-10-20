@@ -2888,6 +2888,8 @@
   "camera.modeSquare": "КВАДРАТ",
   "camera.modePhoto": "ФОТО",
   "camera.modeScreen": "ЭКРАН",
+  "camera.screenTitle": "Снимает весь экран",
+  "camera.screenHint": "Телефон отъезжает в сторону, ведёт обратный отсчёт и делает снимок без себя в кадре.",
   "camera.showGameUi": "Показать интерфейс игры",
   "camera.hideGameUi": "Скрыть интерфейс игры",
   "camera.flashOn": "Вспышка вкл.",
