@@ -78,7 +78,7 @@ internal sealed partial class YellowPagesApp : IResumableApp
     private readonly DropdownMenu optionsMenu = new();
     private readonly DropdownMenu.Item[] optionItems = new DropdownMenu.Item[6];
     private readonly ActionSheet adSheet = new();
-    private readonly ActionSheet inboxSheet = new();
+    private readonly ChatRowSheet inboxSheet;
     private readonly Action back;
     private readonly Action backToBrowse;
     private PhoneTheme theme = PhoneTheme.Default;
@@ -127,6 +127,9 @@ internal sealed partial class YellowPagesApp : IResumableApp
         stepEveryWeeksForward = StepEveryWeeksForward;
         stepFirstWeekBack = StepFirstWeekBack;
         stepFirstWeekForward = StepFirstWeekForward;
+        inboxSheet = new ChatRowSheet(configuration, configuration.YellowPagesPinnedInquiries,
+            configuration.YellowPagesArchivedInquiries, L.Message.DeleteConversation, AskDeleteConversation,
+            ShellToast.Show, () => inboxFilterDirty = true);
         threadView = new ThreadView(this);
         scopeScreen = new GeoScopeScreen(Ink, ui, ScreenTitleStyle);
         MigrateScope();

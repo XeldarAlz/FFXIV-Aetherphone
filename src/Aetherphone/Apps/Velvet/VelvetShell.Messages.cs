@@ -14,7 +14,6 @@ internal sealed partial class VelvetShell
 {
     private const float MessagesSearchHeight = 52f;
     private const float MessagesSearchRevealSeconds = 0.12f;
-    private const int MaxPinnedChats = 3;
 
     private const int IntroLimit = 140;
     private const float HeroAvatarRadius = 38f;
@@ -453,7 +452,7 @@ internal sealed partial class VelvetShell
         }
         else if (hit == VRowHit.Overflow)
         {
-            OpenThreadSheet(thread.OtherUserId);
+            threadSheet.Open(thread.OtherUserId, string.Empty);
         }
     }
 
@@ -480,7 +479,7 @@ internal sealed partial class VelvetShell
         }
         else if (hit == VRowHit.Overflow)
         {
-            OpenThreadSheet(connection.UserId);
+            threadSheet.Open(connection.UserId, string.Empty);
         }
     }
 
@@ -574,79 +573,6 @@ internal sealed partial class VelvetShell
         }
     }
 
-    private void OpenThreadSheet(string otherId)
-    {
-        sheetThreadId = otherId;
-        var pinned = configuration.VelvetPinnedThreads.Contains(otherId);
-        var archived = configuration.VelvetArchivedThreads.Contains(otherId);
-        threadSheetItems[0] = new ActionSheet.Item(Loc.T(pinned ? L.Common.Unpin : L.Common.Pin),
-            pinned ? PhoneIcons.PinFilled : PhoneIcons.Pin);
-        threadSheetItems[1] = new ActionSheet.Item(
-            Loc.T(archived ? L.Social.UnarchiveAction : L.Social.ArchiveAction), PhoneIcons.Archive);
-        threadSheetItems[2] = new ActionSheet.Item(Loc.T(L.Velvet.DeleteConversation), PhoneIcons.Trash, true);
-        threadSheet.Open();
-    }
-
-    private void DrawThreadSheet(Rect screen)
-    {
-        if (!threadSheet.CapturesPointer)
-        {
-            return;
-        }
-
-        var picked = threadSheet.Draw(screen, ActionSheetStyle.From(ui), threadSheetItems, Loc.T(L.Common.Cancel),
-            false);
-        if (picked < 0 || sheetThreadId is not { } otherId)
-        {
-            return;
-        }
-
-        switch (picked)
-        {
-            case 0:
-                ToggleThreadPinned(otherId);
-                break;
-            case 1:
-                ToggleThreadArchived(otherId);
-                break;
-            case 2:
-                AskDeleteConversation(otherId);
-                break;
-        }
-    }
-
-    private void ToggleThreadPinned(string otherId)
-    {
-        var pinned = configuration.VelvetPinnedThreads;
-        if (!pinned.Remove(otherId))
-        {
-            if (pinned.Count >= MaxPinnedChats)
-            {
-                toast.Show(Loc.T(L.Social.PinChatLimit, MaxPinnedChats));
-                return;
-            }
-
-            pinned.Add(otherId);
-            configuration.VelvetArchivedThreads.Remove(otherId);
-        }
-
-        configuration.Save();
-        chatRowsDirty = true;
-    }
-
-    private void ToggleThreadArchived(string otherId)
-    {
-        var archived = configuration.VelvetArchivedThreads;
-        if (!archived.Remove(otherId))
-        {
-            archived.Add(otherId);
-            configuration.VelvetPinnedThreads.Remove(otherId);
-        }
-
-        configuration.Save();
-        chatRowsDirty = true;
-    }
-
     private void AskDeleteConversation(string otherId)
     {
         confirm.Ask(new ConfirmRequest
@@ -665,12 +591,7 @@ internal sealed partial class VelvetShell
     {
         var current = router.Current;
         var threadOpen = current.Screen == VelvetScreenId.Thread && current.Arg == otherId;
-        if (configuration.VelvetPinnedThreads.Remove(otherId) | configuration.VelvetArchivedThreads.Remove(otherId))
-        {
-            configuration.Save();
-            chatRowsDirty = true;
-        }
-
+        threadSheet.Forget(otherId);
         store.DeleteThread(otherId);
         if (threadOpen)
         {

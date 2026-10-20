@@ -22,7 +22,6 @@ internal sealed partial class YellowPagesApp
     private const float InboxArchivedRowHeight = 52f;
     private const float InboxPinGlyph = 14f;
     private const float InboxUnreadDotInset = 8f;
-    private const int MaxPinnedInquiries = 3;
     private const int InboxFilterAll = 0;
     private const int InboxFilterMine = 1;
     private const int InboxFilterAsked = 2;
@@ -33,7 +32,6 @@ internal sealed partial class YellowPagesApp
     private static readonly TextStyle InboxPreviewStyle = TextStyles.Footnote;
     private static readonly TextStyle InboxPreviewUnreadStyle = TextStyles.FootnoteEmphasized;
 
-    private readonly ActionSheet.Item[] inboxSheetItems = new ActionSheet.Item[3];
     private readonly Dictionary<string, InboxPreviewLine> inboxPreviews = new(StringComparer.Ordinal);
     private readonly List<AdInquiryDto> inboxPinned = new();
     private readonly List<AdInquiryDto> inboxFiltered = new();
@@ -49,8 +47,6 @@ internal sealed partial class YellowPagesApp
     private int inboxFilter;
     private string inboxArchivedCountLabel = string.Empty;
     private int inboxArchivedCountValue = -1;
-    private string? inboxSheetThreadId;
-    private string inboxSheetTitle = string.Empty;
 
     private void DrawInbox(Rect area)
     {
@@ -336,7 +332,7 @@ internal sealed partial class YellowPagesApp
 
         if (cell.Hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
         {
-            OpenInboxRowSheet(thread);
+            inboxSheet.Open(thread.Id, SocialIdentity.Name(thread.OtherName, thread.OtherHandle));
         }
         else if (cell.Tapped)
         {
@@ -394,83 +390,14 @@ internal sealed partial class YellowPagesApp
         return line;
     }
 
-    private void OpenInboxRowSheet(AdInquiryDto thread)
-    {
-        inboxSheetThreadId = thread.Id;
-        inboxSheetTitle = SocialIdentity.Name(thread.OtherName, thread.OtherHandle);
-        var pinned = configuration.YellowPagesPinnedInquiries.Contains(thread.Id);
-        var archived = configuration.YellowPagesArchivedInquiries.Contains(thread.Id);
-        inboxSheetItems[0] = new ActionSheet.Item(Loc.T(pinned ? L.Common.Unpin : L.Common.Pin),
-            pinned ? PhoneIcons.PinFilled : PhoneIcons.Pin);
-        inboxSheetItems[1] = new ActionSheet.Item(Loc.T(archived ? L.Social.UnarchiveAction : L.Social.ArchiveAction),
-            PhoneIcons.Archive);
-        inboxSheetItems[2] = new ActionSheet.Item(Loc.T(L.Message.DeleteConversation), PhoneIcons.Trash, true);
-        inboxSheet.Open();
-    }
-
     private void DrawInboxSheet(Rect screen)
     {
-        if (!inboxSheet.CapturesPointer)
-        {
-            return;
-        }
-
         if (inboxSheet.IsOpen && router.Current.Screen is not (YellowPagesScreen.Root or YellowPagesScreen.InboxArchived))
         {
             inboxSheet.Close();
         }
 
-        var picked = inboxSheet.Draw(screen, ActionSheetStyle.From(ui), inboxSheetItems, Loc.T(L.Common.Cancel), false,
-            inboxSheetTitle);
-        if (picked < 0 || inboxSheetThreadId is not { } threadId)
-        {
-            return;
-        }
-
-        switch (picked)
-        {
-            case 0:
-                ToggleInboxPinned(threadId);
-                break;
-            case 1:
-                ToggleInboxArchived(threadId);
-                break;
-            case 2:
-                AskDeleteConversation(threadId);
-                break;
-        }
-    }
-
-    private void ToggleInboxPinned(string threadId)
-    {
-        var pinned = configuration.YellowPagesPinnedInquiries;
-        if (!pinned.Remove(threadId))
-        {
-            if (pinned.Count >= MaxPinnedInquiries)
-            {
-                ShellToast.Show(Loc.T(L.Social.PinChatLimit, MaxPinnedInquiries));
-                return;
-            }
-
-            pinned.Add(threadId);
-            configuration.YellowPagesArchivedInquiries.Remove(threadId);
-        }
-
-        configuration.Save();
-        inboxFilterDirty = true;
-    }
-
-    private void ToggleInboxArchived(string threadId)
-    {
-        var archived = configuration.YellowPagesArchivedInquiries;
-        if (!archived.Remove(threadId))
-        {
-            archived.Add(threadId);
-            configuration.YellowPagesPinnedInquiries.Remove(threadId);
-        }
-
-        configuration.Save();
-        inboxFilterDirty = true;
+        inboxSheet.Draw(screen, ui);
     }
 
     private void AskDeleteConversation(string threadId)
@@ -491,13 +418,7 @@ internal sealed partial class YellowPagesApp
     {
         var current = router.Current;
         var threadOpen = current.Screen == YellowPagesScreen.Thread && current.Id == threadId;
-        if (configuration.YellowPagesPinnedInquiries.Remove(threadId)
-            | configuration.YellowPagesArchivedInquiries.Remove(threadId))
-        {
-            configuration.Save();
-            inboxFilterDirty = true;
-        }
-
+        inboxSheet.Forget(threadId);
         inquiries.DeleteThread(threadId);
         if (threadOpen)
         {

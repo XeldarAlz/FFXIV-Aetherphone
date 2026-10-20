@@ -214,9 +214,49 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
 
     protected abstract TranscriptMessage[] MapTranscript(TMessage[] source);
 
-    protected abstract ChatMenuModel BuildMenuModel();
+    protected virtual ChatMenuModel BuildMenuModel()
+    {
+        return new ChatMenuModel
+        {
+            Ui = ui,
+            ShowReactions = true,
+            CanReply = true,
+            CanForward = false,
+            CanCopy = true,
+            CanStar = false,
+            CanEdit = true,
+            CanInfo = false,
+            CanDelete = true,
+            CanReport = true,
+            CanTranslate = true,
+            IsStarred = _ => false,
+            MyReactionTo = store.MyReactionTo,
+            OnReply = BeginReply,
+            OnForward = _ => { },
+            OnCopy = CopyMessage,
+            OnStar = _ => { },
+            OnEdit = BeginEdit,
+            OnInfo = _ => { },
+            OnDelete = AskDeleteMessage,
+            OnReport = OpenReportMessage,
+            OnTranslate = TranslateMessage,
+            OnReact = store.SetReaction,
+        };
+    }
 
     protected abstract void BeginReply(string messageId);
+
+    protected void BeginReplyTo(string messageId, string otherName)
+    {
+        var message = FindMessage(messageId);
+        if (message is null || IsDeleted(message))
+        {
+            return;
+        }
+
+        var senderName = SenderIdOf(message) == MyUserId ? Loc.T(L.Message.You) : otherName;
+        composer.BeginReply(messageId, senderName, ChatText.QuotePreview(BodyOf(message), KindOf(message)));
+    }
 
     protected abstract bool IsDeleted(TMessage message);
 

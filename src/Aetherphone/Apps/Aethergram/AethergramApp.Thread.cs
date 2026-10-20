@@ -140,49 +140,8 @@ internal sealed partial class AethergramApp
 
         protected override void OpenEncryptionInfo(string threadId) => app.router.Push(AethergramRoute.Encryption);
 
-        protected override void BeginReply(string messageId)
-        {
-            var message = FindMessage(messageId);
-            if (message is null || message.Deleted)
-            {
-                return;
-            }
-
-            var senderName = message.SenderId == MyUserId
-                ? Loc.T(L.Message.You)
-                : app.ThreadTitle(store.CurrentThreadId ?? messageId);
-            composer.BeginReply(messageId, senderName, ChatText.QuotePreview(message.Body, message.Kind));
-        }
-
-        protected override ChatMenuModel BuildMenuModel()
-        {
-            return new ChatMenuModel
-            {
-                Ui = ui,
-                ShowReactions = true,
-                CanReply = true,
-                CanForward = false,
-                CanCopy = true,
-                CanStar = false,
-                CanEdit = true,
-                CanInfo = false,
-                CanDelete = true,
-                CanReport = true,
-                CanTranslate = true,
-                IsStarred = _ => false,
-                MyReactionTo = store.MyReactionTo,
-                OnReply = BeginReply,
-                OnForward = _ => { },
-                OnCopy = CopyMessage,
-                OnStar = _ => { },
-                OnEdit = BeginEdit,
-                OnInfo = _ => { },
-                OnDelete = AskDeleteMessage,
-                OnReport = OpenReportMessage,
-                OnTranslate = TranslateMessage,
-                OnReact = store.SetReaction,
-            };
-        }
+        protected override void BeginReply(string messageId) =>
+            BeginReplyTo(messageId, app.ThreadTitle(store.CurrentThreadId ?? messageId));
 
         protected override void DrawAboveTranscript(ref Rect listRect, string threadId)
         {
@@ -344,78 +303,9 @@ internal sealed partial class AethergramApp
             return 3;
         }
 
-        protected override TranscriptMessage[] MapTranscript(GramMessageDto[] source)
-        {
-            var myId = MyUserId;
-            var otherName = store.CurrentThreadId is { } threadId ? app.ThreadTitle(threadId) : string.Empty;
-            var mapped = new TranscriptMessage[source.Length];
-            for (var index = 0; index < source.Length; index++)
-            {
-                var message = source[index];
-                if (message.Deleted)
-                {
-                    mapped[index] = new TranscriptMessage(message.Id, message.SenderId, Loc.T(L.Message.DeletedBody),
-                        0, message.CreatedAtUnix, 0, 0, null, string.Empty, default, TranscriptFlags.Deleted);
-                    continue;
-                }
-
-                var replySender = string.Empty;
-                var replyBody = string.Empty;
-                var replyKind = message.ReplyKind;
-                if (message.ReplyToId is not null)
-                {
-                    replySender = message.ReplySenderId == myId ? Loc.T(L.Message.You) : otherName;
-                    replyKind = ChatText.EffectiveKind(message.ReplyBody, replyKind);
-                    replyBody = ChatText.QuotePreview(message.ReplyBody, replyKind);
-                }
-
-                TranscriptReaction[]? reactions = null;
-                var summaries = message.Reactions;
-                if (summaries is { Length: > 0 })
-                {
-                    reactions = new TranscriptReaction[summaries.Length];
-                    for (var summaryIndex = 0; summaryIndex < summaries.Length; summaryIndex++)
-                    {
-                        reactions[summaryIndex] = new TranscriptReaction(summaries[summaryIndex].Token,
-                            summaries[summaryIndex].Count, summaries[summaryIndex].Mine);
-                    }
-                }
-
-                mapped[index] = new TranscriptMessage(message.Id, message.SenderId, message.Body, message.Kind,
-                    message.CreatedAtUnix, message.MediaWidth, message.MediaHeight, message.ReadAtUnix, string.Empty,
-                    default, MessageFlags(message), message.ReplyToId, replySender, replyBody, replyKind,
-                    message.DurationSecs, reactions);
-            }
-
-            return mapped;
-        }
-
-        private byte MessageFlags(GramMessageDto message)
-        {
-            byte flags = 0;
-            if (message.EditedAtUnix is not null)
-            {
-                flags |= TranscriptFlags.Edited;
-            }
-
-            if (message.EncVersion == 0)
-            {
-                return flags;
-            }
-
-            var state = store.DecryptionState(message.Id);
-            flags |= TranscriptFlags.Encrypted;
-            if (state.IsPlaceholder)
-            {
-                flags |= TranscriptFlags.Placeholder;
-            }
-            else if (state.State == Aetherphone.Core.Crypto.DmBodyState.Decrypted && !state.Verified)
-            {
-                flags |= TranscriptFlags.Unverified;
-            }
-
-            return flags;
-        }
+        protected override TranscriptMessage[] MapTranscript(GramMessageDto[] source) =>
+            DirectTranscript.Map(store, source, MyUserId,
+                store.CurrentThreadId is { } threadId ? app.ThreadTitle(threadId) : string.Empty);
     }
 
     private void PresenceDot(ImDrawListPtr drawList, Vector2 center, int presence)

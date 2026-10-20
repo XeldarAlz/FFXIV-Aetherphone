@@ -43,7 +43,7 @@ internal sealed record GramMessageDto(
     long? EditedAtUnix = null,
     string? StoryId = null,
     string? StoryMediaUrl = null,
-    bool StoryExpired = false) : IIdentified;
+    bool StoryExpired = false) : IDirectMessage;
 
 internal sealed record GramMessagePage(GramMessageDto[] Items, string? NextCursor);
 

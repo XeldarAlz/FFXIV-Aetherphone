@@ -96,7 +96,7 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
     private readonly VelvetFilterSelection feedInclude = new();
     private readonly string[] whoLabels = new string[3];
     private readonly ActionSheet postSheet = new();
-    private readonly ActionSheet threadSheet = new();
+    private readonly ChatRowSheet threadSheet;
     private VelvetMessagesTab messagesTab = VelvetMessagesTab.Chats;
     private readonly ThreadView threadView;
 
@@ -147,6 +147,9 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
         router = new ViewRouter<VelvetView>(VelvetView.Root);
         drawView = DrawView;
         back = () => router.Pop();
+        threadSheet = new ChatRowSheet(configuration, configuration.VelvetPinnedThreads,
+            configuration.VelvetArchivedThreads, L.Velvet.DeleteConversation, AskDeleteConversation, toast.Show,
+            () => chatRowsDirty = true);
         threadView = new ThreadView(this);
         LoadFilters();
     }
@@ -366,7 +369,7 @@ internal sealed partial class VelvetShell : IResumableApp, ITabIconDrawer, IName
 
         DrainPostNotices();
         DrawPostSheet(screen);
-        DrawThreadSheet(screen);
+        threadSheet.Draw(screen, ui);
         DrawCommentSheet(screen);
         DrawProfileMenu(screen);
         DrawPhotoSheet(screen);

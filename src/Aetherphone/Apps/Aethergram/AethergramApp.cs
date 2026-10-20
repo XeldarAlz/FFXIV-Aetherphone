@@ -243,7 +243,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     private string commentDraft = string.Empty;
     private string hashtagTitle = string.Empty;
     private string hashtagTitleTag = string.Empty;
-    private readonly ActionSheet inboxRowSheet = new();
+    private readonly ChatRowSheet inboxRowSheet;
     private readonly CancellationTokenSource settingsCancellation = new();
     private readonly HashSet<string> shareSentUserIds = new(StringComparer.Ordinal);
     private string shareSearchDraft = string.Empty;
@@ -311,6 +311,9 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             DeleteCommentFailed = L.Aethergram.DeleteCommentFailed,
             RemoveCommentConfirmMessage = L.Aethergram.RemoveCommentConfirmMessage,
         }, confirm, report);
+        inboxRowSheet = new ChatRowSheet(configuration, configuration.AethergramPinnedThreads,
+            configuration.AethergramArchivedThreads, L.Aethergram.DeleteConversation, AskDeleteConversation, toast.Show,
+            () => inboxFilterDirty = true);
         threadView = new ThreadView(this);
     }
 

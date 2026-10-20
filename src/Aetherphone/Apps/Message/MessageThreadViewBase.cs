@@ -334,22 +334,11 @@ internal abstract class MessageThreadViewBase : ChatThreadView<ChatMessageDto, C
                 replyBody = ChatText.QuotePreview(message.ReplyBody, replyKind);
             }
 
-            TranscriptReaction[]? reactions = null;
-            var summaries = message.Reactions;
-            if (summaries is { Length: > 0 })
-            {
-                reactions = new TranscriptReaction[summaries.Length];
-                for (var summaryIndex = 0; summaryIndex < summaries.Length; summaryIndex++)
-                {
-                    reactions[summaryIndex] = new TranscriptReaction(summaries[summaryIndex].Token,
-                        summaries[summaryIndex].Count, summaries[summaryIndex].Mine);
-                }
-            }
-
             mapped[index] = new TranscriptMessage(message.Id, message.SenderId, message.Body, message.Kind,
                 message.CreatedAtUnix, message.MediaWidth, message.MediaHeight, message.ReadAtUnix, senderName,
                 tint, MessageFlags(message), message.ReplyToId, replySender, replyBody, replyKind,
-                message.DurationSecs, reactions, message.SenderBadges, message.SenderBadgeIds,
+                message.DurationSecs, DirectTranscript.Reactions(message.Reactions), message.SenderBadges,
+                message.SenderBadgeIds,
                 senderAvatarUrl: senderAvatar);
         }
 
@@ -393,18 +382,7 @@ internal abstract class MessageThreadViewBase : ChatThreadView<ChatMessageDto, C
             return flags;
         }
 
-        var state = messages.DecryptionState(message.Id);
-        flags |= TranscriptFlags.Encrypted;
-        if (state.IsPlaceholder)
-        {
-            flags |= TranscriptFlags.Placeholder;
-        }
-        else if (state.State == DmBodyState.Decrypted && !state.Verified)
-        {
-            flags |= TranscriptFlags.Unverified;
-        }
-
-        return flags;
+        return (byte)(flags | DirectTranscript.SealFlags(messages.DecryptionState(message.Id)));
     }
 
     private string SystemText(ChatMessageDto message)
