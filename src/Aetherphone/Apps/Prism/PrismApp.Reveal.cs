@@ -316,6 +316,15 @@ internal sealed partial class PrismApp
         if (finalOrder.Count > 0)
         {
             cursor = DrawPodium(list, left, cursor, width, scale);
+            if (PrismOutfit.Has(finalOrder[0].Outfit))
+            {
+                if (PrismArt.Link(list, new Vector2(left, cursor), Loc.T(L.Prism.WinnersOutfit), PrismArt.Muted, scale))
+                {
+                    OpenGlam(finalOrder[0]);
+                }
+
+                cursor += Metrics.Size.TapTarget * scale;
+            }
         }
 
         if (results.MyHeatRank > 0)
@@ -393,6 +402,7 @@ internal sealed partial class PrismApp
             var x = left + index * (column + gap);
             var photo = new Rect(new Vector2(x, top), new Vector2(x + column, top + photoHeight));
             DrawLook(drawList, photo, placing.ImageUrl, false);
+            TapForOutfit(photo.Min, photo.Max, placing);
             var shade = new Vector2(photo.Min.X, photo.Max.Y - photoHeight * PodiumShadeShare);
             drawList.AddRectFilledMultiColor(shade, photo.Max, ImGui.GetColorU32(PodiumClear),
                 ImGui.GetColorU32(PodiumClear), ImGui.GetColorU32(PodiumShade), ImGui.GetColorU32(PodiumShade));
@@ -489,6 +499,7 @@ internal sealed partial class PrismApp
         PrismType.Draw(drawList, new Vector2(left, middle - labelLine * 0.5f),
             Plain[Math.Clamp(placing.Rank, 0, Plain.Length - 1)], PrismArt.Fore, PrismFace.Label, labelPixels);
         var thumbLeft = left + RankColumnUnits * scale;
+        TapForOutfit(new Vector2(left, top), new Vector2(left + width, top + thumbHeight), placing);
         DrawLook(drawList, new Rect(new Vector2(thumbLeft, top), new Vector2(thumbLeft + thumbWidth, top + thumbHeight)),
             placing.ImageUrl, false);
         var textLeft = thumbLeft + thumbWidth + Metrics.Space.Md * scale;

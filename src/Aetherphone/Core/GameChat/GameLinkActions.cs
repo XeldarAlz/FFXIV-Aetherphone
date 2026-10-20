@@ -7,11 +7,11 @@ namespace Aetherphone.Core.GameChat;
 
 internal static unsafe class GameLinkActions
 {
-    public static void TryOn(uint itemId)
+    public static void TryOn(uint itemId, byte stain0 = 0, byte stain1 = 0)
     {
         if (!GameMemory.Attached)
         {
-            GameMemory.SimulateAction($"try on item {itemId}");
+            GameMemory.SimulateAction($"try on item {itemId} dyed {stain0}/{stain1}");
             return;
         }
 
@@ -20,7 +20,7 @@ internal static unsafe class GameLinkActions
             return;
         }
 
-        AgentTryon.TryOn(0xFF, itemId, 0);
+        AgentTryon.TryOn(0xFF, itemId, stain0, stain1);
     }
 
     public static void CompareItem(uint itemId)

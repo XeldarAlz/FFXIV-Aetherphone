@@ -562,6 +562,16 @@ internal sealed class GameData
         return true;
     }
 
+    public string StainName(byte stainId)
+    {
+        if (stainId == 0 || !GameSheets.Available || !data.GetExcelSheet<Stain>().TryGetRow(stainId, out var stain))
+        {
+            return string.Empty;
+        }
+
+        return stain.Name.ExtractText();
+    }
+
     public void CollectTomestoneItemIds(List<uint> into, out uint limitedItemId)
     {
         if (!GameSheets.Available)

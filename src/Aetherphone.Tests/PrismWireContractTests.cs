@@ -184,6 +184,38 @@ public sealed class PrismWireContractTests
     }
 
     [Fact]
+    public void AnOutfitRidesAlongOnlyWhenShared()
+    {
+        var bare = JsonSerializer.Serialize(new PrismEntryRequest("k", 810, 1080),
+            AethernetJsonContext.Default.PrismEntryRequest);
+        Assert.DoesNotContain("outfit", bare);
+
+        var shared = JsonSerializer.Serialize(new PrismEntryRequest("k", 810, 1080,
+            new[] { new PrismGearDto(2, 45123, 1, 101) }), AethernetJsonContext.Default.PrismEntryRequest);
+        Assert.Contains("\"outfit\":[{\"slot\":2,\"itemId\":45123,\"stain0\":1,\"stain1\":101}]", shared);
+
+        var cleared = JsonSerializer.Serialize(new PrismOutfitRequest(null),
+            AethernetJsonContext.Default.PrismOutfitRequest);
+        Assert.Equal("{\"outfit\":null}", cleared);
+        Assert.Equal("/prism/weeks/w%2F1/entry/outfit", PrismClient.OutfitPath("w/1"));
+    }
+
+    [Fact]
+    public void PlacingsAndEntriesCarryTheSharedOutfit()
+    {
+        var results = JsonSerializer.Deserialize("{\"weekId\":\"w_1\",\"finalPodium\":[{\"rank\":1,"
+            + "\"outfit\":[{\"slot\":0,\"itemId\":40001},{\"slot\":3,\"itemId\":45123,\"stain0\":12}]}]}",
+            AethernetJsonContext.Default.PrismResultsDto);
+        var outfit = results?.FinalPodium?[0].Outfit;
+        Assert.True(PrismOutfit.Has(outfit));
+        Assert.Equal(45123u, outfit![1].ItemId);
+        Assert.Equal(12, outfit[1].Stain0);
+
+        var entry = JsonSerializer.Deserialize("{\"id\":\"e_1\"}", AethernetJsonContext.Default.PrismEntryDto);
+        Assert.False(PrismOutfit.Has(entry?.Outfit));
+    }
+
+    [Fact]
     public void AReplacedRoundWithTheSameWeekIdDropsTheHeldResults()
     {
         var held = new PrismResultsDto(WeekId: "2026-W43", Revision: 1000);

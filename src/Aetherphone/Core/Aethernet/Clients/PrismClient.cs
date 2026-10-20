@@ -23,6 +23,8 @@ internal sealed class PrismClient
 
     internal static string BallotPath(string ballotId) => $"/prism/ballots/{Uri.EscapeDataString(ballotId)}";
 
+    internal static string OutfitPath(string weekId) => $"/prism/weeks/{Uri.EscapeDataString(weekId)}/entry/outfit";
+
     internal static string ResultsPath(string weekId, string lang) =>
         $"/prism/weeks/{Uri.EscapeDataString(weekId)}/results?lang={Uri.EscapeDataString(lang)}";
 
@@ -36,6 +38,14 @@ internal sealed class PrismClient
     {
         return net.SendJsonAsync(HttpMethod.Put, EntryPath(weekId), request,
             AethernetJsonContext.Default.PrismEntryRequest, AethernetJsonContext.Default.PrismEntryDto, token, null,
+            onFailure);
+    }
+
+    public Task<PrismEntryDto?> ShareOutfitAsync(string weekId, PrismOutfitRequest request, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.SendJsonAsync(HttpMethod.Put, OutfitPath(weekId), request,
+            AethernetJsonContext.Default.PrismOutfitRequest, AethernetJsonContext.Default.PrismEntryDto, token, null,
             onFailure);
     }
 

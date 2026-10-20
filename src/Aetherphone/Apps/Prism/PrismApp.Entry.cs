@@ -38,7 +38,8 @@ internal sealed partial class PrismApp
         var actionsTop = done.Min.Y;
         var pixels = PrismType.Fit(Loc.T(StatusTitle(entry.Status)), PrismFace.Headline, width,
             StatusMaxUnits * scale, StatusMinUnits * scale, 2, out var lines);
-        var entryFailed = !store.Busy && (store.Failed(PrismAction.Enter) || store.Failed(PrismAction.Withdraw));
+        var entryFailed = !store.Busy && (store.Failed(PrismAction.Enter) || store.Failed(PrismAction.Withdraw) ||
+                                          store.Failed(PrismAction.Outfit));
         var failure = entryFailed ? store.ActionFailureText : string.Empty;
         var hint = entryFailed
             ? failure.Length > 0 ? failure : Loc.T(L.Common.LoadFailedHint)
@@ -83,6 +84,14 @@ internal sealed partial class PrismApp
         if (PrismArt.Strip(drawList, retry ? done : change, Loc.T(L.Common.ChangePhoto), "→", retry, !store.Busy))
         {
             StartPick();
+        }
+
+        var outfit = Loc.T(PrismOutfit.Has(entry.Outfit) ? L.Prism.SharingOutfit : L.Prism.ShareOutfit);
+        var outfitWidth = PrismType.Measure(outfit, PrismFace.Label, labelPixels).X;
+        if (!store.Busy && PrismArt.Link(drawList, new Vector2(left + width - outfitWidth, linkTop), outfit,
+                PrismArt.Muted, scale))
+        {
+            OpenOutfit();
         }
 
         if (!store.Busy && PrismArt.Link(drawList, new Vector2(left, linkTop), Loc.T(L.Prism.Withdraw),
