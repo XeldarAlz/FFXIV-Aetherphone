@@ -135,11 +135,21 @@ internal sealed partial class PrismApp
 
     private void DrawCoverButtons(ImDrawListPtr drawList, Rect content, float top, PrismWeekDto week, float scale)
     {
-        if (week.MyEntry is not null && week.Phase != PrismPhases.Entering &&
-            PrismArt.Button(drawList, new Vector2(content.Min.X + PrismArt.Gutter(scale), top), Loc.T(L.Prism.YourLook),
-                scale, out _))
+        var left = content.Min.X + PrismArt.Gutter(scale);
+        if (week.MyEntry is not null && week.Phase != PrismPhases.Entering)
         {
-            Go(PrismScreen.Entry);
+            if (PrismArt.Button(drawList, new Vector2(left, top), Loc.T(L.Prism.YourLook), scale, out var width))
+            {
+                Go(PrismScreen.Entry);
+            }
+
+            left += width + Metrics.Space.Sm * scale;
+        }
+
+        if (PrismRewards.HasPrizes(Prizes) &&
+            PrismArt.Button(drawList, new Vector2(left, top), Loc.T(L.Prism.Prizes), scale, out _))
+        {
+            OpenPrizes();
         }
     }
 

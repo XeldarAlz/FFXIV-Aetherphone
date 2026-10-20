@@ -24,6 +24,7 @@ internal enum PrismScreen : byte
     Reveal,
     Final,
     Guide,
+    Prizes,
 }
 
 internal sealed partial class PrismApp : IResumableApp
@@ -168,6 +169,9 @@ internal sealed partial class PrismApp : IResumableApp
             case PrismScreen.Guide:
                 DrawGuide(drawList, content, scale);
                 break;
+            case PrismScreen.Prizes:
+                DrawPrizes(drawList, content, scale);
+                break;
             default:
                 DrawCover(drawList, full, content, scale);
                 break;
@@ -197,7 +201,12 @@ internal sealed partial class PrismApp : IResumableApp
         {
             if (PrismArt.Link(drawList, row.Min, Loc.T(L.Prism.Back), PrismArt.Muted, scale))
             {
-                Go(screen == PrismScreen.Pick ? pickReturn : PrismScreen.Cover, -1);
+                Go(screen switch
+                {
+                    PrismScreen.Pick => pickReturn,
+                    PrismScreen.Prizes => prizesReturn,
+                    _ => PrismScreen.Cover,
+                }, -1);
             }
 
             height = PrismType.LineHeight(PrismFace.Label, PrismArt.LabelPixels());

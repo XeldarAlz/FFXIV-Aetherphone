@@ -184,6 +184,45 @@ public sealed class PrismWireContractTests
     }
 
     [Fact]
+    public void PlacingsCarryBadgesFramesAndGilAheadOfTheCoinArrays()
+    {
+        var week = JsonSerializer.Deserialize("{\"id\":\"w_1\",\"prizes\":{\"heat\":[30],\"final\":[2000,1500],"
+            + "\"gilNote\":\"Paid within a week\",\"placings\":[{\"stage\":\"final\",\"rank\":2,\"coins\":1500},"
+            + "{\"stage\":\"final\",\"rank\":1,\"coins\":2000,\"gil\":500000,\"frameDays\":7,"
+            + "\"badge\":{\"id\":\"prism-gold\",\"name\":\"Cover star\",\"icon\":\"f005\"},"
+            + "\"frame\":{\"id\":\"prism-frame\",\"name\":\"Spectrum\",\"assetUrl\":\"https://x/f.png\"}}]}}",
+            AethernetJsonContext.Default.PrismWeekDto);
+        Assert.NotNull(week?.Prizes);
+        Assert.True(PrismRewards.HasPrizes(week.Prizes));
+        Assert.Equal("Paid within a week", week.Prizes.GilNote);
+
+        var final = new List<PrismPrizeRow>();
+        PrismRewards.Fill(final, week.Prizes, PrismPhases.StageFinal);
+        Assert.Equal(2, final.Count);
+        Assert.Equal(1, final[0].Rank);
+        Assert.Equal(500000, final[0].Gil);
+        Assert.Equal(7, final[0].FrameDays);
+        Assert.Equal("prism-gold", final[0].Badge?.Id);
+        Assert.Equal("Spectrum", final[0].Frame?.BaseName);
+        Assert.Null(final[1].Badge);
+
+        var heat = new List<PrismPrizeRow>();
+        PrismRewards.Fill(heat, week.Prizes, PrismPhases.StageHeat);
+        Assert.Single(heat);
+        Assert.Equal(30, heat[0].Coins);
+    }
+
+    [Fact]
+    public void NoPrizesMeansNoPrizesButton()
+    {
+        Assert.False(PrismRewards.HasPrizes(null));
+        Assert.False(PrismRewards.HasPrizes(new PrismPrizesDto(Heat: new long[] { 0 }, Final: Array.Empty<long>())));
+        var rows = new List<PrismPrizeRow> { new(1, 5) };
+        PrismRewards.Fill(rows, null, PrismPhases.StageFinal);
+        Assert.Empty(rows);
+    }
+
+    [Fact]
     public void AReplacedRoundWithTheSameWeekIdDropsTheHeldResults()
     {
         var held = new PrismResultsDto(WeekId: "2026-W43", Revision: 1000);
