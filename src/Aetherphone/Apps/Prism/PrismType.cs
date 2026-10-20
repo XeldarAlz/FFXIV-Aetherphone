@@ -19,6 +19,7 @@ internal static class PrismType
     private const float HeadlineLeading = 1.02f;
     private const int CacheLimit = 256;
     private const float FitStep = 0.92f;
+    private const int FitAttempts = 32;
     private const float BalanceFloor = 0.5f;
     private const int BalanceSteps = 10;
 
@@ -236,17 +237,58 @@ internal static class PrismType
     public static float Fit(string text, PrismFace face, float width, float maxPixels, float minPixels,
         int maxLines, out string[] lines)
     {
-        var pixels = Snap(face, maxPixels);
-        var floor = Snap(face, minPixels);
-        while (true)
+        var probe = new WrapProbe(text, face, width, maxLines);
+        var pixels = FitRequest(ref probe, maxPixels, minPixels);
+        lines = Wrap(text, face, pixels, width);
+        return pixels;
+    }
+
+    internal static float FitRequest<TProbe>(ref TProbe probe, float maxPixels, float minPixels)
+        where TProbe : struct, IFitProbe
+    {
+        var floor = probe.Snap(minPixels);
+        var pixels = maxPixels;
+        for (var attempt = 0; attempt < FitAttempts; attempt++)
         {
-            lines = Wrap(text, face, pixels, width);
-            if (pixels <= floor + 0.01f || (lines.Length <= maxLines && Widest(lines, face, pixels) <= width))
+            if (probe.Snap(pixels) <= floor + 0.01f || probe.Fits(pixels))
             {
                 return pixels;
             }
 
-            pixels = Snap(face, pixels * FitStep);
+            pixels *= FitStep;
+        }
+
+        return pixels;
+    }
+
+    internal interface IFitProbe
+    {
+        float Snap(float pixels);
+
+        bool Fits(float pixels);
+    }
+
+    private readonly struct WrapProbe : IFitProbe
+    {
+        private readonly string text;
+        private readonly PrismFace face;
+        private readonly float width;
+        private readonly int maxLines;
+
+        public WrapProbe(string text, PrismFace face, float width, int maxLines)
+        {
+            this.text = text;
+            this.face = face;
+            this.width = width;
+            this.maxLines = maxLines;
+        }
+
+        public float Snap(float pixels) => PrismType.Snap(face, pixels);
+
+        public bool Fits(float pixels)
+        {
+            var lines = Wrap(text, face, pixels, width);
+            return lines.Length <= maxLines && Widest(lines, face, pixels) <= width;
         }
     }
 
