@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Aetherphone.Core.Aethernet.Contracts;
 
 internal sealed record PrismEntryDto(
@@ -6,7 +8,8 @@ internal sealed record PrismEntryDto(
     int Width = 0,
     int Height = 0,
     string Status = "",
-    string RejectReason = "");
+    string RejectReason = "",
+    string Track = "");
 
 internal sealed record PrismJudgeRewardDto(
     long Amount = 0,
@@ -33,11 +36,23 @@ internal sealed record PrismWeekDto(
     long BallotCoins = 0,
     long ResultsRevision = 0,
     int FinalistCount = 0,
+    PrismPrizesDto? Prizes = null,
+    PrismTrackDto[]? Tracks = null);
+
+internal sealed record PrismTrackDto(
+    string Id = "",
+    int EntryCount = 0,
+    PrismEntryDto? MyEntry = null,
+    int BallotsCast = 0,
+    int FinalistCount = 0,
+    long ResultsRevision = 0,
     PrismPrizesDto? Prizes = null);
 
 internal sealed record PrismPrizesDto(long[]? Heat = null, long[]? Final = null, int MinHeatSize = 0);
 
-internal sealed record PrismEntryRequest(string MediaKey, int Width, int Height);
+internal sealed record PrismEntryRequest(string MediaKey, int Width, int Height,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? Track = null);
 
 internal sealed record PrismLookDto(string Id = "", string ImageUrl = "", int Width = 0, int Height = 0);
 
@@ -73,4 +88,5 @@ internal sealed record PrismResultsDto(
     string HeatLabel = "",
     long Revision = 0,
     int FinalistCount = 0,
-    PrismPrizesDto? Prizes = null);
+    PrismPrizesDto? Prizes = null,
+    string Track = "");

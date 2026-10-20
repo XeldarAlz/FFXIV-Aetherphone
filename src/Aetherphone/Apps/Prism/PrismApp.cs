@@ -24,6 +24,7 @@ internal enum PrismScreen : byte
     Reveal,
     Final,
     Guide,
+    Track,
 }
 
 internal sealed partial class PrismApp : IResumableApp
@@ -167,6 +168,9 @@ internal sealed partial class PrismApp : IResumableApp
                 break;
             case PrismScreen.Guide:
                 DrawGuide(drawList, content, scale);
+                break;
+            case PrismScreen.Track:
+                DrawTrackChoice(drawList, content, scale);
                 break;
             default:
                 DrawCover(drawList, full, content, scale);

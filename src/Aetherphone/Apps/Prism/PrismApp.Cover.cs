@@ -135,6 +135,7 @@ internal sealed partial class PrismApp
 
     private void DrawCoverButtons(ImDrawListPtr drawList, Rect content, float top, PrismWeekDto week, float scale)
     {
+        top = DrawTrackTabs(drawList, content, top, scale);
         if (week.MyEntry is not null && week.Phase != PrismPhases.Entering &&
             PrismArt.Button(drawList, new Vector2(content.Min.X + PrismArt.Gutter(scale), top), Loc.T(L.Prism.YourLook),
                 scale, out _))
@@ -236,7 +237,14 @@ internal sealed partial class PrismApp
             var left = Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.Submit);
             if (PrismArt.Strip(drawList, strip, left, "→", true, !store.Busy))
             {
-                StartPick();
+                if (HasTracks)
+                {
+                    StartTrackChoice(false);
+                }
+                else
+                {
+                    StartPick();
+                }
             }
 
             return;
@@ -252,7 +260,14 @@ internal sealed partial class PrismApp
             : HeatInProgress ? LookCounter(lookIndex + 1, stars.Length) : JudgedLine(week.BallotsCast);
         if (PrismArt.Strip(drawList, strip, Loc.T(label), right, true, !store.Busy))
         {
-            StartJudging();
+            if (HasTracks && !HeatInProgress)
+            {
+                StartTrackChoice(true);
+            }
+            else
+            {
+                StartJudging();
+            }
         }
     }
 
@@ -357,8 +372,15 @@ internal sealed partial class PrismApp
             return string.Empty;
         }
 
-        var key = HashCode.Combine(issue, Loc.Current.Code);
-        return issueText.IsCurrent(key) ? issueText.Value : issueText.Store(key, Loc.T(L.Prism.Issue, issue));
+        var track = HasTracks ? store.Track : string.Empty;
+        var key = HashCode.Combine(issue, track, Loc.Current.Code);
+        if (issueText.IsCurrent(key))
+        {
+            return issueText.Value;
+        }
+
+        var line = Loc.T(L.Prism.Issue, issue);
+        return issueText.Store(key, track.Length > 0 ? Loc.T(L.Prism.WithTrack, line, PrismTracks.Name(track)) : line);
     }
 
     private string CreditLine(PrismPlacingDto cover)
@@ -388,6 +410,10 @@ internal sealed partial class PrismApp
         return totalText.IsCurrent(key) ? totalText.Value : totalText.Store(key, count.ToString("N0", Loc.Culture));
     }
 
-    private static LocString StatusName(string status) =>
-        status == PrismPhases.StatusRejected ? L.Prism.StatusRejected : L.Prism.StatusLive;
+    private static LocString StatusName(string status) => status switch
+    {
+        PrismPhases.StatusRejected => L.Prism.StatusRejected,
+        PrismPhases.StatusMoved => L.Prism.StatusMoved,
+        _ => L.Prism.StatusLive,
+    };
 }
