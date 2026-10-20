@@ -1,3 +1,5 @@
+using Aetherphone.Core.Housing;
+using Aetherphone.Core.Maps;
 using Dalamud.Game;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Environment;
@@ -19,6 +21,9 @@ internal sealed class WeatherService
     private const long RealSecondsPerEorzeaHour = 175;
     private const long RealSecondsPerWindow = 1400;
     private const long RealSecondsPerEorzeaDay = 4200;
+    private const long EstateReadIntervalMilliseconds = 1_000;
+    private const long EstateRetryIntervalMilliseconds = 100;
+    private const uint HousingInteriorUse = 14;
     private const uint TownUse = 0;
     private const uint OverworldUse = 1;
     private const uint FieldOperationOrder = uint.MaxValue - 1;
@@ -34,6 +39,12 @@ internal sealed class WeatherService
     private readonly Dictionary<uint, WeatherChance[]> territoryChances = new();
     private readonly Dictionary<uint, string> territoryNames = new();
     private uint cachedTerritory = uint.MaxValue;
+    private uint estateTerritory = uint.MaxValue;
+    private uint estateDistrict;
+    private uint heldDistrict;
+    private bool estateInterior;
+    private bool estateResolved;
+    private long estateReadAtTick;
 
     private readonly record struct WeatherChance(byte Id, int Cumulative);
 
@@ -50,13 +61,7 @@ internal sealed class WeatherService
             return string.Empty;
         }
 
-        var territoryId = clientState.TerritoryType;
-        if (territoryId != 0 && data.GetExcelSheet<TerritoryType>().TryGetRow(territoryId, out var territory))
-        {
-            return territory.PlaceName.Value.Name.ExtractText();
-        }
-
-        return string.Empty;
+        return ZoneName(CurrentTerritory);
     }
 
     public IReadOnlyList<WeatherEntry> ZoneWeathers()
@@ -103,6 +108,13 @@ internal sealed class WeatherService
 
     public void Forecast(List<WeatherWindow> into, int count)
     {
+        var district = EstateDistrict();
+        if (district != 0)
+        {
+            Forecast(district, into, count);
+            return;
+        }
+
         into.Clear();
         if (!RefreshZone())
         {
@@ -122,7 +134,56 @@ internal sealed class WeatherService
         }
     }
 
-    public uint CurrentTerritory => clientState.TerritoryType;
+    public uint CurrentTerritory
+    {
+        get
+        {
+            var district = EstateDistrict();
+            return district != 0 ? district : clientState.TerritoryType;
+        }
+    }
+
+    private uint EstateDistrict()
+    {
+        var territoryId = clientState.TerritoryType;
+        var now = Environment.TickCount64;
+        if (territoryId != estateTerritory)
+        {
+            estateTerritory = territoryId;
+            estateInterior = IsHousingInterior(territoryId);
+            estateResolved = false;
+            if (!estateInterior)
+            {
+                heldDistrict = HousingDistricts.TryGet(territoryId, out _) ? territoryId : 0;
+            }
+        }
+        else
+        {
+            var interval = estateResolved ? EstateReadIntervalMilliseconds : EstateRetryIntervalMilliseconds;
+            if (now - estateReadAtTick < interval)
+            {
+                return estateDistrict;
+            }
+        }
+
+        estateReadAtTick = now;
+        var district = territoryId == 0 ? 0 : LocationShare.CurrentEstateDistrict();
+        estateResolved = district != 0;
+        if (estateResolved)
+        {
+            heldDistrict = district;
+        }
+
+        estateDistrict = estateResolved || !estateInterior ? district : heldDistrict;
+        return estateDistrict;
+    }
+
+    private bool IsHousingInterior(uint territoryId)
+    {
+        return territoryId != 0 && GameSheets.Available &&
+            data.GetExcelSheet<TerritoryType>().TryGetRow(territoryId, out var territory) &&
+            territory.TerritoryIntendedUse.RowId == HousingInteriorUse;
+    }
 
     public string ZoneName(uint territoryId)
     {

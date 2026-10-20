@@ -82,7 +82,7 @@ internal static class LocationShare
         out SharedLocation location)
     {
         location = default;
-        var districtId = ReadIndoorHouseDistrict();
+        var districtId = ReadIndoorDistrict(false);
         if (districtId == 0 || ZoneName(districtId).Length == 0)
         {
             return false;
@@ -93,7 +93,7 @@ internal static class LocationShare
         return true;
     }
 
-    private static uint ReadIndoorHouseDistrict()
+    private static uint ReadIndoorDistrict(bool includeSharedSpaces)
     {
         if (!GameMemory.Attached)
         {
@@ -111,7 +111,7 @@ internal static class LocationShare
                 }
 
                 var house = housing->GetCurrentIndoorHouseId();
-                if (house.IsApartment || house.IsWorkshop)
+                if (!includeSharedSpaces && (house.IsApartment || house.IsWorkshop))
                 {
                     return 0;
                 }
@@ -159,7 +159,13 @@ internal static class LocationShare
 
     public static (short Ward, short Plot, short Room) CurrentHousing() => ReadHousing();
 
-    public static uint CurrentHouseDistrict() => ReadIndoorHouseDistrict();
+    public static uint CurrentHouseDistrict() => ReadIndoorDistrict(false);
+
+    public static uint CurrentEstateDistrict()
+    {
+        var district = ReadIndoorDistrict(true);
+        return HousingDistricts.TryGet(district, out _) ? district : 0;
+    }
 
     public static bool IsIndoors()
     {
