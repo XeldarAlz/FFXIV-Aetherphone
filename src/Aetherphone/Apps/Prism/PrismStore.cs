@@ -118,24 +118,35 @@ internal sealed class PrismStore : IDisposable
             weekFailed = false;
             week = fetched;
             loadedOnce = true;
-            await LoadResultsAsync(fetched.PreviousWeekId, lang, token).ConfigureAwait(false);
+            await LoadResultsAsync(fetched, lang, token).ConfigureAwait(false);
         }, () => loading = false);
     }
 
-    private async Task LoadResultsAsync(string weekId, string lang, CancellationToken token)
+    private async Task LoadResultsAsync(PrismWeekDto current, string lang, CancellationToken token)
     {
-        if (weekId.Length == 0)
+        var fetched = ResultsOut(current)
+            ? await client.ResultsAsync(current.Id, lang, token).ConfigureAwait(false)
+            : null;
+        if (fetched is null && current.PreviousWeekId.Length > 0)
         {
-            results = null;
-            return;
+            fetched = await client.ResultsAsync(current.PreviousWeekId, lang, token).ConfigureAwait(false);
         }
 
-        var fetched = await client.ResultsAsync(weekId, lang, token).ConfigureAwait(false);
         if (fetched is not null)
         {
             results = fetched;
+            return;
+        }
+
+        if (results is { } held && held.WeekId != current.Id && held.WeekId != current.PreviousWeekId)
+        {
+            results = null;
         }
     }
+
+    private static bool ResultsOut(PrismWeekDto week) =>
+        week.Id.Length > 0 && week.ResultsAtUnix > 0 &&
+        DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= week.ResultsAtUnix;
 
     public void Enter(string sourcePath, WallpaperCrop crop, Action<bool> onComplete)
     {
