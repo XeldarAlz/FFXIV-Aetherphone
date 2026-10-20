@@ -586,7 +586,7 @@ internal static class L
             "Browse by year, month or day, make your own albums, find shots by the place they were taken, and touch them up in the built-in editor.");
         public static readonly LocString PrismSub = new("storeCopy.prismSub", "Weekly glamour contest");
         public static readonly LocString PrismBody = new("storeCopy.prismBody",
-            "Dress for the week's theme, enter a photo of your look and judge heats of other players' looks. The best looks win Aether Coin.");
+            "Dress for the week's theme, enter a photo of your glam and judge heats of other players' glams. The best glams win Aether Coin.");
         public static readonly LocString MusicSub = new("storeCopy.musicSub", "Songs, radio and Jams");
         public static readonly LocString MusicBody = new("storeCopy.musicBody",
             "Daily mixes, stations from around the world, your own playlists with synced lyrics, and Jams to listen in sync with friends.");
@@ -2304,13 +2304,13 @@ internal static class L
             new("changelog.r1400.0",
                 "Added Prism, a weekly glamour contest with a new theme every Monday at the daily reset, contributed by t3sco"),
             new("changelog.r1400.1",
-                "Added entering Prism with one photo of your look for the week's theme, picked from Photos or imported from your PC, and withdrawing it while entries are open"),
+                "Added entering Prism with one photo of your glam for the week's theme, picked from Photos or imported from your PC, and withdrawing it while entries are open"),
             new("changelog.r1400.2",
-                "Added judging in Prism: rate anonymous looks in heats from Off theme to Nails it, with Aether Coin for every heat you judge"),
+                "Added judging in Prism: rate anonymous glams in heats from Off theme to Nails it, with Aether Coin for every heat you judge"),
             new("changelog.r1400.3",
                 "Added the Prism reveal: heat winners go through to a final, and results arrive as a podium with your placing, the Aether Coin you won and a reveal you can replay"),
             new("changelog.r1400.4",
-                "Added reporting a Prism look, so moderators can take it out of the contest"),
+                "Added reporting a Prism glam, so moderators can take it out of the contest"),
         };
 
         public static readonly LocString[] Release1400Messaging =
@@ -10745,7 +10745,7 @@ internal static class L
         public static readonly LocString ShareLabel = new("prism.shareLabel", "Enter in Prism");
         public static readonly LocString SignInTitle = new("prism.signInTitle", "Sign in to take part");
         public static readonly LocString SignInRequired = new("prism.signInRequired",
-            "Sign in to Aethernet in Settings to enter and judge looks");
+            "Sign in to Aethernet in Settings to enter and judge glams");
         public static readonly LocString OpenSettings = new("prism.openSettings", "Open Settings");
         public static readonly LocString NoWeekTitle = new("prism.noWeekTitle", "No theme right now");
         public static readonly LocString NoWeekHint = new("prism.noWeekHint", "A new theme drops soon. Check back later.");
@@ -10754,22 +10754,22 @@ internal static class L
         public static readonly LocString JudgingCloses = new("prism.judgingCloses", "Judging closes");
         public static readonly LocString FinalCloses = new("prism.finalCloses", "The final closes");
         public static readonly LocString ResultsAt = new("prism.resultsAt", "Results arrive");
-        public static readonly LocString EnterLook = new("prism.enterLook", "Enter your look");
-        public static readonly LocString EnterThisLook = new("prism.enterThisLook", "Enter this look");
-        public static readonly LocString Uploading = new("prism.uploading", "Uploading your look…");
+        public static readonly LocString EnterLook = new("prism.enterLook", "Enter your glam");
+        public static readonly LocString EnterThisLook = new("prism.enterThisLook", "Enter this glam");
+        public static readonly LocString Uploading = new("prism.uploading", "Uploading your glam…");
         public static readonly LocString Withdraw = new("prism.withdraw", "Withdraw");
-        public static readonly LocString WithdrawTitle = new("prism.withdrawTitle", "Withdraw your look?");
+        public static readonly LocString WithdrawTitle = new("prism.withdrawTitle", "Withdraw your glam?");
         public static readonly LocString WithdrawBody = new("prism.withdrawBody",
             "Your photo leaves this week's contest. You can enter again until entries close.");
         public static readonly LocString StatusReview = new("prism.statusReview", "In review");
         public static readonly LocString StatusReviewHint = new("prism.statusReviewHint",
-            "A moderator checks every look before judging starts.");
+            "A moderator checks every glam before judging starts.");
         public static readonly LocString StatusLive = new("prism.statusLive", "In the running");
         public static readonly LocString StatusRejected = new("prism.statusRejected", "Not accepted");
         public static readonly LocString JudgeHeat = new("prism.judgeHeat", "Judge a heat");
         public static readonly LocString JudgeFinal = new("prism.judgeFinal", "Judge the final");
         public static readonly LocPlural HeatsJudged = new("prism.heatsJudged", "{0} heat judged", "{0} heats judged");
-        public static readonly LocString LookCount = new("prism.lookCount", "Look {0}/{1}");
+        public static readonly LocString LookCount = new("prism.lookCount", "Glam {0}/{1}");
         public static readonly LocString RateHint = new("prism.rateHint", "How well does it wear the theme?");
         public static readonly LocString HeatDoneTitle = new("prism.heatDoneTitle", "Heat judged");
         public static readonly LocString HeatDoneHint = new("prism.heatDoneHint",
@@ -10778,7 +10778,7 @@ internal static class L
         public static readonly LocString NothingLeftTitle = new("prism.nothingLeftTitle", "All caught up");
         public static readonly LocString NothingLeftHint = new("prism.nothingLeftHint",
             "You've judged every heat you can for now.");
-        public static readonly LocString ReportTitle = new("prism.reportTitle", "Report this look");
+        public static readonly LocString ReportTitle = new("prism.reportTitle", "Report this glam");
         public static readonly LocString LastResults = new("prism.lastResults", "Results");
         public static readonly LocString FinalRank = new("prism.finalRank", "Rank {0} in the final");
         public static readonly LocString TopPercent = new("prism.topPercent", "Top {0}%");
@@ -10789,21 +10789,21 @@ internal static class L
         public static readonly LocString Issue = new("prism.issue", "N°{0}");
         public static readonly LocString CoverCredit = new("prism.coverCredit", "Cover: {0}");
         public static readonly LocPlural LooksThisIssue =
-            new("prism.looksThisIssue", "{0} look this issue", "{0} looks this issue");
-        public static readonly LocString YourLook = new("prism.yourLook", "Your look");
+            new("prism.looksThisIssue", "{0} glam this issue", "{0} glams this issue");
+        public static readonly LocString YourLook = new("prism.yourLook", "Your glam");
         public static readonly LocString ResultsIn = new("prism.resultsIn", "New results");
         public static readonly LocString ReplayReveal = new("prism.replayReveal", "Replay the reveal");
         public static readonly LocString Submitting = new("prism.submitting", "Sending your scores…");
         public static readonly LocString HeatName = new("prism.heatName", "Heat {0}");
         public static readonly LocString YourPlacing = new("prism.yourPlacing", "Your placing");
-        public static readonly LocString TapHint = new("prism.tapHint", "Tap for the next look");
+        public static readonly LocString TapHint = new("prism.tapHint", "Tap for the next glam");
         public static readonly LocString InspectHint = new("prism.inspectHint", "Hold to look closer");
-        public static readonly LocString StatusReviewTitle = new("prism.statusReviewTitle", "Your look is in review");
-        public static readonly LocString StatusLiveTitle = new("prism.statusLiveTitle", "Your look is in the running");
+        public static readonly LocString StatusReviewTitle = new("prism.statusReviewTitle", "Your glam is in review");
+        public static readonly LocString StatusLiveTitle = new("prism.statusLiveTitle", "Your glam is in the running");
         public static readonly LocString StatusRejectedTitle =
-            new("prism.statusRejectedTitle", "Your look wasn't accepted");
+            new("prism.statusRejectedTitle", "Your glam wasn't accepted");
         public static readonly LocString PlaceLabel = new("prism.placeLabel", "Place");
-        public static readonly LocString LooksIn = new("prism.looksIn", "Looks in");
+        public static readonly LocString LooksIn = new("prism.looksIn", "Glams in");
         public static readonly LocString Done = new("prism.done", "Done");
         public static readonly LocString Submit = new("prism.submit", "Submit");
         public static readonly LocString PrintHeading = new("prism.printHeading", "{0} N°{1}");
@@ -10811,13 +10811,13 @@ internal static class L
         public static readonly LocString ScoreHigh = new("prism.scoreHigh", "Nails it");
         public static readonly LocString JudgingCoinLabel = new("prism.judgingCoinLabel", "Aether Coin for judging");
         public static readonly LocString HowItWorks = new("prism.howItWorks", "How it works");
-        public static readonly LocString GuideEnterTitle = new("prism.guideEnterTitle", "Enter one look");
+        public static readonly LocString GuideEnterTitle = new("prism.guideEnterTitle", "Enter one glam");
         public static readonly LocString GuideEnterBody = new("prism.guideEnterBody",
             "A new theme drops every week. Pick the one photo that wears it best, mods and all.");
         public static readonly LocString GuideJudgeBody = new("prism.guideJudgeBody",
-            "Score looks from 1 to 5 in heats of about twelve. Entries are anonymous, and every judge's scores are evened out so nobody can sink a look alone.");
+            "Score glams from 1 to 5 in heats of about twelve. Entries are anonymous, and every judge's scores are evened out so nobody can sink a glam alone.");
         public static readonly LocString GuideFinalBody = new("prism.guideFinalBody",
-            "The top looks from each heat meet in the final, and everyone judges it.");
+            "The top glams from each heat meet in the final, and everyone judges it.");
         public static readonly LocString GuideRevealTitle = new("prism.guideRevealTitle", "The reveal");
         public static readonly LocString GuideRevealBody = new("prism.guideRevealBody",
             "Results play out as a countdown to first place. The podium and active judges earn Aether Coin.");
@@ -10935,7 +10935,7 @@ internal static class L
         public static readonly LocString RulePrismFinalFirst = new("coin.rulePrismFinalFirst", "Prism final, 1st place");
         public static readonly LocString RulePrismFinalSecond = new("coin.rulePrismFinalSecond", "Prism final, 2nd place");
         public static readonly LocString RulePrismFinalThird = new("coin.rulePrismFinalThird", "Prism final, 3rd place");
-        public static readonly LocString RulePrismJudgeHint = new("coin.rulePrismJudgeHint", "Score every look in a Prism heat or the final");
+        public static readonly LocString RulePrismJudgeHint = new("coin.rulePrismJudgeHint", "Score every glam in a Prism heat or the final");
         public static readonly LocString RulePrismHeatHint = new("coin.rulePrismHeatHint", "Finish in the top three of your Prism heat");
         public static readonly LocString RulePrismFinalHint = new("coin.rulePrismFinalHint", "Finish in the top three of the Prism final");
         public static readonly LocString EarnHeader = new("coin.earnHeader", "How to earn");
