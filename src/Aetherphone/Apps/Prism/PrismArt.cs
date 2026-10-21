@@ -177,17 +177,24 @@ internal static class PrismArt
     }
 
     public static bool Link(ImDrawListPtr drawList, Vector2 topLeft, string label, Vector4 color, float scale,
-        float rowHeight = 0f)
+        float rowHeight = 0f, string icon = "")
     {
         var pixels = LabelPixels();
         var size = PrismType.Measure(label, PrismFace.Label, pixels);
+        var lead = icon.Length > 0 ? size.Y + Metrics.Space.Xs * scale : 0f;
         var tap = Metrics.Size.TapTarget * scale;
         var padY = MathF.Max(0f, ((rowHeight > 0f ? rowHeight : tap) - size.Y) * 0.5f);
-        var padX = MathF.Max(0f, (tap - size.X) * 0.5f);
+        var padX = MathF.Max(0f, (tap - size.X - lead) * 0.5f);
         var min = new Vector2(topLeft.X - padX, topLeft.Y - padY);
-        var max = new Vector2(topLeft.X + size.X + padX, topLeft.Y + size.Y + padY);
+        var max = new Vector2(topLeft.X + lead + size.X + padX, topLeft.Y + size.Y + padY);
         var hovered = UiInteract.Hover(min, max);
-        PrismType.Draw(drawList, topLeft, label, hovered ? Fore : color, PrismFace.Label, pixels);
+        if (lead > 0f)
+        {
+            PhoneIcon.Draw(drawList, topLeft + new Vector2(size.Y * 0.5f, size.Y * 0.5f), icon, hovered ? Fore : color,
+                size.Y);
+        }
+
+        PrismType.Draw(drawList, topLeft + new Vector2(lead, 0f), label, hovered ? Fore : color, PrismFace.Label, pixels);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

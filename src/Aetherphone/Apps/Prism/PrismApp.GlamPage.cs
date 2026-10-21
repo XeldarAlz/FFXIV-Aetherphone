@@ -21,6 +21,8 @@ internal sealed partial class PrismApp
     private const float DetailTitleUnits = PrismType.TitleUnits;
     private const float DetailTitleMinUnits = PrismType.HeadingUnits;
     private const string Arrow = "→";
+    private const float BylineAvatarShare = 0.6f;
+    private const int AvatarSegments = 32;
 
     private readonly Dictionary<string, string> handleLines = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> tagLabels = new(StringComparer.Ordinal);
@@ -245,12 +247,17 @@ internal sealed partial class PrismApp
         top += PrismType.DrawLines(drawList, new Vector2(left, top), lines, PrismArt.Fore, PrismFace.Headline, pixels) +
                Metrics.Space.Xs * scale;
         var author = AuthorLine(glam.Author);
+        var avatarRadius = labelLine * BylineAvatarShare;
+        var avatar = new Rect(new Vector2(left, top + labelLine * 0.5f - avatarRadius),
+            new Vector2(left + avatarRadius * 2f, top + labelLine * 0.5f + avatarRadius));
+        DrawAuthorAvatar(drawList, avatar.Center, avatarRadius, glam.Author, TextStyles.Caption2.Scale);
+        var handleLeft = avatar.Max.X + Metrics.Space.Sm * scale;
         if (glam.Author is not { Id.Length: > 0 } who)
         {
-            PrismType.Draw(drawList, new Vector2(left, top), author, PrismArt.Muted, PrismFace.Label, labelPixels);
+            PrismType.Draw(drawList, new Vector2(handleLeft, top), author, PrismArt.Muted, PrismFace.Label, labelPixels);
         }
-        else if (PrismArt.Link(drawList, new Vector2(left, top), author, PrismArt.Muted, scale,
-                     labelLine + Metrics.Space.Sm * scale))
+        else if (PrismArt.Link(drawList, new Vector2(handleLeft, top), author, PrismArt.Muted, scale,
+                     labelLine + Metrics.Space.Sm * scale) || UiInteract.HoverClick(avatar.Min, avatar.Max))
         {
             OpenProfile(who);
         }
@@ -323,6 +330,14 @@ internal sealed partial class PrismApp
 
         return top + PrismType.LineHeight(PrismFace.Label, labelPixels);
     }
+
+    private static string AuthorName(GlamAuthorDto? author) =>
+        author is null ? string.Empty : author.DisplayName.Length > 0 ? author.DisplayName : author.Handle;
+
+    private void DrawAuthorAvatar(ImDrawListPtr drawList, Vector2 center, float radius, GlamAuthorDto? author,
+        float monogramScale) =>
+        AvatarView.Draw(drawList, center, radius, PrismArt.Muted, Initials.Of(AuthorName(author)), monogramScale,
+            images.Avatar(author?.AvatarUrl, radius * 2f), AvatarSegments);
 
     private string TriedOnLine(long tryOns)
     {
@@ -436,7 +451,8 @@ internal sealed partial class PrismApp
         var labelPixels = PrismArt.LabelPixels();
         var row = PrismType.LineHeight(PrismFace.Label, labelPixels) + Metrics.Space.Sm * scale;
         if (listed && PrismArt.Link(drawList, new Vector2(left, top), Loc.T(glam.Liked ? L.Prism.Liked : L.Prism.Like),
-                glam.Liked ? PrismArt.Fore : PrismArt.Muted, scale, row))
+                glam.Liked ? PrismArt.Fore : PrismArt.Muted, scale, row,
+                glam.Liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart))
         {
             glams.ToggleLike(glam);
         }

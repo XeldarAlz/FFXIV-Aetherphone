@@ -19,6 +19,7 @@ internal enum GlamListKind : byte
 internal sealed partial class PrismApp
 {
     private const float ProfileNameUnits = PrismType.TitleUnits;
+    private const float ProfileAvatarUnits = 64f;
     private const string MarketAppId = "market";
 
     private bool showSaved;
@@ -124,27 +125,33 @@ internal sealed partial class PrismApp
         var top = mine
             ? content.Min.Y + HeaderGapUnits * scale
             : DrawHeader(drawList, content, string.Empty, string.Empty, true, scale);
-        var name = author is null ? string.Empty : author.DisplayName.Length > 0 ? author.DisplayName : author.Handle;
         var action = mine ? string.Empty : Loc.T(profile is { Following: true } ? L.Prism.Following : L.Prism.Follow);
         var buttonWidth = mine ? 0f : PrismArt.ButtonWidth(action, scale) + Metrics.Space.Md * scale;
-        var nameWidth = right - left - buttonWidth;
-        var pixels = PrismType.Fit(name, PrismFace.Headline, nameWidth, ProfileNameUnits * scale,
+        var avatar = ProfileAvatarUnits * scale;
+        var textLeft = left + avatar + Metrics.Space.Md * scale;
+        var nameWidth = right - textLeft - buttonWidth;
+        var pixels = PrismType.Fit(AuthorName(author), PrismFace.Headline, nameWidth, ProfileNameUnits * scale,
             ProfileNameUnits * scale * 0.7f, 1, out var lines);
-        var nameTop = top;
-        top += PrismType.DrawLines(drawList, new Vector2(left, top), lines, PrismArt.Fore, PrismFace.Headline, pixels);
         var labelPixels = PrismArt.LabelPixels();
-        PrismType.Draw(drawList, new Vector2(left, top), PrismType.FitLabel(AuthorLine(author), labelPixels, nameWidth),
-            PrismArt.Muted, PrismFace.Label, labelPixels);
-        var buttonTop = (nameTop + top + PrismType.LineHeight(PrismFace.Label, labelPixels) -
-                         PrismArt.ButtonUnits * scale) * 0.5f;
+        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
+        var block = lines.Length * PrismType.LineHeight(PrismFace.Headline, pixels) + labelLine;
+        var rowHeight = MathF.Max(avatar, block);
+        var middle = top + rowHeight * 0.5f;
+        DrawAuthorAvatar(drawList, new Vector2(left + avatar * 0.5f, middle), avatar * 0.5f, author,
+            TextStyles.Title3.Scale);
+        var textTop = middle - block * 0.5f;
+        textTop += PrismType.DrawLines(drawList, new Vector2(textLeft, textTop), lines, PrismArt.Fore, PrismFace.Headline,
+            pixels);
+        PrismType.Draw(drawList, new Vector2(textLeft, textTop),
+            PrismType.FitLabel(AuthorLine(author), labelPixels, nameWidth), PrismArt.Muted, PrismFace.Label, labelPixels);
         if (!mine && author is not null &&
-            PrismArt.Button(drawList, new Vector2(right - PrismArt.ButtonWidth(action, scale), buttonTop), action, scale,
-                out _))
+            PrismArt.Button(drawList, new Vector2(right - PrismArt.ButtonWidth(action, scale),
+                middle - PrismArt.ButtonUnits * scale * 0.5f), action, scale, out _))
         {
             glams.SetFollow(author, profile is not { Following: true });
         }
 
-        top += PrismType.LineHeight(PrismFace.Label, labelPixels) + Metrics.Space.Xl * scale;
+        top += rowHeight + Metrics.Space.Xl * scale;
         top = DrawProfileStats(drawList, left, top, right - left, profile, mine, scale);
         if (mine)
         {
