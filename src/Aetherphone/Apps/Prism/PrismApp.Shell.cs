@@ -100,16 +100,20 @@ internal sealed partial class PrismApp
                 PrismArt.Fore, PrismFace.Label, labelPixels);
         }
 
-        if (PrismArt.Link(drawList, new Vector2(right - offWidth, y), off, PrismArt.Fore, scale))
+        if (PrismArt.Link(drawList, new Vector2(right - offWidth, y), off, PrismArt.Fore, scale, overlay: true))
         {
             glamour.Revert();
         }
     }
 
-    private void DrawTabBar(Rect content, PhoneTheme theme)
+    private void FollowSkin(PhoneTheme theme)
     {
         ui.Theme = theme;
         ui.Palette = ui.Palette with { Accent = PrismArt.Fore, BackdropTop = PrismArt.Back, BackdropBottom = PrismArt.Back };
+    }
+
+    private void DrawTabBar(Rect content)
+    {
         tabItems[(int)PrismTab.Discover] =
             new TabItem(Loc.T(L.Prism.TabDiscover), PhoneIcons.Compass, PhoneIcons.CompassFilled);
         tabItems[(int)PrismTab.Week] = new TabItem(Loc.T(L.Prism.TabWeek), PhoneIcons.Crown);
@@ -129,7 +133,7 @@ internal sealed partial class PrismApp
 
     private void OpenTab(PrismTab next)
     {
-        var direction = next >= tab ? 1 : -1;
+        var direction = next < tab || next == tab && !IsTabRoot(screen) ? -1 : 1;
         historyDepth = 0;
         Go(TabRoots[(int)next], direction);
         if (next == PrismTab.Discover)

@@ -177,7 +177,7 @@ internal static class PrismArt
     }
 
     public static bool Link(ImDrawListPtr drawList, Vector2 topLeft, string label, Vector4 color, float scale,
-        float rowHeight = 0f, string icon = "")
+        float rowHeight = 0f, string icon = "", bool overlay = false)
     {
         var pixels = LabelPixels();
         var size = PrismType.Measure(label, PrismFace.Label, pixels);
@@ -187,7 +187,9 @@ internal static class PrismArt
         var padX = MathF.Max(0f, (tap - size.X - lead) * 0.5f);
         var min = new Vector2(topLeft.X - padX, topLeft.Y - padY);
         var max = new Vector2(topLeft.X + lead + size.X + padX, topLeft.Y + size.Y + padY);
-        var hovered = UiInteract.Hover(min, max);
+        var hovered = overlay
+            ? !UiInteract.InputBlocked && UiInteract.HoverWindowOnly(min, max)
+            : UiInteract.Hover(min, max);
         if (lead > 0f)
         {
             PhoneIcon.Draw(drawList, topLeft + new Vector2(size.Y * 0.5f, size.Y * 0.5f), icon, hovered ? Fore : color,

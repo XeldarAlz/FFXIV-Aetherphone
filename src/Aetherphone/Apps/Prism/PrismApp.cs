@@ -210,12 +210,13 @@ internal sealed partial class PrismApp : IResumableApp
             return;
         }
 
+        FollowSkin(context.Theme);
         if (wearing)
         {
             DrawWearingBar(content, scale);
         }
 
-        DrawTabBar(content, context.Theme);
+        DrawTabBar(content);
     }
 
     private void DrawScreenBody(ImDrawListPtr drawList, Rect full, Rect content, float scale)
