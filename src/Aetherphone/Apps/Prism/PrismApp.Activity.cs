@@ -118,7 +118,10 @@ internal sealed partial class PrismApp
         var pad = Metrics.Space.Md * scale;
         var avatar = ActivityAvatarUnits * scale;
         var thumb = new Vector2(ActivityThumbUnits * scale, ActivityThumbUnits * scale / GlamStore.PhotoRatio);
-        var row = new Rect(new Vector2(left, top), new Vector2(left + width, top + thumb.Y + pad * 2f));
+        var labelPixels = PrismArt.LabelPixels();
+        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
+        var row = new Rect(new Vector2(left, top),
+            new Vector2(left + width, top + MathF.Max(thumb.Y, labelLine * 3f) + pad * 2f));
         if (!ImGui.IsRectVisible(row.Min, row.Max))
         {
             return row.Max.Y;
@@ -150,8 +153,6 @@ internal sealed partial class PrismApp
             right = frame.Min.X - pad;
         }
 
-        var labelPixels = PrismArt.LabelPixels();
-        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var textLeft = left + avatar + pad;
         var text = ActivityLines(item, now, right - textLeft, labelPixels);
         var bodyLines = text.Second.Length > 0 ? 2 : text.First.Length > 0 ? 1 : 0;

@@ -12,8 +12,10 @@ internal static class PrismArt
     public const float ButtonUnits = 30f;
     public const float IconUnits = 24f;
     public const int Stars = 5;
+    public const int PodiumRanks = 3;
 
     private const float IconDotUnits = 4f;
+    private const float IconDotRimUnits = 1.5f;
     private const float IconDotShare = 0.4f;
 
     private const float LabelUnits = 13f;
@@ -34,8 +36,7 @@ internal static class PrismArt
     private const float TopFogDeep = 0.9f;
     private const float PressedAlpha = 0.82f;
     private const float ArrowNudge = 0.08f;
-    private const double GlowPeriodSeconds = 4.5;
-    private const double GlowSweepSeconds = 1.4;
+    private const float GlowSweepSeconds = 1.4f;
     private const float GlowBandUnits = 140f;
     private const float GlowHaloUnits = 9f;
     private const float GlowSliceUnits = 3f;
@@ -44,7 +45,11 @@ internal static class PrismArt
     private const float GlowCoreLift = 0.7f;
     private const float FogAlpha = 0.6f;
     private const float EditorialMarginUnits = 20f;
-    private const float SwatchStrength = 0.6f;
+    private const float SwatchBase = 0.06f;
+    private const float SwatchStep = 0.04f;
+    private const int SwatchTones = 3;
+    private const float SwatchFloor = 0.02f;
+    private const float MedalFill = 0.12f;
     private const int MedalSegments = 48;
     private const float SwatchShadeShare = 0.45f;
 
@@ -97,23 +102,19 @@ internal static class PrismArt
 
     private static readonly string[] Digits = { "1", "2", "3", "4", "5" };
 
-    public static Vector4 ScoreLowInk => AccentRing.Red;
-
-    public static Vector4 ScoreHighInk => AccentRing.Green;
-
     public static float LabelPixels() => LabelUnits * UiScale.Current;
 
     public static float Gutter(float scale) => (EditorialMarginUnits - sidePadding) * scale;
 
     public static float BottomMargin(float scale) => Metrics.Space.Lg * scale;
 
-    public static void Shade(ImDrawListPtr drawList, Rect screen, float scale)
+    public static void Shade(ImDrawListPtr drawList, Rect screen, float scale, float headBottom = 0f)
     {
-        var deep = ImGui.GetColorU32(Palette.WithAlpha(themeInks.Fog, TopFogDeep));
-        var fog = ImGui.GetColorU32(themeInks.Fog);
-        var clear = ImGui.GetColorU32(Palette.WithAlpha(themeInks.Fog, 0f));
-        var band = screen.Min.Y + TopShadeUnits * scale;
-        var lift = screen.Min.Y + screen.Height * TopFadeShare;
+        var deep = ImGui.GetColorU32(Palette.WithAlpha(PhotoInks.Fog, TopFogDeep));
+        var fog = ImGui.GetColorU32(PhotoInks.Fog);
+        var clear = ImGui.GetColorU32(Palette.WithAlpha(PhotoInks.Fog, 0f));
+        var band = MathF.Max(screen.Min.Y + TopShadeUnits * scale, headBottom + Metrics.Space.Lg * scale);
+        var lift = MathF.Max(screen.Min.Y + screen.Height * TopFadeShare, band + (band - screen.Min.Y) * 0.5f);
         drawList.AddRectFilledMultiColor(screen.Min, new Vector2(screen.Max.X, band), deep, deep, fog, fog);
         drawList.AddRectFilledMultiColor(new Vector2(screen.Min.X, band), new Vector2(screen.Max.X, lift), fog, fog,
             clear, clear);
@@ -219,8 +220,9 @@ internal static class PrismArt
         PhoneIcon.Draw(drawList, center, glyph, hovered ? Muted : Fore, size);
         if (dot)
         {
-            drawList.AddCircleFilled(center + new Vector2(size, -size) * IconDotShare, IconDotUnits * scale,
-                ImGui.GetColorU32(ScoreLowInk));
+            var dotCenter = center + new Vector2(size, -size) * IconDotShare;
+            drawList.AddCircleFilled(dotCenter, (IconDotUnits + IconDotRimUnits) * scale, ImGui.GetColorU32(Back));
+            drawList.AddCircleFilled(dotCenter, IconDotUnits * scale, ImGui.GetColorU32(Fore));
         }
 
         if (hovered)
@@ -296,19 +298,25 @@ internal static class PrismArt
 
     public static void Swatch(ImDrawListPtr drawList, Rect rect, int tint)
     {
-        var from = ImGui.GetColorU32(Vector4.Lerp(Back, Spectrum[tint % Spectrum.Length], SwatchStrength));
-        var to = ImGui.GetColorU32(Vector4.Lerp(Back, Spectrum[(tint + 2) % Spectrum.Length], SwatchStrength));
+        var from = ImGui.GetColorU32(Vector4.Lerp(Back, Fore, SwatchBase + SwatchStep * (tint % SwatchTones)));
+        var to = ImGui.GetColorU32(Vector4.Lerp(Back, Fore, SwatchFloor));
         drawList.AddRectFilledMultiColor(rect.Min, rect.Max, from, from, to, to);
         var fade = new Vector2(rect.Min.X, rect.Max.Y - rect.Height * SwatchShadeShare);
         drawList.AddRectFilledMultiColor(fade, rect.Max, ImGui.GetColorU32(ShadeClear), ImGui.GetColorU32(ShadeClear),
             ImGui.GetColorU32(ShadeMid), ImGui.GetColorU32(ShadeMid));
     }
 
-    public static void Medal(ImDrawListPtr drawList, Vector2 center, float radius, int tint, float turn, float scale)
+    public static void Medal(ImDrawListPtr drawList, Vector2 center, float radius, int rank, float turn, float scale)
     {
-        drawList.AddCircleFilled(center, radius,
-            ImGui.GetColorU32(Vector4.Lerp(Back, Spectrum[tint % Spectrum.Length], SwatchStrength)), MedalSegments);
-        SpectrumRing(drawList, center, radius, turn, MathF.Max(1f, 2f * scale));
+        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Vector4.Lerp(Back, Fore, MedalFill)), MedalSegments);
+        if (rank is >= 1 and <= PodiumRanks)
+        {
+            SpectrumRing(drawList, center, radius, turn, MathF.Max(1f, 2f * scale));
+            return;
+        }
+
+        drawList.AddCircle(center, radius, ImGui.GetColorU32(Faint), MedalSegments,
+            MathF.Max(1f, Metrics.Stroke.Hairline * scale));
     }
 
     public static void SpectrumRing(ImDrawListPtr drawList, Vector2 center, float radius, float turn, float thickness)
@@ -333,15 +341,14 @@ internal static class PrismArt
         }
     }
 
-    public static void RuleGlow(ImDrawListPtr drawList, float left, float right, float y, float scale)
+    public static void RuleGlow(ImDrawListPtr drawList, float left, float right, float y, float scale, float age)
     {
-        var phase = ImGui.GetTime() % GlowPeriodSeconds;
-        if (phase >= GlowSweepSeconds)
+        if (age < 0f || age >= GlowSweepSeconds)
         {
             return;
         }
 
-        var progress = (float)(phase / GlowSweepSeconds);
+        var progress = age / GlowSweepSeconds;
         progress = progress * progress * (3f - 2f * progress);
         var half = GlowBandUnits * scale * 0.5f;
         var center = left - half + (right - left + half * 2f) * progress;

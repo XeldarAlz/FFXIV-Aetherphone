@@ -33,8 +33,6 @@ internal sealed partial class PrismApp
     private const int RewardAvatarSegments = 48;
     private const int RewardKinds = 4;
 
-    private static readonly int[] MedalTints = { 2, 5, 4, 3 };
-
     private static readonly LocString[] RewardTitles =
     {
         L.Prism.RewardBadgeTitle, L.Prism.RewardFrameTitle, L.Prism.RewardCoinTitle, L.Prism.RewardGilTitle,
@@ -131,7 +129,8 @@ internal sealed partial class PrismApp
         PrismArt.SpectrumRule(drawList, left, left + width * draw, top, scale);
         if (draw >= PrismMotion.Settled)
         {
-            PrismArt.RuleGlow(drawList, left, left + width, top, scale);
+            PrismArt.RuleGlow(drawList, left, left + width, top, scale,
+                screenAge - RewardRuleDelay - GlowLeadSeconds);
         }
 
         top += Metrics.Space.Lg * scale;
@@ -162,7 +161,7 @@ internal sealed partial class PrismApp
 
     private void DrawRewardArt(ImDrawListPtr drawList, Vector2 center, float radius, int kind, float turn, float scale)
     {
-        PrismArt.Medal(drawList, center, radius, MedalTints[kind], turn, scale);
+        PrismArt.Medal(drawList, center, radius, rank: 1, turn, scale);
         switch (kind)
         {
             case 0:

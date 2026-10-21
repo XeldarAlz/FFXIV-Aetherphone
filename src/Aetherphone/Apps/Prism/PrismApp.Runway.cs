@@ -38,6 +38,7 @@ internal sealed partial class PrismApp
     private volatile int ballotOutcome;
     private string previousLookUrl = string.Empty;
     private float turnAge = TurnIdle;
+    private int turnSign = 1;
     private Spring inspectZoom = new(0f);
     private float inspectHold;
     private Vector2 inspectFocus;
@@ -148,10 +149,23 @@ internal sealed partial class PrismApp
         DrawTurningLook(drawList, photo, look, turn, delta);
         var counter = LookCounter(lookIndex + 1, looks.Length);
         PrismType.Draw(drawList, new Vector2(left, countTop), counter, PrismArt.Muted, PrismFace.Label, labelPixels);
-        var aside = lookIndex == 0 && chosen == 0 ? Loc.T(L.Prism.InspectHint) : store.Week?.Title ?? string.Empty;
-        var room = width - PrismType.Measure(counter, PrismFace.Label, labelPixels).X - Metrics.Space.Lg * scale;
-        PrismType.DrawRight(drawList, new Vector2(left + width, countTop), PrismType.FitLabel(aside, labelPixels, room),
-            PrismArt.Muted, PrismFace.Label, labelPixels);
+        if (lookIndex > 0 && chosen == 0 && !store.Busy)
+        {
+            var previous = Loc.T(L.Common.Previous);
+            var previousWidth = PrismType.Measure(previous, PrismFace.Label, labelPixels).X;
+            if (PrismArt.Link(drawList, new Vector2(left + width - previousWidth, countTop), previous, PrismArt.Muted,
+                    scale))
+            {
+                StepBack(look);
+            }
+        }
+        else
+        {
+            var aside = lookIndex == 0 && chosen == 0 ? Loc.T(L.Prism.InspectHint) : store.Week?.Title ?? string.Empty;
+            var room = width - PrismType.Measure(counter, PrismFace.Label, labelPixels).X - Metrics.Space.Lg * scale;
+            PrismType.DrawRight(drawList, new Vector2(left + width, countTop),
+                PrismType.FitLabel(aside, labelPixels, room), PrismArt.Muted, PrismFace.Label, labelPixels);
+        }
 
         PrismType.DrawLines(drawList, new Vector2(left, questionTop), lines, PrismArt.Fore, PrismFace.Headline,
             pixels);
@@ -163,10 +177,10 @@ internal sealed partial class PrismApp
             scoreFill.SnapTo(0f);
         }
 
-        PrismType.Draw(drawList, new Vector2(left, anchorTop), Loc.T(L.Prism.ScoreLow), PrismArt.ScoreLowInk,
+        PrismType.Draw(drawList, new Vector2(left, anchorTop), Loc.T(L.Prism.ScoreLow), PrismArt.Muted,
             PrismFace.Label, labelPixels);
         PrismType.DrawRight(drawList, new Vector2(left + width, anchorTop), Loc.T(L.Prism.ScoreHigh),
-            PrismArt.ScoreHighInk, PrismFace.Label, labelPixels);
+            PrismArt.Muted, PrismFace.Label, labelPixels);
 
         if (chosen > 0 && fill >= ScoreDone)
         {
@@ -208,7 +222,7 @@ internal sealed partial class PrismApp
 
     private void DrawTurningLook(ImDrawListPtr drawList, Rect photo, PrismLookDto look, float turn, float delta)
     {
-        var shift = new Vector2(photo.Width * TurnShift, 0f);
+        var shift = new Vector2(photo.Width * TurnShift * turnSign, 0f);
         drawList.PushClipRect(photo.Min, photo.Max, true);
         if (turn < PrismMotion.Settled && previousLookUrl.Length > 0)
         {
@@ -238,6 +252,7 @@ internal sealed partial class PrismApp
         lookSeconds = 0f;
         previousLookUrl = look.ImageUrl;
         turnAge = 0f;
+        turnSign = 1;
         if (lookIndex < looks.Length)
         {
             return;
@@ -246,6 +261,17 @@ internal sealed partial class PrismApp
         ballotOutcome = OutcomePending;
         heatCoins = 0;
         store.SubmitBallot(stars, ballotSettled);
+    }
+
+    private void StepBack(PrismLookDto look)
+    {
+        previousLookUrl = look.ImageUrl;
+        lookIndex--;
+        chosen = 0;
+        scoreFill.SnapTo(0f);
+        lookSeconds = stars[lookIndex] is { } star ? star.ViewedMs / 1000f : 0f;
+        turnAge = 0f;
+        turnSign = -1;
     }
 
     private void SettleBallot(bool succeeded)
