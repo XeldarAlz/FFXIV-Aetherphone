@@ -301,6 +301,13 @@ public sealed class PrismWireContractTests
     }
 
     [Fact]
+    public void ModdedIsTheDefaultTrack()
+    {
+        var week = new PrismWeekDto(Id: "w_2", Tracks: new[] { new PrismTrackDto("vanilla"), new PrismTrackDto("modded") });
+        Assert.Equal("modded", PrismTracks.Choose(week, string.Empty));
+    }
+
+    [Fact]
     public void VanillaTakesOnlyCleanCameraShots()
     {
         var stamps = new Dictionary<string, byte>();
