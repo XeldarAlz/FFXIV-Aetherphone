@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -12,6 +13,17 @@ internal enum PrismTab : byte
     Wardrobe,
     Me,
 }
+
+internal readonly record struct PrismStop(
+    PrismScreen Screen,
+    GlamDto? Glam,
+    GlamAuthorDto? Author,
+    bool Saved,
+    GlamListKind Kind,
+    uint ItemId,
+    GlamModDto? Mod,
+    string Title,
+    string OutfitId);
 
 internal sealed partial class PrismApp
 {
@@ -30,7 +42,7 @@ internal sealed partial class PrismApp
         PrismScreen.Discover, PrismScreen.Cover, PrismScreen.Wardrobe, PrismScreen.Me,
     };
 
-    private readonly PrismScreen[] history = new PrismScreen[HistoryDepth];
+    private readonly PrismStop[] history = new PrismStop[HistoryDepth];
     private int historyDepth;
     private PrismTab tab;
     private string wearingKey = string.Empty;
@@ -130,6 +142,7 @@ internal sealed partial class PrismApp
         }
         else if (next == PrismTab.Me)
         {
+            showSaved = false;
             OpenOwnProfile();
         }
         else if (next == PrismTab.Week)
@@ -143,7 +156,8 @@ internal sealed partial class PrismApp
     {
         if (historyDepth < HistoryDepth)
         {
-            history[historyDepth++] = screen;
+            history[historyDepth++] = new PrismStop(screen, glams.Detail, glams.Profile?.User, showSaved, listKind,
+                listItemId, listMod, listTitle, outfitId);
         }
 
         Go(next);
@@ -151,7 +165,40 @@ internal sealed partial class PrismApp
 
     private void GoBack()
     {
-        Go(historyDepth > 0 ? history[--historyDepth] : TabRoots[(int)tab], -1);
+        if (historyDepth == 0)
+        {
+            Go(TabRoots[(int)tab], -1);
+            return;
+        }
+
+        var stop = history[--historyDepth];
+        history[historyDepth] = default;
+        Go(stop.Screen, -1);
+        Restore(stop);
+    }
+
+    private void Restore(in PrismStop stop)
+    {
+        switch (stop.Screen)
+        {
+            case PrismScreen.GlamDetail when stop.Glam is not null:
+                ShowGlam(stop.Glam);
+                break;
+            case PrismScreen.Me or PrismScreen.Profile when stop.Author is not null:
+                showSaved = stop.Saved;
+                glams.OpenProfile(stop.Author, stop.Saved);
+                break;
+            case PrismScreen.GlamList:
+                listKind = stop.Kind;
+                listItemId = stop.ItemId;
+                listMod = stop.Mod;
+                listTitle = stop.Title;
+                OpenList();
+                break;
+            case PrismScreen.WardrobeOutfit:
+                outfitId = stop.OutfitId;
+                break;
+        }
     }
 
     private void SyncTab(PrismScreen next)

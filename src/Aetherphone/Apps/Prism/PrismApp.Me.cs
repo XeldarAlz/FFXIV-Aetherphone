@@ -11,7 +11,6 @@ namespace Aetherphone.Apps.Prism;
 internal enum GlamListKind : byte
 {
     Item,
-    Saved,
     Mod,
 }
 
@@ -22,6 +21,7 @@ internal sealed partial class PrismApp
     private bool showSaved;
     private GlamListKind listKind;
     private uint listItemId;
+    private GlamModDto? listMod;
     private string listTitle = string.Empty;
     private CachedText glamCountText;
     private CachedText triedCountText;
@@ -35,8 +35,7 @@ internal sealed partial class PrismApp
             return;
         }
 
-        showSaved = false;
-        glams.OpenProfile(new GlamAuthorDto(me.Id, me.DisplayName, me.Handle, me.AvatarUrl ?? string.Empty));
+        glams.OpenProfile(new GlamAuthorDto(me.Id, me.DisplayName, me.Handle, me.AvatarUrl ?? string.Empty), showSaved);
     }
 
     private void OpenProfile(GlamAuthorDto author)
@@ -47,25 +46,41 @@ internal sealed partial class PrismApp
             return;
         }
 
-        glams.OpenProfile(author);
         Push(PrismScreen.Profile);
+        showSaved = false;
+        glams.OpenProfile(author);
     }
 
     private void OpenItemGlams(uint itemId)
     {
+        Push(PrismScreen.GlamList);
         listKind = GlamListKind.Item;
         listItemId = itemId;
-        listTitle = gameData.TryGetItem(itemId, out var name, out _, out _) ? name : string.Empty;
-        glams.OpenItem(itemId);
-        Push(PrismScreen.GlamList);
+        listMod = null;
+        listTitle = GearItem(itemId, out var name, out _) ? name : string.Empty;
+        OpenList();
     }
 
     private void OpenModGlams(GlamModDto mod)
     {
-        listKind = GlamListKind.Mod;
-        listTitle = mod.Name;
-        glams.OpenMod(mod.Name, mod.Author);
         Push(PrismScreen.GlamList);
+        listKind = GlamListKind.Mod;
+        listItemId = 0;
+        listMod = mod;
+        listTitle = mod.Name;
+        OpenList();
+    }
+
+    private void OpenList()
+    {
+        if (listKind == GlamListKind.Item)
+        {
+            glams.OpenItem(listItemId);
+        }
+        else if (listMod is { } mod)
+        {
+            glams.OpenMod(mod.Name, mod.Author);
+        }
     }
 
     private void DrawProfile(ImDrawListPtr drawList, Rect content, float scale)
@@ -167,14 +182,7 @@ internal sealed partial class PrismApp
                 !active)
             {
                 showSaved = saved;
-                if (saved)
-                {
-                    glams.OpenCollection(GlamClient.SavedCollection);
-                }
-                else
-                {
-                    OpenOwnProfile();
-                }
+                OpenOwnProfile();
             }
 
             if (active)

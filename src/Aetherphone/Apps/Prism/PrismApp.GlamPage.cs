@@ -35,10 +35,15 @@ internal sealed partial class PrismApp
 
     private void OpenGlam(GlamDto glam)
     {
+        Push(PrismScreen.GlamDetail);
+        ShowGlam(glam);
+    }
+
+    private void ShowGlam(GlamDto glam)
+    {
         glams.Open(glam);
         photoIndex = 0;
         statsFor = string.Empty;
-        Push(PrismScreen.GlamDetail);
     }
 
     private IDalamudTextureWrap? ViewerPage(int index) =>

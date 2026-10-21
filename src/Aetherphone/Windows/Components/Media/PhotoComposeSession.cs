@@ -113,6 +113,7 @@ internal sealed class PhotoComposeSession : IDisposable
     public int PreviewIndex { get; set; }
     public string Notice { get; private set; } = string.Empty;
     public int SelectedCount => selected.Count;
+    public int MaxPhotos { get; set; } = PostMedia.MaxPhotos;
     public bool HasSelection => selected.Count > 0;
     public string FirstSelected => selected.Count > 0 ? selected[0] : string.Empty;
     public string CurrentPath => CurrentIndex >= 0 && CurrentIndex < selected.Count ? selected[CurrentIndex] : string.Empty;
@@ -238,9 +239,9 @@ internal sealed class PhotoComposeSession : IDisposable
             }
         }
 
-        if (selected.Count >= PostMedia.MaxPhotos)
+        if (selected.Count >= MaxPhotos)
         {
-            Notice = Loc.T(L.Common.PhotoLimit, PostMedia.MaxPhotos);
+            Notice = Loc.T(L.Common.PhotoLimit, MaxPhotos);
             return;
         }
 

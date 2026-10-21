@@ -282,7 +282,11 @@ internal sealed partial class PrismApp : IResumableApp
         if (back)
         {
             var backClicked = PrismArt.Link(drawList, row.Min, Loc.T(L.Prism.Back), PrismArt.Muted, scale);
-            if (backClicked && IsLibraryScreen(screen))
+            if (backClicked && screen == PrismScreen.Compose && composeDetails)
+            {
+                composeDetails = false;
+            }
+            else if (backClicked && IsLibraryScreen(screen))
             {
                 GoBack();
             }

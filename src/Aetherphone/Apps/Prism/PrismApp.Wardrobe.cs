@@ -156,8 +156,8 @@ internal sealed partial class PrismApp
 
             if (UiInteract.Click(min, max, hovered))
             {
-                outfitId = outfit.Id;
                 Push(PrismScreen.WardrobeOutfit);
+                outfitId = outfit.Id;
             }
         }
 

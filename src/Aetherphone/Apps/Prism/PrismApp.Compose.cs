@@ -30,7 +30,9 @@ internal sealed partial class PrismApp
 
     private void StartCompose()
     {
+        postOutcome = OutcomePending;
         composeSession.Open(false);
+        composeSession.MaxPhotos = GlamStore.MaxPhotos;
         composeDetails = false;
         captured = Array.Empty<GlamGearDto>();
         glamTitle = string.Empty;
@@ -171,6 +173,8 @@ internal sealed partial class PrismApp
 
     private void PostGlam()
     {
+        captured = glamour.Capture();
+        capturedVanilla = GlamourService.IsVanilla(captured) && PhotosAreVanilla();
         var paths = composeSession.SelectedArray();
         var crops = composeSession.CropsArray();
         var count = Math.Min(paths.Length, GlamStore.MaxPhotos);
@@ -215,10 +219,10 @@ internal sealed partial class PrismApp
         }
 
         postOutcome = OutcomePending;
-        if (outcome == OutcomeSent && glams.Detail is { } created)
+        if (outcome == OutcomeSent && glams.Posted is { } created)
         {
-            historyDepth = Math.Max(0, historyDepth - 1);
-            OpenGlam(created);
+            Go(PrismScreen.GlamDetail);
+            ShowGlam(created);
         }
     }
 }

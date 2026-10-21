@@ -46,6 +46,7 @@ internal sealed class GlamStore : IDisposable
     private Func<string?, CancellationToken, Task<GlamPage?>>? listFetch;
     private volatile string listKey = string.Empty;
     private volatile GlamDto? detail;
+    private volatile GlamDto? posted;
     private volatile GlamProfileDto? profile;
     private volatile GlamCollectionDto[] collections = Array.Empty<GlamCollectionDto>();
     private volatile GlamItemDto? item;
@@ -73,6 +74,8 @@ internal sealed class GlamStore : IDisposable
     public bool? VanillaOnly => vanillaOnly;
 
     public GlamDto? Detail => detail;
+
+    public GlamDto? Posted => posted;
 
     public GlamProfileDto? Profile => profile;
 
@@ -137,7 +140,13 @@ internal sealed class GlamStore : IDisposable
             }
 
             lane.ApplyRefresh(page.Items ?? Array.Empty<GlamDto>(), page.NextCursor);
-        }, () => lane.Loading = false);
+        }, () =>
+        {
+            if (started == epoch)
+            {
+                lane.Loading = false;
+            }
+        });
     }
 
     public void LoadMore(GlamScope scope)
@@ -160,14 +169,32 @@ internal sealed class GlamStore : IDisposable
             {
                 lane.ApplyMore(page.Items ?? Array.Empty<GlamDto>(), page.NextCursor);
             }
-        }, () => lane.LoadingMore = false);
+        }, () =>
+        {
+            if (started == epoch)
+            {
+                lane.LoadingMore = false;
+            }
+        });
     }
 
-    public void OpenProfile(GlamAuthorDto author)
+    public void OpenProfile(GlamAuthorDto author, bool saved = false)
     {
-        profile = new GlamProfileDto(User: author);
         var userId = author.Id;
-        OpenList("user:" + userId, (cursor, token) => client.UserGlamsAsync(userId, cursor, token));
+        if (profile?.User?.Id != userId)
+        {
+            profile = new GlamProfileDto(User: author);
+        }
+
+        if (saved)
+        {
+            OpenCollection(GlamClient.SavedCollection);
+        }
+        else
+        {
+            OpenList(UserListKey(userId), (cursor, token) => client.UserGlamsAsync(userId, cursor, token));
+        }
+
         work.Run("profile", async token =>
         {
             var fetched = await client.ProfileAsync(userId, token).ConfigureAwait(false);
@@ -216,7 +243,13 @@ internal sealed class GlamStore : IDisposable
             {
                 list.ApplyMore(page.Items ?? Array.Empty<GlamDto>(), page.NextCursor);
             }
-        }, () => list.LoadingMore = false);
+        }, () =>
+        {
+            if (key == listKey)
+            {
+                list.LoadingMore = false;
+            }
+        });
     }
 
     public void Open(GlamDto glam)
@@ -305,6 +338,7 @@ internal sealed class GlamStore : IDisposable
 
         posting = true;
         postFailed = false;
+        posted = null;
         postFailure.Clear();
         work.Run("post", async token =>
         {
@@ -336,7 +370,12 @@ internal sealed class GlamStore : IDisposable
 
             var newest = discover[(int)GlamScope.New];
             newest.Items = CopyOnWrite.Prepend(newest.Items, created);
-            detail = created;
+            if (listKey == UserListKey(MyId))
+            {
+                list.Items = CopyOnWrite.Prepend(list.Items, created);
+            }
+
+            posted = created;
             return true;
         }, onComplete, () => posting = false);
     }
@@ -397,6 +436,8 @@ internal sealed class GlamStore : IDisposable
         work.Dispose();
     }
 
+    private static string UserListKey(string userId) => "user:" + userId;
+
     private void OpenList(string key, Func<string?, CancellationToken, Task<GlamPage?>> fetch)
     {
         if (key == listKey && !list.Failed && (list.Loading || !list.NeverLoaded))
@@ -424,7 +465,13 @@ internal sealed class GlamStore : IDisposable
             }
 
             list.ApplyRefresh(page.Items ?? Array.Empty<GlamDto>(), page.NextCursor);
-        }, () => list.Loading = false);
+        }, () =>
+        {
+            if (key == listKey)
+            {
+                list.Loading = false;
+            }
+        });
     }
 
     private void Replace(GlamDto glam)
