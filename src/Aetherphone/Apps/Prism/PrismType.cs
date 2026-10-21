@@ -2,7 +2,6 @@ using System.Text;
 using Aetherphone.Core;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Prism;
 
@@ -33,7 +32,7 @@ internal static class PrismType
     private readonly record struct BalanceKey(string Text, float Scale, FontWeight Weight, int Width);
 
     public static float Snap(PrismFace face, float pixels) =>
-        Tier(face, pixels) * UiBuilder.DefaultFontSizePx * UiScale.Current * Plugin.Fonts.Zoom;
+        Tier(face, pixels) * Plugin.Fonts.BaseSize * UiScale.Current * Plugin.Fonts.Zoom;
 
     public static Vector2 Measure(string text, PrismFace face, float pixels)
     {
@@ -329,7 +328,7 @@ internal static class PrismType
 
     private static float Tier(PrismFace face, float pixels)
     {
-        var scale = pixels / (UiBuilder.DefaultFontSizePx * UiScale.Current);
+        var scale = pixels / (Plugin.Fonts.BaseSize * UiScale.Current);
         var tier = face switch
         {
             PrismFace.Headline => FontService.TitleScaleAtMost(scale),

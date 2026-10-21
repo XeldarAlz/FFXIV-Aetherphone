@@ -137,6 +137,8 @@ internal sealed class FontService : IDisposable
 
     public float Zoom => zoom;
 
+    public float BaseSize => baseSize;
+
     public bool DisplayReady => displayHandle is { Available: true };
 
     public FontToken PushDisplay() => new(displayHandle is null ? textHandles[0, 0].Push() : displayHandle.Push());
