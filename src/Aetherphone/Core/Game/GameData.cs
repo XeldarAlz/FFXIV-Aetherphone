@@ -542,6 +542,8 @@ internal sealed class GameData
         return string.Empty;
     }
 
+    public const uint GilItemId = 1;
+
     public bool TryGetItem(uint itemId, out string name, out uint iconId, out int itemLevel)
     {
         name = string.Empty;

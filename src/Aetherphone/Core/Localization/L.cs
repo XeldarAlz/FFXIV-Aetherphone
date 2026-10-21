@@ -10877,8 +10877,6 @@ internal static class L
         public static readonly LocString RewardsHeadline = new("prism.rewardsHeadline", "Win the week");
         public static readonly LocString RewardsIntro = new("prism.rewardsIntro",
             "Every week Prism crowns its best glams. This is what they take home.");
-        public static readonly LocString Badges = new("prism.badges", "Badges");
-        public static readonly LocString Frames = new("prism.frames", "Frames");
         public static readonly LocString RewardBadgeTitle = new("prism.rewardBadgeTitle", "Podium badges");
         public static readonly LocString RewardBadgeBody = new("prism.rewardBadgeBody",
             "Finish on a podium and a badge joins your profile, worn next to your name across Aetherphone.");

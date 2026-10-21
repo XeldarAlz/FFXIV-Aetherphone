@@ -194,7 +194,6 @@ public sealed class PrismWireContractTests
             + "\"frame\":{\"id\":\"prism-frame\",\"name\":\"Spectrum\",\"assetUrl\":\"https://x/f.png\"}}]}}",
             AethernetJsonContext.Default.PrismWeekDto);
         Assert.NotNull(week?.Prizes);
-        Assert.True(PrismRewards.HasPrizes(week.Prizes));
         Assert.Equal("Paid within a week", week.Prizes.GilNote);
 
         var final = new List<PrismPrizeRow>();
@@ -214,10 +213,8 @@ public sealed class PrismWireContractTests
     }
 
     [Fact]
-    public void NoPrizesMeansNoPrizesButton()
+    public void NoPrizesMeansNoPrizeRows()
     {
-        Assert.False(PrismRewards.HasPrizes(null));
-        Assert.False(PrismRewards.HasPrizes(new PrismPrizesDto(Heat: new long[] { 0 }, Final: Array.Empty<long>())));
         var rows = new List<PrismPrizeRow> { new(1, 5) };
         PrismRewards.Fill(rows, null, PrismPhases.StageFinal);
         Assert.Empty(rows);

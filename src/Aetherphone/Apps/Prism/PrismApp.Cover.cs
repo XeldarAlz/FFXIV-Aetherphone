@@ -163,9 +163,30 @@ internal sealed partial class PrismApp
             left += width + Metrics.Space.Sm * scale;
         }
 
-        if (PrismArt.Button(drawList, new Vector2(left, top), Loc.T(L.Prism.Rewards), scale, out _))
+        var rewards = Loc.T(L.Prism.Rewards);
+        if (left + PrismArt.ButtonWidth(rewards, scale) > content.Max.X - PrismArt.Gutter(scale))
+        {
+            left = content.Min.X + PrismArt.Gutter(scale);
+            top += PrismArt.ButtonUnits * scale + Metrics.Space.Sm * scale;
+        }
+
+        if (PrismArt.Button(drawList, new Vector2(left, top), rewards, scale, out _))
         {
             OpenRewards();
+        }
+    }
+
+    private string EnterLabel() => Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.Submit);
+
+    private void StartEntry()
+    {
+        if (HasTracks)
+        {
+            StartTrackChoice(false);
+        }
+        else
+        {
+            StartPick();
         }
     }
 
@@ -268,17 +289,9 @@ internal sealed partial class PrismApp
                 return;
             }
 
-            var left = Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.Submit);
-            if (PrismArt.Strip(drawList, strip, left, "→", true, !store.Busy))
+            if (PrismArt.Strip(drawList, strip, EnterLabel(), "→", true, !store.Busy))
             {
-                if (HasTracks)
-                {
-                    StartTrackChoice(false);
-                }
-                else
-                {
-                    StartPick();
-                }
+                StartEntry();
             }
 
             return;

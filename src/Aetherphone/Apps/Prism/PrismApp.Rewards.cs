@@ -1,6 +1,7 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
@@ -18,20 +19,21 @@ internal sealed partial class PrismApp
     private const float MedalUnits = 30f;
     private const float ChapterArtUnits = 36f;
     private const float RewardTitleUnits = 24f;
+    private const float RewardTitleMinShare = 0.75f;
+    private const int RewardTitleLines = 2;
+    private const float MedalGlyphShare = 1.1f;
+    private const float MedalAvatarShare = 0.62f;
+    private const float MedalIconShare = 0.55f;
     private const float RewardRuleDelay = 0.15f;
     private const float MedalDelay = 0.25f;
     private const float ChapterDelay = 0.5f;
     private const float MedalRestScale = 0.82f;
     private const float RingTurnPerSecond = 0.12f;
-    private const float PrizeMonogramScale = 0.8f;
-    private const int PrizeAvatarSegments = 48;
-    private const uint GilItemId = 1;
+    private const float RewardMonogramScale = 0.8f;
+    private const int RewardAvatarSegments = 48;
     private const int RewardKinds = 4;
 
-    private static readonly LocString[] MedalLabels =
-    {
-        L.Prism.Badges, L.Prism.Frames, L.Prism.RewardCoinTitle, L.Prism.RewardGilTitle,
-    };
+    private static readonly int[] MedalTints = { 2, 5, 4, 3 };
 
     private static readonly LocString[] RewardTitles =
     {
@@ -50,6 +52,7 @@ internal sealed partial class PrismApp
     private int rewardFrameDays;
     private CachedText rewardDaysText;
     private CachedText monogramText;
+    private CachedText gilText;
 
     private PrismPrizesDto? Prizes => store.Week?.Prizes ?? store.Results?.Prizes;
 
@@ -101,16 +104,9 @@ internal sealed partial class PrismApp
         if (store.Week is { Phase: PrismPhases.Entering, MyEntry: null })
         {
             var strip = new Rect(new Vector2(left, cursor), new Vector2(left + width, cursor + PrismArt.StripUnits * scale));
-            if (PrismArt.Strip(list, strip, Loc.T(L.Prism.Submit), Arrow, true, !store.Busy))
+            if (PrismArt.Strip(list, strip, EnterLabel(), Arrow, true, !store.Busy))
             {
-                if (HasTracks)
-                {
-                    StartTrackChoice(false);
-                }
-                else
-                {
-                    StartPick();
-                }
+                StartEntry();
             }
 
             cursor = strip.Max.Y;
@@ -151,52 +147,46 @@ internal sealed partial class PrismApp
         var gap = Metrics.Space.Md * scale;
         var column = (width - gap * (RewardKinds - 1)) / RewardKinds;
         var radius = MathF.Min(MedalUnits * scale, column * 0.5f);
-        var labelPixels = PrismArt.LabelPixels();
         var turn = (float)(ImGui.GetTime() * RingTurnPerSecond);
         for (var index = 0; index < RewardKinds; index++)
         {
             var center = new Vector2(left + column * (index + 0.5f) + gap * index, top + radius);
             var mark = PrismMotion.Mark(drawList);
             DrawRewardArt(drawList, center, radius, index, turn, scale);
-            var label = PrismType.FitLabel(Loc.T(MedalLabels[index]), labelPixels, column);
-            var size = PrismType.Measure(label, PrismFace.Label, labelPixels);
-            PrismType.Draw(drawList, new Vector2(center.X - size.X * 0.5f, center.Y + radius + Metrics.Space.Sm * scale),
-                label, PrismArt.Fore, PrismFace.Label, labelPixels);
             var shown = PrismMotion.At(screenAge, MedalDelay + index * PrismMotion.Stagger, Motion.PageSettle);
             PrismMotion.Scale(drawList, mark, center, MedalRestScale + (1f - MedalRestScale) * shown, shown);
         }
 
-        return top + radius * 2f + Metrics.Space.Sm * scale + PrismType.LineHeight(PrismFace.Label, labelPixels) +
-               Metrics.Space.Xxl * scale;
+        return top + radius * 2f + Metrics.Space.Xxl * scale;
     }
 
     private void DrawRewardArt(ImDrawListPtr drawList, Vector2 center, float radius, int kind, float turn, float scale)
     {
-        PrismArt.Medal(drawList, center, radius, kind * 2, turn, scale);
+        PrismArt.Medal(drawList, center, radius, MedalTints[kind], turn, scale);
         switch (kind)
         {
             case 0:
                 if (rewardBadge is not null)
                 {
                     BadgeStrip.DrawOne(drawList, center, rewardBadge, images, Palette.Luminance(PrismArt.Back) >= 0.5f,
-                        radius * 1.1f);
+                        radius * MedalGlyphShare);
                     break;
                 }
 
-                var pixels = radius * 1.1f;
+                var pixels = radius * MedalGlyphShare;
                 var size = PrismType.Measure(Plain[1], PrismFace.Numerals, pixels);
                 PrismType.Draw(drawList, center - size * 0.5f, Plain[1], PrismArt.Fore, PrismFace.Numerals, pixels);
                 break;
             case 1:
-                DrawRewardAvatar(drawList, center, radius * 0.62f);
+                DrawRewardAvatar(drawList, center, radius * MedalAvatarShare);
                 break;
             case 2:
-                CurrencyGlyph.Draw(drawList, CurrencyKind.Coins, center, radius * 1.1f);
+                CurrencyGlyph.Draw(drawList, CurrencyKind.Coins, center, radius * MedalGlyphShare);
                 break;
             default:
-                if (GearItem(GilItemId, out _, out var iconId))
+                if (GearItem(GameData.GilItemId, out _, out var iconId))
                 {
-                    var half = new Vector2(radius * 0.55f, radius * 0.55f);
+                    var half = new Vector2(radius * MedalIconShare, radius * MedalIconShare);
                     GameIconTile.Draw(drawList, textures, iconId, center - half, center + half, 0f, scale);
                 }
 
@@ -204,14 +194,15 @@ internal sealed partial class PrismApp
         }
     }
 
-    private void DrawRewardAvatar(ImDrawListPtr drawList, Vector2 center, float radius)
+    private void DrawRewardAvatar(ImDrawListPtr drawList, Vector2 center, float room)
     {
+        var radius = room / (1f + AvatarView.Reserve(rewardFrame, room) / room);
         var user = store.CurrentUser;
         var name = user?.DisplayName is { Length: > 0 } display ? display : user?.Name ?? string.Empty;
         var key = HashCode.Combine(name);
         var monogram = monogramText.IsCurrent(key) ? monogramText.Value : monogramText.Store(key, Initials.Of(name));
-        AvatarView.Draw(drawList, center, radius, PrismArt.Muted, monogram, PrizeMonogramScale,
-            images.Avatar(user?.AvatarUrl, radius * 2f), PrizeAvatarSegments);
+        AvatarView.Draw(drawList, center, radius, PrismArt.Muted, monogram, RewardMonogramScale,
+            images.Avatar(user?.AvatarUrl, radius * 2f), RewardAvatarSegments);
         if (rewardFrame is not null)
         {
             AvatarView.DrawFrame(drawList, center, radius, images, rewardFrame);
@@ -235,7 +226,7 @@ internal sealed partial class PrismApp
             labelPixels);
         cursor += labelLine;
         var pixels = PrismType.Fit(Loc.T(RewardTitles[kind]), PrismFace.Headline, textWidth, RewardTitleUnits * scale,
-            RewardTitleUnits * scale * 0.75f, 2, out var lines);
+            RewardTitleUnits * scale * RewardTitleMinShare, RewardTitleLines, out var lines);
         cursor += PrismType.DrawLines(drawList, new Vector2(textLeft, cursor), lines, PrismArt.Fore, PrismFace.Headline,
             pixels) + Metrics.Space.Xs * scale;
         cursor += Typography.DrawWrappedLeft(new Vector2(textLeft, cursor), Loc.T(RewardBodies[kind]), PrismArt.Muted,
@@ -252,6 +243,12 @@ internal sealed partial class PrismApp
         return MathF.Max(cursor, top + art * 2f) + Metrics.Space.Xl * scale;
     }
 
+    private string GilLines(string note)
+    {
+        var key = HashCode.Combine(note, Loc.Current.Code);
+        return gilText.IsCurrent(key) ? gilText.Value : gilText.Store(key, string.Concat(Loc.T(L.Prism.GilSent), " ", note));
+    }
+
     private string RewardExtra(int kind)
     {
         switch (kind)
@@ -264,7 +261,7 @@ internal sealed partial class PrismApp
             case 2:
                 return RewardLine(store.Week?.JudgeReward);
             case 3:
-                return Prizes is { GilNote.Length: > 0 } prizes ? prizes.GilNote : Loc.T(L.Prism.GilSent);
+                return Prizes is { GilNote.Length: > 0 } prizes ? GilLines(prizes.GilNote) : Loc.T(L.Prism.GilSent);
             default:
                 return string.Empty;
         }
