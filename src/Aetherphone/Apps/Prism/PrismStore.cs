@@ -21,6 +21,7 @@ internal static class PrismPhases
     public const string StatusRejected = "rejected";
 
     public const string StageFinal = "final";
+    public const string StageHeat = "heat";
 
     public static bool Judgeable(string phase) => phase is Judging or Final;
 }
@@ -70,6 +71,8 @@ internal sealed class PrismStore : IDisposable
     public static bool EntryRevealsWholeImage => PostAspects.RevealsWholeImage(EntryAspect);
 
     public bool IsSignedIn => session.IsSignedIn;
+
+    public UserDto? CurrentUser => session.CurrentUser;
 
     public PrismWeekDto? Week => week;
 

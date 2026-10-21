@@ -10832,6 +10832,15 @@ internal static class L
         public static readonly LocString JudgeRewardEach = new("prism.judgeRewardEach", "+{0} Aether Coin for every heat you judge");
         public static readonly LocString JudgeRewardLeft = new("prism.judgeRewardLeft", "+{0} Aether Coin a heat, {1} left this week");
         public static readonly LocString JudgeRewardSpent = new("prism.judgeRewardSpent", "No judging Aether Coin left this week");
+        public static readonly LocString Prizes = new("prism.prizes", "Prizes");
+        public static readonly LocString HeatWinners = new("prism.heatWinners", "Heat winners");
+        public static readonly LocString Judging = new("prism.judging", "Judging");
+        public static readonly LocString MinHeatSize = new("prism.minHeatSize", "Heats pay out with {0} glams or more");
+        public static readonly LocPlural FrameDays =
+            new("prism.frameDays", "Yours to wear for {0} day", "Yours to wear for {0} days");
+        public static readonly LocString GilSent = new("prism.gilSent",
+            "Gil prizes are sent to you in game by the Aetherphone team.");
+        public static readonly LocString WhatWinnersGet = new("prism.whatWinnersGet", "What winners get");
     }
 
     internal static class Announcements
