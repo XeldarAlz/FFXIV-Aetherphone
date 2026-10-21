@@ -63,6 +63,7 @@ internal sealed partial class PrismApp : IResumableApp
     private readonly ITextureProvider textures;
     private readonly MarketItemIndex marketIndex;
     private readonly MarketLauncher marketLauncher;
+    private readonly ShareService share;
     private readonly PhotoComposeSession pickSession;
     private readonly ImageIntake pickIntake = new();
     private readonly PhotoViewerOverlay photoViewer = new();
@@ -85,7 +86,7 @@ internal sealed partial class PrismApp : IResumableApp
     public PrismApp(AethernetSession session, AethernetApi api, RemoteImageCache images, PhotoLibrary library,
         WallpaperImageCache wallpaperImages, Configuration configuration, ConfirmService confirm,
         ReportService report, GameData gameData, ITextureProvider textures, GlamourService glamour,
-        MarketItemIndex marketIndex, MarketLauncher marketLauncher)
+        MarketItemIndex marketIndex, MarketLauncher marketLauncher, ShareService share)
     {
         store = new PrismStore(session, api);
         glams = new GlamStore(session, api);
@@ -99,6 +100,7 @@ internal sealed partial class PrismApp : IResumableApp
         this.textures = textures;
         this.marketIndex = marketIndex;
         this.marketLauncher = marketLauncher;
+        this.share = share;
         pickSession = new PhotoComposeSession(library, wallpaperImages);
         composeSession = new PhotoComposeSession(library, wallpaperImages);
         wardrobe = new WardrobeStore(Plugin.PluginInterface.ConfigDirectory.FullName);

@@ -5,6 +5,7 @@ using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Report;
+using Aetherphone.Core.Sharing;
 using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
@@ -388,8 +389,15 @@ internal sealed partial class PrismApp
             glams.ToggleLike(glam);
         }
 
-        var leftRows = listed ? 2 : 1;
-        DrawWardrobeLink(drawList, left, top + row * (leftRows - 1), glam, key, row, scale);
+        var shareable = listed && postedCover.Length > 0 && glam.Id == postedId;
+        var leftRows = (listed ? 2 : 1) + (shareable ? 1 : 0);
+        DrawWardrobeLink(drawList, left, top + (listed ? row : 0f), glam, key, row, scale);
+        if (shareable && PrismArt.Link(drawList, new Vector2(left, top + row * (leftRows - 1)), Loc.T(L.Share.Action),
+                PrismArt.Fore, scale, row))
+        {
+            share.Offer(new ShareItem(ShareKind.Photo, postedCover, Id));
+        }
+
         var lines = 0;
         if (totalPieces > 0)
         {

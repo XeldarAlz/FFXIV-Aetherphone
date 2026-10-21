@@ -26,6 +26,9 @@ internal sealed partial class PrismApp
     private string glamTitle = string.Empty;
     private string glamTags = string.Empty;
     private volatile int postOutcome;
+    private string postingCover = string.Empty;
+    private string postedCover = string.Empty;
+    private string postedId = string.Empty;
     private CachedText capturedText;
 
     private void StartCompose()
@@ -191,6 +194,7 @@ internal sealed partial class PrismApp
         }
 
         postOutcome = OutcomePending;
+        postingCover = count > 0 ? photos[0].Path : string.Empty;
         glams.Post(photos, captured, glamTitle.Trim(), SplitTags(glamTags), race, gender, capturedVanilla, postSettled);
     }
 
@@ -229,6 +233,8 @@ internal sealed partial class PrismApp
         postOutcome = OutcomePending;
         if (outcome == OutcomeSent && glams.Posted is { } created)
         {
+            postedId = created.Id;
+            postedCover = postingCover;
             Go(PrismScreen.GlamDetail);
             ShowGlam(created);
         }
