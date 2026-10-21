@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Aetherphone.Apps.Prism;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Glamour;
@@ -109,6 +110,18 @@ public sealed class GlamourCoreTests
         {
             new GlamGearDto(3, 100), new GlamGearDto(GearSlots.None, Mods: new[] { new GlamModDto("Body") }),
         }));
+    }
+
+    [Fact]
+    public void GlamourerDesignsBecomeWardrobeGear()
+    {
+        var gear = WardrobeStore.DesignGear("{\"Equipment\":{\"Head\":{\"ItemId\":0},"
+            + "\"Body\":{\"ItemId\":45123,\"Stain\":12,\"Stain2\":3},\"LFinger\":{\"ItemId\":8000}}}");
+        Assert.Equal(2, gear.Length);
+        Assert.Equal(new GlamGearDto((int)GearSlot.Body, 45123, 12, 3), gear[0]);
+        Assert.Equal(new GlamGearDto((int)GearSlot.RingLeft, 8000), gear[1]);
+        Assert.Empty(WardrobeStore.DesignGear(string.Empty));
+        Assert.Empty(WardrobeStore.DesignGear("{\"Customize\":{}}"));
     }
 
     [Fact]

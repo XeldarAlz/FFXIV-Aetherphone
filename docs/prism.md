@@ -26,6 +26,12 @@ With Glamourer, Try on sets each slot with `Glamourer.SetItem.V3` (once, equipme
 
 A link is clickable only when it is `https` on an allowed host: `xivmodarchive.com`, `heliosphere.app`, `patreon.com`, `ko-fi.com`, `gumroad.com` and `*.carrd.co` (`Core/Glamour/ModLinks.cs`). Any other link shows as plain text. The server applies the same list. A mod that is 18+ can't be linked at all, and every glam has to be safe for work as shown.
 
+### What the client adds on its own
+
+- Owned pieces count the bags, armoury, glamour dresser and armoire (`Core/Glamour/OwnedItems.cs`). The dresser and armoire only count once the player has opened them this session, and the glam page says so.
+- An item's page shows whether you own it, its gil vendor price and a market board link, from the phone's market index. The server only sends the glam count and what the item is worn with.
+- Without Penumbra the glam page says mods need it and a new post is stamped vanilla; without Glamourer it says Try on uses the game's window.
+
 ## Server contract
 
 Everything is under the signed-in Aethernet session. Paths are built in `Core/Aethernet/Clients/GlamClient.cs` and pinned by `GlamWireContractTests`.
