@@ -269,11 +269,12 @@ internal sealed class GlamStore : IDisposable
     public void OpenItem(uint itemId)
     {
         item = null;
-        OpenList("item:" + itemId, (cursor, token) => client.ItemGlamsAsync(itemId, cursor, token));
+        var key = "item:" + itemId;
+        OpenList(key, (cursor, token) => client.ItemGlamsAsync(itemId, cursor, token));
         work.Run("item", async token =>
         {
             var fetched = await client.ItemAsync(itemId, token).ConfigureAwait(false);
-            if (fetched is not null && item?.ItemId == itemId)
+            if (fetched is not null && listKey == key)
             {
                 item = fetched;
             }

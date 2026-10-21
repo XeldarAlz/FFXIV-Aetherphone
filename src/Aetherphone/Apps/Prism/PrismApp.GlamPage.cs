@@ -96,6 +96,8 @@ internal sealed partial class PrismApp
 
     private void DrawGlamDetail(ImDrawListPtr drawList, Rect content, float scale)
     {
+        var pending = glams.DetailPending;
+        var missing = glams.DetailMissing;
         if (glams.Detail is not { } glam)
         {
             GoBack();
@@ -104,11 +106,17 @@ internal sealed partial class PrismApp
 
         var top = DrawHeader(drawList, content, string.Empty, string.Empty, true, scale);
         var gutter = PrismArt.Gutter(scale);
-        if (glams.DetailPending || glams.DetailMissing)
+        if (pending || missing)
         {
-            Typography.DrawWrappedLeft(new Vector2(content.Min.X + gutter, top),
-                Loc.T(glams.DetailMissing ? L.Common.LoadFailedHint : L.Common.Loading), PrismArt.Muted,
-                TextStyles.Subheadline, content.Width - gutter * 2f);
+            top += Typography.DrawWrappedLeft(new Vector2(content.Min.X + gutter, top),
+                Loc.T(missing ? L.Common.LoadFailedHint : L.Common.Loading), PrismArt.Muted, TextStyles.Subheadline,
+                content.Width - gutter * 2f) + Metrics.Space.Md * scale;
+            if (missing && PrismArt.Link(drawList, new Vector2(content.Min.X + gutter, top), Loc.T(L.Common.Retry),
+                    PrismArt.Fore, scale))
+            {
+                glams.Open(glam);
+            }
+
             return;
         }
 

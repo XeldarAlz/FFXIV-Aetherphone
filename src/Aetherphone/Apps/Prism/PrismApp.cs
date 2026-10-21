@@ -464,7 +464,11 @@ internal sealed partial class PrismApp : IResumableApp
         }
 
         pendingSharedPhoto = null;
-        StartCompose();
+        if (screen != PrismScreen.Compose)
+        {
+            StartCompose();
+        }
+
         composeSession.TakeImported(path);
     }
 

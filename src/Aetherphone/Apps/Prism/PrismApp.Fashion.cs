@@ -33,7 +33,7 @@ internal sealed partial class PrismApp
     private bool roseSearched;
     private int hintsMet = -1;
     private int dyesMet;
-    private string stillEmpty = string.Empty;
+    private int emptySlots;
     private CachedText scoreText;
     private CachedText emptyText;
     private volatile NpcSpot? roseSpot;
@@ -186,7 +186,7 @@ internal sealed partial class PrismApp
         if (!OwnedItems.StorageLoaded)
         {
             cursor += Typography.DrawWrappedLeft(new Vector2(left, cursor), Loc.T(L.Prism.OpenStorage), PrismArt.Muted,
-                TextStyles.Footnote, width);
+                TextStyles.Footnote, width) + Metrics.Space.Sm * scale;
         }
 
         cursor = DrawWearingCheck(list, left, cursor, width, report, scale) + Metrics.Space.Xl * scale;
@@ -307,7 +307,7 @@ internal sealed partial class PrismApp
 
         var saved = wardrobe.FindByGlam(wearKey);
         if (PrismArt.Link(drawList, new Vector2(left, top), Loc.T(saved is null ? L.Prism.AddToWardrobe : L.Prism.InWardrobe),
-                PrismArt.Muted, scale))
+                PrismArt.Muted, scale, PrismType.LineHeight(PrismFace.Label, PrismArt.LabelPixels()) + Metrics.Space.Sm * scale))
         {
             if (saved is null)
             {
@@ -350,15 +350,12 @@ internal sealed partial class PrismApp
         PrismType.Draw(drawList, new Vector2(left, top), PrismType.FitLabel(score, labelPixels, width), PrismArt.Fore,
             PrismFace.Label, labelPixels);
         top += labelLine;
-        if (stillEmpty.Length > 0)
+        if (emptySlots != 0)
         {
-            var emptyKey = HashCode.Combine(stillEmpty, Loc.Current.Code);
-            var empty = emptyText.IsCurrent(emptyKey)
-                ? emptyText.Value
-                : emptyText.Store(emptyKey, Loc.T(L.Prism.StillEmpty, stillEmpty));
-            PrismType.Draw(drawList, new Vector2(left, top), PrismType.FitLabel(empty, labelPixels, width),
-                PrismArt.Muted, PrismFace.Label, labelPixels);
-            top += labelLine;
+            var emptyKey = HashCode.Combine(emptySlots, Loc.Current.Code);
+            var empty = emptyText.IsCurrent(emptyKey) ? emptyText.Value : emptyText.Store(emptyKey, EmptyLine(emptySlots));
+            top += Typography.DrawWrappedLeft(new Vector2(left, top), empty, PrismArt.Muted, TextStyles.Subheadline,
+                width);
         }
 
         return top + Typography.DrawWrappedLeft(new Vector2(left, top + Metrics.Space.Xs * scale),
@@ -373,8 +370,10 @@ internal sealed partial class PrismApp
         var hints = report.Hints ?? Array.Empty<FashionHintDto>();
         for (var index = 0; index < hints.Length; index++)
         {
-            if (Worn(worn, hints[index].Slot) is { } piece && Array.IndexOf(hints[index].Items ?? Array.Empty<uint>(),
-                    piece.ItemId) >= 0)
+            var items = hints[index].Items ?? Array.Empty<uint>();
+            if (Matches(worn, hints[index].Slot, items) ||
+                IsRing(hints[index].Slot) && (Matches(worn, (int)GearSlot.RingRight, items) ||
+                                              Matches(worn, (int)GearSlot.RingLeft, items)))
             {
                 hintsMet++;
             }
@@ -390,19 +389,36 @@ internal sealed partial class PrismApp
             }
         }
 
-        var missing = new List<string>();
+        emptySlots = 0;
         for (var index = 0; index < GearSlots.All.Length; index++)
         {
             var slot = (int)GearSlots.All[index];
-            var name = Loc.T(SlotNames[slot]);
-            if (slot != (int)GearSlot.OffHand && Worn(worn, slot) is null && !missing.Contains(name))
+            if (slot != (int)GearSlot.OffHand && Worn(worn, slot) is null)
             {
-                missing.Add(name);
+                emptySlots |= 1 << slot;
+            }
+        }
+    }
+
+    private static string EmptyLine(int slots)
+    {
+        var names = new List<string>();
+        for (var slot = 0; slot < SlotNames.Length; slot++)
+        {
+            var name = Loc.T(SlotNames[slot]);
+            if ((slots & 1 << slot) != 0 && !names.Contains(name))
+            {
+                names.Add(name);
             }
         }
 
-        stillEmpty = string.Join(", ", missing);
+        return Loc.T(L.Prism.StillEmpty, string.Join(", ", names));
     }
+
+    private static bool IsRing(int slot) => slot is (int)GearSlot.RingRight or (int)GearSlot.RingLeft;
+
+    private static bool Matches(GlamGearDto[] worn, int slot, uint[] items) =>
+        Worn(worn, slot) is { } piece && Array.IndexOf(items, piece.ItemId) >= 0;
 
     private static GlamGearDto? Worn(GlamGearDto[] worn, int slot)
     {
