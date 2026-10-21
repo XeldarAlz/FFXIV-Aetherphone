@@ -13,6 +13,7 @@ internal sealed partial class PrismApp
     private const float GuideTitleUnits = PrismType.TitleUnits;
     private const float GuideTitleMinUnits = PrismType.HeadingUnits;
     private const int GuideTitleLines = 2;
+    private const int GuideCopyLines = 3;
     private const float GuidePlateDelay = 0.04f;
     private const float GuideCopyDelay = 0.12f;
     private const float GuideFillDelay = 0.45f;
@@ -123,7 +124,8 @@ internal sealed partial class PrismApp
             GuideTitleMinUnits * scale, GuideTitleLines, out var lines);
         var copy = PrismType.Sentences(Loc.T(GuideBodies[guidePage]), TextStyles.Subheadline, width);
         var copyWidth = PrismType.BalancedWidth(copy, TextStyles.Subheadline, width);
-        var copyHeight = Typography.MeasureWrappedBlock(copy, TextStyles.Subheadline, copyWidth).Y;
+        var copyHeight = MathF.Max(Typography.MeasureWrappedBlock(copy, TextStyles.Subheadline, copyWidth).Y,
+            Typography.LineHeight(TextStyles.Subheadline) * GuideCopyLines);
         var headlineLine = PrismType.LineHeight(PrismFace.Headline, pixels);
         var textTop = strip.Min.Y - Metrics.Space.Xxl * scale - copyHeight - Metrics.Space.Md * scale -
                       lines.Length * headlineLine - Metrics.Space.Sm * scale - labelLine;
@@ -133,6 +135,7 @@ internal sealed partial class PrismApp
         {
             var mark = PrismMotion.Mark(drawList);
             DrawGuidePlate(drawList, plate, scale);
+            PrismMotion.Center(drawList, mark, plate);
             PrismMotion.Rise(drawList, mark, PrismMotion.At(screenAge, GuidePlateDelay, Motion.PageSettle),
                 PrismMotion.RiseUnits * scale);
         }
