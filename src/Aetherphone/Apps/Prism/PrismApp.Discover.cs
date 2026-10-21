@@ -11,6 +11,10 @@ namespace Aetherphone.Apps.Prism;
 internal sealed partial class PrismApp
 {
     private const int GridColumns = 2;
+    private const int SkeletonRows = 2;
+    private const float SkeletonTitleShare = 0.6f;
+    private const float SkeletonHandleShare = 0.35f;
+    private const float TileMedalUnits = 11f;
     private const float TileShadeShare = 0.4f;
 
     private static readonly LocString[] ScopeNames = { L.Prism.ScopeNew, L.Prism.ScopePopular, L.Prism.ScopeFollowing };
@@ -18,6 +22,9 @@ internal sealed partial class PrismApp
     private static readonly LocString[] FilterNames = { L.Prism.FilterAll, L.Prism.FilterModded, L.Prism.FilterVanilla };
     private static readonly Vector4 TileShade = new(0f, 0f, 0f, 0.7f);
     private static readonly Vector4 TileClear = new(0f, 0f, 0f, 0f);
+    private static readonly Vector4 TilePressed = new(0f, 0f, 0f, 0.22f);
+    private static readonly Vector4 CaptionScrimTop = new(0f, 0f, 0f, 0.5f);
+    private static readonly Vector4 CaptionScrimBottom = new(0f, 0f, 0f, 0.78f);
 
     private GlamScope discoverScope = GlamScope.New;
     private int discoverFilter;
@@ -186,13 +193,18 @@ internal sealed partial class PrismApp
         FeedLane<GlamDto> lane, LocString emptyHint, float scale)
     {
         var items = lane.Items;
+        if (items.Length == 0 && lane.Loading)
+        {
+            return DrawGlamSkeleton(drawList, left, top, width, scale);
+        }
+
         if (items.Length == 0)
         {
-            var text = Loc.T(lane.Loading ? L.Common.Loading : lane.Failed ? L.Common.LoadFailedHint : emptyHint);
+            var text = Loc.T(lane.Failed ? L.Common.LoadFailedHint : emptyHint);
             var copy = PrismType.Sentences(text, TextStyles.Subheadline, width);
             top += Typography.DrawWrappedLeft(new Vector2(left, top), copy, PrismArt.Muted, TextStyles.Subheadline,
                 PrismType.BalancedWidth(copy, TextStyles.Subheadline, width)) + Metrics.Space.Md * scale;
-            if (lane.Failed && !lane.Loading &&
+            if (lane.Failed &&
                 PrismArt.Link(drawList, new Vector2(left, top), Loc.T(L.Common.Retry), PrismArt.Fore, scale))
             {
                 RetryLane(lane);
@@ -221,6 +233,9 @@ internal sealed partial class PrismApp
         var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var pad = Metrics.Space.Sm * scale;
         var rows = (items.Length + GridColumns - 1) / GridColumns;
+        var clear = ImGui.GetColorU32(TileClear);
+        var scrimTop = ImGui.GetColorU32(CaptionScrimTop);
+        var scrimBottom = ImGui.GetColorU32(CaptionScrimBottom);
         for (var index = 0; index < items.Length; index++)
         {
             var x = left + index % GridColumns * (column + gap);
@@ -235,11 +250,19 @@ internal sealed partial class PrismApp
             var glam = items[index];
             drawList.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(PrismArt.Fore, PickFillAlpha)));
             DrawLook(drawList, new Rect(min, max), Cover(glam), false);
-            var shade = new Vector2(x, max.Y - height * TileShadeShare);
-            drawList.AddRectFilledMultiColor(shade, max, ImGui.GetColorU32(TileClear), ImGui.GetColorU32(TileClear),
-                ImGui.GetColorU32(TileShade), ImGui.GetColorU32(TileShade));
+            var captionTop = max.Y - pad - labelLine * 2f;
+            var scrimMiddle = captionTop - Metrics.Space.Sm * scale;
+            drawList.AddRectFilledMultiColor(new Vector2(x, MathF.Max(min.Y, captionTop - labelLine * 2f)),
+                new Vector2(max.X, scrimMiddle), clear, clear, scrimTop, scrimTop);
+            drawList.AddRectFilledMultiColor(new Vector2(x, scrimMiddle), max, scrimTop, scrimTop, scrimBottom,
+                scrimBottom);
             drawList.PushClipRect(min, max, true);
-            PrismType.Draw(drawList, new Vector2(x + pad, max.Y - pad - labelLine * 2f),
+            if (glam.Placing is >= 1 and <= 3)
+            {
+                DrawTileMedal(drawList, new Vector2(x + pad, y + pad), glam.Placing, scale);
+            }
+
+            PrismType.Draw(drawList, new Vector2(x + pad, captionTop),
                 PrismType.FitLabel(glam.Title, labelPixels, column - pad * 2f), PrismArt.PhotoFore, PrismFace.Label,
                 labelPixels);
             var likesWidth = 0f;
@@ -260,11 +283,7 @@ internal sealed partial class PrismApp
                 Palette.WithAlpha(PrismArt.PhotoFore, MutedOnPhoto), PrismFace.Label, labelPixels);
             drawList.PopClipRect();
             var hovered = UiInteract.Hover(min, max);
-            if (hovered)
-            {
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            }
-
+            DrawPressVeil(drawList, min, max, hovered);
             if (UiInteract.Click(min, max, hovered))
             {
                 OpenGlam(glam);
@@ -272,6 +291,61 @@ internal sealed partial class PrismApp
         }
 
         return top + rows * (height + gap);
+    }
+
+    private static void DrawPressVeil(ImDrawListPtr drawList, Vector2 min, Vector2 max, bool hovered)
+    {
+        if (!hovered)
+        {
+            return;
+        }
+
+        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        if (ImGui.IsMouseDown(ImGuiMouseButton.Left) && !DragScrollHost.AnyDragging)
+        {
+            drawList.AddRectFilled(min, max, ImGui.GetColorU32(TilePressed));
+        }
+    }
+
+    private static void DrawTileMedal(ImDrawListPtr drawList, Vector2 corner, int placing, float scale)
+    {
+        var radius = TileMedalUnits * scale;
+        var center = corner + new Vector2(radius, radius);
+        PrismArt.Medal(drawList, center, radius, placing, 0f, scale);
+        var numeral = Plain[placing];
+        var size = PrismType.Measure(numeral, PrismFace.Numerals, radius);
+        PrismType.Draw(drawList, center - size * 0.5f, numeral, PrismArt.Fore, PrismFace.Numerals, radius);
+    }
+
+    private float DrawGlamSkeleton(ImDrawListPtr drawList, float left, float top, float width, float scale)
+    {
+        var gap = Metrics.Space.Sm * scale;
+        var column = (width - gap * (GridColumns - 1)) / GridColumns;
+        var height = column / GlamStore.PhotoRatio;
+        var labelLine = PrismType.LineHeight(PrismFace.Label, PrismArt.LabelPixels());
+        var pad = Metrics.Space.Sm * scale;
+        var fill = ImGui.GetColorU32(Palette.WithAlpha(PrismArt.Fore, PickFillAlpha));
+        var faint = ImGui.GetColorU32(PrismArt.Faint);
+        for (var index = 0; index < SkeletonRows * GridColumns; index++)
+        {
+            var x = left + index % GridColumns * (column + gap);
+            var y = top + index / GridColumns * (height + gap);
+            drawList.AddRectFilled(new Vector2(x, y), new Vector2(x + column, y + height), fill);
+            DrawSkeletonBars(drawList, x + pad, y + height - pad, column, labelLine, faint);
+        }
+
+        return top + SkeletonRows * (height + gap) + PrismArt.BottomMargin(scale);
+    }
+
+    private static void DrawSkeletonBars(ImDrawListPtr drawList, float left, float bottom, float width, float labelLine,
+        uint color)
+    {
+        var y = bottom - labelLine * 2f + labelLine * 0.25f;
+        drawList.AddRectFilled(new Vector2(left, y), new Vector2(left + width * SkeletonTitleShare, y + labelLine * 0.5f),
+            color);
+        y += labelLine;
+        drawList.AddRectFilled(new Vector2(left, y), new Vector2(left + width * SkeletonHandleShare, y + labelLine * 0.5f),
+            color);
     }
 
     private void RefreshDiscover(bool always)
@@ -289,23 +363,31 @@ internal sealed partial class PrismApp
 
     private float DrawDayHero(ImDrawListPtr drawList, float left, float top, float width, float scale)
     {
-        if (glams.Lane(GlamScope.Today).Items is not { Length: > 0 } today)
+        var today = glams.Lane(GlamScope.Today);
+        if (today.Items.Length == 0 && !today.Loading)
         {
             return top;
         }
 
-        var glam = today[0];
         var gap = Metrics.Space.Sm * scale;
         var column = (width - gap * (GridColumns - 1)) / GridColumns;
         var photo = new Rect(new Vector2(left, top), new Vector2(left + column, top + column / GlamStore.PhotoRatio));
         drawList.AddRectFilled(photo.Min, photo.Max, ImGui.GetColorU32(Palette.WithAlpha(PrismArt.Fore, PickFillAlpha)));
-        DrawLook(drawList, photo, Cover(glam), false);
         var labelPixels = PrismArt.LabelPixels();
         var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var textLeft = photo.Max.X + Metrics.Space.Md * scale;
         var textWidth = left + width - textLeft;
-        PrismType.Draw(drawList, new Vector2(textLeft, top), Loc.T(L.Prism.GlamOfTheDay), PrismArt.Muted, PrismFace.Label,
+        PrismType.Draw(drawList, new Vector2(textLeft, top),
+            PrismType.FitLabel(Loc.T(L.Prism.GlamOfTheDay), labelPixels, textWidth), PrismArt.Muted, PrismFace.Label,
             labelPixels);
+        if (today.Items.Length == 0)
+        {
+            DrawSkeletonBars(drawList, textLeft, photo.Max.Y, textWidth, labelLine, ImGui.GetColorU32(PrismArt.Faint));
+            return photo.Max.Y + Metrics.Space.Xl * scale;
+        }
+
+        var glam = today.Items[0];
+        DrawLook(drawList, photo, Cover(glam), false);
         var pixels = PrismType.Fit(glam.Title, PrismFace.Headline, textWidth, PrismType.TitleUnits * scale,
             PrismType.HeadingUnits * scale, 3, out var lines);
         var textTop = top + labelLine + Metrics.Space.Xs * scale;
@@ -326,11 +408,7 @@ internal sealed partial class PrismApp
         drawList.PopClipRect();
 
         var hovered = UiInteract.Hover(photo.Min, new Vector2(left + width, photo.Max.Y));
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
+        DrawPressVeil(drawList, photo.Min, photo.Max, hovered);
         if (UiInteract.Click(photo.Min, new Vector2(left + width, photo.Max.Y), hovered))
         {
             OpenGlam(glam);
