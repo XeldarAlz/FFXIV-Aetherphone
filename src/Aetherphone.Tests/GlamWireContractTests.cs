@@ -24,6 +24,7 @@ public sealed class GlamWireContractTests
         Assert.Equal("/prism/items/45123/glams?cursor=x", GlamClient.ItemGlamsPath(45123, "x"));
         Assert.Equal("/prism/mods/glams?name=Cute%20Coat&author=Bea&cursor=x",
             GlamClient.ModGlamsPath("Cute Coat", "Bea", "x"));
+        Assert.Equal("/prism/tags/summer%20goth/glams?cursor=x", GlamClient.TagGlamsPath("summer goth", "x"));
     }
 
     [Fact]

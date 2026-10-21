@@ -91,6 +91,7 @@ Everything is under the signed-in Aethernet session. Paths are built in `Core/Ae
 | `GET /prism/items/{itemId}` | | `{ itemId, glamCount, wornWith: [{ itemId, count }] }` |
 | `GET /prism/items/{itemId}/glams[?cursor=]` | | `{ items: Glam[], nextCursor }` |
 | `GET /prism/mods/glams?name=&author=[&cursor=]` | | `{ items: Glam[], nextCursor }` |
+| `GET /prism/tags/{tag}/glams[?cursor=]` | | `{ items: Glam[], nextCursor }`; tags are stored lowercase without a leading `#` |
 | `GET /prism/seasons/current` | | `{ id, name, startsAtUnix, endsAtUnix, standings: [{ user, points, rank }], me: { points, rank } }` |
 | `POST /reports` | `{ targetType: "prism_glam", targetId, reason }` | as other reports |
 

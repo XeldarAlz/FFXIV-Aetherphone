@@ -13,6 +13,7 @@ internal enum GlamListKind : byte
 {
     Item,
     Mod,
+    Tag,
 }
 
 internal sealed partial class PrismApp
@@ -24,6 +25,7 @@ internal sealed partial class PrismApp
     private GlamListKind listKind;
     private uint listItemId;
     private GlamModDto? listMod;
+    private string listTag = string.Empty;
     private string listTitle = string.Empty;
     private CachedText glamCountText;
     private CachedText triedCountText;
@@ -76,6 +78,17 @@ internal sealed partial class PrismApp
         OpenList();
     }
 
+    private void OpenTagGlams(string tag)
+    {
+        Push(PrismScreen.GlamList);
+        listKind = GlamListKind.Tag;
+        listItemId = 0;
+        listMod = null;
+        listTag = tag;
+        listTitle = TagLabel(tag);
+        OpenList();
+    }
+
     private void OpenList()
     {
         if (listKind == GlamListKind.Item)
@@ -83,6 +96,10 @@ internal sealed partial class PrismApp
             listOwned = OwnedItems.Owns(listItemId);
             marketIndex.EnsureBuilt();
             glams.OpenItem(listItemId);
+        }
+        else if (listKind == GlamListKind.Tag)
+        {
+            glams.OpenTag(listTag);
         }
         else if (listMod is { } mod)
         {

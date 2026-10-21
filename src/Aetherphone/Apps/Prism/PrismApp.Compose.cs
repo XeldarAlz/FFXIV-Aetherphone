@@ -197,14 +197,17 @@ internal sealed partial class PrismApp
     private static string[] SplitTags(string text)
     {
         var parts = text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (parts.Length <= MaxTags)
+        var kept = new List<string>(Math.Min(parts.Length, MaxTags));
+        for (var index = 0; index < parts.Length && kept.Count < MaxTags; index++)
         {
-            return parts;
+            var tag = parts[index].TrimStart('#').Trim().ToLowerInvariant();
+            if (tag.Length > 0 && !kept.Contains(tag))
+            {
+                kept.Add(tag);
+            }
         }
 
-        var kept = new string[MaxTags];
-        Array.Copy(parts, kept, MaxTags);
-        return kept;
+        return kept.ToArray();
     }
 
     private static (int Race, int Gender) Appearance()

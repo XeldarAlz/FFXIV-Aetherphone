@@ -22,6 +22,7 @@ internal readonly record struct PrismStop(
     GlamListKind Kind,
     uint ItemId,
     GlamModDto? Mod,
+    string Tag,
     string Title,
     string OutfitId);
 
@@ -165,7 +166,7 @@ internal sealed partial class PrismApp
         if (historyDepth < HistoryDepth)
         {
             history[historyDepth++] = new PrismStop(screen, glams.Detail, glams.Profile?.User, showSaved, listKind,
-                listItemId, listMod, listTitle, outfitId);
+                listItemId, listMod, listTag, listTitle, outfitId);
         }
 
         Go(next);
@@ -200,6 +201,7 @@ internal sealed partial class PrismApp
                 listKind = stop.Kind;
                 listItemId = stop.ItemId;
                 listMod = stop.Mod;
+                listTag = stop.Tag;
                 listTitle = stop.Title;
                 OpenList();
                 break;

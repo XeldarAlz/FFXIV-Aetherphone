@@ -22,6 +22,7 @@ internal sealed partial class PrismApp
     private const string Arrow = "→";
 
     private readonly Dictionary<string, string> handleLines = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> tagLabels = new(StringComparer.Ordinal);
     private readonly Dictionary<uint, (string Name, uint Icon)> itemRows = new();
     private readonly HashSet<uint> ownedIds = new();
     private string? statsFor;
@@ -30,6 +31,7 @@ internal sealed partial class PrismApp
     private CachedText modsText;
     private CachedText triedText;
     private CachedText bodyText;
+    private CachedText moreText;
     private int ownedPieces;
     private int totalPieces;
     private int missingMods;
@@ -113,6 +115,7 @@ internal sealed partial class PrismApp
         cursor = DrawGlamHeading(list, left, cursor, width, glam, scale);
         cursor = DrawGlamActions(list, left, cursor, width, glam, scale);
         cursor = DrawGear(list, left, cursor, width, glam, scale);
+        cursor = DrawMoreFrom(list, left, cursor, width, glam, scale);
         ImGui.Dummy(new Vector2(width, cursor - origin.Y + PrismArt.BottomMargin(scale)));
     }
 
@@ -258,7 +261,70 @@ internal sealed partial class PrismApp
             top += labelLine;
         }
 
-        return top + Metrics.Space.Lg * scale;
+        return DrawTags(drawList, left, top, width, glam.Tags, scale) + Metrics.Space.Lg * scale;
+    }
+
+    private float DrawTags(ImDrawListPtr drawList, float left, float top, float width, string[]? tags, float scale)
+    {
+        if (tags is not { Length: > 0 })
+        {
+            return top;
+        }
+
+        var labelPixels = PrismArt.LabelPixels();
+        var gap = Metrics.Space.Lg * scale;
+        top += Metrics.Space.Sm * scale;
+        var x = left;
+        for (var index = 0; index < tags.Length; index++)
+        {
+            var label = TagLabel(tags[index]);
+            var tagWidth = PrismType.Measure(label, PrismFace.Label, labelPixels).X;
+            if (x + tagWidth > left + width)
+            {
+                break;
+            }
+
+            if (PrismArt.Link(drawList, new Vector2(x, top), label, PrismArt.Fore, scale))
+            {
+                OpenTagGlams(tags[index]);
+            }
+
+            x += tagWidth + gap;
+        }
+
+        return top + PrismType.LineHeight(PrismFace.Label, labelPixels);
+    }
+
+    private string TagLabel(string tag)
+    {
+        if (!tagLabels.TryGetValue(tag, out var label))
+        {
+            label = "#" + tag;
+            tagLabels[tag] = label;
+        }
+
+        return label;
+    }
+
+    private float DrawMoreFrom(ImDrawListPtr drawList, float left, float top, float width, GlamDto glam, float scale)
+    {
+        if (glam.Id.Length == 0)
+        {
+            return top;
+        }
+
+        glams.OpenMoreFrom(glam);
+        var more = glams.More;
+        if (more.Length == 0 || glams.MoreFor != glam.Id || glam.Author is not { } author)
+        {
+            return top;
+        }
+
+        var name = author.DisplayName.Length > 0 ? author.DisplayName : AuthorLine(author);
+        var key = HashCode.Combine(name, Loc.Current.Code);
+        var title = moreText.IsCurrent(key) ? moreText.Value : moreText.Store(key, Loc.T(L.Prism.MoreFrom, name));
+        top = DrawSectionLabel(drawList, left, top + Metrics.Space.Xl * scale, width, 2, title, scale);
+        return DrawGlamGrid(drawList, left, top, width, more, scale);
     }
 
     private string BodyLine(int race, int gender)

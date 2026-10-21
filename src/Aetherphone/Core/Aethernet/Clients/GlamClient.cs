@@ -56,6 +56,9 @@ internal sealed class GlamClient
     internal static string ModGlamsPath(string name, string author, string? cursor) =>
         WithCursor($"/prism/mods/glams?name={Uri.EscapeDataString(name)}&author={Uri.EscapeDataString(author)}", cursor);
 
+    internal static string TagGlamsPath(string tag, string? cursor) =>
+        WithCursor($"/prism/tags/{Uri.EscapeDataString(tag)}/glams", cursor);
+
     public Task<GlamPage?> FeedAsync(string scope, bool? vanilla, string? cursor, CancellationToken token,
         Action<AepFailure>? onFailure = null) =>
         net.GetAsync(FeedPath(scope, vanilla, cursor), AethernetJsonContext.Default.GlamPage, token, null, onFailure);
@@ -119,6 +122,10 @@ internal sealed class GlamClient
     public Task<GlamPage?> ModGlamsAsync(string name, string author, string? cursor, CancellationToken token,
         Action<AepFailure>? onFailure = null) =>
         net.GetAsync(ModGlamsPath(name, author, cursor), AethernetJsonContext.Default.GlamPage, token, null, onFailure);
+
+    public Task<GlamPage?> TagGlamsAsync(string tag, string? cursor, CancellationToken token,
+        Action<AepFailure>? onFailure = null) =>
+        net.GetAsync(TagGlamsPath(tag, cursor), AethernetJsonContext.Default.GlamPage, token, null, onFailure);
 
     public Task<GlamSeasonDto?> SeasonAsync(CancellationToken token, Action<AepFailure>? onFailure = null) =>
         net.GetAsync("/prism/seasons/current", AethernetJsonContext.Default.GlamSeasonDto, token, null, onFailure);

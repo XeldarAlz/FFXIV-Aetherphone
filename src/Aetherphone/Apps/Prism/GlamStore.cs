@@ -24,6 +24,8 @@ internal sealed class GlamStore : IDisposable
 {
     public const int MaxPhotos = 4;
 
+    private const int MoreLimit = 4;
+
     private const int PhotoBaseSize = 1080;
     private const PostAspect GlamAspect = PostAspect.Portrait;
 
@@ -47,6 +49,8 @@ internal sealed class GlamStore : IDisposable
     private volatile string listKey = string.Empty;
     private volatile GlamDto? detail;
     private volatile GlamDto? posted;
+    private volatile GlamDto[] more = Array.Empty<GlamDto>();
+    private volatile string moreFor = string.Empty;
     private volatile GlamProfileDto? profile;
     private volatile GlamCollectionDto[] collections = Array.Empty<GlamCollectionDto>();
     private volatile GlamItemDto? item;
@@ -76,6 +80,10 @@ internal sealed class GlamStore : IDisposable
     public GlamDto? Detail => detail;
 
     public GlamDto? Posted => posted;
+
+    public GlamDto[] More => more;
+
+    public string MoreFor => moreFor;
 
     public GlamProfileDto? Profile => profile;
 
@@ -219,6 +227,41 @@ internal sealed class GlamStore : IDisposable
             {
                 item = fetched;
             }
+        });
+    }
+
+    public void OpenTag(string tag) =>
+        OpenList("tag:" + tag, (cursor, token) => client.TagGlamsAsync(tag, cursor, token));
+
+    public void OpenMoreFrom(GlamDto glam)
+    {
+        if (moreFor == glam.Id || glam.Author is not { Id.Length: > 0 } author || !session.IsSignedIn)
+        {
+            return;
+        }
+
+        var glamId = glam.Id;
+        var authorId = author.Id;
+        moreFor = glamId;
+        more = Array.Empty<GlamDto>();
+        work.Run("more from", async token =>
+        {
+            var page = await client.UserGlamsAsync(authorId, null, token).ConfigureAwait(false);
+            if (page?.Items is not { } items || moreFor != glamId)
+            {
+                return;
+            }
+
+            var kept = new List<GlamDto>(MoreLimit);
+            for (var index = 0; index < items.Length && kept.Count < MoreLimit; index++)
+            {
+                if (items[index].Id != glamId)
+                {
+                    kept.Add(items[index]);
+                }
+            }
+
+            more = kept.ToArray();
         });
     }
 
