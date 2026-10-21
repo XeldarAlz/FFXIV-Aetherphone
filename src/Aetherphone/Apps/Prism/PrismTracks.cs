@@ -1,4 +1,5 @@
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 
 namespace Aetherphone.Apps.Prism;
@@ -16,6 +17,36 @@ internal static class PrismTracks
         Modded => Loc.T(L.Prism.TrackModded),
         _ => id,
     };
+
+    public static LocString? VanillaBlock(ModSigns? signs)
+    {
+        if (signs is not { } found)
+        {
+            return L.Prism.VanillaCameraOnly;
+        }
+
+        if ((found & ModSigns.Penumbra) != 0)
+        {
+            return L.Prism.VanillaPenumbra;
+        }
+
+        if ((found & ModSigns.Appearance) != 0)
+        {
+            return L.Prism.VanillaAppearance;
+        }
+
+        if ((found & ModSigns.BodyScaling) != 0)
+        {
+            return L.Prism.VanillaBodyScaling;
+        }
+
+        if ((found & ModSigns.Posing) != 0)
+        {
+            return L.Prism.VanillaPosing;
+        }
+
+        return found == ModSigns.None ? null : L.Prism.VanillaUnchecked;
+    }
 
     public static string Choose(PrismWeekDto week, string current)
     {

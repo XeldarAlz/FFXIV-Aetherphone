@@ -62,8 +62,9 @@ internal sealed partial class PrismApp
 
         var strip = StripRect(content, scale);
         var label = Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.EnterThisLook);
-        if (PrismArt.Strip(drawList, strip, label, "→", true, pickSession.HasSelection && !store.Busy,
-                UiSound.Shutter))
+        var blocked = VanillaBlock(pickSession.HasSelection ? pickSession.FirstSelected : string.Empty);
+        var ready = pickSession.HasSelection && !store.Busy && blocked is null;
+        if (PrismArt.Strip(drawList, strip, label, "→", true, ready, UiSound.Shutter))
         {
             store.Enter(pickSession.FirstSelected, pickSession.CropsArray()[0],
                 configuration.PrismShareOutfit ? EquippedOutfit.Read() : null, entrySettled);
@@ -79,6 +80,15 @@ internal sealed partial class PrismApp
         }
 
         gridBottom -= Metrics.Space.Xl * scale;
+        if (blocked is { } why)
+        {
+            var text = Loc.T(why);
+            gridBottom -= Typography.MeasureWrappedBlock(text, TextStyles.Subheadline, strip.Width).Y;
+            Typography.DrawWrappedLeft(new Vector2(strip.Min.X, gridBottom), text, PrismArt.Muted,
+                TextStyles.Subheadline, strip.Width);
+            gridBottom -= Metrics.Space.Md * scale;
+        }
+
         if (store.Failed(PrismAction.Enter) && !store.Busy)
         {
             var reason = store.ActionFailureText;

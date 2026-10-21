@@ -543,10 +543,9 @@ internal sealed class CameraApp : IPhoneApp
                 return;
             }
 
-            if (PhotoPlaces.Stamp(configuration.PhotoPlaces, path, Plugin.ClientState.TerritoryType))
-            {
-                configuration.Save();
-            }
+            PhotoPlaces.Stamp(configuration.PhotoPlaces, path, Plugin.ClientState.TerritoryType);
+            ModScan.Stamp(configuration.PhotoModSigns, path, ModScan.Scan());
+            configuration.Save();
 
             UiFeedback.Play(UiSound.Shutter);
             BeginFlight(pixels, width, height, path);
