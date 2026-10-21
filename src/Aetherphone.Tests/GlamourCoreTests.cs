@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Aetherphone.Apps.Prism;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Glamour;
@@ -113,15 +112,18 @@ public sealed class GlamourCoreTests
     }
 
     [Fact]
-    public void GlamourerDesignsBecomeWardrobeGear()
+    public void GlamourerDesignsGiveGearAndBody()
     {
-        var gear = WardrobeStore.DesignGear("{\"Equipment\":{\"Head\":{\"ItemId\":0},"
-            + "\"Body\":{\"ItemId\":45123,\"Stain\":12,\"Stain2\":3},\"LFinger\":{\"ItemId\":8000}}}");
+        var gear = GlamourerDesign.Read("{\"Customize\":{\"Race\":{\"Value\":8},\"Gender\":{\"Value\":1}},"
+            + "\"Equipment\":{\"Head\":{\"ItemId\":0},\"Body\":{\"ItemId\":45123,\"Stain\":12,\"Stain2\":3},"
+            + "\"LFinger\":{\"ItemId\":8000}}}", out var race, out var gender);
         Assert.Equal(2, gear.Length);
         Assert.Equal(new GlamGearDto((int)GearSlot.Body, 45123, 12, 3), gear[0]);
         Assert.Equal(new GlamGearDto((int)GearSlot.RingLeft, 8000), gear[1]);
-        Assert.Empty(WardrobeStore.DesignGear(string.Empty));
-        Assert.Empty(WardrobeStore.DesignGear("{\"Customize\":{}}"));
+        Assert.Equal((8, 1), (race, gender));
+        Assert.Empty(GlamourerDesign.Read(string.Empty, out _, out _));
+        Assert.Empty(GlamourerDesign.Read("{\"Customize\":{}}", out race, out _));
+        Assert.Equal(0, race);
     }
 
     [Fact]

@@ -8,7 +8,8 @@ A glam is one outfit with up to four portrait (3:4) photos. Everything about the
 
 | Part | Where it comes from |
 | --- | --- |
-| Gear per slot (item id, two dyes) | The equipped glamour, read by `Core/Glamour/EquippedOutfit.cs` |
+| Gear per slot (item id, two dyes) | Glamourer's current state when Glamourer is on (`Core/Glamour/GlamourerDesign.cs`), otherwise the equipped glamour (`Core/Glamour/EquippedOutfit.cs`) |
+| Race and body type | Glamourer's state, otherwise the character |
 | Mods per slot (name, author, version, link, picked options) | Penumbra, through `Core/Glamour/GlamourService.Capture` |
 | Character mods (body, face, hair) | The same capture, on slot `-1` |
 | Vanilla stamp | No mods on any slot, plus the camera's `ModScan` at the shutter |

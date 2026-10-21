@@ -174,7 +174,7 @@ internal sealed partial class PrismApp
 
     private void PostGlam()
     {
-        captured = glamour.Capture();
+        captured = glamour.Capture(out var race, out var gender);
         capturedVanilla = GlamourService.IsVanilla(captured) && PhotosAreVanilla();
         var paths = composeSession.SelectedArray();
         var crops = composeSession.CropsArray();
@@ -185,7 +185,11 @@ internal sealed partial class PrismApp
             photos[index] = new GlamPhotoDraft(paths[index], index < crops.Length ? crops[index] : default);
         }
 
-        var (race, gender) = Appearance();
+        if (race == 0)
+        {
+            (race, gender) = Appearance();
+        }
+
         postOutcome = OutcomePending;
         glams.Post(photos, captured, glamTitle.Trim(), SplitTags(glamTags), race, gender, capturedVanilla, postSettled);
     }

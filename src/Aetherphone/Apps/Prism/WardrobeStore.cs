@@ -4,7 +4,6 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Inventory;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Aetherphone.Apps.Prism;
 
@@ -20,14 +19,6 @@ internal sealed record WardrobeOutfit(
 internal sealed class WardrobeStore
 {
     private const string FolderName = "PrismWardrobe";
-
-    private static readonly (string Key, GearSlot Slot)[] DesignSlots =
-    {
-        ("MainHand", GearSlot.MainHand), ("OffHand", GearSlot.OffHand), ("Head", GearSlot.Head),
-        ("Body", GearSlot.Body), ("Hands", GearSlot.Hands), ("Legs", GearSlot.Legs), ("Feet", GearSlot.Feet),
-        ("Ears", GearSlot.Ears), ("Neck", GearSlot.Neck), ("Wrists", GearSlot.Wrists),
-        ("RFinger", GearSlot.RingRight), ("LFinger", GearSlot.RingLeft),
-    };
 
     private readonly DirectoryInfo root;
     private readonly object sync = new();
@@ -134,7 +125,7 @@ internal sealed class WardrobeStore
             }
 
             grown.Add(new WardrobeOutfit(Guid.NewGuid().ToString("N"), name, string.Empty, id,
-                DesignGear(glamour.Design(id)), false, DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
+                GlamourerDesign.Read(glamour.Design(id), out _, out _), false, DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
             added++;
         }
 
@@ -144,42 +135,6 @@ internal sealed class WardrobeStore
         }
 
         return added;
-    }
-
-    public static GlamGearDto[] DesignGear(string design)
-    {
-        if (design.Length == 0)
-        {
-            return Array.Empty<GlamGearDto>();
-        }
-
-        try
-        {
-            if (JObject.Parse(design)["Equipment"] is not JObject equipment)
-            {
-                return Array.Empty<GlamGearDto>();
-            }
-
-            var gear = new List<GlamGearDto>(DesignSlots.Length);
-            for (var index = 0; index < DesignSlots.Length; index++)
-            {
-                if (equipment[DesignSlots[index].Key] is not JObject piece ||
-                    piece["ItemId"]?.Value<ulong>() is not { } itemId || itemId == 0 || itemId > uint.MaxValue)
-                {
-                    continue;
-                }
-
-                gear.Add(new GlamGearDto((int)DesignSlots[index].Slot, (uint)itemId,
-                    piece["Stain"]?.Value<byte>() ?? 0, piece["Stain2"]?.Value<byte>() ?? 0));
-            }
-
-            return gear.ToArray();
-        }
-        catch (Exception exception)
-        {
-            AepLog.Warning($"Could not read a Glamourer design: {exception.Message}");
-            return Array.Empty<GlamGearDto>();
-        }
     }
 
     private static bool HasDesign(WardrobeOutfit[] current, Guid id)

@@ -42,9 +42,20 @@ internal sealed class GlamourService : IDisposable
 
     public bool TryingOn => tryingOn;
 
-    public GlamGearDto[] Capture()
+    public GlamGearDto[] Capture() => Capture(out _, out _);
+
+    public GlamGearDto[] Capture(out int race, out int gender)
     {
-        var gear = EquippedOutfit.Read();
+        race = 0;
+        gender = 0;
+        var gear = HasGlamourer
+            ? GlamourerDesign.Read(glamourer.State(), out race, out gender)
+            : Array.Empty<GlamGearDto>();
+        if (gear.Length == 0)
+        {
+            gear = EquippedOutfit.Read();
+        }
+
         if (!HasPenumbra || !penumbra.Enabled() || penumbra.PlayerPaths() is not { } paths)
         {
             return gear;
