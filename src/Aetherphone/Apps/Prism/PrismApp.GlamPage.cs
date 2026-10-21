@@ -131,6 +131,7 @@ internal sealed partial class PrismApp
 
         statsFor = key;
         statsStorage = storage;
+        fashionFor = null;
         modLines.Clear();
         var gear = glam.Gear ?? Array.Empty<GlamGearDto>();
         ownedPieces = GlamourService.OwnedPieces(gear, out totalPieces, ownedIds);
@@ -557,7 +558,8 @@ internal sealed partial class PrismApp
             StartWearing(string.Empty, name);
         }
 
-        if (interactive && screen == PrismScreen.GlamDetail && ownedIds.Contains(piece.ItemId))
+        if (interactive && screen is PrismScreen.GlamDetail or PrismScreen.FashionReport &&
+            ownedIds.Contains(piece.ItemId))
         {
             PrismType.DrawRight(drawList, new Vector2(left + width, top + labelLine), Loc.T(L.Prism.Owned), PrismArt.Muted,
                 PrismFace.Label, labelPixels);

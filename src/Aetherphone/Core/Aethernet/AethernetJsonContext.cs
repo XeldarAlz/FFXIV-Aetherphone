@@ -126,6 +126,7 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(GlamCollectionRequest))]
 [JsonSerializable(typeof(GlamItemDto))]
 [JsonSerializable(typeof(GlamSeasonDto))]
+[JsonSerializable(typeof(FashionReportDto))]
 [JsonSerializable(typeof(PrismBallotDto))]
 [JsonSerializable(typeof(PrismBallotRequest))]
 [JsonSerializable(typeof(PrismResultsDto))]

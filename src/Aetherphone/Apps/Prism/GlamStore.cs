@@ -63,6 +63,8 @@ internal sealed class GlamStore : IDisposable
     private volatile GlamCollectionDto[] collections = Array.Empty<GlamCollectionDto>();
     private volatile GlamItemDto? item;
     private volatile GlamSeasonDto? season;
+    private volatile FashionReportDto? fashion;
+    private volatile bool fashionLoading;
     private volatile bool posting;
     private volatile bool postFailed;
     private volatile int epoch;
@@ -102,6 +104,10 @@ internal sealed class GlamStore : IDisposable
     public GlamItemDto? Item => item;
 
     public GlamSeasonDto? Season => season;
+
+    public FashionReportDto? Fashion => fashion;
+
+    public bool FashionLoading => fashionLoading;
 
     public bool Posting => posting;
 
@@ -493,6 +499,24 @@ internal sealed class GlamStore : IDisposable
     {
         var glamId = glam.Id;
         work.Run("collect", token => client.SetInCollectionAsync(collectionId, glamId, true, token));
+    }
+
+    public void RefreshFashion(string lang)
+    {
+        if (fashionLoading || !session.IsSignedIn)
+        {
+            return;
+        }
+
+        fashionLoading = true;
+        work.Run("fashion report", async token =>
+        {
+            var fetched = await client.FashionReportAsync(lang, token).ConfigureAwait(false);
+            if (fetched is not null)
+            {
+                fashion = fetched;
+            }
+        }, () => fashionLoading = false);
     }
 
     public void RefreshSeason()
