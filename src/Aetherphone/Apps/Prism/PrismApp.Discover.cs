@@ -14,7 +14,8 @@ internal sealed partial class PrismApp
     private const float TileShadeShare = 0.4f;
     private const float ThemeTitleUnits = 22f;
 
-    private static readonly LocString[] ScopeNames = { L.Prism.ScopeToday, L.Prism.ScopeNew, L.Prism.ScopeFollowing };
+    private static readonly LocString[] ScopeNames = { L.Prism.ScopeNew, L.Prism.ScopePopular, L.Prism.ScopeFollowing };
+    private static readonly GlamScope[] ShownScopes = { GlamScope.New, GlamScope.Popular, GlamScope.Following };
     private static readonly LocString[] FilterNames = { L.Prism.FilterAll, L.Prism.FilterModded, L.Prism.FilterVanilla };
     private static readonly Vector4 TileShade = new(0f, 0f, 0f, 0.7f);
     private static readonly Vector4 TileClear = new(0f, 0f, 0f, 0f);
@@ -66,12 +67,12 @@ internal sealed partial class PrismApp
         for (var index = 0; index < ScopeNames.Length; index++)
         {
             var label = Loc.T(ScopeNames[index]);
-            var active = (int)discoverScope == index;
+            var active = discoverScope == ShownScopes[index];
             var width = PrismType.Measure(label, PrismFace.Label, labelPixels).X;
             if (PrismArt.Link(drawList, new Vector2(x, top), label, active ? PrismArt.Fore : PrismArt.Muted, scale,
                     labelLine + Metrics.Space.Md * scale) && !active)
             {
-                discoverScope = (GlamScope)index;
+                discoverScope = ShownScopes[index];
                 RefreshDiscover(false);
             }
 
@@ -250,7 +251,7 @@ internal sealed partial class PrismApp
             glams.Refresh(discoverScope);
         }
 
-        if (discoverScope != GlamScope.Today && (always || glams.Lane(GlamScope.Today).NeverLoaded))
+        if (always || glams.Lane(GlamScope.Today).NeverLoaded)
         {
             glams.Refresh(GlamScope.Today);
         }
@@ -258,7 +259,7 @@ internal sealed partial class PrismApp
 
     private float DrawDayHero(ImDrawListPtr drawList, float left, float top, float width, float scale)
     {
-        if (discoverScope == GlamScope.Today || glams.Lane(GlamScope.Today).Items is not { Length: > 0 } today)
+        if (glams.Lane(GlamScope.Today).Items is not { Length: > 0 } today)
         {
             return top;
         }

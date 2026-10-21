@@ -15,6 +15,7 @@ internal enum GlamScope : byte
 {
     Today,
     New,
+    Popular,
     Following,
 }
 
@@ -31,7 +32,10 @@ internal sealed class GlamStore : IDisposable
     private const int PhotoBaseSize = 1080;
     private const PostAspect GlamAspect = PostAspect.Portrait;
 
-    private static readonly string[] ScopeKeys = { GlamClient.ScopeToday, GlamClient.ScopeNew, GlamClient.ScopeFollowing };
+    private static readonly string[] ScopeKeys =
+    {
+        GlamClient.ScopeToday, GlamClient.ScopeNew, GlamClient.ScopePopular, GlamClient.ScopeFollowing,
+    };
 
     private readonly AethernetSession session;
     private readonly GlamClient client;
@@ -43,6 +47,7 @@ internal sealed class GlamStore : IDisposable
     private readonly FeedLane<GlamDto>[] discover =
     {
         FeedLane<GlamDto>.ServerOrdered(), FeedLane<GlamDto>.ServerOrdered(), FeedLane<GlamDto>.ServerOrdered(),
+        FeedLane<GlamDto>.ServerOrdered(),
     };
     private readonly FeedLane<GlamDto> list = FeedLane<GlamDto>.ServerOrdered();
     private readonly HashSet<string> triedOn = new(StringComparer.Ordinal);

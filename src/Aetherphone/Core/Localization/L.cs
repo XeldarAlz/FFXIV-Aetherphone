@@ -10825,8 +10825,8 @@ internal static class L
         public static readonly LocString TabWeek = new("prism.tabWeek", "This week");
         public static readonly LocString TabWardrobe = new("prism.tabWardrobe", "Wardrobe");
         public static readonly LocString TabMe = new("prism.tabMe", "Me");
-        public static readonly LocString ScopeToday = new("prism.scopeToday", "Today");
         public static readonly LocString ScopeNew = new("prism.scopeNew", "New");
+        public static readonly LocString ScopePopular = new("prism.scopePopular", "Popular");
         public static readonly LocString ScopeFollowing = new("prism.scopeFollowing", "Following");
         public static readonly LocString FilterAll = new("prism.filterAll", "All");
         public static readonly LocString FilterModded = new("prism.filterModded", "Modded");

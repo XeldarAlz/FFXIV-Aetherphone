@@ -75,7 +75,7 @@ Everything is under the signed-in Aethernet session. Paths are built in `Core/Ae
 
 | Route | Body | Returns |
 | --- | --- | --- |
-| `GET /prism/glams?scope=new\|today\|following[&vanilla=true\|false][&race=&gender=][&cursor=]` | | `{ items: Glam[], nextCursor }`; `race` and `gender` (Fits me) keep glams made on that body |
+| `GET /prism/glams?scope=new\|popular\|today\|following[&vanilla=true\|false][&race=&gender=][&cursor=]` | | `{ items: Glam[], nextCursor }`; `race` and `gender` (Fits me) keep glams made on that body |
 | `GET /prism/glams/{id}` | | `Glam` |
 | `POST /prism/glams` | `{ title, photos: [{ key, width, height }], gear, tags, race, gender, vanilla, inspiredBy }` | `Glam` |
 | `DELETE /prism/glams/{id}` | | 204 |
@@ -105,5 +105,6 @@ A contest entry keeps today's routes (`PUT /prism/weeks/{id}/entry`, tracks, bal
 
 - Up to 5 new glams per account per day, 4 photos each, 3:4.
 - Mod links outside the allowlist are stored as plain text.
-- Glam of the day (`scope=today`) changes at the daily reset, 15:00 UTC.
+- Glam of the day (`scope=today`) changes at the daily reset, 15:00 UTC. The client shows it as the card on top of Discover, not as a tab.
+- Popular (`scope=popular`) ranks the last seven days by likes and try ons.
 - Popular orderings count likes and try-ons from distinct, established accounts only.

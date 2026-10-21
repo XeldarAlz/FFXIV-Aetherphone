@@ -9,6 +9,7 @@ internal sealed class GlamClient
     internal const string SavedCollection = "saved";
     internal const string ScopeNew = "new";
     internal const string ScopeToday = "today";
+    internal const string ScopePopular = "popular";
     internal const string ScopeFollowing = "following";
 
     private readonly AethernetTransport net;
