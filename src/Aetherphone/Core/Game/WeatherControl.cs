@@ -19,6 +19,9 @@ internal sealed class WeatherControl : IDisposable
     private readonly AppGate installed;
     private byte weatherOverride = NoWeather;
     private int timeOverride = NoTime;
+    private int heldTime = NoTime;
+    private string? timeHoldOwner;
+    private bool timeApplied;
     private bool strayOffsetSwept;
 
     public WeatherControl(WeatherService weather, IFramework framework, IClientState clientState, ICondition condition,
@@ -39,15 +42,24 @@ internal sealed class WeatherControl : IDisposable
     public bool HasWeatherOverride => weatherOverride != NoWeather;
     public bool HasTimeOverride => timeOverride != NoTime;
     public bool HasOverride => HasWeatherOverride || HasTimeOverride;
+    public bool HasTimeHold => timeHoldOwner is not null;
+    public string? TimeHoldOwner => timeHoldOwner;
     public byte WeatherOverride => weatherOverride;
     public int TimeOverrideMinutes => timeOverride;
+    private int EffectiveTime => timeOverride != NoTime ? timeOverride : heldTime;
 
     public void SetWeather(byte id)
     {
         if (id != NoWeather && CanControl)
         {
-            weatherOverride = id;
+            OverrideWeather(id);
         }
+    }
+
+    private void OverrideWeather(byte id)
+    {
+        weatherOverride = id;
+        weather.LiveOverridden = id != NoWeather;
     }
 
     public void SetTime(int minuteOfDay)
@@ -65,7 +77,7 @@ internal sealed class WeatherControl : IDisposable
             return;
         }
 
-        weatherOverride = NoWeather;
+        OverrideWeather(NoWeather);
         var natural = weather.NaturalNow();
         if (!GameMemory.Attached)
         {
@@ -85,14 +97,44 @@ internal sealed class WeatherControl : IDisposable
         }
     }
 
-    public unsafe void ClearTime()
+    public void HoldTime(string owner, int minuteOfDay)
     {
-        if (timeOverride == NoTime)
+        timeHoldOwner = owner;
+        heldTime = Math.Clamp(minuteOfDay, 0, EorzeaTime.MinutesPerDay - 1);
+    }
+
+    public void ReleaseTime(string owner)
+    {
+        if (!string.Equals(timeHoldOwner, owner, StringComparison.Ordinal))
         {
             return;
         }
 
+        timeHoldOwner = null;
+        heldTime = NoTime;
+        if (timeOverride == NoTime)
+        {
+            ReleaseAppliedTime();
+        }
+    }
+
+    public void ClearTime()
+    {
         timeOverride = NoTime;
+        if (heldTime == NoTime)
+        {
+            ReleaseAppliedTime();
+        }
+    }
+
+    private unsafe void ReleaseAppliedTime()
+    {
+        if (!timeApplied)
+        {
+            return;
+        }
+
+        timeApplied = false;
         if (!GameMemory.Attached)
         {
             if (GameMemory.Simulated is { } simulated)
@@ -141,20 +183,32 @@ internal sealed class WeatherControl : IDisposable
             SweepStrayOffset();
         }
 
-        if (weatherOverride == NoWeather && timeOverride == NoTime)
+        if (weatherOverride == NoWeather && timeOverride == NoTime && heldTime == NoTime)
         {
             return;
         }
 
-        if (!installed.Open || !CanControl)
+        if (!CanControl)
+        {
+            ClearWeather();
+            timeOverride = NoTime;
+            ReleaseAppliedTime();
+            return;
+        }
+
+        if (!installed.Open)
         {
             ClearAll();
-            return;
+            if (heldTime == NoTime)
+            {
+                return;
+            }
         }
 
+        var minute = EffectiveTime;
         if (!GameMemory.Attached)
         {
-            ApplySimulated();
+            ApplySimulated(minute);
             return;
         }
 
@@ -168,7 +222,7 @@ internal sealed class WeatherControl : IDisposable
             }
         }
 
-        if (timeOverride == NoTime)
+        if (minute == NoTime)
         {
             return;
         }
@@ -178,11 +232,12 @@ internal sealed class WeatherControl : IDisposable
         {
             var days = instance->ClientTime.EorzeaTime / EorzeaSecondsPerDay;
             instance->ClientTime.IsEorzeaTimeOverridden = true;
-            instance->ClientTime.EorzeaTimeOverride = days * EorzeaSecondsPerDay + timeOverride * 60L;
+            instance->ClientTime.EorzeaTimeOverride = days * EorzeaSecondsPerDay + minute * 60L;
+            timeApplied = true;
         }
     }
 
-    private void ApplySimulated()
+    private void ApplySimulated(int minute)
     {
         if (GameMemory.Simulated is not { } simulated)
         {
@@ -194,12 +249,13 @@ internal sealed class WeatherControl : IDisposable
             simulated.WeatherId = weatherOverride;
         }
 
-        simulated.EorzeaMinuteOverride = timeOverride;
+        simulated.EorzeaMinuteOverride = minute;
+        timeApplied = minute != NoTime;
     }
 
     private void OnTerritoryChanged(uint _)
     {
-        weatherOverride = NoWeather;
+        OverrideWeather(NoWeather);
         ClearTime();
     }
 
@@ -207,6 +263,8 @@ internal sealed class WeatherControl : IDisposable
     {
         framework.Update -= OnUpdate;
         clientState.TerritoryChanged -= OnTerritoryChanged;
+        timeHoldOwner = null;
+        heldTime = NoTime;
         ClearAll();
     }
 }

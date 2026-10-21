@@ -566,6 +566,17 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public long AnnouncementsSeenUnix { get; set; }
     public long AnnouncementsNotifiedUnix { get; set; }
     public bool AnnouncementsInitialized { get; set; }
+    public long LoveIslandSeenAtUnix { get; set; }
+    public long LoveIslandPostsSeenUnix { get; set; }
+    public long LoveIslandPostsNotifiedUnix { get; set; }
+    public bool LoveIslandPostsInitialized { get; set; }
+    public bool LoveIslandMarksInitialized { get; set; }
+    public bool LoveIslandEarned { get; set; }
+    public bool? LoveIslandKeepNight { get; set; }
+    public List<string> LoveIslandKnownExperiences { get; set; } = new();
+    public List<string> LoveIslandReminders { get; set; } = new();
+    public string LoveIslandIconUrl { get; set; } = string.Empty;
+    public string LoveIslandIconForegroundUrl { get; set; } = string.Empty;
     public bool? Use24HourClock { get; set; }
     public bool TimeZoneManual { get; set; }
     public int ManualUtcOffsetMinutes { get; set; }

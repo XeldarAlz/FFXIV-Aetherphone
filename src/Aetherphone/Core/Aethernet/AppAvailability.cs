@@ -10,7 +10,7 @@ internal sealed class AppAvailability : IDisposable
     private const long PushDebounceMilliseconds = 1500;
 
     private static readonly string[] AlwaysAvailable = { "appstore", "settings", "announcements" };
-    private static readonly string[] HiddenUntilLaunched = { "muster", "coin", "casino", "prism" };
+    private static readonly string[] HiddenUntilLaunched = { "muster", "coin", "casino", "prism", "loveisland" };
     private static readonly string[] UnavailableInChina = Array.Empty<string>();
 
     private static AppAvailability? current;

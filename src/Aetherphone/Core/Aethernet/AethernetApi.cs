@@ -1,4 +1,5 @@
 using Aetherphone.Core.Aethernet.Clients;
+using Aetherphone.Core.Campaigns;
 using Aetherphone.Core.Net;
 
 namespace Aetherphone.Core.Aethernet;
@@ -33,6 +34,7 @@ internal sealed class AethernetApi
         Casino = new CasinoClient(net);
         Games = new GamesClient(net);
         Scores = new ScoresClient(net);
+        Campaigns = new CampaignClient(net);
     }
 
     public AuthClient Auth { get; }
@@ -60,4 +62,5 @@ internal sealed class AethernetApi
     public CasinoClient Casino { get; }
     public GamesClient Games { get; }
     public ScoresClient Scores { get; }
+    public CampaignClient Campaigns { get; }
 }

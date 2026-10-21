@@ -15,6 +15,7 @@ using Aetherphone.Apps.Housing;
 using Aetherphone.Apps.Hunts;
 using Aetherphone.Apps.Inventory;
 using Aetherphone.Apps.Jobs;
+using Aetherphone.Apps.LoveIsland;
 using Aetherphone.Apps.Calculator;
 using Aetherphone.Apps.Casino;
 using Aetherphone.Apps.Maps;
@@ -104,7 +105,8 @@ internal static class AppRegistry
         apps.Add(new FeedbackApp(services.AethernetSession, feedbackNet.Feedback, feedbackNet.Media, photoLibrary, services.Configuration, services.Confirm, services.WallpaperImages, services.RemoteImages, services.GameData, services.Notifications, services.RealtimeSignals, services.FeedbackLauncher));
         apps.Add(new PollsApp(services.AethernetSession, new AethernetApi(services.Http, services.AethernetSession, "polls").Polls, services.Installer, services.RealtimeSignals));
         apps.Add(new PrismApp(services.AethernetSession, new AethernetApi(services.Http, services.AethernetSession, "prism"), services.RemoteImages, photoLibrary, services.WallpaperImages, services.Configuration, services.Confirm, services.Report, services.GameData, services.Textures, services.Glamour, services.MarketIndex, services.MarketLauncher, services.Share, services.SocialNotifications, services.SocialLauncher));
-        apps.Add(new AnnouncementsApp(services.AethernetSession, new AethernetApi(services.Http, services.AethernetSession, "announcements").Announcements, services.Notifications, services.Configuration, services.AnnouncementsLauncher, services.Visibility, services.RealtimeSignals));
+        apps.Add(new AnnouncementsApp(services.AethernetSession, new AethernetApi(services.Http, services.AethernetSession, "announcements").Announcements, services.Notifications, services.Configuration, services.AnnouncementsLauncher, services.Visibility, services.RealtimeSignals, services.RemoteImages));
+        apps.Add(new LoveIslandApp(services.AethernetSession, new AethernetApi(services.Http, services.AethernetSession, "loveisland"), services.Notifications, services.Configuration, services.CampaignLauncher, services.RealtimeSignals, services.RemoteImages, services.Lodestone, services.BadgeCatalog, services.FrameCatalog, services.SocialLauncher, services.Confirm));
         apps.Add(new CameraApp(new PhotoCaptureService(), photoLibrary, services.Configuration, services.GameUiVisibility, services.CameraShutter));
         apps.Add(new PhotosApp(photoLibrary, services.Confirm, services.Share, services.Configuration));
         apps.Add(new SkywatcherApp(services.Weather, services.WeatherControl, services.Configuration));

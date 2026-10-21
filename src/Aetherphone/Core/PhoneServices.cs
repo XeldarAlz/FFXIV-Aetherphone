@@ -204,6 +204,7 @@ internal sealed class PhoneServices : IDisposable
     public required AdInquiryStore AdInquiries { get; init; }
     public required YellowPagesLauncher YellowPagesLauncher { get; init; }
     public required AnnouncementsLauncher AnnouncementsLauncher { get; init; }
+    public required Campaigns.CampaignLauncher CampaignLauncher { get; init; }
     public required CollectionsCatalogService Collections { get; init; }
     public required CollectionsJournal CollectionsJournal { get; init; }
     public required InventoryCaptureService InventoryCapture { get; init; }
@@ -623,6 +624,7 @@ internal sealed class PhoneServices : IDisposable
             AdInquiries = adInquiries,
             YellowPagesLauncher = new YellowPagesLauncher(),
             AnnouncementsLauncher = new AnnouncementsLauncher(),
+            CampaignLauncher = new Campaigns.CampaignLauncher(),
             Collections = collections,
             CollectionsJournal = collectionsJournal,
             InventoryCapture = inventoryCapture,

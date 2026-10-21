@@ -93,6 +93,7 @@ internal static class AppPalettes
     public static readonly AppPalette AetherStream = For("aetherstream");
     public static readonly AppPalette Hunts = For("hunts");
     public static readonly AppPalette Notifications = For("notifications");
+    public static readonly AppPalette LoveIsland = For("loveisland");
 
     private static AppPalette MessageChrome(Vector4 accent) => new()
     {

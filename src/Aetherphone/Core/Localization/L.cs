@@ -374,6 +374,7 @@ internal static class L
         public static readonly LocString AppStore = new("app.appstore", "App Store");
         public static readonly LocString AetherStream = new("app.aetherstream", "MogCast");
         public static readonly LocString Shortcuts = new("app.shortcuts", "Shortcuts");
+        public static readonly LocString LoveIsland = new("app.loveisland", "Love Island Eclipse");
     }
 
     internal static class Shortcuts
@@ -557,6 +558,9 @@ internal static class L
         public static readonly LocString PollsSub = new("storeCopy.pollsSub", "Ask the whole server");
         public static readonly LocString PollsBody = new("storeCopy.pollsBody",
             "Put a question to Eorzea and watch the votes land while you wait.");
+        public static readonly LocString LoveIslandSub = new("storeCopy.loveislandSub", "PNX's Halloween festival");
+        public static readonly LocString LoveIslandBody = new("storeCopy.loveislandBody",
+            "The companion for Love Island Eclipse on Materia: tonight's experiences with Teleport, the live #LoveIslandEclipse gallery, the linkshells to join, and the frame and badge you earn by sharing your night.");
         public static readonly LocString AnnouncementsSub = new("storeCopy.announcementsSub", "Word from the team");
         public static readonly LocString AnnouncementsBody = new("storeCopy.announcementsBody",
             "Release notes, downtime warnings and everything else the Aetherphone team wants you to know, delivered straight to your phone.");
@@ -2345,6 +2349,18 @@ internal static class L
                 "Fixed the reaction buttons in a radio station's chat being cut off on the left"),
         };
 
+        public static readonly LocString[] Release1400Announcements =
+        {
+            new("changelog.r1400.22",
+                "Added photos and link buttons to announcements: the newest one leads with its first photo, and tapping a photo opens it full screen"),
+        };
+
+        public static readonly LocString[] Release1400AethergramVelvet =
+        {
+            new("changelog.r1400.23",
+                "Changed profile post grids to taller 3:4 tiles so portrait photos are cropped less, contributed by t3sco"),
+        };
+
         public static readonly LocString[] Release1400Phone =
         {
             new("changelog.r1400.15",
@@ -2353,6 +2369,10 @@ internal static class L
                 "Changed apps that are switched on or off for everyone to appear or disappear within seconds instead of a few minutes"),
             new("changelog.r1400.16",
                 "Fixed the status bar clock not lining up with screen titles"),
+            new("changelog.r1400.26",
+                "Changed app names on the home screen to always show in full: a long name shrinks a little or wraps onto a second line instead of ending in an ellipsis"),
+            new("changelog.r1400.28",
+                "Changed new apps to arrive on your home screen by themselves, in the first free spot starting from the first page; an app you remove stays removed"),
         };
 
         public static readonly LocString[] Release1400Gamba =
@@ -2369,10 +2389,24 @@ internal static class L
                 "Fixed the Played too short to pay note never showing when you leave a game before it pays"),
         };
 
+        public static readonly LocString[] Release1400Skywatcher =
+        {
+            new("changelog.r1400.27",
+                "Fixed Skywatcher and its widget showing another district's name and forecast, or a blank name, inside a house, apartment or workshop, contributed by YozoraCho"),
+        };
+
         public static readonly LocString[] Release1400Sounds =
         {
             new("changelog.r1400.19",
                 "Fixed game sounds going silent when Interface Sounds was turned off"),
+        };
+
+        public static readonly LocString[] Release1400LoveIsland =
+        {
+            new("changelog.r1400.24",
+                "Added Love Island Eclipse, the companion app for PNX's Halloween festival on Materia: a countdown to the doors and the experience on now, every experience with Teleport and a reminder, the #LoveIslandEclipse gallery, the linkshells to ask for, and the frame, badge and Aether Coin you earn by posting during the night"),
+            new("changelog.r1400.25",
+                "Added Keep it night to Love Island Eclipse, which holds Eorzea at night while the app is open during the event"),
         };
 
         public static readonly LocString[] Release1330Chirper =
@@ -11022,6 +11056,130 @@ internal static class L
         public static readonly LocString CopyText = new("announcements.copyText", "Copy text");
         public static readonly LocString OpenSettings = new("announcements.openSettings", "Open Settings");
         public static readonly LocString RefreshFailed = new("announcements.refreshFailed", "Couldn't refresh. Showing what you already have.");
+    }
+
+    internal static class LoveIsland
+    {
+        public static readonly LocString TabTonight = new("loveisland.tabTonight", "Tonight");
+        public static readonly LocString TabExperiences = new("loveisland.tabExperiences", "Experiences");
+        public static readonly LocString TabGallery = new("loveisland.tabGallery", "Gallery");
+        public static readonly LocString TabPerks = new("loveisland.tabPerks", "Perks");
+        public static readonly LocString DoorsOpenIn = new("loveisland.doorsOpenIn", "Doors open in");
+        public static readonly LocString LiveNow = new("loveisland.liveNow", "Live now");
+        public static readonly LocString BetweenSets = new("loveisland.betweenSets", "Between sets");
+        public static readonly LocString EndedTitle = new("loveisland.endedTitle", "Thank you for coming");
+        public static readonly LocString EndedBody = new("loveisland.endedBody",
+            "This app goes away in a few days. Your frame and badge stay in your inventory, and the gallery stays on Aethergram.");
+        public static readonly LocString KeepNight = new("loveisland.keepNight", "Keep it night");
+        public static readonly LocString KeepNightHintLive = new("loveisland.keepNightHintLive",
+            "Eorzean time stays at night while the app is open. Lifts in combat.");
+        public static readonly LocString KeepNightHintBefore = new("loveisland.keepNightHintBefore",
+            "Available during the event window.");
+        public static readonly LocString LiveDj = new("loveisland.liveDj", "Live DJ");
+        public static readonly LocString NoStream = new("loveisland.noStream", "No stream scheduled");
+        public static readonly LocString StreamHint = new("loveisland.streamHint",
+            "The experiences list marks which ones stream.");
+        public static readonly LocString WatchTwitch = new("loveisland.watchTwitch", "Watch on Twitch");
+        public static readonly LocString ShareTitle = new("loveisland.shareTitle", "Share your night");
+        public static readonly LocString ShareBody = new("loveisland.shareBody",
+            "Post your gposes with the tag and they join the live gallery. One post during the event earns the Eclipse frame and badge.");
+        public static readonly LocString WebsiteNote = new("loveisland.websiteNote",
+            "Photos you post with the tag can also appear on the event website.");
+        public static readonly LocString PostCta = new("loveisland.postCta", "Post on Aethergram");
+        public static readonly LocString GalleryCta = new("loveisland.galleryCta", "Gallery");
+        public static readonly LocString Pinned = new("loveisland.pinned", "Pinned");
+        public static readonly LocString Announcements = new("loveisland.announcements", "Announcements");
+        public static readonly LocString AnnouncementsFrom = new("loveisland.announcementsFrom", "{0} from PNX");
+        public static readonly LocString AnnouncementsBody = new("loveisland.announcementsBody",
+            "Doors, stage changes, surprises. New ones arrive as a banner.");
+        public static readonly LocString LinkshellsTitle = new("loveisland.linkshellsTitle", "Linkshells");
+        public static readonly LocString LinkshellsBody = new("loveisland.linkshellsBody",
+            "The crew's linkshells for the night. Ask the contact for an invite.");
+        public static readonly LocString AskContact = new("loveisland.askContact", "Ask {0}");
+        public static readonly LocString About = new("loveisland.about", "About");
+        public static readonly LocString More = new("loveisland.more", "More");
+        public static readonly LocString AboutFooter = new("loveisland.aboutFooter",
+            "An event by PNX with Aetherphone and The Emporium. This app leaves your phone a few days after the event; your frame and badge stay.");
+        public static readonly LocString ExperiencesSub = new("loveisland.experiencesSub", "times in your timezone");
+        public static readonly LocString NothingScheduled = new("loveisland.nothingScheduled", "Nothing scheduled yet.");
+        public static readonly LocString WhoIsOn = new("loveisland.whoIsOn", "Who is on");
+        public static readonly LocString RemindMe = new("loveisland.remindMe", "Remind me {0} min before");
+        public static readonly LocString DcTravelNote = new("loveisland.dcTravelNote",
+            "On another data center? Travel to Materia from character select first.");
+        public static readonly LocString GallerySub = new("loveisland.gallerySub",
+            "{0} posts on Aethergram · newest first");
+        public static readonly LocString GalleryCta2 = new("loveisland.galleryCta2", "Post yours with #{0}");
+        public static readonly LocString PerksSub = new("loveisland.perksSub",
+            "Exclusive to people who were there. Never sold.");
+        public static readonly LocString FrameName = new("loveisland.frameName", "Eclipse frame");
+        public static readonly LocString FrameBody = new("loveisland.frameBody",
+            "Wraps your avatar on Chirper, Aethergram and in chats.");
+        public static readonly LocString BadgeName = new("loveisland.badgeName", "Eclipse badge");
+        public static readonly LocString BadgeBody = new("loveisland.badgeBody",
+            "Sits next to your name everywhere, in one of your two badge slots.");
+        public static readonly LocString CoinsName = new("loveisland.coinsName", "Aether Coins");
+        public static readonly LocString CoinsBody = new("loveisland.coinsBody",
+            "{0} coins land in your wallet with the frame and badge.");
+        public static readonly LocString HowToEarn = new("loveisland.howToEarn", "How to earn both");
+        public static readonly LocString EarnTitle = new("loveisland.earnTitle", "Post once with #{0}");
+        public static readonly LocString EarnBody = new("loveisland.earnBody",
+            "On Aethergram or Chirper, any time between {0} and {1} (your time). They arrive in your inventory within a few minutes.");
+        public static readonly LocString EquipCta = new("loveisland.equipCta", "Equip in the Coin app");
+        public static readonly LocString Earned = new("loveisland.earned", "Earned");
+        public static readonly LocString NotYet = new("loveisland.notYet", "Not yet");
+        public static readonly LocString WindowLine = new("loveisland.windowLine", "{0} to {1} · {2}");
+        public static readonly LocString StartsLine = new("loveisland.startsLine", "{0} · {1} your time");
+        public static readonly LocString FirstUp = new("loveisland.firstUp", "First up: {0}");
+        public static readonly LocString NextUp = new("loveisland.nextUp", "Next: {0}");
+        public static readonly LocString NextUpAt = new("loveisland.nextUpAt", "Next: {0} at {1}");
+        public static readonly LocString UntilClock = new("loveisland.untilClock", "until {0}");
+        public static readonly LocString OnAir = new("loveisland.onAir", "On air");
+        public static readonly LocString OffAir = new("loveisland.offAir", "Off air");
+        public static readonly LocString LiveSet = new("loveisland.liveSet", "Live set");
+        public static readonly LocString NowPill = new("loveisland.nowPill", "Now");
+        public static readonly LocString OnNow = new("loveisland.onNow", "On now");
+        public static readonly LocString Finished = new("loveisland.finished", "Finished");
+        public static readonly LocString InCountdown = new("loveisland.inCountdown", "in {0}");
+        public static readonly LocString Streamed = new("loveisland.streamed", "streamed");
+        public static readonly LocString Where = new("loveisland.where", "Where · {0}");
+        public static readonly LocString WardPlot = new("loveisland.wardPlot", "Ward {0}, Plot {1}");
+        public static readonly LocString TimeRange = new("loveisland.timeRange", "{0} · {1} to {2} · your time");
+        public static readonly LocString CopyCommand = new("loveisland.copyCommand", "Copy /li");
+        public static readonly LocString NothingYet = new("loveisland.nothingYet", "Nothing yet.");
+        public static readonly LocString NothingListed = new("loveisland.nothingListed", "Nothing listed yet.");
+        public static readonly LocString PostGone = new("loveisland.postGone", "This announcement is gone.");
+        public static readonly LocString ExperienceGone = new("loveisland.experienceGone", "This experience is gone.");
+        public static readonly LocString NoLinks = new("loveisland.noLinks", "No links yet.");
+        public static readonly LocString NewBadge = new("loveisland.newBadge", "NEW");
+        public static readonly LocString SignInBody = new("loveisland.signInBody",
+            "Sign in to Aethernet in Settings to see the event.");
+        public static readonly LocString Unavailable = new("loveisland.unavailable", "The event is not available right now.");
+        public static readonly LocString UnavailableHint = new("loveisland.unavailableHint", "Check back once the doors open.");
+        public static readonly LocString CountdownDays = new("loveisland.countdownDays", "{0}d {1}h {2:00}m");
+        public static readonly LocString CountdownHours = new("loveisland.countdownHours", "{0}h {1:00}m {2:00}s");
+        public static readonly LocString CountdownMinutes = new("loveisland.countdownMinutes", "{0}:{1:00}");
+        public static readonly LocString HashtagCopied = new("loveisland.hashtagCopied", "Copied #{0}. Paste it in your post.");
+        public static readonly LocString ReminderOn = new("loveisland.reminderOn", "Reminder set for {0} minutes before");
+        public static readonly LocString ReminderOff = new("loveisland.reminderOff", "Reminder off");
+        public static readonly LocString NightOn = new("loveisland.nightOn", "Eorzean time locked to night");
+        public static readonly LocString NightOff = new("loveisland.nightOff", "Back to real Eorzean time");
+        public static readonly LocString LinkTwitch = new("loveisland.linkTwitch", "Twitch");
+        public static readonly LocString LinkYouTube = new("loveisland.linkYouTube", "YouTube");
+        public static readonly LocString LinkBluesky = new("loveisland.linkBluesky", "Bluesky");
+        public static readonly LocString LinkX = new("loveisland.linkX", "X");
+        public static readonly LocString LinkKofi = new("loveisland.linkKofi", "Ko-fi");
+        public static readonly LocString LinkPatreon = new("loveisland.linkPatreon", "Patreon");
+        public static readonly LocString LinkPartner = new("loveisland.linkPartner", "Partner site");
+        public static readonly LocString Linkshell = new("loveisland.linkshell", "Linkshell");
+        public static readonly LocString CrossWorldLinkshell = new("loveisland.crossWorldLinkshell", "Cross-world linkshell");
+        public static readonly LocString AboutTitle = new("loveisland.aboutTitle", "About {0}");
+        public static readonly LocString AwardNotification = new("loveisland.awardNotification",
+            "You earned the frame and badge. Open Perks to see them.");
+        public static readonly LocString ReminderNotification = new("loveisland.reminderNotification",
+            "{0} starts in {1} minutes");
+        public static readonly LocString NewExperienceNotification = new("loveisland.newExperienceNotification",
+            "New experience: {0}");
+        public static readonly LocString LiveChannel = new("loveisland.liveChannel", "twitch.tv/{0}");
     }
 
     internal static class Loadout

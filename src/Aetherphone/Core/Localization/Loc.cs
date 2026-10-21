@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text;
 
@@ -10,8 +11,8 @@ internal static class Loc
     private static CultureInfo culture = CultureInfo.InvariantCulture;
     private static StringCatalog catalog = StringCatalog.Empty;
     private static ushort[] glyphs = Array.Empty<ushort>();
-    private static readonly Dictionary<string, string> UpperCache = new(StringComparer.Ordinal);
-    private static readonly Dictionary<string, CompositeFormat> FormatCache = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<string, string> UpperCache = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<string, CompositeFormat> FormatCache = new(StringComparer.Ordinal);
     public static LanguageInfo Current => current;
     public static CultureInfo Culture => culture;
     public static ushort[] CatalogGlyphs => glyphs;

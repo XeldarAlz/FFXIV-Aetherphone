@@ -104,6 +104,9 @@ internal sealed class CallSignalRouter : IDisposable
             case SignalType.AnnouncePing:
                 signals.PublishAnnouncements();
                 return;
+            case SignalType.CampaignPing:
+                signals.PublishCampaign();
+                return;
             case SignalType.PollPing:
                 signals.PublishPolls();
                 return;

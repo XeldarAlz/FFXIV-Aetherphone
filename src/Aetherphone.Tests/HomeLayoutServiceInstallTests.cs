@@ -20,15 +20,113 @@ public sealed class HomeLayoutServiceInstallTests
     }
 
     [Fact]
-    public void AppShippedAfterTheSaveWasWritten_IsNotInstalled()
+    public void AppThatExistedBeforeTheUpgrade_StaysInTheAppStore()
     {
         var apps = MakeApps();
         var configuration = SavedWith("a", "b");
 
         var layout = BuildLayout(apps, configuration);
 
-        Assert.False(layout.IsInstalled("c"), "An app the user has never had should not install itself");
+        Assert.False(layout.IsInstalled("c"), "An app that already existed must not be pushed onto Home by the upgrade");
         Assert.Equal(-1, PageIndexOf(layout, "c"));
+        Assert.True(configuration.Home!.KnownBaseline);
+        Assert.Contains("c", configuration.Home.Known);
+    }
+
+    [Fact]
+    public void AppShippedInALaterUpdate_ArrivesOnTheFirstPage()
+    {
+        var apps = MakeApps();
+        var configuration = SavedKnowing(new[] { "a", "b" }, "a", "b");
+
+        var layout = BuildLayout(apps, configuration);
+
+        Assert.True(layout.IsInstalled("c"), "A new app should arrive on every phone by itself");
+        Assert.Equal(0, PageIndexOf(layout, "c"));
+    }
+
+    [Fact]
+    public void ArrivedAppTheUserRemoved_StaysRemovedAfterARestart()
+    {
+        var apps = MakeApps();
+        var configuration = SavedKnowing(new[] { "a", "b" }, "a", "b");
+
+        Assert.True(BuildLayout(apps, configuration).Uninstall("c"));
+        var layout = BuildLayout(apps, configuration);
+
+        Assert.False(layout.IsInstalled("c"), "Removing an app that arrived by itself must stick");
+        Assert.Equal(-1, PageIndexOf(layout, "c"));
+    }
+
+    [Theory]
+    [InlineData("loveisland")]
+    [InlineData("prism")]
+    public void ArrivingAppAlreadyLiveAtTheUpgrade_StillArrivesOnTheFirstPage(string appId)
+    {
+        var apps = MakeApps();
+        apps.Add(new FakeApp(appId));
+        var configuration = SavedWith("a", "b", "c");
+
+        var layout = BuildLayout(apps, configuration);
+
+        Assert.True(layout.IsInstalled(appId));
+        Assert.Equal(0, PageIndexOf(layout, appId));
+    }
+
+    [Fact]
+    public void ArrivingAppOnAFreshPhone_LandsOnTheFirstPage()
+    {
+        var apps = ManyApps(30);
+        apps.Add(new FakeApp("loveisland"));
+
+        var layout = BuildLayout(apps, new FakeHomeConfiguration());
+
+        Assert.True(layout.IsInstalled("loveisland"));
+        Assert.Equal(0, PageIndexOf(layout, "loveisland"));
+    }
+
+    [Fact]
+    public void ArrivalOnAFullFirstPage_TakesTheFirstFreeCellOnTheNextPageWithoutMovingAnything()
+    {
+        var apps = ManyApps(26);
+        var arriving = new FakeApp("zz-new") { IsAvailable = false };
+        apps.Add(arriving);
+        var ids = new string[26];
+        for (var index = 0; index < ids.Length; index++)
+        {
+            ids[index] = apps[index].Id;
+        }
+
+        var layout = BuildLayout(apps, SavedKnowing(ids, ids));
+        var before = new Dictionary<string, (int Page, GridCell Cell)>();
+        for (var page = 0; page < layout.PageCount; page++)
+        {
+            var tiles = layout.Page(page);
+            for (var index = 0; index < tiles.Count; index++)
+            {
+                before[tiles[index].App!.Id] = (page, tiles[index].Cell);
+            }
+        }
+
+        arriving.IsAvailable = true;
+        layout.EnsureCurrent();
+
+        Assert.Equal(1, PageIndexOf(layout, "zz-new"));
+        for (var page = 0; page < layout.PageCount; page++)
+        {
+            var tiles = layout.Page(page);
+            for (var index = 0; index < tiles.Count; index++)
+            {
+                var tile = tiles[index];
+                if (tile.App!.Id == "zz-new")
+                {
+                    Assert.Equal(new GridCell(2, 0), tile.Cell);
+                    continue;
+                }
+
+                Assert.Equal(before[tile.App.Id], (page, tile.Cell));
+            }
+        }
     }
 
     [Fact]
@@ -111,7 +209,7 @@ public sealed class HomeLayoutServiceInstallTests
         layout.EnsureCurrent();
 
         Assert.True(layout.IsInstalled("c"), "An app nobody has seen before should install itself when it launches");
-        Assert.True(PageIndexOf(layout, "c") >= 0);
+        Assert.Equal(0, PageIndexOf(layout, "c"));
     }
 
     [Fact]
@@ -357,6 +455,25 @@ public sealed class HomeLayoutServiceInstallTests
                 Installed = new List<string>(appIds),
             },
         };
+    }
+
+    private static FakeHomeConfiguration SavedKnowing(string[] known, params string[] appIds)
+    {
+        var configuration = SavedWith(appIds);
+        configuration.Home!.Known = new List<string>(known);
+        configuration.Home.KnownBaseline = true;
+        return configuration;
+    }
+
+    private static List<IPhoneApp> ManyApps(int count)
+    {
+        var apps = new List<IPhoneApp>(count);
+        for (var index = 0; index < count; index++)
+        {
+            apps.Add(new FakeApp("app" + index.ToString("D2")));
+        }
+
+        return apps;
     }
 
     private static int PageIndexOf(HomeLayoutService layout, string appId)

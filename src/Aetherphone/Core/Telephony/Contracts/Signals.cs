@@ -33,6 +33,7 @@ internal static class SignalType
     public const string SocialPing = "social.ping";
     public const string MusterPing = "muster.ping";
     public const string AnnouncePing = "announce.ping";
+    public const string CampaignPing = "campaign.ping";
     public const string PollPing = "poll.ping";
     public const string FeedbackPing = "feedback.ping";
     public const string ServerRestarting = "server.restarting";
