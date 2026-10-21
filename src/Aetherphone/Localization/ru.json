@@ -5597,7 +5597,7 @@
   "polls.emptyOpenTitle": "Нет активных опросов",
   "polls.emptyOpenHint": "Новые опросы сообщества появляются здесь, а значок приложения подскажет, когда какой-то ждёт вашего голоса.",
   "polls.refreshFailed": "Не удалось обновить. Потяните вниз, чтобы повторить.",
-  "prism.shareLabel": "Отправить в Prism",
+  "prism.shareLabel": "Опубликовать в Prism",
   "prism.signInTitle": "Войдите, чтобы участвовать",
   "prism.signInRequired": "Войдите в Aethernet в настройках, чтобы отправлять и оценивать гламуры",
   "prism.openSettings": "Открыть настройки",

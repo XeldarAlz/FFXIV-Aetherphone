@@ -28,6 +28,7 @@ internal sealed class GlamStore : IDisposable
     public const int MaxPhotos = 4;
 
     private const int MoreLimit = 4;
+    private const int NotFound = 404;
 
     private const int PhotoBaseSize = 1080;
     private const PostAspect GlamAspect = PostAspect.Portrait;
@@ -56,6 +57,9 @@ internal sealed class GlamStore : IDisposable
     private volatile string listKey = string.Empty;
     private volatile GlamDto? detail;
     private volatile GlamDto? posted;
+    private volatile bool detailPending;
+    private volatile bool detailMissing;
+    private volatile bool fashionFailed;
     private volatile GlamMore? more;
     private volatile string moreFor = string.Empty;
     private volatile int listOpened;
@@ -93,6 +97,12 @@ internal sealed class GlamStore : IDisposable
     public GlamDto? Detail => detail;
 
     public GlamDto? Posted => posted;
+
+    public bool DetailPending => detailPending;
+
+    public bool DetailMissing => detailMissing;
+
+    public bool FashionFailed => fashionFailed;
 
     public GlamDto[] MoreFrom(string glamId) =>
         more is { } shown && shown.GlamId == glamId ? shown.Items : Array.Empty<GlamDto>();
@@ -258,7 +268,7 @@ internal sealed class GlamStore : IDisposable
 
     public void OpenItem(uint itemId)
     {
-        item = new GlamItemDto(itemId);
+        item = null;
         OpenList("item:" + itemId, (cursor, token) => client.ItemGlamsAsync(itemId, cursor, token));
         work.Run("item", async token =>
         {
@@ -338,6 +348,8 @@ internal sealed class GlamStore : IDisposable
     {
         detail = glam;
         var glamId = glam.Id;
+        detailPending = glamId.Length > 0 && glam.Photos is not { Length: > 0 };
+        detailMissing = false;
         if (glamId.Length == 0)
         {
             return;
@@ -346,10 +358,21 @@ internal sealed class GlamStore : IDisposable
         work.Run("glam", async token =>
         {
             var fetched = await client.GlamAsync(glamId, token).ConfigureAwait(false);
-            if (fetched is not null && detail?.Id == glamId)
+            if (detail?.Id != glamId)
+            {
+                return;
+            }
+
+            if (fetched is not null)
             {
                 Replace(fetched);
             }
+            else if (detailPending)
+            {
+                detailMissing = true;
+            }
+
+            detailPending = false;
         });
     }
 
@@ -509,12 +532,19 @@ internal sealed class GlamStore : IDisposable
         }
 
         fashionLoading = true;
+        fashionFailed = false;
         work.Run("fashion report", async token =>
         {
-            var fetched = await client.FashionReportAsync(lang, token).ConfigureAwait(false);
+            var reported = AepFailure.None;
+            var fetched = await client.FashionReportAsync(lang, token, failure => reported = failure)
+                .ConfigureAwait(false);
             if (fetched is not null)
             {
                 fashion = fetched;
+            }
+            else
+            {
+                fashionFailed = reported.StatusCode != NotFound;
             }
         }, () => fashionLoading = false);
     }

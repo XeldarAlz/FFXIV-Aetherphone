@@ -156,6 +156,7 @@ internal sealed partial class PrismApp : IResumableApp
     {
         sinceRefresh = 0f;
         statsFor = null;
+        fashionFor = null;
         store.Refresh();
         if (screen == PrismScreen.Discover && (glams.Lane(discoverScope).NeverLoaded || glams.Lane(discoverScope).Failed))
         {
@@ -464,13 +465,8 @@ internal sealed partial class PrismApp : IResumableApp
         }
 
         pendingSharedPhoto = null;
-        if (store.Week?.Phase != PrismPhases.Entering)
-        {
-            return;
-        }
-
-        StartPick();
-        pickSession.TakeImported(path);
+        StartCompose();
+        composeSession.TakeImported(path);
     }
 
     private void OpenReport(string lookId)

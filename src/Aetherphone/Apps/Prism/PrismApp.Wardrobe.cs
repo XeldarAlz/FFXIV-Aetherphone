@@ -51,8 +51,17 @@ internal sealed partial class PrismApp
 
             if (PrismArt.Button(drawList, new Vector2(x, top), import, scale, out _))
             {
-                ShellToast.Show(Loc.T(L.Prism.DesignsAdded, wardrobe.ImportDesigns(glamour)));
+                if (wardrobe.StartImport(glamour) == 0)
+                {
+                    ShellToast.Show(Loc.T(L.Prism.DesignsAdded, 0));
+                }
             }
+        }
+
+        var imported = wardrobe.PumpImport(glamour);
+        if (imported >= 0)
+        {
+            ShellToast.Show(Loc.T(L.Prism.DesignsAdded, imported));
         }
 
         top += PrismArt.ButtonUnits * scale + Metrics.Space.Lg * scale;
@@ -105,6 +114,13 @@ internal sealed partial class PrismApp
     private float DrawOutfitGrid(ImDrawListPtr drawList, float left, float top, float width, float scale)
     {
         var outfits = wardrobe.Outfits;
+        if (wardrobe.Loading || wardrobe.Importing)
+        {
+            PrismType.Draw(drawList, new Vector2(left, top), Loc.T(L.Common.Loading), PrismArt.Muted, PrismFace.Label,
+                PrismArt.LabelPixels());
+            return top + PrismType.LineHeight(PrismFace.Label, PrismArt.LabelPixels());
+        }
+
         if (outfits.Length == 0)
         {
             var hint = PrismType.Sentences(Loc.T(L.Prism.WardrobeEmptyHint), TextStyles.Subheadline, width);

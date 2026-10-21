@@ -28,6 +28,9 @@ internal sealed partial class PrismApp
     private FashionReportDto? fashionFor;
     private GlamGearDto[][] fashionSets = Array.Empty<GlamGearDto[]>();
     private string[] fashionKeys = Array.Empty<string>();
+    private GlamGearDto[][] fashionHintGear = Array.Empty<GlamGearDto[]>();
+    private GlamGearDto?[][] fashionPieceGear = Array.Empty<GlamGearDto?[]>();
+    private bool roseSearched;
     private volatile NpcSpot? roseSpot;
     private volatile bool roseLooking;
     private CachedText fashionWeekText;
@@ -44,11 +47,12 @@ internal sealed partial class PrismApp
 
     private void FindMaskedRose()
     {
-        if (roseSpot is not null || roseLooking)
+        if (roseSearched || roseLooking)
         {
             return;
         }
 
+        roseSearched = true;
         roseLooking = true;
         _ = Task.Run(() =>
         {
@@ -84,11 +88,14 @@ internal sealed partial class PrismApp
         statsFor = null;
         ownedIds.Clear();
         var hints = report.Hints ?? Array.Empty<FashionHintDto>();
+        fashionHintGear = new GlamGearDto[hints.Length][];
         for (var index = 0; index < hints.Length; index++)
         {
             var items = hints[index].Items ?? Array.Empty<uint>();
+            fashionHintGear[index] = new GlamGearDto[items.Length];
             for (var itemIndex = 0; itemIndex < items.Length; itemIndex++)
             {
+                fashionHintGear[index][itemIndex] = new GlamGearDto(hints[index].Slot, items[itemIndex]);
                 if (OwnedItems.Owns(items[itemIndex]))
                 {
                     ownedIds.Add(items[itemIndex]);
@@ -99,11 +106,13 @@ internal sealed partial class PrismApp
         var sets = report.Sets ?? Array.Empty<FashionSetDto>();
         fashionSets = new GlamGearDto[sets.Length][];
         fashionKeys = new string[sets.Length];
+        fashionPieceGear = new GlamGearDto?[sets.Length][];
         setTexts = new CachedText[sets.Length];
         for (var index = 0; index < sets.Length; index++)
         {
             var pieces = sets[index].Pieces ?? Array.Empty<FashionPieceDto>();
             var gear = new List<GlamGearDto>(pieces.Length);
+            fashionPieceGear[index] = new GlamGearDto?[pieces.Length];
             for (var pieceIndex = 0; pieceIndex < pieces.Length; pieceIndex++)
             {
                 var piece = pieces[pieceIndex];
@@ -112,7 +121,9 @@ internal sealed partial class PrismApp
                     continue;
                 }
 
-                gear.Add(new GlamGearDto(piece.Slot, piece.ItemId, piece.StainId));
+                var worn = new GlamGearDto(piece.Slot, piece.ItemId, piece.StainId);
+                fashionPieceGear[index][pieceIndex] = worn;
+                gear.Add(worn);
                 if (OwnedItems.Owns(piece.ItemId))
                 {
                     ownedIds.Add(piece.ItemId);
@@ -149,17 +160,30 @@ internal sealed partial class PrismApp
         cursor += labelLine + Metrics.Space.Sm * scale;
         if (report is null)
         {
+            var failed = glams.FashionFailed && !glams.FashionLoading;
             cursor += Typography.DrawWrappedLeft(new Vector2(left, cursor),
-                Loc.T(glams.FashionLoading ? L.Common.Loading : L.Prism.FashionMissing), PrismArt.Muted,
-                TextStyles.Subheadline, width);
-            ImGui.Dummy(new Vector2(width, cursor - origin.Y));
+                Loc.T(glams.FashionLoading ? L.Common.Loading : failed ? L.Common.LoadFailedHint : L.Prism.FashionMissing),
+                PrismArt.Muted, TextStyles.Subheadline, width) + Metrics.Space.Md * scale;
+            if (failed && PrismArt.Link(list, new Vector2(left, cursor), Loc.T(L.Common.Retry), PrismArt.Fore, scale))
+            {
+                glams.RefreshFashion(Loc.Current.Code);
+            }
+
+            ImGui.Dummy(new Vector2(width, cursor - origin.Y + Metrics.Size.TapTarget * scale));
             return;
         }
 
         cursor = DrawSectionTitle(list, left, cursor, width, report.Theme, scale);
         cursor = DrawRoseLink(list, left, cursor, scale);
         cursor += Typography.DrawWrappedLeft(new Vector2(left, cursor), Loc.T(L.Prism.FillEverySlot), PrismArt.Muted,
-            TextStyles.Footnote, width) + Metrics.Space.Xl * scale;
+            TextStyles.Footnote, width) + Metrics.Space.Sm * scale;
+        if (!OwnedItems.StorageLoaded)
+        {
+            cursor += Typography.DrawWrappedLeft(new Vector2(left, cursor), Loc.T(L.Prism.OpenStorage), PrismArt.Muted,
+                TextStyles.Footnote, width);
+        }
+
+        cursor += Metrics.Space.Xl * scale;
         var section = 0;
         cursor = DrawFashionSets(list, left, cursor, width, report, ref section, scale);
         cursor = DrawFashionHints(list, left, cursor, width, report, ref section, scale);
@@ -178,7 +202,8 @@ internal sealed partial class PrismApp
             }
             else if (report.SourceUrl.Length == 0)
             {
-                PrismType.Draw(list, new Vector2(left, cursor), credit, PrismArt.Muted, PrismFace.Label, labelPixels);
+                PrismType.Draw(list, new Vector2(left, cursor), PrismType.FitLabel(credit, labelPixels, width),
+                    PrismArt.Muted, PrismFace.Label, labelPixels);
             }
 
             cursor += labelLine;
@@ -227,13 +252,12 @@ internal sealed partial class PrismApp
                 : setTexts[index].Store(key, Loc.T(L.Prism.EasySet, set.Points));
             top = DrawSectionLabel(drawList, left, top, width, section++, title, scale);
             var pieces = set.Pieces ?? Array.Empty<FashionPieceDto>();
-            for (var pieceIndex = 0; pieceIndex < pieces.Length; pieceIndex++)
+            var worn = fashionPieceGear[index];
+            for (var pieceIndex = 0; pieceIndex < pieces.Length && pieceIndex < worn.Length; pieceIndex++)
             {
-                var piece = pieces[pieceIndex];
-                top = piece.ItemId == 0
-                    ? DrawAnyDyeableRow(drawList, left, top, width, piece, scale)
-                    : DrawGearRow(drawList, left, top, width, new GlamGearDto(piece.Slot, piece.ItemId, piece.StainId),
-                        true, scale);
+                top = worn[pieceIndex] is { } piece
+                    ? DrawGearRow(drawList, left, top, width, piece, true, scale)
+                    : DrawAnyDyeableRow(drawList, left, top, width, pieces[pieceIndex], scale);
             }
 
             var gear = fashionSets[index];
@@ -252,7 +276,7 @@ internal sealed partial class PrismApp
                     else
                     {
                         glamour.TryOn(gear);
-                        StartWearing(wearKey, title);
+                        StartWearing(wearKey, report.Theme);
                     }
                 }
 
@@ -301,10 +325,10 @@ internal sealed partial class PrismApp
             top = DrawSectionLabel(drawList, left, top, width, section++,
                 PrismType.FitLabel(hint.Hint, labelPixels, width - SectionIndexUnits * scale - slotWidth -
                     Metrics.Space.Md * scale), scale);
-            var items = hint.Items ?? Array.Empty<uint>();
-            for (var itemIndex = 0; itemIndex < items.Length; itemIndex++)
+            var gear = index < fashionHintGear.Length ? fashionHintGear[index] : Array.Empty<GlamGearDto>();
+            for (var itemIndex = 0; itemIndex < gear.Length; itemIndex++)
             {
-                top = DrawGearRow(drawList, left, top, width, new GlamGearDto(hint.Slot, items[itemIndex]), true, scale);
+                top = DrawGearRow(drawList, left, top, width, gear[itemIndex], true, scale);
             }
 
             top += Metrics.Space.Xl * scale;

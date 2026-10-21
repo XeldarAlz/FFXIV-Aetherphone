@@ -5597,7 +5597,7 @@
   "polls.emptyOpenTitle": "Açık anket yok",
   "polls.emptyOpenHint": "Yeni topluluk anketleri buraya gelir; birinin oyunu beklediğini uygulama rozeti haber verir.",
   "polls.refreshFailed": "Yenilenemedi. Tekrar denemek için aşağı çek.",
-  "prism.shareLabel": "Prism'e katıl",
+  "prism.shareLabel": "Prism'de paylaş",
   "prism.signInTitle": "Katılmak için giriş yap",
   "prism.signInRequired": "Glam göndermek ve oylamak için Ayarlar'dan Aethernet'e giriş yap",
   "prism.openSettings": "Ayarlar'ı aç",

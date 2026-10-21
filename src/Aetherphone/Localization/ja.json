@@ -5597,7 +5597,7 @@
   "polls.emptyOpenTitle": "受付中の投票はありません",
   "polls.emptyOpenHint": "コミュニティの新しい投票はここに届きます。投票待ちのものがあるとアプリのバッジでお知らせします。",
   "polls.refreshFailed": "更新できませんでした。下に引っぱって再試行してください。",
-  "prism.shareLabel": "Prismにエントリー",
+  "prism.shareLabel": "Prismに投稿",
   "prism.signInTitle": "サインインして参加",
   "prism.signInRequired": "ミラプリのエントリーや審査をするには、設定でAethernetにサインインしてください",
   "prism.openSettings": "設定を開く",

@@ -5597,7 +5597,7 @@
   "polls.emptyOpenTitle": "Aucun sondage en cours",
   "polls.emptyOpenHint": "Les nouveaux sondages de la communauté arrivent ici, et la pastille de l'app vous prévient quand l'un attend votre vote.",
   "polls.refreshFailed": "Actualisation impossible. Tirez vers le bas pour réessayer.",
-  "prism.shareLabel": "Participer dans Prism",
+  "prism.shareLabel": "Publier sur Prism",
   "prism.signInTitle": "Connectez-vous pour participer",
   "prism.signInRequired": "Connectez-vous à Aethernet dans les Réglages pour présenter et juger des mirages",
   "prism.openSettings": "Ouvrir les Réglages",

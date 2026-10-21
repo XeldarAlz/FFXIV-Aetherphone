@@ -23,11 +23,15 @@ internal sealed record WardrobeCover(string Path, float Zoom, float CenterX, flo
 internal sealed class WardrobeStore
 {
     private const string FolderName = "PrismWardrobe";
+    private const int ImportBatch = 12;
 
     private readonly DirectoryInfo root;
     private readonly object sync = new();
     private volatile WardrobeOutfit[] outfits = Array.Empty<WardrobeOutfit>();
+    private readonly Queue<(Guid Id, string Name)> importQueue = new();
+    private readonly List<WardrobeOutfit> imported = new();
     private ulong loadedFor;
+    private volatile bool loading;
 
     public WardrobeStore(string configDirectory)
     {
@@ -35,6 +39,10 @@ internal sealed class WardrobeStore
     }
 
     public WardrobeOutfit[] Outfits => outfits;
+
+    public bool Loading => loading;
+
+    public bool Importing => importQueue.Count > 0;
 
     public void Ensure()
     {
@@ -45,21 +53,31 @@ internal sealed class WardrobeStore
         }
 
         loadedFor = contentId;
+        outfits = Array.Empty<WardrobeOutfit>();
+        importQueue.Clear();
+        loading = true;
         var path = PathFor(contentId);
-        WardrobeOutfit[]? read = null;
-        try
+        _ = Task.Run(() =>
         {
-            if (File.Exists(path))
+            WardrobeOutfit[]? read = null;
+            try
             {
-                read = JsonConvert.DeserializeObject<WardrobeOutfit[]>(File.ReadAllText(path));
+                if (File.Exists(path))
+                {
+                    read = JsonConvert.DeserializeObject<WardrobeOutfit[]>(File.ReadAllText(path));
+                }
             }
-        }
-        catch (Exception exception)
-        {
-            AepLog.Warning(exception, $"Wardrobe load failed for {contentId:X16}");
-        }
+            catch (Exception exception)
+            {
+                AepLog.Warning(exception, $"Wardrobe load failed for {contentId:X16}");
+            }
 
-        outfits = read ?? Array.Empty<WardrobeOutfit>();
+            if (loadedFor == contentId)
+            {
+                outfits = read ?? Array.Empty<WardrobeOutfit>();
+                loading = false;
+            }
+        });
     }
 
     public WardrobeOutfit? Find(string id)
@@ -92,6 +110,11 @@ internal sealed class WardrobeStore
 
     public void Add(WardrobeOutfit outfit)
     {
+        if (loading)
+        {
+            return;
+        }
+
         var current = outfits;
         var grown = new WardrobeOutfit[current.Length + 1];
         grown[0] = outfit;
@@ -101,6 +124,11 @@ internal sealed class WardrobeStore
 
     public void Update(WardrobeOutfit outfit)
     {
+        if (loading)
+        {
+            return;
+        }
+
         var current = outfits;
         var updated = (WardrobeOutfit[])current.Clone();
         for (var index = 0; index < updated.Length; index++)
@@ -116,6 +144,11 @@ internal sealed class WardrobeStore
 
     public void Remove(string id)
     {
+        if (loading)
+        {
+            return;
+        }
+
         var current = outfits;
         var kept = new List<WardrobeOutfit>(current.Length);
         for (var index = 0; index < current.Length; index++)
@@ -129,29 +162,50 @@ internal sealed class WardrobeStore
         Commit(kept.ToArray());
     }
 
-    public int ImportDesigns(GlamourService glamour)
+    public int StartImport(GlamourService glamour)
     {
-        var designs = glamour.Designs();
+        if (loading || Importing)
+        {
+            return -1;
+        }
+
         var current = outfits;
-        var added = 0;
-        var grown = new List<WardrobeOutfit>(current);
-        foreach (var (id, (name, _, _, _)) in designs)
+        imported.Clear();
+        foreach (var (id, (name, _, _, _)) in glamour.Designs())
         {
-            if (HasDesign(current, id))
+            if (!HasDesign(current, id))
             {
-                continue;
+                importQueue.Enqueue((id, name));
             }
-
-            grown.Add(new WardrobeOutfit(Guid.NewGuid().ToString("N"), name, string.Empty, id,
-                GlamourerDesign.Read(glamour.Design(id), out _, out _), false, DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
-            added++;
         }
 
-        if (added > 0)
+        return importQueue.Count;
+    }
+
+    public int PumpImport(GlamourService glamour)
+    {
+        if (importQueue.Count == 0)
         {
-            Commit(grown.ToArray());
+            return -1;
         }
 
+        for (var step = 0; step < ImportBatch && importQueue.TryDequeue(out var design); step++)
+        {
+            imported.Add(new WardrobeOutfit(Guid.NewGuid().ToString("N"), design.Name, string.Empty, design.Id,
+                GlamourerDesign.Read(glamour.Design(design.Id), out _, out _), false,
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
+        }
+
+        if (importQueue.Count > 0)
+        {
+            return -1;
+        }
+
+        var grown = new List<WardrobeOutfit>(outfits);
+        grown.AddRange(imported);
+        Commit(grown.ToArray());
+        var added = imported.Count;
+        imported.Clear();
         return added;
     }
 

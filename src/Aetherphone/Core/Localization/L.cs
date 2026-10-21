@@ -10746,7 +10746,7 @@ internal static class L
 
     internal static class Prism
     {
-        public static readonly LocString ShareLabel = new("prism.shareLabel", "Enter in Prism");
+        public static readonly LocString ShareLabel = new("prism.shareLabel", "Post to Prism");
         public static readonly LocString SignInTitle = new("prism.signInTitle", "Sign in to take part");
         public static readonly LocString SignInRequired = new("prism.signInRequired",
             "Sign in to Aethernet in Settings to enter and judge glams");

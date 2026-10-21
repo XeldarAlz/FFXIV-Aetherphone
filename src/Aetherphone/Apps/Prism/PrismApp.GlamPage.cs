@@ -102,9 +102,17 @@ internal sealed partial class PrismApp
             return;
         }
 
-        RefreshStats(glam);
         var top = DrawHeader(drawList, content, string.Empty, string.Empty, true, scale);
         var gutter = PrismArt.Gutter(scale);
+        if (glams.DetailPending || glams.DetailMissing)
+        {
+            Typography.DrawWrappedLeft(new Vector2(content.Min.X + gutter, top),
+                Loc.T(glams.DetailMissing ? L.Common.LoadFailedHint : L.Common.Loading), PrismArt.Muted,
+                TextStyles.Subheadline, content.Width - gutter * 2f);
+            return;
+        }
+
+        RefreshStats(glam);
         DrawGlamMenu(drawList, content, glam, scale);
         var body = new Rect(new Vector2(content.Min.X, top), content.Max);
         using var surface = AppSurface.BeginEdgeToEdge(body);
@@ -447,6 +455,11 @@ internal sealed partial class PrismApp
         float scale)
     {
         wardrobe.Ensure();
+        if (wardrobe.Loading)
+        {
+            return;
+        }
+
         var saved = wardrobe.FindByGlam(key);
         var label = Loc.T(saved is null ? L.Prism.AddToWardrobe : L.Prism.InWardrobe);
         if (!PrismArt.Link(drawList, new Vector2(left, top), label, PrismArt.Muted, scale, row))

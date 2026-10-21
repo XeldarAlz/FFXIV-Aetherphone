@@ -165,11 +165,14 @@ internal sealed partial class PrismApp
 
     private void Push(PrismScreen next)
     {
-        if (historyDepth < HistoryDepth)
+        if (historyDepth == HistoryDepth)
         {
-            history[historyDepth++] = new PrismStop(screen, glams.Detail, glams.Profile?.User, showSaved, listKind,
-                listItemId, listMod, listTag, listTitle, outfitId);
+            Array.Copy(history, 1, history, 0, HistoryDepth - 1);
+            historyDepth--;
         }
+
+        history[historyDepth++] = new PrismStop(screen, glams.Detail, glams.Profile?.User, showSaved, listKind,
+            listItemId, listMod, listTag, listTitle, outfitId);
 
         Go(next);
     }

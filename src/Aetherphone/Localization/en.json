@@ -5597,7 +5597,7 @@
   "polls.emptyOpenTitle": "No open polls",
   "polls.emptyOpenHint": "New community polls land here, and the app badge tells you when one needs your vote.",
   "polls.refreshFailed": "Couldn't refresh. Pull down to try again.",
-  "prism.shareLabel": "Enter in Prism",
+  "prism.shareLabel": "Post to Prism",
   "prism.signInTitle": "Sign in to take part",
   "prism.signInRequired": "Sign in to Aethernet in Settings to enter and judge glams",
   "prism.openSettings": "Open Settings",

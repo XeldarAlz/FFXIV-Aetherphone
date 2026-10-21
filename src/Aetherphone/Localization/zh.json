@@ -5597,7 +5597,7 @@
   "polls.emptyOpenTitle": "暂无进行中的投票",
   "polls.emptyOpenHint": "社区的新投票会出现在这里，有投票等你参与时，应用角标会提醒你。",
   "polls.refreshFailed": "刷新失败。下拉即可重试。",
-  "prism.shareLabel": "参加 Prism",
+  "prism.shareLabel": "发布到 Prism",
   "prism.signInTitle": "登录后参与",
   "prism.signInRequired": "请在设置中登录 Aethernet 以投稿和评审幻化",
   "prism.openSettings": "打开设置",
