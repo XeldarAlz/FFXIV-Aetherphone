@@ -256,15 +256,12 @@ internal sealed partial class PrismApp
         }
 
         var stamp = Loc.T(glam.Vanilla ? L.Prism.VanillaStamp : L.Prism.ModdedStamp);
-        PrismType.DrawRight(drawList, new Vector2(left + width, top), stamp, PrismArt.Fore, PrismFace.Label, labelPixels);
+        PrismType.DrawRight(drawList, new Vector2(left + width, top), stamp, PrismArt.Muted, PrismFace.Label, labelPixels);
         top += labelLine;
         if (glam.TryOns > 0)
         {
-            var key = HashCode.Combine(glam.TryOns, Loc.Current.Code);
-            var tried = triedText.IsCurrent(key)
-                ? triedText.Value
-                : triedText.Store(key, Loc.Plural(L.Prism.TriedOnCount, (int)Math.Min(glam.TryOns, int.MaxValue)));
-            PrismType.Draw(drawList, new Vector2(left, top), tried, PrismArt.Muted, PrismFace.Label, labelPixels);
+            PrismType.Draw(drawList, new Vector2(left, top), TriedOnLine(glam.TryOns), PrismArt.Muted, PrismFace.Label,
+                labelPixels);
         }
 
         var body = BodyLine(glam.Race, glam.Gender);
@@ -315,7 +312,7 @@ internal sealed partial class PrismApp
                 break;
             }
 
-            if (PrismArt.Link(drawList, new Vector2(x, top), label, PrismArt.Fore, scale,
+            if (PrismArt.Link(drawList, new Vector2(x, top), label, PrismArt.Muted, scale,
                     PrismType.LineHeight(PrismFace.Label, labelPixels) + Metrics.Space.Sm * scale))
             {
                 OpenTagGlams(tags[index]);
@@ -325,6 +322,14 @@ internal sealed partial class PrismApp
         }
 
         return top + PrismType.LineHeight(PrismFace.Label, labelPixels);
+    }
+
+    private string TriedOnLine(long tryOns)
+    {
+        var key = HashCode.Combine(tryOns, Loc.Current.Code);
+        return triedText.IsCurrent(key)
+            ? triedText.Value
+            : triedText.Store(key, Loc.Plural(L.Prism.TriedOnCount, (int)Math.Min(tryOns, int.MaxValue)));
     }
 
     private static bool HasCharacterMods(GlamDto glam)

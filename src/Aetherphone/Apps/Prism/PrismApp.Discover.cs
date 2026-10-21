@@ -12,7 +12,6 @@ internal sealed partial class PrismApp
 {
     private const int GridColumns = 2;
     private const float TileShadeShare = 0.4f;
-    private const float ThemeTitleUnits = PrismType.HeadingUnits;
 
     private static readonly LocString[] ScopeNames = { L.Prism.ScopeNew, L.Prism.ScopePopular, L.Prism.ScopeFollowing };
     private static readonly GlamScope[] ShownScopes = { GlamScope.New, GlamScope.Popular, GlamScope.Following };
@@ -59,7 +58,7 @@ internal sealed partial class PrismApp
             return;
         }
 
-        var cursor = DrawThemeCard(list, origin.X + gutter, origin.Y, width, scale);
+        var cursor = DrawThemeRow(list, origin.X + gutter, origin.Y, width, scale);
         cursor = DrawDayHero(list, origin.X + gutter, cursor, width, scale);
         cursor = DrawLaneGrid(list, body, origin.X + gutter, cursor, width, lane,
             discoverScope == GlamScope.Following ? L.Prism.FollowingEmptyHint : L.Prism.DiscoverEmptyHint, scale);
@@ -137,7 +136,7 @@ internal sealed partial class PrismApp
         return top + labelLine + Metrics.Space.Lg * scale;
     }
 
-    private float DrawThemeCard(ImDrawListPtr drawList, float left, float top, float width, float scale)
+    private float DrawThemeRow(ImDrawListPtr drawList, float left, float top, float width, float scale)
     {
         if (store.Week is not { Id.Length: > 0 } week || !HasPrimary(week))
         {
@@ -145,31 +144,42 @@ internal sealed partial class PrismApp
         }
 
         var labelPixels = PrismArt.LabelPixels();
-        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var pad = Metrics.Space.Md * scale;
-        var pixels = PrismType.Fit(week.Title, PrismFace.Headline, width - pad * 2f, ThemeTitleUnits * scale,
-            ThemeTitleUnits * scale * 0.75f, 2, out var lines);
-        var height = pad * 2f + labelLine + lines.Length * PrismType.LineHeight(PrismFace.Headline, pixels) +
-                     Metrics.Space.Sm * scale + labelLine;
-        var card = new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
-        drawList.AddRect(card.Min, card.Max, ImGui.GetColorU32(PrismArt.Faint), 0f, ImDrawFlags.None, 1f);
+        var gap = Metrics.Space.Sm * scale;
+        var row = new Rect(new Vector2(left, top),
+            new Vector2(left + width, top + PrismType.LineHeight(PrismFace.Label, labelPixels) + pad * 2f));
         var y = top + pad;
-        PrismType.Draw(drawList, new Vector2(left + pad, y), Loc.T(L.Prism.ThemeLabel), PrismArt.Muted, PrismFace.Label,
-            labelPixels);
-        y += labelLine;
-        y += PrismType.DrawLines(drawList, new Vector2(left + pad, y), lines, PrismArt.Fore, PrismFace.Headline, pixels) +
-             Metrics.Space.Sm * scale;
+        PrismArt.Hairline(drawList, row.Min.X, row.Max.X, row.Min.Y, PrismArt.Faint, scale);
+        PrismArt.Hairline(drawList, row.Min.X, row.Max.X, row.Max.Y, PrismArt.Faint, scale);
         var action = Loc.T(week.Phase != PrismPhases.Entering ? L.Prism.JudgeHeat
             : week.MyEntry is null ? L.Prism.Submit : L.Prism.YourLook);
-        if (PrismArt.Link(drawList, new Vector2(left + pad, y), action, PrismArt.Fore, scale))
+        var right = row.Max.X - PrismType.DrawRight(drawList, new Vector2(row.Max.X, y), Arrow, PrismArt.Fore,
+            PrismFace.Label, labelPixels) - gap;
+        right -= PrismType.DrawRight(drawList, new Vector2(right, y), action, PrismArt.Fore, PrismFace.Label,
+            labelPixels) + gap * 2f;
+        var label = Loc.T(L.Prism.ThemeLabel);
+        var labelWidth = PrismType.Measure(label, PrismFace.Label, labelPixels).X + gap;
+        var titleLeft = left;
+        if (labelWidth + PrismType.Measure(week.Title, PrismFace.Label, labelPixels).X <= right - left)
+        {
+            PrismType.Draw(drawList, new Vector2(left, y), label, PrismArt.Muted, PrismFace.Label, labelPixels);
+            titleLeft += labelWidth;
+        }
+
+        PrismType.Draw(drawList, new Vector2(titleLeft, y), PrismType.FitLabel(week.Title, labelPixels, right - titleLeft),
+            PrismArt.Fore, PrismFace.Label, labelPixels);
+        var hovered = UiInteract.Hover(row.Min, row.Max);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        if (UiInteract.Click(row.Min, row.Max, hovered))
         {
             OpenTab(PrismTab.Week);
         }
 
-        PrismType.Draw(drawList, new Vector2(left + pad + PrismType.Measure(action, PrismFace.Label, labelPixels).X +
-            Metrics.Space.Sm * scale, y), Arrow, PrismArt.Fore, PrismFace.Label, labelPixels);
-
-        return card.Max.Y + Metrics.Space.Lg * scale;
+        return row.Max.Y + Metrics.Space.Lg * scale;
     }
 
     private float DrawLaneGrid(ImDrawListPtr drawList, Rect body, float left, float top, float width,
@@ -232,12 +242,8 @@ internal sealed partial class PrismApp
             PrismType.Draw(drawList, new Vector2(x + pad, max.Y - pad - labelLine * 2f),
                 PrismType.FitLabel(glam.Title, labelPixels, column - pad * 2f), PrismArt.PhotoFore, PrismFace.Label,
                 labelPixels);
-            var stamp = Loc.T(glam.Vanilla ? L.Prism.VanillaStamp : L.Prism.ModdedStamp);
-            var stampWidth = PrismType.Measure(stamp, PrismFace.Label, labelPixels).X;
-            PrismType.DrawRight(drawList, new Vector2(max.X - pad, max.Y - pad - labelLine), stamp, PrismArt.PhotoFore,
-                PrismFace.Label, labelPixels);
             PrismType.Draw(drawList, new Vector2(x + pad, max.Y - pad - labelLine),
-                PrismType.FitLabel(AuthorLine(glam.Author), labelPixels, column - pad * 3f - stampWidth),
+                PrismType.FitLabel(AuthorLine(glam.Author), labelPixels, column - pad * 2f),
                 Palette.WithAlpha(PrismArt.PhotoFore, MutedOnPhoto), PrismFace.Label, labelPixels);
             drawList.PopClipRect();
             var hovered = UiInteract.Hover(min, max);
@@ -288,14 +294,18 @@ internal sealed partial class PrismApp
         PrismType.Draw(drawList, new Vector2(textLeft, top), Loc.T(L.Prism.GlamOfTheDay), PrismArt.Muted, PrismFace.Label,
             labelPixels);
         var y = top + labelLine + Metrics.Space.Xs * scale;
-        var pixels = PrismType.Fit(glam.Title, PrismFace.Headline, textWidth, ThemeTitleUnits * scale,
-            ThemeTitleUnits * scale * 0.75f, 3, out var lines);
+        var pixels = PrismType.Fit(glam.Title, PrismFace.Headline, textWidth, PrismType.TitleUnits * scale,
+            PrismType.HeadingUnits * scale, 3, out var lines);
         y += PrismType.DrawLines(drawList, new Vector2(textLeft, y), lines, PrismArt.Fore, PrismFace.Headline, pixels) +
              Metrics.Space.Xs * scale;
         PrismType.Draw(drawList, new Vector2(textLeft, y), PrismType.FitLabel(AuthorLine(glam.Author), labelPixels,
             textWidth), PrismArt.Muted, PrismFace.Label, labelPixels);
-        PrismType.Draw(drawList, new Vector2(textLeft, photo.Max.Y - labelLine),
-            Loc.T(glam.Vanilla ? L.Prism.VanillaStamp : L.Prism.ModdedStamp), PrismArt.Fore, PrismFace.Label, labelPixels);
+        if (glam.TryOns > 0)
+        {
+            PrismType.Draw(drawList, new Vector2(textLeft, photo.Max.Y - labelLine),
+                PrismType.FitLabel(TriedOnLine(glam.TryOns), labelPixels, textWidth), PrismArt.Muted, PrismFace.Label,
+                labelPixels);
+        }
         var hovered = UiInteract.Hover(photo.Min, new Vector2(left + width, photo.Max.Y));
         if (hovered)
         {
