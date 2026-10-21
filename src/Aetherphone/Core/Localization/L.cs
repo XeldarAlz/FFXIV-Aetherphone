@@ -11036,6 +11036,7 @@ internal static class L
         public static readonly LocString ActivityThisWeek = new("prism.activityThisWeek", "This week");
         public static readonly LocString ActivityThisMonth = new("prism.activityThisMonth", "This month");
         public static readonly LocString ActivityEarlier = new("prism.activityEarlier", "Earlier");
+        public static readonly LocString Published = new("prism.published", "Published");
     }
 
     internal static class Announcements

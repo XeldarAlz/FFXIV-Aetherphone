@@ -1,8 +1,10 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Report;
 using Aetherphone.Core.Sharing;
@@ -23,7 +25,12 @@ internal sealed partial class PrismApp
     private const string Arrow = "→";
     private const float BylineAvatarShare = 0.6f;
     private const int AvatarSegments = 32;
+    private const float LikeBloomSeconds = 0.9f;
+    private const float LikeHoldSeconds = 0.45f;
+    private const float LikeStamp = 0.35f;
 
+    private readonly DoubleTapLike photoLike = new();
+    private readonly DeferredTap photoTap = new();
     private readonly Dictionary<string, string> handleLines = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> tagLabels = new(StringComparer.Ordinal);
     private readonly Dictionary<uint, (string Name, uint Icon)> itemRows = new();
@@ -40,6 +47,9 @@ internal sealed partial class PrismApp
     private int missingMods;
     private int totalMods;
     private int photoIndex;
+    private string likeBloomId = string.Empty;
+    private double likeBloomAt;
+    private bool likeBloomOnPhoto;
 
     private void OpenGlam(GlamDto glam)
     {
@@ -52,6 +62,7 @@ internal sealed partial class PrismApp
         glams.Open(glam);
         photoIndex = 0;
         statsFor = null;
+        photoTap.Cancel();
     }
 
     private IDalamudTextureWrap? ViewerPage(int index) =>
@@ -208,10 +219,33 @@ internal sealed partial class PrismApp
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             }
 
-            if (UiInteract.Click(frame.Min, frame.Max, hovered))
+            var likeable = glam.Id.Length > 0;
+            if (likeable && photoLike.Tapped(frame, glam.Id))
+            {
+                photoTap.Cancel();
+                if (!glam.Liked)
+                {
+                    glams.ToggleLike(glam);
+                }
+
+                UiFeedback.Play(UiSound.ToggleOn);
+                likeBloomId = glam.Id;
+                likeBloomAt = ImGui.GetTime();
+                likeBloomOnPhoto = true;
+            }
+            else if ((!likeable || !photoLike.SwallowedTap(glam.Id)) &&
+                     UiInteract.Click(frame.Min, frame.Max, hovered))
+            {
+                photoTap.Arm(glam.Id);
+            }
+
+            if (photoTap.Ready(out var tapped) && tapped == glam.Id)
             {
                 photoViewer.Open(this, photos.Length, photoIndex, viewerPage);
             }
+
+            DrawPublished(drawList, frame, glam, photos[0].Url, scale);
+            DrawPhotoLike(drawList, frame, glam, scale);
         }
 
         var cursor = frame.Max.Y + Metrics.Space.Sm * scale;
@@ -236,6 +270,63 @@ internal sealed partial class PrismApp
         }
 
         return cursor + thumb / GlamStore.PhotoRatio + Metrics.Space.Lg * scale;
+    }
+
+    private void DrawPublished(ImDrawListPtr drawList, Rect frame, GlamDto glam, string coverUrl, float scale)
+    {
+        if (postedId.Length == 0 || glam.Id != postedId)
+        {
+            return;
+        }
+
+        if (loadedAt.TryGetValue(coverUrl, out var seen))
+        {
+            var sweep = PrismMotion.At((float)(ImGui.GetTime() - seen), 0.1f, Motion.Sheet);
+            if (sweep < PrismMotion.Settled)
+            {
+                drawList.PushClipRect(frame.Min, frame.Max, true);
+                PrismArt.Refraction(drawList, frame, sweep);
+                drawList.PopClipRect();
+            }
+        }
+
+        PrismArt.Tag(drawList, new Vector2(frame.Max.X, frame.Min.Y), Loc.T(L.Prism.Published), scale);
+    }
+
+    private void DrawPhotoLike(ImDrawListPtr drawList, Rect frame, GlamDto glam, float scale)
+    {
+        var age = (float)(ImGui.GetTime() - likeBloomAt);
+        if (!likeBloomOnPhoto || glam.Id != likeBloomId || age >= LikeBloomSeconds)
+        {
+            return;
+        }
+
+        drawList.PushClipRect(frame.Min, frame.Max, true);
+        var size = MathF.Min(frame.Width, frame.Height) * 0.22f;
+        var mark = PrismMotion.Mark(drawList);
+        PhoneIcon.Draw(drawList, frame.Center, PhoneIcons.HeartFilled, PrismArt.PhotoFore, size);
+        PrismMotion.Grow(drawList, mark, frame.Center, 0.6f + 0.4f * Spring.Settle(age, Motion.Appear));
+        if (age > LikeHoldSeconds)
+        {
+            PrismMotion.Shift(drawList, mark, Vector2.Zero, 1f - PrismMotion.At(age, LikeHoldSeconds, Motion.Release));
+        }
+
+        DrawLikeRing(drawList, frame.Center, size * 0.6f, age, scale);
+        drawList.PopClipRect();
+    }
+
+    private static void DrawLikeRing(ImDrawListPtr drawList, Vector2 center, float baseRadius, float age, float scale)
+    {
+        var grow = PrismMotion.At(age, 0f, Motion.Sheet);
+        if (grow >= PrismMotion.Settled)
+        {
+            return;
+        }
+
+        var mark = PrismMotion.Mark(drawList);
+        PrismArt.SpectrumRing(drawList, center, baseRadius * (1f + 1.6f * grow), grow * MathF.PI * 0.5f,
+            MathF.Max(1f, 1.5f * scale));
+        PrismMotion.Shift(drawList, mark, Vector2.Zero, 1f - grow);
     }
 
     private float DrawGlamHeading(ImDrawListPtr drawList, float left, float top, float width, GlamDto glam, float scale)
@@ -448,42 +539,80 @@ internal sealed partial class PrismApp
             glams.ToggleSave(glam);
         }
 
-        top = tryOn.Max.Y + Metrics.Space.Md * scale;
         var labelPixels = PrismArt.LabelPixels();
-        var row = PrismType.LineHeight(PrismFace.Label, labelPixels) + Metrics.Space.Sm * scale;
-        if (listed && PrismArt.Link(drawList, new Vector2(left, top), glam.Likes > 0 ? NumberText.Compact(glam.Likes) : Loc.T(L.Prism.Like),
-                glam.Liked ? PrismArt.Fore : PrismArt.Muted, scale, row,
-                glam.Liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart))
+        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
+        var row = MathF.Max(labelLine + Metrics.Space.Sm * scale, Metrics.Size.TapTarget * scale);
+        var band = tryOn.Max.Y + Metrics.Space.Xxs * scale;
+        top = band + (row - labelLine) * 0.5f;
+        var leftWidest = 0f;
+        if (listed)
         {
-            glams.ToggleLike(glam);
+            var liked = glam.Liked;
+            var likeLabel = glam.Likes > 0 ? NumberText.Compact(glam.Likes) : Loc.T(L.Prism.Like);
+            var likeSize = PrismType.Measure(likeLabel, PrismFace.Label, labelPixels);
+            leftWidest = likeSize.X + likeSize.Y + Metrics.Space.Xs * scale;
+            var likeAge = (float)(ImGui.GetTime() - likeBloomAt);
+            var blooming = glam.Id == likeBloomId && !likeBloomOnPhoto && likeAge < LikeBloomSeconds;
+            var likeMark = PrismMotion.Mark(drawList);
+            if (PrismArt.Link(drawList, new Vector2(left, top), likeLabel, PrismArt.Fore, scale, row,
+                    liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart))
+            {
+                glams.ToggleLike(glam);
+                if (!liked)
+                {
+                    likeBloomId = glam.Id;
+                    likeBloomAt = ImGui.GetTime();
+                    likeBloomOnPhoto = false;
+                }
+            }
+
+            if (blooming)
+            {
+                var heart = new Vector2(left + likeSize.Y * 0.5f, top + likeSize.Y * 0.5f);
+                PrismMotion.Grow(drawList, likeMark, heart,
+                    1f + LikeStamp * (1f - PrismMotion.At(likeAge, 0f, Motion.PageSettle)));
+                DrawLikeRing(drawList, heart, likeSize.Y * 0.5f, likeAge, scale);
+            }
         }
 
         var shareable = listed && postedCover.Length > 0 && glam.Id == postedId;
         var leftRows = (listed ? 2 : 1) + (shareable ? 1 : 0);
-        DrawWardrobeLink(drawList, left, top + (listed ? row : 0f), glam, key, row, scale);
-        if (shareable && PrismArt.Link(drawList, new Vector2(left, top + row * (leftRows - 1)), Loc.T(L.Share.Action),
-                PrismArt.Fore, scale, row))
+        leftWidest = MathF.Max(leftWidest,
+            DrawWardrobeLink(drawList, left, top + (listed ? row : 0f), glam, key, row, scale));
+        if (shareable)
         {
-            share.Offer(new ShareItem(ShareKind.Photo, postedCover, Id));
+            var shareLabel = Loc.T(L.Share.Action);
+            var shareSize = PrismType.Measure(shareLabel, PrismFace.Label, labelPixels);
+            leftWidest = MathF.Max(leftWidest, shareSize.X + shareSize.Y + Metrics.Space.Xs * scale);
+            if (PrismArt.Link(drawList, new Vector2(left, top + row * (leftRows - 1)), shareLabel, PrismArt.Fore, scale,
+                    row, PhoneIcons.Share))
+            {
+                share.Offer(new ShareItem(ShareKind.Photo, postedCover, Id));
+            }
         }
 
+        var owned = totalPieces > 0 ? OwnedLine() : string.Empty;
+        var mods = totalMods == 0 ? string.Empty : glamour.HasPenumbra ? ModsLine() : Loc.T(L.Prism.ModsNeedPenumbra);
+        var rightWidest = MathF.Max(PrismType.Measure(owned, PrismFace.Label, labelPixels).X,
+            PrismType.Measure(mods, PrismFace.Label, labelPixels).X);
+        var stacked = leftWidest + Metrics.Space.Lg * scale + rightWidest > width;
+        var rightTop = stacked ? top + row * leftRows : top;
         var lines = 0;
-        if (totalPieces > 0)
+        if (owned.Length > 0)
         {
-            PrismType.DrawRight(drawList, new Vector2(left + width, top), OwnedLine(), PrismArt.Muted, PrismFace.Label,
+            PrismType.DrawRight(drawList, new Vector2(left + width, rightTop), owned, PrismArt.Muted, PrismFace.Label,
                 labelPixels);
             lines++;
         }
 
-        if (totalMods > 0)
+        if (mods.Length > 0)
         {
-            PrismType.DrawRight(drawList, new Vector2(left + width, top + row * lines),
-                glamour.HasPenumbra ? ModsLine() : Loc.T(L.Prism.ModsNeedPenumbra), PrismArt.Muted, PrismFace.Label,
-                labelPixels);
+            PrismType.DrawRight(drawList, new Vector2(left + width, rightTop + row * lines), mods, PrismArt.Muted,
+                PrismFace.Label, labelPixels);
             lines++;
         }
 
-        top += row * Math.Max(lines, leftRows) + Metrics.Space.Sm * scale;
+        top = band + row * (stacked ? leftRows + lines : Math.Max(lines, leftRows)) + Metrics.Space.Sm * scale;
         LocString? note = !glamour.HasGlamourer ? L.Prism.TryOnWithoutGlamourer
             : ownedPieces < totalPieces && !OwnedItems.StorageLoaded ? L.Prism.OpenStorage : null;
         if (note is { } shown)
@@ -495,20 +624,23 @@ internal sealed partial class PrismApp
         return top + Metrics.Space.Lg * scale;
     }
 
-    private void DrawWardrobeLink(ImDrawListPtr drawList, float left, float top, GlamDto glam, string key, float row,
+    private float DrawWardrobeLink(ImDrawListPtr drawList, float left, float top, GlamDto glam, string key, float row,
         float scale)
     {
         wardrobe.Ensure();
         if (wardrobe.Loading)
         {
-            return;
+            return 0f;
         }
 
         var saved = wardrobe.FindByGlam(key);
         var label = Loc.T(saved is null ? L.Prism.AddToWardrobe : L.Prism.InWardrobe);
-        if (!PrismArt.Link(drawList, new Vector2(left, top), label, PrismArt.Muted, scale, row))
+        var size = PrismType.Measure(label, PrismFace.Label, PrismArt.LabelPixels());
+        var drawn = size.X + size.Y + Metrics.Space.Xs * scale;
+        if (!PrismArt.Link(drawList, new Vector2(left, top), label, PrismArt.Fore, scale, row,
+                saved is null ? PhoneIcons.Plus : PhoneIcons.Check))
         {
-            return;
+            return drawn;
         }
 
         if (saved is not null)
@@ -516,11 +648,13 @@ internal sealed partial class PrismApp
             Push(PrismScreen.WardrobeOutfit);
             outfitId = saved.Id;
             renaming = false;
-            return;
+            return drawn;
         }
 
         wardrobe.Add(new WardrobeOutfit(Guid.NewGuid().ToString("N"), glam.Title, string.Empty, Guid.Empty,
             glam.Gear ?? Array.Empty<GlamGearDto>(), false, DateTimeOffset.UtcNow.ToUnixTimeSeconds(), key));
+        ShellToast.Show(Loc.T(L.Prism.InWardrobe));
+        return drawn;
     }
 
     private string OwnedLine()
@@ -594,6 +728,10 @@ internal sealed partial class PrismApp
                 scale);
         }
 
+        var dyes = DyeLine(piece.Stain0, piece.Stain1);
+        var owned = interactive && screen == PrismScreen.GlamDetail && ownedIds.Contains(piece.ItemId);
+        var lines = dyes.Length > 0 || owned ? 2 : 1;
+        var textTop = top + MathF.Max(0f, (icon - labelLine * lines) * 0.5f);
         var textLeft = left + icon + Metrics.Space.Md * scale;
         var tryLabel = Loc.T(L.Prism.TryOnGlam);
         var tryWidth = interactive ? PrismType.Measure(tryLabel, PrismFace.Label, labelPixels).X : 0f;
@@ -601,31 +739,31 @@ internal sealed partial class PrismApp
         var fitted = PrismType.FitLabel(name, labelPixels, room);
         if (!interactive)
         {
-            PrismType.Draw(drawList, new Vector2(textLeft, top), fitted, PrismArt.Fore, PrismFace.Label, labelPixels);
+            PrismType.Draw(drawList, new Vector2(textLeft, textTop), fitted, PrismArt.Fore, PrismFace.Label,
+                labelPixels);
         }
-        else if (PrismArt.Link(drawList, new Vector2(textLeft, top), fitted, PrismArt.Fore, scale))
+        else if (PrismArt.Link(drawList, new Vector2(textLeft, textTop), fitted, PrismArt.Fore, scale))
         {
             OpenItemGlams(piece.ItemId);
         }
 
         if (interactive &&
-            PrismArt.Link(drawList, new Vector2(left + width - tryWidth, top), tryLabel, PrismArt.Muted, scale))
+            PrismArt.Link(drawList, new Vector2(left + width - tryWidth, textTop), tryLabel, PrismArt.Muted, scale))
         {
             glamour.TryOnPiece(piece);
             StartWearing(string.Empty, name);
         }
 
-        if (interactive && screen == PrismScreen.GlamDetail && ownedIds.Contains(piece.ItemId))
+        if (owned)
         {
-            PrismType.DrawRight(drawList, new Vector2(left + width, top + labelLine), Loc.T(L.Prism.Owned), PrismArt.Muted,
-                PrismFace.Label, labelPixels);
+            PrismType.DrawRight(drawList, new Vector2(left + width, textTop + labelLine), Loc.T(L.Prism.Owned),
+                PrismArt.Muted, PrismFace.Label, labelPixels);
         }
 
-        var dyes = DyeLine(piece.Stain0, piece.Stain1);
         if (dyes.Length > 0)
         {
-            PrismType.Draw(drawList, new Vector2(textLeft, top + labelLine), PrismType.FitLabel(dyes, labelPixels, room),
-                PrismArt.Muted, PrismFace.Label, labelPixels);
+            PrismType.Draw(drawList, new Vector2(textLeft, textTop + labelLine),
+                PrismType.FitLabel(dyes, labelPixels, room), PrismArt.Muted, PrismFace.Label, labelPixels);
         }
 
         var bottom = top + MathF.Max(icon, labelLine * 2f) + Metrics.Space.Sm * scale;

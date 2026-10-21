@@ -11,6 +11,7 @@ internal static class PrismMotion
     public const float RiseUnits = 18f;
     public const float Stagger = 0.06f;
     public const float Settled = 0.995f;
+    public const float GrowEpsilon = 0.001f;
 
     public static float At(float age, float delay, float smoothTime) => Spring.Settle(age - delay, smoothTime);
 
@@ -73,6 +74,21 @@ internal static class PrismMotion
             ref var vertex = ref vertices[index];
             vertex.Pos = transform.Map(vertex.Pos);
             vertex.Col = transform.MapColor(vertex.Col);
+        }
+    }
+
+    public static void Grow(ImDrawListPtr drawList, int from, Vector2 pivot, float scale)
+    {
+        if (MathF.Abs(scale - 1f) < GrowEpsilon)
+        {
+            return;
+        }
+
+        var transform = LayerTransform.ScaleAbout(pivot, scale, default, 1f);
+        var vertices = drawList.VtxBuffer.AsSpan();
+        for (var index = Math.Max(0, from); index < vertices.Length; index++)
+        {
+            vertices[index].Pos = transform.Map(vertices[index].Pos);
         }
     }
 
