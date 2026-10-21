@@ -633,6 +633,11 @@ internal sealed class GameData
             : GearSlots.None;
     }
 
+    public byte StainShade(byte stainId) =>
+        stainId != 0 && GameSheets.Available && data.GetExcelSheet<Stain>().TryGetRow(stainId, out var stain)
+            ? stain.Shade
+            : (byte)0;
+
     public string StainName(byte stainId)
     {
         if (stainId == 0 || !GameSheets.Available || !data.GetExcelSheet<Stain>().TryGetRow(stainId, out var stain))

@@ -10885,6 +10885,11 @@ internal static class L
         public static readonly LocString AnyDyeable = new("prism.anyDyeable", "Any dyeable piece");
         public static readonly LocString DyeBonus = new("prism.dyeBonus", "Dye bonus");
         public static readonly LocString SolutionsFrom = new("prism.solutionsFrom", "Solutions from {0}");
+        public static readonly LocString CheckWearing = new("prism.checkWearing", "Check what I'm wearing");
+        public static readonly LocString WearingScore = new("prism.wearingScore", "Hints {0} of {1}, dyes {2} of {3}");
+        public static readonly LocString StillEmpty = new("prism.stillEmpty", "Still empty: {0}");
+        public static readonly LocString JudgedOnGlamour = new("prism.judgedOnGlamour",
+            "The Fashion Report judges your real glamour, not what Glamourer or Penumbra show.");
         public static readonly LocString TryOnGlam = new("prism.tryOnGlam", "Try on");
         public static readonly LocString Save = new("prism.save", "Save");
         public static readonly LocString Saved = new("prism.saved", "Saved");

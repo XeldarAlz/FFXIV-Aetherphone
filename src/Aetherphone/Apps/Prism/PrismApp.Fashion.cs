@@ -31,6 +31,11 @@ internal sealed partial class PrismApp
     private GlamGearDto[][] fashionHintGear = Array.Empty<GlamGearDto[]>();
     private GlamGearDto?[][] fashionPieceGear = Array.Empty<GlamGearDto?[]>();
     private bool roseSearched;
+    private int hintsMet = -1;
+    private int dyesMet;
+    private string stillEmpty = string.Empty;
+    private CachedText scoreText;
+    private CachedText emptyText;
     private volatile NpcSpot? roseSpot;
     private volatile bool roseLooking;
     private CachedText fashionWeekText;
@@ -85,6 +90,7 @@ internal sealed partial class PrismApp
 
         fashionFor = report;
         statsStorage = storage;
+        hintsMet = -1;
         statsFor = null;
         ownedIds.Clear();
         var hints = report.Hints ?? Array.Empty<FashionHintDto>();
@@ -183,7 +189,7 @@ internal sealed partial class PrismApp
                 TextStyles.Footnote, width);
         }
 
-        cursor += Metrics.Space.Xl * scale;
+        cursor = DrawWearingCheck(list, left, cursor, width, report, scale) + Metrics.Space.Xl * scale;
         var section = 0;
         cursor = DrawFashionSets(list, left, cursor, width, report, ref section, scale);
         cursor = DrawFashionHints(list, left, cursor, width, report, ref section, scale);
@@ -280,13 +286,135 @@ internal sealed partial class PrismApp
                     }
                 }
 
-                top = strip.Max.Y;
+                top = DrawSetWardrobeLink(drawList, left, strip.Max.Y + Metrics.Space.Sm * scale, gear, wearKey,
+                    report.Week, scale);
             }
 
             top += Metrics.Space.Xl * scale;
         }
 
         return top;
+    }
+
+    private float DrawSetWardrobeLink(ImDrawListPtr drawList, float left, float top, GlamGearDto[] gear,
+        string wearKey, int week, float scale)
+    {
+        wardrobe.Ensure();
+        if (wardrobe.Loading)
+        {
+            return top;
+        }
+
+        var saved = wardrobe.FindByGlam(wearKey);
+        if (PrismArt.Link(drawList, new Vector2(left, top), Loc.T(saved is null ? L.Prism.AddToWardrobe : L.Prism.InWardrobe),
+                PrismArt.Muted, scale))
+        {
+            if (saved is null)
+            {
+                wardrobe.Add(new WardrobeOutfit(Guid.NewGuid().ToString("N"), FashionWeekLine(week), string.Empty,
+                    Guid.Empty, gear, false, DateTimeOffset.UtcNow.ToUnixTimeSeconds(), wearKey));
+            }
+            else
+            {
+                Push(PrismScreen.WardrobeOutfit);
+                outfitId = saved.Id;
+                renaming = false;
+            }
+        }
+
+        return top + PrismType.LineHeight(PrismFace.Label, PrismArt.LabelPixels());
+    }
+
+    private float DrawWearingCheck(ImDrawListPtr drawList, float left, float top, float width, FashionReportDto report,
+        float scale)
+    {
+        var labelPixels = PrismArt.LabelPixels();
+        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
+        if (PrismArt.Link(drawList, new Vector2(left, top), Loc.T(L.Prism.CheckWearing), PrismArt.Fore, scale))
+        {
+            CheckWearing(report);
+        }
+
+        top += labelLine + Metrics.Space.Sm * scale;
+        if (hintsMet < 0)
+        {
+            return top;
+        }
+
+        var hints = report.Hints?.Length ?? 0;
+        var dyes = report.Dyes?.Length ?? 0;
+        var key = HashCode.Combine(hintsMet, hints, dyesMet, dyes, Loc.Current.Code);
+        var score = scoreText.IsCurrent(key)
+            ? scoreText.Value
+            : scoreText.Store(key, Loc.T(L.Prism.WearingScore, hintsMet, hints, dyesMet, dyes));
+        PrismType.Draw(drawList, new Vector2(left, top), PrismType.FitLabel(score, labelPixels, width), PrismArt.Fore,
+            PrismFace.Label, labelPixels);
+        top += labelLine;
+        if (stillEmpty.Length > 0)
+        {
+            var emptyKey = HashCode.Combine(stillEmpty, Loc.Current.Code);
+            var empty = emptyText.IsCurrent(emptyKey)
+                ? emptyText.Value
+                : emptyText.Store(emptyKey, Loc.T(L.Prism.StillEmpty, stillEmpty));
+            PrismType.Draw(drawList, new Vector2(left, top), PrismType.FitLabel(empty, labelPixels, width),
+                PrismArt.Muted, PrismFace.Label, labelPixels);
+            top += labelLine;
+        }
+
+        return top + Typography.DrawWrappedLeft(new Vector2(left, top + Metrics.Space.Xs * scale),
+            Loc.T(L.Prism.JudgedOnGlamour), PrismArt.Muted, TextStyles.Footnote, width);
+    }
+
+    private void CheckWearing(FashionReportDto report)
+    {
+        var worn = EquippedOutfit.Read();
+        hintsMet = 0;
+        dyesMet = 0;
+        var hints = report.Hints ?? Array.Empty<FashionHintDto>();
+        for (var index = 0; index < hints.Length; index++)
+        {
+            if (Worn(worn, hints[index].Slot) is { } piece && Array.IndexOf(hints[index].Items ?? Array.Empty<uint>(),
+                    piece.ItemId) >= 0)
+            {
+                hintsMet++;
+            }
+        }
+
+        var dyes = report.Dyes ?? Array.Empty<FashionDyeDto>();
+        for (var index = 0; index < dyes.Length; index++)
+        {
+            var shade = gameData.StainShade(dyes[index].StainId);
+            if (shade != 0 && Worn(worn, dyes[index].Slot) is { } piece && gameData.StainShade(piece.Stain0) == shade)
+            {
+                dyesMet++;
+            }
+        }
+
+        var missing = new List<string>();
+        for (var index = 0; index < GearSlots.All.Length; index++)
+        {
+            var slot = (int)GearSlots.All[index];
+            var name = Loc.T(SlotNames[slot]);
+            if (slot != (int)GearSlot.OffHand && Worn(worn, slot) is null && !missing.Contains(name))
+            {
+                missing.Add(name);
+            }
+        }
+
+        stillEmpty = string.Join(", ", missing);
+    }
+
+    private static GlamGearDto? Worn(GlamGearDto[] worn, int slot)
+    {
+        for (var index = 0; index < worn.Length; index++)
+        {
+            if (worn[index].Slot == slot && worn[index].ItemId != 0)
+            {
+                return worn[index];
+            }
+        }
+
+        return null;
     }
 
     private float DrawAnyDyeableRow(ImDrawListPtr drawList, float left, float top, float width, FashionPieceDto piece,
