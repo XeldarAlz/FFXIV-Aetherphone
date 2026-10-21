@@ -378,7 +378,13 @@ internal sealed partial class PrismApp : IResumableApp
         var texture = images.Sized(url, MathF.Max(rect.Width, rect.Height));
         if (texture is null)
         {
-            var placeholder = Loc.T(images.Failed(url) ? L.Common.ImageFailed : L.Common.Loading);
+            var failed = images.Failed(url);
+            if (!failed && !contain)
+            {
+                return rect;
+            }
+
+            var placeholder = Loc.T(failed ? L.Common.ImageFailed : L.Common.Loading);
             var size = PrismType.Measure(placeholder, PrismFace.Label, PrismArt.LabelPixels());
             if (size.X <= rect.Width)
             {
