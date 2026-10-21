@@ -11,6 +11,21 @@ internal static unsafe class OwnedItems
 
     private static Dictionary<uint, uint>? cabinetRows;
 
+    public static bool StorageLoaded
+    {
+        get
+        {
+            if (!GameMemory.Attached)
+            {
+                return false;
+            }
+
+            var mirage = MirageManager.Instance();
+            var state = UIState.Instance();
+            return mirage is not null && mirage->PrismBoxLoaded && state is not null && state->Cabinet.IsCabinetLoaded();
+        }
+    }
+
     public static bool Owns(uint itemId)
     {
         if (itemId == 0 || !GameMemory.Attached)

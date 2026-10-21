@@ -91,6 +91,11 @@ internal sealed partial class PrismApp
 
         var filter = Loc.T(FilterNames[discoverFilter]);
         var filterWidth = PrismType.Measure(filter, PrismFace.Label, labelPixels).X;
+        if (x > right - filterWidth)
+        {
+            top += labelLine + Metrics.Space.Md * scale;
+        }
+
         if (PrismArt.Link(drawList, new Vector2(right - filterWidth, top), filter, PrismArt.Muted, scale))
         {
             discoverFilter = (discoverFilter + 1) % FilterNames.Length;
@@ -128,7 +133,8 @@ internal sealed partial class PrismApp
         y += labelLine;
         y += PrismType.DrawLines(drawList, new Vector2(left + pad, y), lines, PrismArt.Fore, PrismFace.Headline, pixels) +
              Metrics.Space.Sm * scale;
-        var action = Loc.T(week.Phase == PrismPhases.Entering ? L.Prism.Submit : L.Prism.JudgeHeat);
+        var action = Loc.T(week.Phase != PrismPhases.Entering ? L.Prism.JudgeHeat
+            : week.MyEntry is null ? L.Prism.Submit : L.Prism.YourLook);
         if (PrismArt.Link(drawList, new Vector2(left + pad, y), action, PrismArt.Fore, scale))
         {
             OpenTab(PrismTab.Week);
@@ -148,14 +154,23 @@ internal sealed partial class PrismApp
         {
             var text = Loc.T(lane.Loading ? L.Common.Loading : lane.Failed ? L.Common.LoadFailedHint : emptyHint);
             var copy = PrismType.Sentences(text, TextStyles.Subheadline, width);
-            return top + Typography.DrawWrappedLeft(new Vector2(left, top), copy, PrismArt.Muted, TextStyles.Subheadline,
-                PrismType.BalancedWidth(copy, TextStyles.Subheadline, width)) + Metrics.Space.Xl * scale;
+            top += Typography.DrawWrappedLeft(new Vector2(left, top), copy, PrismArt.Muted, TextStyles.Subheadline,
+                PrismType.BalancedWidth(copy, TextStyles.Subheadline, width)) + Metrics.Space.Md * scale;
+            if (lane.Failed && !lane.Loading &&
+                PrismArt.Link(drawList, new Vector2(left, top), Loc.T(L.Common.Retry), PrismArt.Fore, scale))
+            {
+                RetryLane(lane);
+            }
+
+            return top + Metrics.Size.TapTarget * scale;
         }
 
         var bottom = DrawGlamGrid(drawList, left, top, width, items, scale);
         if (lane.LoadingMore)
         {
+            ImGui.SetCursorScreenPos(new Vector2(left, bottom));
             InfiniteScroll.DrawLoadingRow(left + width * 0.5f, PrismArt.Muted);
+            bottom = ImGui.GetCursorScreenPos().Y;
         }
 
         return bottom + PrismArt.BottomMargin(scale);
@@ -188,9 +203,11 @@ internal sealed partial class PrismApp
             drawList.AddRectFilledMultiColor(shade, max, ImGui.GetColorU32(TileClear), ImGui.GetColorU32(TileClear),
                 ImGui.GetColorU32(TileShade), ImGui.GetColorU32(TileShade));
             drawList.PushClipRect(min, max, true);
-            PrismType.Draw(drawList, new Vector2(x + pad, max.Y - pad - labelLine * 2f), glam.Title, PrismArt.PhotoFore,
-                PrismFace.Label, labelPixels);
-            PrismType.Draw(drawList, new Vector2(x + pad, max.Y - pad - labelLine), AuthorLine(glam.Author),
+            PrismType.Draw(drawList, new Vector2(x + pad, max.Y - pad - labelLine * 2f),
+                PrismType.FitLabel(glam.Title, labelPixels, column - pad * 2f), PrismArt.PhotoFore, PrismFace.Label,
+                labelPixels);
+            PrismType.Draw(drawList, new Vector2(x + pad, max.Y - pad - labelLine),
+                PrismType.FitLabel(AuthorLine(glam.Author), labelPixels, column - pad * 2f),
                 Palette.WithAlpha(PrismArt.PhotoFore, MutedOnPhoto), PrismFace.Label, labelPixels);
             drawList.PopClipRect();
             var hovered = UiInteract.Hover(min, max);
@@ -206,6 +223,23 @@ internal sealed partial class PrismApp
         }
 
         return top + rows * (height + gap);
+    }
+
+    private void RetryLane(FeedLane<GlamDto> lane)
+    {
+        lane.ClearFailure();
+        if (!ReferenceEquals(lane, glams.List))
+        {
+            glams.Refresh(discoverScope);
+        }
+        else if (screen == PrismScreen.GlamList)
+        {
+            OpenList();
+        }
+        else if (glams.Profile?.User is { } author)
+        {
+            glams.OpenProfile(author, showSaved);
+        }
     }
 
     private static string Cover(GlamDto glam) => glam.Photos is { Length: > 0 } photos ? photos[0].Url : string.Empty;

@@ -95,7 +95,8 @@ internal sealed partial class PrismApp
         top += labelLine;
         PrismType.Draw(drawList, new Vector2(left, top), CapturedLine(), PrismArt.Fore, PrismFace.Label, labelPixels);
         top += labelLine + Metrics.Space.Sm * scale;
-        var note = PrismType.Sentences(Loc.T(L.Prism.CapturedNote), TextStyles.Subheadline, width);
+        var note = PrismType.Sentences(Loc.T(glamour.HasPenumbra ? L.Prism.CapturedNote : L.Prism.PostsAsVanilla),
+            TextStyles.Subheadline, width);
         Typography.DrawWrappedLeft(new Vector2(left, top), note, PrismArt.Muted, TextStyles.Subheadline,
             PrismType.BalancedWidth(note, TextStyles.Subheadline, width));
         var strip = StripRect(content, scale);

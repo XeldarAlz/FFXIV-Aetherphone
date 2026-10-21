@@ -10842,6 +10842,14 @@ internal static class L
         public static readonly LocPlural TriedOnCount = new("prism.triedOnCount", "Tried on {0} time", "Tried on {0} times");
         public static readonly LocString TakeOff = new("prism.takeOff", "Take it off");
         public static readonly LocString Wearing = new("prism.wearing", "Wearing");
+        public static readonly LocString ModsNeedPenumbra = new("prism.modsNeedPenumbra", "Mods need Penumbra");
+        public static readonly LocString TryOnWithoutGlamourer = new("prism.tryOnWithoutGlamourer",
+            "Without Glamourer, Prism uses the game's Try On window, without mods.");
+        public static readonly LocString OpenStorage = new("prism.openStorage",
+            "Prism counts your dresser and armoire after you open them once.");
+        public static readonly LocString PostsAsVanilla = new("prism.postsAsVanilla",
+            "Mods are read through Penumbra. Without it, this glam posts as vanilla.");
+        public static readonly LocString DesignsAdded = new("prism.designsAdded", "Designs added: {0}");
         public static readonly LocString TryOnGlam = new("prism.tryOnGlam", "Try on");
         public static readonly LocString Save = new("prism.save", "Save");
         public static readonly LocString Saved = new("prism.saved", "Saved");

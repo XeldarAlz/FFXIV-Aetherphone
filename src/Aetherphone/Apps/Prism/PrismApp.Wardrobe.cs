@@ -42,9 +42,15 @@ internal sealed partial class PrismApp
         if (glamour.HasGlamourer)
         {
             var import = Loc.T(L.Prism.ImportDesigns);
+            if (x + PrismArt.ButtonWidth(import, scale) > right)
+            {
+                x = left;
+                top += PrismArt.ButtonUnits * scale + Metrics.Space.Sm * scale;
+            }
+
             if (PrismArt.Button(drawList, new Vector2(x, top), import, scale, out _))
             {
-                wardrobe.ImportDesigns(glamour);
+                ShellToast.Show(Loc.T(L.Prism.DesignsAdded, wardrobe.ImportDesigns(glamour)));
             }
         }
 
@@ -130,7 +136,7 @@ internal sealed partial class PrismApp
                 continue;
             }
 
-            PrismArt.Swatch(drawList, new Rect(min, max), index);
+            PrismArt.Swatch(drawList, new Rect(min, max), (int)(outfit.CreatedAtUnix % int.MaxValue));
             var placed = 0;
             for (var pieceIndex = 0; pieceIndex < outfit.Gear.Length && placed < CollagePieces; pieceIndex++)
             {
@@ -145,8 +151,9 @@ internal sealed partial class PrismApp
             }
 
             drawList.PushClipRect(min, max, true);
-            PrismType.Draw(drawList, new Vector2(x + gap, max.Y - gap - labelLine), outfit.Name, PrismArt.PhotoFore,
-                PrismFace.Label, labelPixels);
+            PrismType.Draw(drawList, new Vector2(x + gap, max.Y - gap - labelLine),
+                PrismType.FitLabel(outfit.Name, labelPixels, column - gap * 2f), PrismArt.PhotoFore, PrismFace.Label,
+                labelPixels);
             drawList.PopClipRect();
             var hovered = UiInteract.Hover(min, max);
             if (hovered)
@@ -191,7 +198,7 @@ internal sealed partial class PrismApp
         var wear = new Rect(new Vector2(left, cursor), new Vector2(left + half, cursor + height));
         var favourite = new Rect(new Vector2(left + half + gap, cursor), new Vector2(left + width, cursor + height));
         var wearing = Wearing(outfit.Id);
-        if (PrismArt.Strip(list, wear, Loc.T(wearing ? L.Prism.TakeOff : L.Prism.PutOn), Arrow, true))
+        if (PrismArt.Strip(list, wear, Loc.T(wearing ? L.Prism.TakeOff : L.Prism.PutOn), string.Empty, true))
         {
             if (wearing)
             {
@@ -209,16 +216,24 @@ internal sealed partial class PrismApp
             wardrobe.Update(outfit with { Favourite = !outfit.Favourite });
         }
 
-        cursor = wear.Max.Y + Metrics.Space.Xl * scale;
+        cursor = wear.Max.Y + Metrics.Space.Md * scale;
+        if (!glamour.HasGlamourer)
+        {
+            cursor += Typography.DrawWrappedLeft(new Vector2(left, cursor), Loc.T(L.Prism.TryOnWithoutGlamourer),
+                PrismArt.Muted, TextStyles.Footnote, width);
+        }
+
+        cursor += Metrics.Space.Lg * scale;
         cursor = DrawSectionLabel(list, left, cursor, width, 0, Loc.T(L.Prism.GearHeading), scale);
         cursor = DrawGearList(list, left, cursor, width, outfit.Gear, true, scale) + Metrics.Space.Lg * scale;
         if (outfit.State.Length > 0 && glamour.HasGlamourer &&
-            PrismArt.Link(list, new Vector2(left, cursor), Loc.T(L.Prism.SaveToGlamourer), PrismArt.Muted, scale))
+            PrismArt.Link(list, new Vector2(left, cursor), Loc.T(L.Prism.SaveToGlamourer), PrismArt.Muted, scale) &&
+            glamour.SaveDesign(outfit.State, outfit.Name))
         {
-            glamour.SaveDesign(outfit.State, outfit.Name);
+            ShellToast.Show(Loc.T(L.Prism.Saved));
         }
 
-        cursor += PrismType.LineHeight(PrismFace.Label, PrismArt.LabelPixels()) + Metrics.Space.Md * scale;
+        cursor += Metrics.Size.TapTarget * scale;
         if (PrismArt.Link(list, new Vector2(left, cursor), Loc.T(L.Prism.DeleteOutfit), PrismArt.Muted, scale))
         {
             confirm.Ask(new ConfirmRequest

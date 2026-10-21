@@ -253,7 +253,8 @@ internal sealed partial class PrismApp
         var save = new Rect(new Vector2(left + half + gap, top), new Vector2(left + width, top + height));
         var key = WearKey(glam);
         var wearing = Wearing(key);
-        if (PrismArt.Strip(drawList, tryOn, Loc.T(wearing ? L.Prism.TakeOff : L.Prism.TryOnGlam), Arrow, true))
+        if (PrismArt.Strip(drawList, tryOn, Loc.T(wearing ? L.Prism.TakeOff : L.Prism.TryOnGlam), string.Empty,
+                true))
         {
             if (wearing)
             {
@@ -285,17 +286,32 @@ internal sealed partial class PrismApp
             glams.ToggleLike(glam);
         }
 
-        var owned = OwnedLine();
-        PrismType.DrawRight(drawList, new Vector2(left + width, top), owned, PrismArt.Muted, PrismFace.Label, labelPixels);
-        top += labelLine;
-        if (totalMods > 0)
+        var lines = 0;
+        if (totalPieces > 0)
         {
-            PrismType.DrawRight(drawList, new Vector2(left + width, top), ModsLine(), PrismArt.Muted, PrismFace.Label,
+            PrismType.DrawRight(drawList, new Vector2(left + width, top), OwnedLine(), PrismArt.Muted, PrismFace.Label,
                 labelPixels);
-            top += labelLine;
+            lines++;
         }
 
-        return top + Metrics.Space.Xl * scale;
+        if (totalMods > 0)
+        {
+            PrismType.DrawRight(drawList, new Vector2(left + width, top + labelLine * lines),
+                glamour.HasPenumbra ? ModsLine() : Loc.T(L.Prism.ModsNeedPenumbra), PrismArt.Muted, PrismFace.Label,
+                labelPixels);
+            lines++;
+        }
+
+        top += labelLine * Math.Max(lines, listed ? 1 : 0) + Metrics.Space.Md * scale;
+        LocString? note = !glamour.HasGlamourer ? L.Prism.TryOnWithoutGlamourer
+            : ownedPieces < totalPieces && !OwnedItems.StorageLoaded ? L.Prism.OpenStorage : null;
+        if (note is { } shown)
+        {
+            top += Typography.DrawWrappedLeft(new Vector2(left, top), Loc.T(shown), PrismArt.Muted, TextStyles.Footnote,
+                width) + Metrics.Space.Md * scale;
+        }
+
+        return top + Metrics.Space.Lg * scale;
     }
 
     private string OwnedLine()
@@ -427,7 +443,7 @@ internal sealed partial class PrismApp
         bool interactive, float scale)
     {
         var labelPixels = PrismArt.LabelPixels();
-        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
+        var pitch = PrismType.LineHeight(PrismFace.Label, labelPixels) + Metrics.Space.Sm * scale;
         var getKey = Loc.Current.Code.GetHashCode(StringComparison.Ordinal);
         var get = getText.IsCurrent(getKey) ? getText.Value : getText.Store(getKey, Loc.T(L.Prism.GetMod) + " " + Arrow);
         var getWidth = PrismType.Measure(get, PrismFace.Label, labelPixels).X;
@@ -442,17 +458,18 @@ internal sealed partial class PrismApp
             {
                 PrismType.Draw(drawList, new Vector2(left, top), fitted, PrismArt.Fore, PrismFace.Label, labelPixels);
             }
-            else if (PrismArt.Link(drawList, new Vector2(left, top), fitted, PrismArt.Fore, scale))
+            else if (PrismArt.Link(drawList, new Vector2(left, top), fitted, PrismArt.Fore, scale, pitch))
             {
                 OpenModGlams(mod);
             }
 
-            if (allowed && PrismArt.Link(drawList, new Vector2(left + width - getWidth, top), get, PrismArt.Muted, scale))
+            if (allowed && PrismArt.Link(drawList, new Vector2(left + width - getWidth, top), get, PrismArt.Muted, scale,
+                    pitch))
             {
                 UrlActions.AskThenOpen(mod.Link);
             }
 
-            top += labelLine;
+            top += pitch;
         }
 
         return top + Metrics.Space.Sm * scale;

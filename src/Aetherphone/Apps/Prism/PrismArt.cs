@@ -157,8 +157,9 @@ internal static class PrismArt
         var pixels = LabelPixels();
         var inset = rect.Height * 0.32f;
         var top = rect.Center.Y - pixels * 0.5f;
-        PrismType.Draw(drawList, new Vector2(rect.Min.X + inset, top), left, text, PrismFace.Label, pixels);
-        var room = rect.Width - inset * 3f - PrismType.Measure(left, PrismFace.Label, pixels).X;
+        var label = PrismType.FitLabel(left, pixels, rect.Width - inset * 2f);
+        PrismType.Draw(drawList, new Vector2(rect.Min.X + inset, top), label, text, PrismFace.Label, pixels);
+        var room = rect.Width - inset * 3f - PrismType.Measure(label, PrismFace.Label, pixels).X;
         if (right.Length > 0 && PrismType.Measure(right, PrismFace.Label, pixels).X <= room)
         {
             var nudge = PressFx.Toward(ImGui.GetID(left), hovered ? 1f + ArrowNudge : 1f) - 1f;
@@ -174,13 +175,16 @@ internal static class PrismArt
         return enabled && UiInteract.Click(rect.Min, rect.Max, hovered, sound);
     }
 
-    public static bool Link(ImDrawListPtr drawList, Vector2 topLeft, string label, Vector4 color, float scale)
+    public static bool Link(ImDrawListPtr drawList, Vector2 topLeft, string label, Vector4 color, float scale,
+        float rowHeight = 0f)
     {
         var pixels = LabelPixels();
         var size = PrismType.Measure(label, PrismFace.Label, pixels);
-        var pad = MathF.Max(0f, (Metrics.Size.TapTarget * scale - size.Y) * 0.5f);
-        var min = new Vector2(topLeft.X, topLeft.Y - pad);
-        var max = new Vector2(topLeft.X + size.X, topLeft.Y + size.Y + pad);
+        var tap = Metrics.Size.TapTarget * scale;
+        var padY = MathF.Max(0f, ((rowHeight > 0f ? rowHeight : tap) - size.Y) * 0.5f);
+        var padX = MathF.Max(0f, (tap - size.X) * 0.5f);
+        var min = new Vector2(topLeft.X - padX, topLeft.Y - padY);
+        var max = new Vector2(topLeft.X + size.X + padX, topLeft.Y + size.Y + padY);
         var hovered = UiInteract.Hover(min, max);
         PrismType.Draw(drawList, topLeft, label, hovered ? Fore : color, PrismFace.Label, pixels);
         if (hovered)

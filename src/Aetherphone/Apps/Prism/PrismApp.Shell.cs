@@ -106,7 +106,7 @@ internal sealed partial class PrismApp
         {
             var min = new Vector2(content.Min.X + cell * index, top);
             var max = new Vector2(min.X + cell, content.Max.Y);
-            var label = Loc.T(TabNames[index]);
+            var label = PrismType.FitLabel(Loc.T(TabNames[index]), labelPixels, cell - Metrics.Space.Sm * scale * 2f);
             var width = PrismType.Measure(label, PrismFace.Label, labelPixels).X;
             var left = min.X + (cell - width) * 0.5f;
             var active = (int)tab == index;
