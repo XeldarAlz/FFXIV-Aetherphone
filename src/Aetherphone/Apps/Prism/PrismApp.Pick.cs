@@ -45,7 +45,7 @@ internal sealed partial class PrismApp
         pickIntake.AcceptDrop(content, library, PrismArt.Fore);
         var week = store.Week;
         var top = DrawHeader(drawList, content, string.Empty,
-            week is null ? Loc.T(L.Prism.EnterLook) : week.Title, true, scale);
+            week is null ? Loc.T(L.Prism.EnterLook) : TrackTitle(week.Title), true, scale);
         if (week is { Brief.Length: > 0 })
         {
             var gutter = PrismArt.Gutter(scale);

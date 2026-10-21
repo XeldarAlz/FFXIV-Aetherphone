@@ -230,7 +230,7 @@ public sealed class PrismWireContractTests
         Assert.DoesNotContain("outfit", bare);
 
         var shared = JsonSerializer.Serialize(new PrismEntryRequest("k", 810, 1080,
-            new[] { new PrismGearDto(2, 45123, 1, 101) }), AethernetJsonContext.Default.PrismEntryRequest);
+            Outfit: new[] { new PrismGearDto(2, 45123, 1, 101) }), AethernetJsonContext.Default.PrismEntryRequest);
         Assert.Contains("\"outfit\":[{\"slot\":2,\"itemId\":45123,\"stain0\":1,\"stain1\":101}]", shared);
 
         var cleared = JsonSerializer.Serialize(new PrismOutfitRequest(null),
@@ -252,6 +252,51 @@ public sealed class PrismWireContractTests
 
         var entry = JsonSerializer.Deserialize("{\"id\":\"e_1\"}", AethernetJsonContext.Default.PrismEntryDto);
         Assert.False(PrismOutfit.Has(entry?.Outfit));
+    }
+
+    [Fact]
+    public void TrackRoutesAddTheTrackOnlyWhenThereIsOne()
+    {
+        Assert.Equal("/prism/weeks/w_1/entry?track=modded", PrismClient.EntryPath("w_1", "modded"));
+        Assert.Equal("/prism/weeks/w_1/ballots?track=vanilla", PrismClient.BallotsPath("w_1", "vanilla"));
+        Assert.Equal("/prism/weeks/w_1/results?lang=ja&track=modded", PrismClient.ResultsPath("w_1", "ja", "modded"));
+        Assert.Equal("/prism/weeks/w_1/ballots", PrismClient.BallotsPath("w_1", string.Empty));
+        Assert.DoesNotContain("track", JsonSerializer.Serialize(new PrismEntryRequest("k", 810, 1080),
+            AethernetJsonContext.Default.PrismEntryRequest));
+        Assert.Contains("\"track\":\"modded\"", JsonSerializer.Serialize(new PrismEntryRequest("k", 810, 1080, "modded"),
+            AethernetJsonContext.Default.PrismEntryRequest));
+    }
+
+    [Fact]
+    public void TheWeekReadsAsTheChosenTrack()
+    {
+        var week = JsonSerializer.Deserialize("{\"id\":\"w_1\",\"phase\":\"entering\",\"entryCount\":120,"
+            + "\"tracks\":[{\"id\":\"vanilla\",\"entryCount\":120},"
+            + "{\"id\":\"modded\",\"entryCount\":84,\"ballotsCast\":3,\"myEntry\":{\"id\":\"e_2\",\"track\":\"modded\"}}]}",
+            AethernetJsonContext.Default.PrismWeekDto)!;
+        Assert.Equal("modded", PrismTracks.Choose(week, string.Empty));
+        Assert.Equal("vanilla", PrismTracks.Choose(week, "vanilla"));
+        Assert.Equal("modded", PrismTracks.Choose(week, "gone"));
+
+        var modded = PrismTracks.Project(week, "modded");
+        Assert.Equal(84, modded.EntryCount);
+        Assert.Equal(3, modded.BallotsCast);
+        Assert.Equal("e_2", modded.MyEntry?.Id);
+        Assert.Null(PrismTracks.Project(week, "vanilla").MyEntry);
+
+        var entered = PrismTracks.WithEntry(week, "vanilla", new PrismEntryDto(Id: "e_1"));
+        Assert.Equal("e_1", PrismTracks.Project(entered, "vanilla").MyEntry?.Id);
+        Assert.Equal("e_2", PrismTracks.Project(entered, "modded").MyEntry?.Id);
+        Assert.Null(PrismTracks.Project(PrismTracks.WithEntry(entered, "modded", null), "modded").MyEntry);
+    }
+
+    [Fact]
+    public void AWeekWithoutTracksStaysAsItIs()
+    {
+        var week = new PrismWeekDto(Id: "w_1", EntryCount: 9);
+        Assert.Equal(string.Empty, PrismTracks.Choose(week, "modded"));
+        Assert.Same(week, PrismTracks.Project(week, string.Empty));
+        Assert.Equal("e_1", PrismTracks.WithEntry(week, string.Empty, new PrismEntryDto(Id: "e_1")).MyEntry?.Id);
     }
 
     [Fact]

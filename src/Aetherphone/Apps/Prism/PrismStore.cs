@@ -19,6 +19,7 @@ internal static class PrismPhases
     public const string Results = "results";
 
     public const string StatusRejected = "rejected";
+    public const string StatusMoved = "moved";
 
     public const string StageFinal = "final";
     public const string StageHeat = "heat";
@@ -49,7 +50,9 @@ internal sealed class PrismStore : IDisposable
     private readonly FailureSlot weekFailure = new();
     private readonly FailureSlot actionFailure = new();
 
+    private volatile PrismWeekDto? rawWeek;
     private volatile PrismWeekDto? week;
+    private volatile string track = string.Empty;
     private volatile PrismResultsDto? results;
     private volatile PrismBallotDto? ballot;
     private volatile bool loading;
@@ -76,6 +79,10 @@ internal sealed class PrismStore : IDisposable
     public UserDto? CurrentUser => session.CurrentUser;
 
     public PrismWeekDto? Week => week;
+
+    public string Track => track;
+
+    public PrismTrackDto[] Tracks => PrismTracks.Of(rawWeek);
 
     public PrismResultsDto? Results => results;
 
@@ -119,20 +126,49 @@ internal sealed class PrismStore : IDisposable
 
             weekFailure.Clear();
             weekFailed = false;
-            week = fetched;
+            Publish(fetched);
             loadedOnce = true;
-            await LoadResultsAsync(fetched, lang, token).ConfigureAwait(false);
+            await LoadResultsAsync(week!, lang, token).ConfigureAwait(false);
         }, () => loading = false);
+    }
+
+    public void SelectTrack(string id)
+    {
+        if (rawWeek is not { } raw || id == track || PrismTracks.Choose(raw, id) != id)
+        {
+            return;
+        }
+
+        track = id;
+        var current = PrismTracks.Project(raw, id);
+        week = current;
+        ballot = null;
+        results = null;
+        var lang = Loc.Current.Code;
+        work.Run("results", token => LoadResultsAsync(current, lang, token));
+    }
+
+    private void Publish(PrismWeekDto raw)
+    {
+        rawWeek = raw;
+        track = PrismTracks.Choose(raw, track);
+        week = PrismTracks.Project(raw, track);
     }
 
     private async Task LoadResultsAsync(PrismWeekDto current, string lang, CancellationToken token)
     {
+        var showing = track;
         var fetched = ResultsOut(current)
-            ? await client.ResultsAsync(current.Id, lang, token).ConfigureAwait(false)
+            ? await client.ResultsAsync(current.Id, lang, showing, token).ConfigureAwait(false)
             : null;
         if (fetched is null && current.PreviousWeekId.Length > 0)
         {
-            fetched = await client.ResultsAsync(current.PreviousWeekId, lang, token).ConfigureAwait(false);
+            fetched = await client.ResultsAsync(current.PreviousWeekId, lang, showing, token).ConfigureAwait(false);
+        }
+
+        if (showing != track)
+        {
+            return;
         }
 
         if (fetched is not null)
@@ -157,10 +193,12 @@ internal sealed class PrismStore : IDisposable
 
     public void Enter(string sourcePath, WallpaperCrop crop, PrismGearDto[]? outfit, Action<bool> onComplete)
     {
-        if (week is not { } current || !BeginAction())
+        if (rawWeek is not { } current || !BeginAction())
         {
             return;
         }
+
+        var entering = track;
 
         work.Run("enter", async token =>
         {
@@ -176,7 +214,8 @@ internal sealed class PrismStore : IDisposable
                 return Fail(PrismAction.Enter, failure);
             }
 
-            var request = new PrismEntryRequest(upload.Key, baked.Width, baked.Height, outfit);
+            var request = new PrismEntryRequest(upload.Key, baked.Width, baked.Height,
+                entering.Length > 0 ? entering : null, outfit);
             var entry = await client.EnterAsync(current.Id, request, token, received => failure = received)
                 .ConfigureAwait(false);
             if (entry is null)
@@ -184,49 +223,52 @@ internal sealed class PrismStore : IDisposable
                 return Fail(PrismAction.Enter, failure);
             }
 
-            week = current with { MyEntry = entry };
+            Publish(PrismTracks.WithEntry(rawWeek ?? current, entering, entry));
             return true;
         }, onComplete, EndAction);
     }
 
     public void ShareOutfit(PrismGearDto[]? outfit)
     {
-        if (week is not { MyEntry: not null } current || !BeginAction())
+        if (week is not { MyEntry: not null } || rawWeek is not { } current || !BeginAction())
         {
             return;
         }
 
+        var sharing = track;
         work.Run("outfit", async token =>
         {
             var failure = AepFailure.None;
-            var entry = await client.ShareOutfitAsync(current.Id, new PrismOutfitRequest(outfit), token,
+            var entry = await client.ShareOutfitAsync(current.Id, sharing, new PrismOutfitRequest(outfit), token,
                 received => failure = received).ConfigureAwait(false);
             if (entry is null)
             {
                 return Fail(PrismAction.Outfit, failure);
             }
 
-            week = current with { MyEntry = entry };
+            Publish(PrismTracks.WithEntry(rawWeek ?? current, sharing, entry));
             return true;
         }, NoCompletion, EndAction);
     }
 
     public void Withdraw()
     {
-        if (week is not { } current || !BeginAction())
+        if (rawWeek is not { } current || !BeginAction())
         {
             return;
         }
 
+        var leaving = track;
         work.Run("withdraw", async token =>
         {
             var failure = AepFailure.None;
-            if (!await client.WithdrawAsync(current.Id, token, received => failure = received).ConfigureAwait(false))
+            if (!await client.WithdrawAsync(current.Id, leaving, token, received => failure = received)
+                    .ConfigureAwait(false))
             {
                 return Fail(PrismAction.Withdraw, failure);
             }
 
-            week = current with { MyEntry = null };
+            Publish(PrismTracks.WithEntry(rawWeek ?? current, leaving, null));
             return true;
         }, NoCompletion, EndAction);
     }
@@ -241,7 +283,7 @@ internal sealed class PrismStore : IDisposable
         work.Run("ballot", async token =>
         {
             var failure = AepFailure.None;
-            var fetched = await client.BallotAsync(current.Id, token, received => failure = received)
+            var fetched = await client.BallotAsync(current.Id, track, token, received => failure = received)
                 .ConfigureAwait(false);
             if (fetched is null)
             {
@@ -272,7 +314,7 @@ internal sealed class PrismStore : IDisposable
             }
 
             Interlocked.Exchange(ref lastBallotCoins, Math.Max(0, updated.BallotCoins));
-            week = updated;
+            Publish(updated);
             ballot = null;
             return true;
         }, onComplete, EndAction);

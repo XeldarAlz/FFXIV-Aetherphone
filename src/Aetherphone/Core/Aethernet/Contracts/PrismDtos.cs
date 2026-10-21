@@ -9,6 +9,7 @@ internal sealed record PrismEntryDto(
     int Height = 0,
     string Status = "",
     string RejectReason = "",
+    string Track = "",
     PrismGearDto[]? Outfit = null);
 
 internal sealed record PrismGearDto(int Slot = 0, uint ItemId = 0, byte Stain0 = 0, byte Stain1 = 0);
@@ -39,7 +40,17 @@ internal sealed record PrismWeekDto(
     long ResultsRevision = 0,
     int FinalistCount = 0,
     PrismPrizesDto? Prizes = null,
-    long NextWeekAtUnix = 0);
+    long NextWeekAtUnix = 0,
+    PrismTrackDto[]? Tracks = null);
+
+internal sealed record PrismTrackDto(
+    string Id = "",
+    int EntryCount = 0,
+    PrismEntryDto? MyEntry = null,
+    int BallotsCast = 0,
+    int FinalistCount = 0,
+    long ResultsRevision = 0,
+    PrismPrizesDto? Prizes = null);
 
 internal sealed record PrismPrizesDto(long[]? Heat = null, long[]? Final = null, int MinHeatSize = 0,
     PrismPrizeDto[]? Placings = null, string GilNote = "");
@@ -54,6 +65,8 @@ internal sealed record PrismPrizeDto(
     int FrameDays = 0);
 
 internal sealed record PrismEntryRequest(string MediaKey, int Width, int Height,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? Track = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     PrismGearDto[]? Outfit = null);
 
@@ -94,4 +107,5 @@ internal sealed record PrismResultsDto(
     string HeatLabel = "",
     long Revision = 0,
     int FinalistCount = 0,
-    PrismPrizesDto? Prizes = null);
+    PrismPrizesDto? Prizes = null,
+    string Track = "");

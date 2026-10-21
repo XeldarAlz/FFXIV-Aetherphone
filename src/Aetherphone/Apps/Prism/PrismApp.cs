@@ -29,6 +29,7 @@ internal enum PrismScreen : byte
     Prizes,
     Outfit,
     Glam,
+    Track,
 }
 
 internal sealed partial class PrismApp : IResumableApp
@@ -185,6 +186,9 @@ internal sealed partial class PrismApp : IResumableApp
                 break;
             case PrismScreen.Glam:
                 DrawGlam(drawList, content, scale);
+                break;
+            case PrismScreen.Track:
+                DrawTrackChoice(drawList, content, scale);
                 break;
             default:
                 DrawCover(drawList, full, content, scale);
