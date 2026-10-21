@@ -157,7 +157,7 @@ internal sealed partial class PrismApp
             PrismFace.Label, labelPixels) - gap;
         right -= PrismType.DrawRight(drawList, new Vector2(right, y), action, PrismArt.Fore, PrismFace.Label,
             labelPixels) + gap * 2f;
-        var label = Loc.T(L.Prism.ThemeLabel);
+        var label = Loc.T(L.Prism.TabWeek);
         var labelWidth = PrismType.Measure(label, PrismFace.Label, labelPixels).X + gap;
         var titleLeft = left;
         if (labelWidth + PrismType.Measure(week.Title, PrismFace.Label, labelPixels).X <= right - left)
@@ -293,19 +293,21 @@ internal sealed partial class PrismApp
         var textWidth = left + width - textLeft;
         PrismType.Draw(drawList, new Vector2(textLeft, top), Loc.T(L.Prism.GlamOfTheDay), PrismArt.Muted, PrismFace.Label,
             labelPixels);
-        var y = top + labelLine + Metrics.Space.Xs * scale;
         var pixels = PrismType.Fit(glam.Title, PrismFace.Headline, textWidth, PrismType.TitleUnits * scale,
             PrismType.HeadingUnits * scale, 3, out var lines);
+        var y = photo.Max.Y - lines.Length * PrismType.LineHeight(PrismFace.Headline, pixels) -
+                Metrics.Space.Xs * scale - labelLine * (glam.TryOns > 0 ? 2f : 1f);
         y += PrismType.DrawLines(drawList, new Vector2(textLeft, y), lines, PrismArt.Fore, PrismFace.Headline, pixels) +
              Metrics.Space.Xs * scale;
         PrismType.Draw(drawList, new Vector2(textLeft, y), PrismType.FitLabel(AuthorLine(glam.Author), labelPixels,
             textWidth), PrismArt.Muted, PrismFace.Label, labelPixels);
         if (glam.TryOns > 0)
         {
-            PrismType.Draw(drawList, new Vector2(textLeft, photo.Max.Y - labelLine),
+            PrismType.Draw(drawList, new Vector2(textLeft, y + labelLine),
                 PrismType.FitLabel(TriedOnLine(glam.TryOns), labelPixels, textWidth), PrismArt.Muted, PrismFace.Label,
                 labelPixels);
         }
+
         var hovered = UiInteract.Hover(photo.Min, new Vector2(left + width, photo.Max.Y));
         if (hovered)
         {
