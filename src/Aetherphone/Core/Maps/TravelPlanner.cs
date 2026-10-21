@@ -36,7 +36,6 @@ internal readonly record struct HousingHome(
 
 internal static class TravelPlanner
 {
-
     private static Dictionary<uint, TravelDestination>? destinationByTerritory;
     private static Dictionary<uint, HousingHome>? housingByTerritory;
 
