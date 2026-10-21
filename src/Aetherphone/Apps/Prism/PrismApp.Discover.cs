@@ -246,12 +246,13 @@ internal sealed partial class PrismApp
             if (glam.Likes > 0)
             {
                 var bottom = max.Y - pad - labelLine;
+                var ink = PrismType.Snap(PrismFace.Label, labelPixels);
+                var iconGap = Metrics.Space.Xs * scale;
                 likesWidth = PrismType.DrawRight(drawList, new Vector2(max.X - pad, bottom),
                     NumberText.Compact(glam.Likes), PrismArt.PhotoFore, PrismFace.Label, labelPixels);
-                PhoneIcon.Draw(drawList, new Vector2(max.X - pad - likesWidth - gap - labelPixels * 0.5f,
-                    bottom + labelLine * 0.5f), glam.Liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart,
-                    PrismArt.PhotoFore, labelPixels);
-                likesWidth += labelPixels + gap * 2f;
+                PhoneIcon.Draw(drawList, new Vector2(max.X - pad - likesWidth - iconGap - ink * 0.5f, bottom + ink * 0.5f),
+                    glam.Liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart, PrismArt.PhotoFore, ink);
+                likesWidth += ink + iconGap + gap;
             }
 
             PrismType.Draw(drawList, new Vector2(x + pad, max.Y - pad - labelLine),
