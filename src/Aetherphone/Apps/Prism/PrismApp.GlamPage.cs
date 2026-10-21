@@ -9,6 +9,7 @@ using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Textures.TextureWraps;
 
 namespace Aetherphone.Apps.Prism;
 
@@ -39,6 +40,9 @@ internal sealed partial class PrismApp
         statsFor = string.Empty;
         Push(PrismScreen.GlamDetail);
     }
+
+    private IDalamudTextureWrap? ViewerPage(int index) =>
+        glams.Detail?.Photos is { } photos && index < photos.Length ? images.Get(photos[index].Url) : null;
 
     private static string WearKey(GlamDto glam) =>
         glam.Id.Length > 0 ? glam.Id : glam.Photos is { Length: > 0 } photos ? photos[0].Url : string.Empty;
@@ -164,6 +168,16 @@ internal sealed partial class PrismApp
         if (photos.Length > 0)
         {
             DrawLook(drawList, frame, photos[photoIndex].Url, false);
+            var hovered = UiInteract.Hover(frame.Min, frame.Max);
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+
+            if (UiInteract.Click(frame.Min, frame.Max, hovered))
+            {
+                photoViewer.Open(this, photos.Length, photoIndex, viewerPage);
+            }
         }
 
         var cursor = frame.Max.Y + Metrics.Space.Sm * scale;

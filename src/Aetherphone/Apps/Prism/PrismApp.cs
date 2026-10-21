@@ -14,6 +14,7 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Prism;
@@ -60,6 +61,8 @@ internal sealed partial class PrismApp : IResumableApp
     private readonly ITextureProvider textures;
     private readonly PhotoComposeSession pickSession;
     private readonly ImageIntake pickIntake = new();
+    private readonly PhotoViewerOverlay photoViewer = new();
+    private readonly Func<int, IDalamudTextureWrap?> viewerPage;
     private readonly Action withdraw;
     private readonly Action<bool> ballotSettled;
     private readonly Action<bool> entrySettled;
@@ -93,6 +96,7 @@ internal sealed partial class PrismApp : IResumableApp
         composeSession = new PhotoComposeSession(library, wallpaperImages);
         wardrobe = new WardrobeStore(Plugin.PluginInterface.ConfigDirectory.FullName);
         postSettled = SettlePost;
+        viewerPage = ViewerPage;
         withdraw = store.Withdraw;
         ballotSettled = SettleBallot;
         entrySettled = SettleEntry;
@@ -143,6 +147,7 @@ internal sealed partial class PrismApp : IResumableApp
     public void OnClosed()
     {
         pickIntake.Discard();
+        photoViewer.Close();
     }
 
     public void Draw(in PhoneContext context)
@@ -153,6 +158,12 @@ internal sealed partial class PrismApp : IResumableApp
         var full = SceneChrome.ScreenFrom(content, context.Theme, scale);
         PrismArt.Follow(context.Theme);
         ImGui.GetWindowDrawList().AddRectFilled(full.Min, full.Max, ImGui.GetColorU32(PrismArt.Back));
+        if (photoViewer.Active)
+        {
+            photoViewer.Draw(full, context.Theme);
+            return;
+        }
+
         TickRefresh();
         ForgetLoadsOnNewWeek();
         ConsumeSharedPhoto();
