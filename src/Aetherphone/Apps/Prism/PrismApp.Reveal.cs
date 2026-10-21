@@ -316,7 +316,7 @@ internal sealed partial class PrismApp
         if (finalOrder.Count > 0)
         {
             cursor = DrawPodium(list, left, cursor, width, scale);
-            if (PrismOutfit.Has(finalOrder[0].Outfit))
+            if (HasOutfit(finalOrder[0].Outfit) || finalOrder[0].GlamId.Length > 0)
             {
                 if (PrismArt.Link(list, new Vector2(left, cursor), Loc.T(L.Prism.WinnersOutfit), PrismArt.Muted, scale))
                 {

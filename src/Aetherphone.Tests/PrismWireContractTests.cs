@@ -243,16 +243,18 @@ public sealed class PrismWireContractTests
     [Fact]
     public void PlacingsAndEntriesCarryTheSharedOutfit()
     {
-        var results = JsonSerializer.Deserialize("{\"weekId\":\"w_1\",\"finalPodium\":[{\"rank\":1,"
+        var results = JsonSerializer.Deserialize("{\"weekId\":\"w_1\",\"finalPodium\":[{\"rank\":1,\"glamId\":\"g_9\","
             + "\"outfit\":[{\"slot\":0,\"itemId\":40001},{\"slot\":3,\"itemId\":45123,\"stain0\":12}]}]}",
             AethernetJsonContext.Default.PrismResultsDto);
-        var outfit = results?.FinalPodium?[0].Outfit;
-        Assert.True(PrismOutfit.Has(outfit));
+        var winner = results?.FinalPodium?[0];
+        Assert.Equal("g_9", winner?.GlamId);
+        var outfit = winner?.Outfit;
+        Assert.Equal(2, outfit?.Length);
         Assert.Equal(45123u, outfit![1].ItemId);
         Assert.Equal(12, outfit[1].Stain0);
 
         var entry = JsonSerializer.Deserialize("{\"id\":\"e_1\"}", AethernetJsonContext.Default.PrismEntryDto);
-        Assert.False(PrismOutfit.Has(entry?.Outfit));
+        Assert.Null(entry?.Outfit);
     }
 
     [Fact]

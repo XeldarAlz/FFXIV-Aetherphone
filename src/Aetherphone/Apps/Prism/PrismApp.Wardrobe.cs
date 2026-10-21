@@ -210,15 +210,7 @@ internal sealed partial class PrismApp
 
         cursor = wear.Max.Y + Metrics.Space.Xl * scale;
         cursor = DrawSectionLabel(list, left, cursor, width, 0, Loc.T(L.Prism.GearHeading), scale);
-        for (var index = 0; index < outfit.Gear.Length; index++)
-        {
-            if (outfit.Gear[index].ItemId != 0)
-            {
-                cursor = DrawGearRow(list, left, cursor, width, outfit.Gear[index], scale);
-            }
-        }
-
-        cursor += Metrics.Space.Lg * scale;
+        cursor = DrawGearList(list, left, cursor, width, outfit.Gear, true, scale) + Metrics.Space.Lg * scale;
         if (outfit.State.Length > 0 && glamour.HasGlamourer &&
             PrismArt.Link(list, new Vector2(left, cursor), Loc.T(L.Prism.SaveToGlamourer), PrismArt.Muted, scale))
         {

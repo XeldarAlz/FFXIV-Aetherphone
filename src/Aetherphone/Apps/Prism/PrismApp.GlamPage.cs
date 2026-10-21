@@ -99,7 +99,8 @@ internal sealed partial class PrismApp
         var gutter = PrismArt.Gutter(scale);
         var top = content.Min.Y + HeaderGapUnits * scale;
         var width = PrismType.Measure(MoreGlyph, PrismFace.Label, labelPixels).X;
-        if (!PrismArt.Link(drawList, new Vector2(content.Max.X - gutter - width, top), MoreGlyph, PrismArt.Muted, scale))
+        if (glam.Id.Length == 0 ||
+            !PrismArt.Link(drawList, new Vector2(content.Max.X - gutter - width, top), MoreGlyph, PrismArt.Muted, scale))
         {
             return;
         }
@@ -174,7 +175,11 @@ internal sealed partial class PrismApp
         top += PrismType.DrawLines(drawList, new Vector2(left, top), lines, PrismArt.Fore, PrismFace.Headline, pixels) +
                Metrics.Space.Xs * scale;
         var author = AuthorLine(glam.Author);
-        if (glam.Author is { } who && PrismArt.Link(drawList, new Vector2(left, top), author, PrismArt.Muted, scale))
+        if (glam.Author is not { Id.Length: > 0 } who)
+        {
+            PrismType.Draw(drawList, new Vector2(left, top), author, PrismArt.Muted, PrismFace.Label, labelPixels);
+        }
+        else if (PrismArt.Link(drawList, new Vector2(left, top), author, PrismArt.Muted, scale))
         {
             OpenProfile(who);
         }
@@ -199,7 +204,8 @@ internal sealed partial class PrismApp
     {
         var height = PrismArt.StripUnits * scale;
         var gap = Metrics.Space.Md * scale;
-        var half = (width - gap) * 0.5f;
+        var listed = glam.Id.Length > 0;
+        var half = listed ? (width - gap) * 0.5f : width;
         var tryOn = new Rect(new Vector2(left, top), new Vector2(left + half, top + height));
         var save = new Rect(new Vector2(left + half + gap, top), new Vector2(left + width, top + height));
         if (PrismArt.Strip(drawList, tryOn, Loc.T(glamour.TryingOn ? L.Prism.TakeOff : L.Prism.TryOnGlam), Arrow, true))
@@ -215,7 +221,8 @@ internal sealed partial class PrismApp
             }
         }
 
-        if (PrismArt.Strip(drawList, save, Loc.T(glam.Saved ? L.Prism.Saved : L.Prism.Save), string.Empty, false))
+        if (listed && PrismArt.Strip(drawList, save, Loc.T(glam.Saved ? L.Prism.Saved : L.Prism.Save), string.Empty,
+                false))
         {
             glams.ToggleSave(glam);
         }
@@ -223,7 +230,7 @@ internal sealed partial class PrismApp
         top = tryOn.Max.Y + Metrics.Space.Md * scale;
         var labelPixels = PrismArt.LabelPixels();
         var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
-        if (PrismArt.Link(drawList, new Vector2(left, top), Loc.T(glam.Liked ? L.Prism.Liked : L.Prism.Like),
+        if (listed && PrismArt.Link(drawList, new Vector2(left, top), Loc.T(glam.Liked ? L.Prism.Liked : L.Prism.Like),
                 glam.Liked ? PrismArt.Fore : PrismArt.Muted, scale))
         {
             glams.ToggleLike(glam);
@@ -267,11 +274,24 @@ internal sealed partial class PrismApp
         }
 
         top = DrawSectionLabel(drawList, left, top, width, 0, Loc.T(L.Prism.GearHeading), scale);
+        top = DrawGearList(drawList, left, top, width, gear, true, scale);
+        if (glam.WeekId.Length > 0)
+        {
+            top += Typography.DrawWrappedLeft(new Vector2(left, top), Loc.T(L.Prism.OutfitCaveat), PrismArt.Muted,
+                TextStyles.Footnote, width);
+        }
+
+        return top;
+    }
+
+    private float DrawGearList(ImDrawListPtr drawList, float left, float top, float width, GlamGearDto[] gear,
+        bool interactive, float scale)
+    {
         for (var index = 0; index < gear.Length; index++)
         {
             if (gear[index].ItemId != 0)
             {
-                top = DrawGearRow(drawList, left, top, width, gear[index], scale);
+                top = DrawGearRow(drawList, left, top, width, gear[index], interactive, scale);
             }
         }
 
@@ -281,14 +301,15 @@ internal sealed partial class PrismApp
             {
                 top = DrawSectionLabel(drawList, left, top + Metrics.Space.Lg * scale, width, 1,
                     Loc.T(L.Prism.CharacterHeading), scale);
-                top = DrawModChips(drawList, left, top, width, mods, scale);
+                top = DrawModChips(drawList, left, top, width, mods, interactive, scale);
             }
         }
 
         return top;
     }
 
-    private float DrawGearRow(ImDrawListPtr drawList, float left, float top, float width, GlamGearDto piece, float scale)
+    private float DrawGearRow(ImDrawListPtr drawList, float left, float top, float width, GlamGearDto piece,
+        bool interactive, float scale)
     {
         var labelPixels = PrismArt.LabelPixels();
         var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
@@ -301,15 +322,20 @@ internal sealed partial class PrismApp
 
         var textLeft = left + icon + Metrics.Space.Md * scale;
         var tryLabel = Loc.T(L.Prism.TryOnGlam);
-        var tryWidth = PrismType.Measure(tryLabel, PrismFace.Label, labelPixels).X;
-        var room = width - (textLeft - left) - tryWidth - Metrics.Space.Md * scale;
-        if (PrismArt.Link(drawList, new Vector2(textLeft, top), PrismType.FitLabel(name, labelPixels, room), PrismArt.Fore,
-                scale))
+        var tryWidth = interactive ? PrismType.Measure(tryLabel, PrismFace.Label, labelPixels).X : 0f;
+        var room = width - (textLeft - left) - (interactive ? tryWidth + Metrics.Space.Md * scale : 0f);
+        var fitted = PrismType.FitLabel(name, labelPixels, room);
+        if (!interactive)
+        {
+            PrismType.Draw(drawList, new Vector2(textLeft, top), fitted, PrismArt.Fore, PrismFace.Label, labelPixels);
+        }
+        else if (PrismArt.Link(drawList, new Vector2(textLeft, top), fitted, PrismArt.Fore, scale))
         {
             OpenItemGlams(piece.ItemId);
         }
 
-        if (PrismArt.Link(drawList, new Vector2(left + width - tryWidth, top), tryLabel, PrismArt.Muted, scale))
+        if (interactive &&
+            PrismArt.Link(drawList, new Vector2(left + width - tryWidth, top), tryLabel, PrismArt.Muted, scale))
         {
             glamour.TryOnPiece(piece);
         }
@@ -324,7 +350,7 @@ internal sealed partial class PrismApp
         var bottom = top + MathF.Max(icon, labelLine * 2f) + Metrics.Space.Sm * scale;
         if (piece.Mods is { Length: > 0 } mods)
         {
-            bottom = DrawModChips(drawList, textLeft, bottom, width - (textLeft - left), mods, scale);
+            bottom = DrawModChips(drawList, textLeft, bottom, width - (textLeft - left), mods, interactive, scale);
         }
 
         PrismArt.Hairline(drawList, left, left + width, bottom, PrismArt.Faint, scale);
@@ -352,7 +378,8 @@ internal sealed partial class PrismApp
 
     private readonly Dictionary<int, string> dyeLines = new();
 
-    private float DrawModChips(ImDrawListPtr drawList, float left, float top, float width, GlamModDto[] mods, float scale)
+    private float DrawModChips(ImDrawListPtr drawList, float left, float top, float width, GlamModDto[] mods,
+        bool interactive, float scale)
     {
         var labelPixels = PrismArt.LabelPixels();
         var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
@@ -363,12 +390,18 @@ internal sealed partial class PrismApp
         {
             var mod = mods[index];
             var (line, allowed) = ModLine(mod);
+            allowed &= interactive;
             var room = width - (allowed ? getWidth + Metrics.Space.Md * scale : 0f);
-            if (PrismArt.Link(drawList, new Vector2(left, top), PrismType.FitLabel(line, labelPixels, room), PrismArt.Fore,
-                    scale))
+            var fitted = PrismType.FitLabel(line, labelPixels, room);
+            if (!interactive)
+            {
+                PrismType.Draw(drawList, new Vector2(left, top), fitted, PrismArt.Fore, PrismFace.Label, labelPixels);
+            }
+            else if (PrismArt.Link(drawList, new Vector2(left, top), fitted, PrismArt.Fore, scale))
             {
                 OpenModGlams(mod);
             }
+
             if (allowed && PrismArt.Link(drawList, new Vector2(left + width - getWidth, top), get, PrismArt.Muted, scale))
             {
                 UrlActions.AskThenOpen(mod.Link);

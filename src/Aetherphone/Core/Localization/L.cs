@@ -10906,13 +10906,12 @@ internal static class L
         public static readonly LocString OutfitTitle = new("prism.outfitTitle", "Your outfit");
         public static readonly LocString Outfit = new("prism.outfit", "Outfit");
         public static readonly LocString OutfitBody = new("prism.outfitBody",
-            "The items and dyes you have on right now. Anyone who sees the results can see them and try them on, and your photo may show something else.");
+            "The items, dyes and mods you have on right now. Anyone who sees the results can see them and try them on, and your photo may show something else.");
         public static readonly LocString ShareOutfit = new("prism.shareOutfit", "Share my outfit");
         public static readonly LocString SharingOutfit = new("prism.sharingOutfit", "Sharing my outfit");
         public static readonly LocString StopSharingOutfit = new("prism.stopSharingOutfit", "Stop sharing my outfit");
         public static readonly LocString UpdateOutfit = new("prism.updateOutfit", "Update my shared outfit");
         public static readonly LocString NothingEquipped = new("prism.nothingEquipped", "Nothing equipped to share right now");
-        public static readonly LocString TryOnAll = new("prism.tryOnAll", "Try on the whole outfit");
         public static readonly LocString WinnersOutfit = new("prism.winnersOutfit", "The winner's outfit");
         public static readonly LocString OutfitCaveat = new("prism.outfitCaveat",
             "Saved when they entered, so it may not match the photo.");

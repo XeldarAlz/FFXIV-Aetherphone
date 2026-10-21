@@ -87,7 +87,8 @@ internal sealed record PrismPlacingDto(
     string DisplayName = "",
     string World = "",
     string Handle = "",
-    GlamGearDto[]? Outfit = null);
+    GlamGearDto[]? Outfit = null,
+    string GlamId = "");
 
 internal sealed record PrismResultsDto(
     string WeekId = "",

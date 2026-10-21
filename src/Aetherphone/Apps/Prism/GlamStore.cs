@@ -223,6 +223,11 @@ internal sealed class GlamStore : IDisposable
     {
         detail = glam;
         var glamId = glam.Id;
+        if (glamId.Length == 0)
+        {
+            return;
+        }
+
         work.Run("glam", async token =>
         {
             var fetched = await client.GlamAsync(glamId, token).ConfigureAwait(false);

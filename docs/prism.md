@@ -91,7 +91,7 @@ Uploads use `/media/upload-url` with scope `prism`, the same as contest entries.
 
 ### The contest on glams
 
-A contest entry keeps today's routes (`PUT /prism/weeks/{id}/entry`, tracks, ballots, results). Its `outfit` now carries the full glam gear with mods. While the week runs the entry stays nameless and out of every feed. When results are out the server publishes it as a glam on the author's profile with `weekId` and `placing` set, and a glam that is already public can't be entered.
+A contest entry keeps today's routes (`PUT /prism/weeks/{id}/entry`, tracks, ballots, results). Its `outfit` now carries the full glam gear with mods. While the week runs the entry stays nameless and out of every feed. When results are out the server publishes it as a glam on the author's profile with `weekId` and `placing` set, and a glam that is already public can't be entered. Each podium placing in the results carries that glam's `glamId`, so tapping a winner opens the full glam page (likes, saves, try on); without it the client shows the placing's photo and outfit read only.
 
 ### Rules the server enforces
 
