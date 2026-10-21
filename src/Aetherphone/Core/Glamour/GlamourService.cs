@@ -88,6 +88,18 @@ internal sealed class GlamourService : IDisposable
         return captured.ToArray();
     }
 
+    public bool TryBody(out int race, out int gender)
+    {
+        race = 0;
+        gender = 0;
+        if (HasGlamourer)
+        {
+            GlamourerDesign.Read(glamourer.State(), out race, out gender);
+        }
+
+        return race > 0;
+    }
+
     public static bool IsVanilla(GlamGearDto[] gear)
     {
         for (var index = 0; index < gear.Length; index++)

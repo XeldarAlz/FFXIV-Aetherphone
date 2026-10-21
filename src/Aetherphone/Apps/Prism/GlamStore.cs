@@ -59,6 +59,7 @@ internal sealed class GlamStore : IDisposable
     private volatile bool postFailed;
     private volatile int epoch;
     private bool? vanillaOnly;
+    private (int Race, int Gender) body;
 
     public GlamStore(AethernetSession session, AethernetApi api)
     {
@@ -76,6 +77,8 @@ internal sealed class GlamStore : IDisposable
     public string MyId => session.CurrentUser?.Id ?? string.Empty;
 
     public bool? VanillaOnly => vanillaOnly;
+
+    public bool FitsBody => body.Race > 0;
 
     public GlamDto? Detail => detail;
 
@@ -113,6 +116,22 @@ internal sealed class GlamStore : IDisposable
         }
 
         vanillaOnly = only;
+        ClearDiscover();
+    }
+
+    public void SetBody(int race, int gender)
+    {
+        if (body == (race, gender))
+        {
+            return;
+        }
+
+        body = (race, gender);
+        ClearDiscover();
+    }
+
+    private void ClearDiscover()
+    {
         epoch++;
         for (var index = 0; index < discover.Length; index++)
         {
@@ -130,12 +149,14 @@ internal sealed class GlamStore : IDisposable
 
         var key = ScopeKeys[(int)scope];
         var only = vanillaOnly;
+        var fits = body;
         var started = epoch;
         lane.Loading = true;
         work.Run("discover", async token =>
         {
             var reported = AepFailure.None;
-            var page = await client.FeedAsync(key, only, null, token, failure => reported = failure).ConfigureAwait(false);
+            var page = await client.FeedAsync(key, only, fits, null, token, failure => reported = failure)
+                .ConfigureAwait(false);
             if (started != epoch)
             {
                 return;
@@ -168,11 +189,12 @@ internal sealed class GlamStore : IDisposable
 
         var key = ScopeKeys[(int)scope];
         var only = vanillaOnly;
+        var fits = body;
         var started = epoch;
         lane.LoadingMore = true;
         work.Run("discover more", async token =>
         {
-            var page = await client.FeedAsync(key, only, cursor, token).ConfigureAwait(false);
+            var page = await client.FeedAsync(key, only, fits, cursor, token).ConfigureAwait(false);
             if (page is not null && started == epoch)
             {
                 lane.ApplyMore(page.Items ?? Array.Empty<GlamDto>(), page.NextCursor);

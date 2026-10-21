@@ -84,9 +84,28 @@ internal sealed partial class PrismApp
 
         var filter = Loc.T(FilterNames[discoverFilter]);
         var filterWidth = PrismType.Measure(filter, PrismFace.Label, labelPixels).X;
-        if (x > right - filterWidth)
+        var fits = Loc.T(L.Prism.FitsMe);
+        var fitsWidth = PrismType.Measure(fits, PrismFace.Label, labelPixels).X;
+        var gap = Metrics.Space.Lg * scale;
+        if (x > right - filterWidth - gap - fitsWidth)
         {
             top += labelLine + Metrics.Space.Md * scale;
+        }
+
+        var fitsLeft = right - filterWidth - gap - fitsWidth;
+        if (PrismArt.Link(drawList, new Vector2(fitsLeft, top), fits, glams.FitsBody ? PrismArt.Fore : PrismArt.Muted,
+                scale))
+        {
+            var (race, gender) = glams.FitsBody ? (0, 0) : glamour.TryBody(out var shown, out var shownGender)
+                ? (shown, shownGender)
+                : Appearance();
+            glams.SetBody(race, gender);
+            RefreshDiscover(true);
+        }
+
+        if (glams.FitsBody)
+        {
+            PrismArt.Hairline(drawList, fitsLeft, fitsLeft + fitsWidth, top + labelLine, PrismArt.Fore, scale);
         }
 
         if (PrismArt.Link(drawList, new Vector2(right - filterWidth, top), filter, PrismArt.Muted, scale))

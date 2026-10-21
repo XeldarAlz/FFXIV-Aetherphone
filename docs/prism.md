@@ -75,7 +75,7 @@ Everything is under the signed-in Aethernet session. Paths are built in `Core/Ae
 
 | Route | Body | Returns |
 | --- | --- | --- |
-| `GET /prism/glams?scope=new\|today\|following[&vanilla=true\|false][&cursor=]` | | `{ items: Glam[], nextCursor }` |
+| `GET /prism/glams?scope=new\|today\|following[&vanilla=true\|false][&race=&gender=][&cursor=]` | | `{ items: Glam[], nextCursor }`; `race` and `gender` (Fits me) keep glams made on that body |
 | `GET /prism/glams/{id}` | | `Glam` |
 | `POST /prism/glams` | `{ title, photos: [{ key, width, height }], gear, tags, race, gender, vanilla, inspiredBy }` | `Glam` |
 | `DELETE /prism/glams/{id}` | | 204 |
