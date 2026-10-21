@@ -10860,6 +10860,8 @@ internal static class L
         public static readonly LocString BodyMale = new("prism.bodyMale", "{0}, male");
         public static readonly LocString MoreFrom = new("prism.moreFrom", "More from {0}");
         public static readonly LocString FitsMe = new("prism.fitsMe", "Fits me");
+        public static readonly LocString StillTryingOn = new("prism.stillTryingOn",
+            "You're still trying something on, so it would go out as your gear. Take it off unless the photo shows it.");
         public static readonly LocString CheckMarket = new("prism.checkMarket", "Check market");
         public static readonly LocString GlamOfTheDay = new("prism.glamOfTheDay", "Glam of the day");
         public static readonly LocString SeasonStanding = new("prism.seasonStanding", "{0}: rank {1}, {2} points");
@@ -10927,7 +10929,6 @@ internal static class L
             "Gil prizes are sent to you in game by the Aetherphone team.");
         public static readonly LocString WhatWinnersGet = new("prism.whatWinnersGet", "What winners get");
         public static readonly LocString OutfitTitle = new("prism.outfitTitle", "Your outfit");
-        public static readonly LocString Outfit = new("prism.outfit", "Outfit");
         public static readonly LocString OutfitBody = new("prism.outfitBody",
             "The items, dyes and mods you have on right now. Anyone who sees the results can see them and try them on, and your photo may show something else.");
         public static readonly LocString ShareOutfit = new("prism.shareOutfit", "Share my outfit");

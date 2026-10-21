@@ -20,6 +20,8 @@ internal enum GlamScope : byte
 
 internal readonly record struct GlamPhotoDraft(string Path, WallpaperCrop Crop);
 
+internal sealed record GlamMore(string GlamId, GlamDto[] Items);
+
 internal sealed class GlamStore : IDisposable
 {
     public const int MaxPhotos = 4;
@@ -49,8 +51,9 @@ internal sealed class GlamStore : IDisposable
     private volatile string listKey = string.Empty;
     private volatile GlamDto? detail;
     private volatile GlamDto? posted;
-    private volatile GlamDto[] more = Array.Empty<GlamDto>();
+    private volatile GlamMore? more;
     private volatile string moreFor = string.Empty;
+    private volatile int listOpened;
     private volatile GlamProfileDto? profile;
     private volatile GlamCollectionDto[] collections = Array.Empty<GlamCollectionDto>();
     private volatile GlamItemDto? item;
@@ -84,9 +87,8 @@ internal sealed class GlamStore : IDisposable
 
     public GlamDto? Posted => posted;
 
-    public GlamDto[] More => more;
-
-    public string MoreFor => moreFor;
+    public GlamDto[] MoreFrom(string glamId) =>
+        more is { } shown && shown.GlamId == glamId ? shown.Items : Array.Empty<GlamDto>();
 
     public GlamProfileDto? Profile => profile;
 
@@ -265,7 +267,6 @@ internal sealed class GlamStore : IDisposable
         var glamId = glam.Id;
         var authorId = author.Id;
         moreFor = glamId;
-        more = Array.Empty<GlamDto>();
         work.Run("more from", async token =>
         {
             var page = await client.UserGlamsAsync(authorId, null, token).ConfigureAwait(false);
@@ -283,7 +284,7 @@ internal sealed class GlamStore : IDisposable
                 }
             }
 
-            more = kept.ToArray();
+            more = new GlamMore(glamId, kept.ToArray());
         });
     }
 
@@ -514,11 +515,12 @@ internal sealed class GlamStore : IDisposable
         listFetch = fetch;
         list.Clear();
         list.Loading = true;
+        var opened = ++listOpened;
         work.Run("list", async token =>
         {
             var reported = AepFailure.None;
             var page = await fetch(null, token).ConfigureAwait(false);
-            if (key != listKey)
+            if (opened != listOpened)
             {
                 return;
             }
@@ -532,7 +534,7 @@ internal sealed class GlamStore : IDisposable
             list.ApplyRefresh(page.Items ?? Array.Empty<GlamDto>(), page.NextCursor);
         }, () =>
         {
-            if (key == listKey)
+            if (opened == listOpened)
             {
                 list.Loading = false;
             }

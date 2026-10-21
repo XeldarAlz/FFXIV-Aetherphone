@@ -116,6 +116,7 @@ public sealed class GlamourCoreTests
     {
         var gear = GlamourerDesign.Read("{\"Customize\":{\"Race\":{\"Value\":8},\"Gender\":{\"Value\":1}},"
             + "\"Equipment\":{\"Head\":{\"ItemId\":0},\"Body\":{\"ItemId\":45123,\"Stain\":12,\"Stain2\":3},"
+            + "\"Hands\":{\"ItemId\":4294967162},\"Feet\":{\"ItemId\":32802,\"Apply\":false},"
             + "\"LFinger\":{\"ItemId\":8000}}}", out var race, out var gender);
         Assert.Equal(2, gear.Length);
         Assert.Equal(new GlamGearDto((int)GearSlot.Body, 45123, 12, 3), gear[0]);

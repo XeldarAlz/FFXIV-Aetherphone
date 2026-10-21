@@ -68,7 +68,8 @@ internal sealed partial class PrismApp
             var label = Loc.T(ScopeNames[index]);
             var active = (int)discoverScope == index;
             var width = PrismType.Measure(label, PrismFace.Label, labelPixels).X;
-            if (PrismArt.Link(drawList, new Vector2(x, top), label, active ? PrismArt.Fore : PrismArt.Muted, scale) && !active)
+            if (PrismArt.Link(drawList, new Vector2(x, top), label, active ? PrismArt.Fore : PrismArt.Muted, scale,
+                    labelLine + Metrics.Space.Md * scale) && !active)
             {
                 discoverScope = (GlamScope)index;
                 RefreshDiscover(false);
@@ -94,7 +95,7 @@ internal sealed partial class PrismApp
 
         var fitsLeft = right - filterWidth - gap - fitsWidth;
         if (PrismArt.Link(drawList, new Vector2(fitsLeft, top), fits, glams.FitsBody ? PrismArt.Fore : PrismArt.Muted,
-                scale))
+                scale, labelLine + Metrics.Space.Md * scale))
         {
             var (race, gender) = glams.FitsBody ? (0, 0) : glamour.TryBody(out var shown, out var shownGender)
                 ? (shown, shownGender)
@@ -108,7 +109,8 @@ internal sealed partial class PrismApp
             PrismArt.Hairline(drawList, fitsLeft, fitsLeft + fitsWidth, top + labelLine, PrismArt.Fore, scale);
         }
 
-        if (PrismArt.Link(drawList, new Vector2(right - filterWidth, top), filter, PrismArt.Muted, scale))
+        if (PrismArt.Link(drawList, new Vector2(right - filterWidth, top), filter, PrismArt.Muted, scale,
+                labelLine + Metrics.Space.Md * scale))
         {
             discoverFilter = (discoverFilter + 1) % FilterNames.Length;
             glams.SetVanillaOnly(discoverFilter switch

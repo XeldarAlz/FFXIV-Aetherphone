@@ -233,7 +233,8 @@ internal sealed partial class PrismApp
         {
             PrismType.Draw(drawList, new Vector2(left, top), author, PrismArt.Muted, PrismFace.Label, labelPixels);
         }
-        else if (PrismArt.Link(drawList, new Vector2(left, top), author, PrismArt.Muted, scale))
+        else if (PrismArt.Link(drawList, new Vector2(left, top), author, PrismArt.Muted, scale,
+                     labelLine + Metrics.Space.Sm * scale))
         {
             OpenProfile(who);
         }
@@ -285,7 +286,8 @@ internal sealed partial class PrismApp
                 break;
             }
 
-            if (PrismArt.Link(drawList, new Vector2(x, top), label, PrismArt.Fore, scale))
+            if (PrismArt.Link(drawList, new Vector2(x, top), label, PrismArt.Fore, scale,
+                    PrismType.LineHeight(PrismFace.Label, labelPixels) + Metrics.Space.Sm * scale))
             {
                 OpenTagGlams(tags[index]);
             }
@@ -315,8 +317,8 @@ internal sealed partial class PrismApp
         }
 
         glams.OpenMoreFrom(glam);
-        var more = glams.More;
-        if (more.Length == 0 || glams.MoreFor != glam.Id || glam.Author is not { } author)
+        var more = glams.MoreFrom(glam.Id);
+        if (more.Length == 0 || glam.Author is not { } author)
         {
             return top;
         }

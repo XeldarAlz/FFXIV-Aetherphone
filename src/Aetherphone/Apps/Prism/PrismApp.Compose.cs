@@ -100,8 +100,14 @@ internal sealed partial class PrismApp
         top += labelLine + Metrics.Space.Sm * scale;
         var note = PrismType.Sentences(Loc.T(glamour.HasPenumbra ? L.Prism.CapturedNote : L.Prism.PostsAsVanilla),
             TextStyles.Subheadline, width);
-        Typography.DrawWrappedLeft(new Vector2(left, top), note, PrismArt.Muted, TextStyles.Subheadline,
-            PrismType.BalancedWidth(note, TextStyles.Subheadline, width));
+        top += Typography.DrawWrappedLeft(new Vector2(left, top), note, PrismArt.Muted, TextStyles.Subheadline,
+            PrismType.BalancedWidth(note, TextStyles.Subheadline, width)) + Metrics.Space.Lg * scale;
+        DrawStillTryingOn(drawList, left, top, width, scale, out var tookOff);
+        if (tookOff)
+        {
+            captured = glamour.Capture();
+        }
+
         var strip = StripRect(content, scale);
         if (glams.PostFailed && !glams.Posting)
         {
@@ -118,6 +124,26 @@ internal sealed partial class PrismApp
         {
             PostGlam();
         }
+    }
+
+    private float DrawStillTryingOn(ImDrawListPtr drawList, float left, float top, float width, float scale,
+        out bool tookOff)
+    {
+        tookOff = false;
+        if (!glamour.TryingOn)
+        {
+            return top;
+        }
+
+        top += Typography.DrawWrappedLeft(new Vector2(left, top), Loc.T(L.Prism.StillTryingOn), PrismArt.Fore,
+            TextStyles.Subheadline, width) + Metrics.Space.Sm * scale;
+        if (PrismArt.Link(drawList, new Vector2(left, top), Loc.T(L.Prism.TakeOff), PrismArt.Fore, scale))
+        {
+            glamour.Revert();
+            tookOff = true;
+        }
+
+        return top + Metrics.Size.TapTarget * scale;
     }
 
     private float DrawField(ImDrawListPtr drawList, float left, float top, float width, string label, string hint,

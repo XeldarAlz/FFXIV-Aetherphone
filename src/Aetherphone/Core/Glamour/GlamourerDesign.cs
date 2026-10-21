@@ -5,6 +5,9 @@ namespace Aetherphone.Core.Glamour;
 
 internal static class GlamourerDesign
 {
+    // Glamourer stores empty slots as reserved ids just under uint.MaxValue (ItemManager.NothingId and SmallclothesId).
+    private const uint ReservedIds = 1024;
+
     private static readonly (string Key, GearSlot Slot)[] Slots =
     {
         ("MainHand", GearSlot.MainHand), ("OffHand", GearSlot.OffHand), ("Head", GearSlot.Head),
@@ -39,8 +42,9 @@ internal static class GlamourerDesign
             var gear = new List<GlamGearDto>(Slots.Length);
             for (var index = 0; index < Slots.Length; index++)
             {
-                if (equipment[Slots[index].Key] is not JObject piece ||
-                    piece["ItemId"]?.Value<ulong>() is not { } itemId || itemId == 0 || itemId > uint.MaxValue)
+                if (equipment[Slots[index].Key] is not JObject piece || piece["Apply"]?.Value<bool>() == false ||
+                    piece["ItemId"]?.Value<ulong>() is not { } itemId || itemId == 0 ||
+                    itemId >= uint.MaxValue - ReservedIds)
                 {
                     continue;
                 }

@@ -74,6 +74,11 @@ internal sealed partial class PrismApp
             var cursor = DrawSectionTitle(list, left, origin.Y, width, Loc.T(L.Prism.OutfitTitle), scale);
             cursor += Typography.DrawWrappedLeft(new Vector2(left, cursor), Loc.T(L.Prism.OutfitBody), PrismArt.Muted,
                 TextStyles.Subheadline, width) + Metrics.Space.Xl * scale;
+            cursor = DrawStillTryingOn(list, left, cursor, width, scale, out var tookOff);
+            if (tookOff)
+            {
+                wornOutfit = glamour.Capture();
+            }
             if (wornOutfit.Length == 0)
             {
                 PrismType.Draw(list, new Vector2(left, cursor), Loc.T(L.Prism.NothingEquipped), PrismArt.Muted,

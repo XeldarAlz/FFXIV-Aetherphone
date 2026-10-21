@@ -1,6 +1,7 @@
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.GameChat;
+using Aetherphone.Core.Inventory;
 using Dalamud.Plugin;
 
 namespace Aetherphone.Core.Glamour;
@@ -15,6 +16,7 @@ internal sealed class GlamourService : IDisposable
     private bool probed;
     private bool tryingOn;
     private string before = string.Empty;
+    private ulong snapshotFor;
 
     public GlamourService(IDalamudPluginInterface pluginInterface)
     {
@@ -40,7 +42,7 @@ internal sealed class GlamourService : IDisposable
         }
     }
 
-    public bool TryingOn => tryingOn;
+    public bool TryingOn => tryingOn && !SnapshotStale();
 
     public GlamGearDto[] Capture() => Capture(out _, out _);
 
@@ -210,6 +212,12 @@ internal sealed class GlamourService : IDisposable
             return;
         }
 
+        if (SnapshotStale())
+        {
+            Forget();
+            return;
+        }
+
         tryingOn = false;
         if (HasGlamourer)
         {
@@ -266,19 +274,46 @@ internal sealed class GlamourService : IDisposable
         glamourer.Dispose();
     }
 
+    private bool SnapshotStale()
+    {
+        var current = InventoryReader.ReadLocalContentId();
+        return current != 0 && current != snapshotFor;
+    }
+
+    private void Forget()
+    {
+        tryingOn = false;
+        before = string.Empty;
+        if (HasPenumbra)
+        {
+            penumbra.ClearTemporary();
+        }
+    }
+
     private void Snapshot()
     {
+        if (tryingOn && SnapshotStale())
+        {
+            Forget();
+        }
+
         if (tryingOn)
         {
             return;
         }
 
         before = glamourer.State();
+        snapshotFor = InventoryReader.ReadLocalContentId();
         tryingOn = true;
     }
 
     private bool Prepare()
     {
+        if (tryingOn && SnapshotStale())
+        {
+            Forget();
+        }
+
         if (!tryingOn)
         {
             Snapshot();
