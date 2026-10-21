@@ -53,6 +53,8 @@ internal static class AppStoreCatalog
         ["yellowpages"] = new(L.Apps.YellowPages, L.StoreCopy.YellowPagesSub, L.StoreCopy.YellowPagesBody,
             StoreCategory.Community),
         ["polls"] = new(L.Apps.Polls, L.StoreCopy.PollsSub, L.StoreCopy.PollsBody, StoreCategory.Community),
+        ["loveisland"] = new(L.Apps.LoveIsland, L.StoreCopy.LoveIslandSub, L.StoreCopy.LoveIslandBody,
+            StoreCategory.Community),
         ["camera"] = new(L.Apps.Camera, L.StoreCopy.CameraSub, L.StoreCopy.CameraBody, StoreCategory.PhotoVideo),
         ["photos"] = new(L.Apps.Photos, L.StoreCopy.PhotosSub, L.StoreCopy.PhotosBody, StoreCategory.PhotoVideo),
         ["prism"] = new(L.Apps.Prism, L.StoreCopy.PrismSub, L.StoreCopy.PrismBody, StoreCategory.PhotoVideo),

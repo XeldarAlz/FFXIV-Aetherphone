@@ -90,7 +90,8 @@ internal sealed class PhoneShell : IDisposable
             services.LinkpearlLauncher, services.VelvetLauncher, services.DmLauncher, services.SocialDmLauncher,
             services.SocialLauncher, services.MusterLauncher, services.YellowPagesLauncher,
             services.AnnouncementsLauncher, services.SafetyLauncher, services.EncryptionSetup, services.RadioLauncher,
-            services.CasinoLauncher, services.AetherStreamLauncher, services.HuntsLauncher, services.JamLauncher, services.FeedbackLauncher);
+            services.CasinoLauncher, services.AetherStreamLauncher, services.HuntsLauncher, services.JamLauncher, services.FeedbackLauncher,
+            services.CampaignLauncher);
         MusterChatBridge.Bind(services.Musters, services.MusterLauncher, navigation);
         AdChatBridge.Bind(services.YellowPages, services.YellowPagesLauncher, navigation);
         banner = new NotificationBanner(notifications, VisibleAppId, PhoneVisible, router);
@@ -327,7 +328,7 @@ internal sealed class PhoneShell : IDisposable
         if (!navigation.IsTransitioning)
         {
             transition.ResetPrepared();
-            if (navigation.Current is { } blockedApp && suspensions.Blocks(blockedApp.Id))
+            if (navigation.Current is { } blockedApp && (suspensions.Blocks(blockedApp.Id) || !blockedApp.IsAvailable))
             {
                 navigation.GoHome();
             }

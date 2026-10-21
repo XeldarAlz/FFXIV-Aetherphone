@@ -8,7 +8,7 @@ internal sealed class SuspensionGate
     private static readonly string[] GatedAppIds =
     {
         "message", "chirper", "aethergram", "velvet", "muster", "yellowpages",
-        "announcements", "polls", "casino", "prism",
+        "announcements", "polls", "casino", "prism", "loveisland",
     };
 
     private readonly AethernetSession session;

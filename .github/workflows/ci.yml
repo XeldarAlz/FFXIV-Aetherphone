@@ -127,11 +127,13 @@ jobs:
       # A naming analyzer cannot express this: a private static readonly holding a
       # lookup table is PascalCase while one holding mutable state is camelCase,
       # so any capitalization rule fires on about a thousand correct names. The
-      # leading underscore is the part that is unambiguous.
+      # leading underscore is the part that is unambiguous. The bracket opens
+      # with "]" because POSIX reads a backslash inside brackets literally, so
+      # "\]" would close the set early and the check would match nothing real.
       - name: Verify no underscore prefixed fields
         shell: bash
         run: |
-          offenders=$(grep -rnE '^[[:space:]]*(private|protected)[[:alnum:][:space:]<>,?\[\]\.]*[[:space:]]_[a-zA-Z]' \
+          offenders=$(grep -rnE '^[[:space:]]*(private|protected)[][[:alnum:][:space:]<>,?.]*[[:space:]]_[a-zA-Z]' \
             src/Aetherphone src/Aetherphone.Tests --include=*.cs || true)
           if [ -n "$offenders" ]; then
             echo "$offenders"

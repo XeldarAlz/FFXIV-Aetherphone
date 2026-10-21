@@ -7,11 +7,12 @@ internal sealed class AppAvailability : IDisposable
 {
     private const long RefreshIntervalMilliseconds = 5 * 60 * 1000;
     private const long RetryIntervalMilliseconds = 60 * 1000;
+    private const long PushDebounceMilliseconds = 1500;
 
     public const string ChirperDms = "chirper.dms";
 
     private static readonly string[] AlwaysAvailable = { "appstore", "settings", "announcements" };
-    private static readonly string[] HiddenUntilLaunched = { "muster", "coin", "casino", "prism", ChirperDms };
+    private static readonly string[] HiddenUntilLaunched = { "muster", "coin", "casino", "prism", "loveisland", ChirperDms };
     private static readonly string[] UnavailableInChina = Array.Empty<string>();
 
     private static AppAvailability? current;
@@ -22,8 +23,10 @@ internal sealed class AppAvailability : IDisposable
     private readonly GameData gameData;
     private readonly CancellationTokenSource cancellation = new();
     private volatile Dictionary<string, bool> flags;
+    private RealtimeSignalBus? signals;
     private long nextFetchTick;
     private int fetching;
+    private int pushedDuringFetch;
 
     public AppAvailability(HttpService http, AethernetSession session, Configuration configuration,
         GameData gameData)
@@ -37,6 +40,32 @@ internal sealed class AppAvailability : IDisposable
     }
 
     public static bool IsEnabled(string appId) => GameSheets.Supports(appId) && (current is null || current.Enabled(appId));
+
+    public void Follow(RealtimeSignalBus bus)
+    {
+        signals = bus;
+        bus.FlagsChanged += OnFlagsChanged;
+    }
+
+    internal static long ScheduleAfterPush(long nowTick, long scheduledTick) =>
+        Math.Min(scheduledTick, nowTick + PushDebounceMilliseconds);
+
+    internal static long ScheduleAfterFetch(long nowTick, bool served, bool pushedMeanwhile)
+    {
+        if (pushedMeanwhile)
+        {
+            return nowTick + PushDebounceMilliseconds;
+        }
+
+        return nowTick + (served ? RefreshIntervalMilliseconds : RetryIntervalMilliseconds);
+    }
+
+    private void OnFlagsChanged()
+    {
+        Volatile.Write(ref pushedDuringFetch, 1);
+        var scheduled = Volatile.Read(ref nextFetchTick);
+        Interlocked.CompareExchange(ref nextFetchTick, ScheduleAfterPush(Environment.TickCount64, scheduled), scheduled);
+    }
 
     public bool Enabled(string appId)
     {
@@ -106,21 +135,20 @@ internal sealed class AppAvailability : IDisposable
             return;
         }
 
+        Volatile.Write(ref pushedDuringFetch, 0);
         var token = cancellation.Token;
         _ = Task.Run(async () =>
         {
+            var served = false;
             try
             {
                 var response = await http.GetJsonAsync($"{session.BaseUrl.TrimEnd('/')}/flags",
                     AethernetJsonContext.Default.FeatureFlagsDto, null, token).ConfigureAwait(false);
-                if (response?.Apps is { Count: > 0 } served)
+                if (response?.Apps is { Count: > 0 } apps)
                 {
-                    Apply(served);
-                    Volatile.Write(ref nextFetchTick, Environment.TickCount64 + RefreshIntervalMilliseconds);
-                    return;
+                    Apply(apps);
+                    served = true;
                 }
-
-                Volatile.Write(ref nextFetchTick, Environment.TickCount64 + RetryIntervalMilliseconds);
             }
             catch (OperationCanceledException)
             {
@@ -128,10 +156,11 @@ internal sealed class AppAvailability : IDisposable
             catch (Exception exception)
             {
                 AepLog.Warning(exception, "App availability fetch failed");
-                Volatile.Write(ref nextFetchTick, Environment.TickCount64 + RetryIntervalMilliseconds);
             }
             finally
             {
+                var pushed = Interlocked.Exchange(ref pushedDuringFetch, 0) == 1;
+                Volatile.Write(ref nextFetchTick, ScheduleAfterFetch(Environment.TickCount64, served, pushed));
                 Volatile.Write(ref fetching, 0);
             }
         });
@@ -170,6 +199,11 @@ internal sealed class AppAvailability : IDisposable
 
     public void Dispose()
     {
+        if (signals is not null)
+        {
+            signals.FlagsChanged -= OnFlagsChanged;
+        }
+
         if (ReferenceEquals(current, this))
         {
             current = null;

@@ -30,7 +30,7 @@ public sealed class PrismWireContractTests
             + "\"entriesCloseAtUnix\":10,\"judgingCloseAtUnix\":20,\"finalCloseAtUnix\":30,\"resultsAtUnix\":40,"
             + "\"myEntry\":{\"id\":\"e_1\",\"imageUrl\":\"https://x/e.jpg\",\"width\":810,\"height\":1080,"
             + "\"status\":\"rejected\",\"rejectReason\":\"Not your character\"},\"ballotsCast\":2,"
-            + "\"previousWeekId\":\"w_0\",\"issue\":43,\"entryCount\":214}";
+            + "\"previousWeekId\":\"w_0\",\"issue\":43,\"entryCount\":214,\"resultsRevision\":2}";
         var week = JsonSerializer.Deserialize(json, AethernetJsonContext.Default.PrismWeekDto);
         Assert.NotNull(week);
         Assert.Equal("entering", week.Phase);
@@ -39,6 +39,7 @@ public sealed class PrismWireContractTests
         Assert.Equal("w_0", week.PreviousWeekId);
         Assert.Equal(43, week.Issue);
         Assert.Equal(214, week.EntryCount);
+        Assert.Equal(2, week.ResultsRevision);
         Assert.NotNull(week.MyEntry);
         Assert.Equal("rejected", week.MyEntry.Status);
         Assert.Equal("Not your character", week.MyEntry.RejectReason);
@@ -148,7 +149,7 @@ public sealed class PrismWireContractTests
             + "\"heatPodium\":[{\"rank\":1,\"imageUrl\":\"https://x/p.jpg\",\"displayName\":\"Ada Moon\","
             + "\"world\":\"Phoenix\",\"handle\":\"ada.moon\"}],\"finalPodium\":[],\"myHeatRank\":2,\"heatSize\":12,\"percentile\":15,"
             + "\"coinsAwarded\":150,\"issue\":42,\"entryCount\":214,\"myImageUrl\":\"https://x/me.jpg\","
-            + "\"heatLabel\":\"B\"}", AethernetJsonContext.Default.PrismResultsDto);
+            + "\"heatLabel\":\"B\",\"revision\":2}", AethernetJsonContext.Default.PrismResultsDto);
         Assert.NotNull(results);
         Assert.NotNull(results.HeatPodium);
         Assert.Equal("Ada Moon", results.HeatPodium[0].DisplayName);
@@ -159,5 +160,40 @@ public sealed class PrismWireContractTests
         Assert.Equal(42, results.Issue);
         Assert.Equal("https://x/me.jpg", results.MyImageUrl);
         Assert.Equal("B", results.HeatLabel);
+        Assert.Equal(2, results.Revision);
+    }
+
+    [Fact]
+    public void ServerRevisionsAreMillisecondsAndStillParse()
+    {
+        var week = JsonSerializer.Deserialize("{\"id\":\"2026-W43\",\"phase\":\"results\",\"previousWeekId\":\"2026-W43\","
+            + "\"resultsRevision\":1792440123456,\"finalistCount\":6,\"prizes\":{\"heat\":[30,20,10],"
+            + "\"final\":[2000,1500,1000],\"minHeatSize\":4}}", AethernetJsonContext.Default.PrismWeekDto);
+        Assert.NotNull(week);
+        Assert.Equal(1792440123456L, week.ResultsRevision);
+        Assert.Equal(6, week.FinalistCount);
+        Assert.NotNull(week.Prizes);
+        Assert.Equal(new long[] { 2000, 1500, 1000 }, week.Prizes.Final);
+        Assert.Equal(4, week.Prizes.MinHeatSize);
+
+        var results = JsonSerializer.Deserialize("{\"weekId\":\"2026-W43\",\"revision\":1792440123456,\"finalistCount\":6}",
+            AethernetJsonContext.Default.PrismResultsDto);
+        Assert.NotNull(results);
+        Assert.Equal(1792440123456L, results.Revision);
+        Assert.Null(results.Prizes);
+    }
+
+    [Fact]
+    public void AReplacedRoundWithTheSameWeekIdDropsTheHeldResults()
+    {
+        var held = new PrismResultsDto(WeekId: "2026-W43", Revision: 1000);
+        var replaced = new PrismWeekDto(Id: "2026-W43", PreviousWeekId: "2026-W43", ResultsRevision: 2000);
+        var same = replaced with { ResultsRevision = 1000 };
+        var older = new PrismWeekDto(Id: "2026-W43", PreviousWeekId: "2026-W42");
+
+        Assert.False(PrismStore.StillCurrent(held, replaced));
+        Assert.True(PrismStore.StillCurrent(held, same));
+        Assert.False(PrismStore.StillCurrent(held, older));
+        Assert.True(PrismStore.StillCurrent(new PrismResultsDto(WeekId: "2026-W42"), older));
     }
 }

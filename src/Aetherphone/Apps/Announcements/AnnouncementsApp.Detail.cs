@@ -3,6 +3,7 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Onboarding;
+using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -17,6 +18,10 @@ internal sealed partial class AnnouncementsApp
     private const float MetaToRule = 18f;
     private const float RuleToBody = 18f;
     private const float ParagraphGap = 12f;
+    private const float BlockGap = 20f;
+    private const float ImageRadius = Metrics.Radius.Widget;
+    private const float MinImageAspect = 0.5f;
+    private const float TallImageFocus = 0f;
     private const float BodyToNeighbors = 36f;
     private const float NeighborGap = 10f;
     private const float NeighborPad = 14f;
@@ -140,7 +145,7 @@ internal sealed partial class AnnouncementsApp
         cursorY += Typography.LineHeight(TextStyles.Subheadline) + MetaToRule * scale;
         FeedCell.Hairline(drawList, left, left + measure, cursorY, ui.Hairline);
         cursorY += RuleToBody * scale;
-        cursorY = DrawBlocks(drawList, entry, left, cursorY, measure, scale);
+        cursorY = DrawPieces(drawList, entry, left, cursorY, measure, scale);
 
         if (UiAnchors.Recording)
         {
@@ -153,41 +158,94 @@ internal sealed partial class AnnouncementsApp
         ImGui.Dummy(new Vector2(width, cursorY - origin.Y));
     }
 
-    private float DrawBlocks(ImDrawListPtr drawList, AnnouncementEntry entry, float left, float top, float measure,
+    private float DrawPieces(ImDrawListPtr drawList, AnnouncementEntry entry, float left, float top, float measure,
         float scale)
     {
         var cursorY = top;
-        var blocks = entry.Blocks;
-        for (var blockIndex = 0; blockIndex < blocks.Length; blockIndex++)
+        var pieces = entry.Pieces;
+        for (var pieceIndex = 0; pieceIndex < pieces.Length; pieceIndex++)
         {
-            if (entry.BlockOpensParagraph[blockIndex])
+            var piece = pieces[pieceIndex];
+            cursorY += GapUnits(piece.Gap) * scale;
+            var origin = new Vector2(left, cursorY);
+            cursorY += piece.Kind switch
             {
-                cursorY += ParagraphGap * scale;
-            }
-
-            var block = blocks[blockIndex];
-            RichTextLayout? layout;
-            using (Plugin.Fonts.Push(TextStyles.Body.Scale, TextStyles.Body.Weight))
-            {
-                layout = LinkText.LayoutFor(block, measure);
-            }
-
-            if (layout is null)
-            {
-                cursorY += Typography.DrawWrappedLeft(new Vector2(left, cursorY), block, ui.BodyInk, TextStyles.Body,
-                    measure);
-                continue;
-            }
-
-            using (Plugin.Fonts.Push(TextStyles.Body.Scale, TextStyles.Body.Weight))
-            {
-                LinkText.Draw(drawList, layout, new Vector2(left, cursorY), 1f, ui.BodyInk, ui.Accent, 1f, true);
-            }
-
-            cursorY += layout.Size.Y;
+                AnnouncementPieceKind.Image => DrawImagePiece(drawList, entry, piece, origin, measure, scale),
+                AnnouncementPieceKind.Link => DrawLinkPiece(drawList, piece, origin, measure, scale),
+                _ => DrawLinePiece(drawList, piece.Text, origin, measure),
+            };
         }
 
         return cursorY;
+    }
+
+    private static float GapUnits(AnnouncementGap gap) => gap switch
+    {
+        AnnouncementGap.Paragraph => ParagraphGap,
+        AnnouncementGap.Block => BlockGap,
+        _ => 0f,
+    };
+
+    private float DrawLinePiece(ImDrawListPtr drawList, string text, Vector2 origin, float measure)
+    {
+        RichTextLayout? layout;
+        using (Plugin.Fonts.Push(TextStyles.Body.Scale, TextStyles.Body.Weight))
+        {
+            layout = LinkText.LayoutFor(text, measure);
+        }
+
+        if (layout is null)
+        {
+            return Typography.DrawWrappedLeft(origin, text, ui.BodyInk, TextStyles.Body, measure);
+        }
+
+        using (Plugin.Fonts.Push(TextStyles.Body.Scale, TextStyles.Body.Weight))
+        {
+            LinkText.Draw(drawList, layout, origin, 1f, ui.BodyInk, ui.Accent, 1f, true);
+        }
+
+        return layout.Size.Y;
+    }
+
+    private float DrawImagePiece(ImDrawListPtr drawList, AnnouncementEntry entry, in AnnouncementPiece piece,
+        Vector2 origin, float measure, float scale)
+    {
+        var height = measure / MathF.Max(piece.Aspect, MinImageAspect);
+        var frame = new Rect(origin, new Vector2(origin.X + measure, origin.Y + height));
+        var rounding = ImageRadius * scale;
+        if (!DrawImage(drawList, piece.Url, frame, rounding, false, TallImageFocus))
+        {
+            return height;
+        }
+
+        Squircle.Stroke(drawList, frame.Min, frame.Max, rounding, ImGui.GetColorU32(ui.Hairline),
+            Metrics.Stroke.Hairline * scale);
+        var hovered = UiInteract.Hover(frame.Min, frame.Max);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        if (UiInteract.Click(frame.Min, frame.Max, hovered))
+        {
+            OpenPhotos(entry.ImageUrls, piece.ImageIndex);
+        }
+
+        return height;
+    }
+
+    private float DrawLinkPiece(ImDrawListPtr drawList, in AnnouncementPiece piece, Vector2 origin, float measure,
+        float scale)
+    {
+        var height = Button.LargeHeight * scale;
+        var rect = new Rect(origin, new Vector2(origin.X + measure, origin.Y + height));
+        if (Button.Draw(drawList, rect, piece.Text, ControlInk.From(ui), ButtonStyle.Prominent, id: piece.Key))
+        {
+            UrlActions.AskThenOpen(piece.Url);
+        }
+
+        HoverTooltip.Show(rect, piece.Url);
+        return height;
     }
 
     private void DrawNeighbors(int index, float scale)

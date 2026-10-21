@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Campaigns;
 using Aetherphone.Core.Config;
 using Aetherphone.Core.Device;
 using Aetherphone.Core.Emoji;
@@ -128,6 +129,7 @@ public sealed class Plugin : IDalamudPlugin
             Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
             services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, Framework, DutyState,
                 TextureProvider, PluginInterface.ConfigDirectory, UnlockState, Condition);
+            WireCampaignShell(services);
             FilePicker.ProblemReporter = message =>
                 services.Confirm.Alert(null, message, Loc.T(L.Common.Close));
             Fonts = new FontService(PluginInterface, Cfg, services.Loading, Cfg.TextZoom,
@@ -294,6 +296,7 @@ public sealed class Plugin : IDalamudPlugin
         Updates?.Dispose();
         shell?.Dispose();
         screenshotImport?.Dispose();
+        CampaignShellBridge.Clear();
         services?.Dispose();
         Device?.Dispose();
         Windows.Components.AppIconCache.Dispose();
@@ -442,6 +445,7 @@ public sealed class Plugin : IDalamudPlugin
         screenshotImport.Dispose();
         Updates.Dispose();
         shell.Dispose();
+        CampaignShellBridge.Clear();
         services.Dispose();
         Device.Dispose();
         Windows.Components.AppIconCache.Dispose();
@@ -467,6 +471,14 @@ public sealed class Plugin : IDalamudPlugin
     public static void RefreshServerBar()
     {
         Instance?.serverBar?.Refresh();
+    }
+
+    private static void WireCampaignShell(PhoneServices phoneServices)
+    {
+        CampaignShellBridge.UseIconOverride = Windows.Components.AppIconCache.TryUseOverride;
+        CampaignShellBridge.ClearIconOverride = Windows.Components.AppIconCache.ClearOverride;
+        CampaignShellBridge.HoldNight = phoneServices.WeatherControl.HoldTime;
+        CampaignShellBridge.ReleaseNight = phoneServices.WeatherControl.ReleaseTime;
     }
 
     private static void InitializeLocalization()

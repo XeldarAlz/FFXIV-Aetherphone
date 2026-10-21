@@ -178,10 +178,16 @@ internal sealed partial class PrismApp
         mark = PrismMotion.Mark(drawList);
         var statTop = bottom - statHeight;
         var column = (width - Metrics.Space.Lg * scale) * 0.5f;
-        DrawStat(drawList, new Vector2(left, statTop), column, Loc.T(DeadlineLabel(week.Phase)), DeadlineValue(week),
+        var totalLeft = left;
+        if (week.Phase != PrismPhases.Results)
+        {
+            DrawStat(drawList, new Vector2(left, statTop), column, Loc.T(DeadlineLabel(week.Phase)),
+                DeadlineValue(week), scale);
+            totalLeft += column + Metrics.Space.Lg * scale;
+        }
+
+        DrawStat(drawList, new Vector2(totalLeft, statTop), column, Loc.T(L.Prism.LooksIn), LookTotal(week.EntryCount),
             scale);
-        DrawStat(drawList, new Vector2(left + column + Metrics.Space.Lg * scale, statTop), column,
-            Loc.T(L.Prism.LooksIn), LookTotal(week.EntryCount), scale);
         RiseStep(drawList, mark, step++, scale);
         return step;
     }
@@ -207,7 +213,7 @@ internal sealed partial class PrismApp
         var strip = store.Results is null ? row : new Rect(row.Min, new Vector2(row.Min.X + half, row.Max.Y));
         if (store.Results is { } results)
         {
-            var seen = configuration.PrismRevealedWeek == results.WeekId;
+            var seen = Revealed(results);
             var slot = HasPrimary(week) ? new Rect(new Vector2(row.Max.X - half, row.Min.Y), row.Max) : row;
             if (PrismArt.Strip(drawList, slot, Loc.T(seen ? L.Prism.LastResults : L.Prism.ResultsIn), "→", false))
             {
@@ -278,7 +284,7 @@ internal sealed partial class PrismApp
             return;
         }
 
-        if (configuration.PrismRevealedWeek == results.WeekId || (results.FinalPodium?.Length ?? 0) == 0)
+        if (Revealed(results) || (results.FinalPodium?.Length ?? 0) == 0)
         {
             Go(PrismScreen.Final);
             return;
@@ -286,6 +292,9 @@ internal sealed partial class PrismApp
 
         StartReveal();
     }
+
+    private bool Revealed(PrismResultsDto results) =>
+        configuration.PrismRevealedWeek == results.WeekId && configuration.PrismRevealedRevision == results.Revision;
 
     private static PrismPlacingDto? CoverPlacing(PrismResultsDto? results)
     {
@@ -379,10 +388,6 @@ internal sealed partial class PrismApp
         return totalText.IsCurrent(key) ? totalText.Value : totalText.Store(key, count.ToString("N0", Loc.Culture));
     }
 
-    private static LocString StatusName(string status) => status switch
-    {
-        PrismPhases.StatusLive => L.Prism.StatusLive,
-        PrismPhases.StatusRejected => L.Prism.StatusRejected,
-        _ => L.Prism.StatusReview,
-    };
+    private static LocString StatusName(string status) =>
+        status == PrismPhases.StatusRejected ? L.Prism.StatusRejected : L.Prism.StatusLive;
 }

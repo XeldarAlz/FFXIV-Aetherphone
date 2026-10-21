@@ -16,9 +16,8 @@ internal static class PrismPhases
     public const string Judging = "judging";
     public const string Final = "final";
     public const string Tallying = "tallying";
+    public const string Results = "results";
 
-    public const string StatusReview = "review";
-    public const string StatusLive = "live";
     public const string StatusRejected = "rejected";
 
     public const string StageFinal = "final";
@@ -118,24 +117,39 @@ internal sealed class PrismStore : IDisposable
             weekFailed = false;
             week = fetched;
             loadedOnce = true;
-            await LoadResultsAsync(fetched.PreviousWeekId, lang, token).ConfigureAwait(false);
+            await LoadResultsAsync(fetched, lang, token).ConfigureAwait(false);
         }, () => loading = false);
     }
 
-    private async Task LoadResultsAsync(string weekId, string lang, CancellationToken token)
+    private async Task LoadResultsAsync(PrismWeekDto current, string lang, CancellationToken token)
     {
-        if (weekId.Length == 0)
+        var fetched = ResultsOut(current)
+            ? await client.ResultsAsync(current.Id, lang, token).ConfigureAwait(false)
+            : null;
+        if (fetched is null && current.PreviousWeekId.Length > 0)
         {
-            results = null;
-            return;
+            fetched = await client.ResultsAsync(current.PreviousWeekId, lang, token).ConfigureAwait(false);
         }
 
-        var fetched = await client.ResultsAsync(weekId, lang, token).ConfigureAwait(false);
         if (fetched is not null)
         {
             results = fetched;
+            return;
+        }
+
+        if (results is { } held && !StillCurrent(held, current))
+        {
+            results = null;
         }
     }
+
+    internal static bool StillCurrent(PrismResultsDto held, PrismWeekDto current) =>
+        (held.WeekId == current.PreviousWeekId || held.WeekId == current.Id) &&
+        held.Revision == current.ResultsRevision;
+
+    private static bool ResultsOut(PrismWeekDto week) =>
+        week.Id.Length > 0 && (week.Phase == PrismPhases.Results || (week.ResultsAtUnix > 0 &&
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= week.ResultsAtUnix));
 
     public void Enter(string sourcePath, WallpaperCrop crop, Action<bool> onComplete)
     {

@@ -269,7 +269,8 @@ internal sealed partial class BlackjackTable
             DrawRailSideStakes(drawList, board, seatIndex, slot, scale);
 
             DrawBetDisplay(drawList, ui, seatIndex, currency, puck,
-                new Vector2(puck.X, puck.Y - layout.RailBetLift), dealerAnchor, false, scale);
+                new Vector2(puck.X, puck.Y - layout.RailBetLift), dealerAnchor, false,
+                !SettledBadgeShows(projection.HandsAt(seatIndex), BadgeEntrance(seatIndex)), scale);
             DrawRailHands(drawList, ui, board, seatIndex, puck, shoe, scale);
         }
 
@@ -431,6 +432,7 @@ internal sealed partial class BlackjackTable
         var cardWidth = layout.RailCardPixels(count);
         var handWidth = layout.RailHandWidth(count);
         var fanY = puck.Y - layout.RailCardsLift;
+        var badgeY = puck.Y - layout.RailBetLift;
         var activeHand = board.ActiveSeat == seatIndex ? board.ActiveHand : -1;
         for (var handIndex = 0; handIndex < count; handIndex++)
         {
@@ -438,22 +440,22 @@ internal sealed partial class BlackjackTable
             var fanCenter = new Vector2(puck.X + (handIndex - (count - 1) * 0.5f) * handWidth, fanY);
             DrawHandFan(drawList, seatIndex, handIndex, hand, fanCenter, cardWidth, handWidth - 3f * scale, shoe,
                 scale);
-            var outcomeText = RailOutcomeLabel(hand);
-            var badgeEntrance = BadgeEntrance(seatIndex);
-            var badgeShown = outcomeText.Length > 0 && badgeEntrance > 0f;
-            if (badgeShown)
-            {
-                var tint = hand.Delta > 0 ? CasinoColors.Money : hand.Delta < 0 ? StageText.Body : StageText.Strong;
-                BlackjackTableArt.DrawOutcomeBadge(drawList, fanCenter, outcomeText, tint, tint, badgeEntrance,
-                    handWidth, scale);
-            }
-            else if (hand.Total > 0)
+            if (hand.Total > 0)
             {
                 var ink = hand.Outcome == BlackjackOutcomes.Bust
                     ? StageText.Body
                     : handIndex == activeHand ? ui.Accent : ui.TitleInk;
                 BlackjackTableArt.DrawTotalPill(drawList, fanCenter, GameNumber.Label(hand.Total), PillFill, ink,
                     scale);
+            }
+
+            var outcomeText = RailOutcomeLabel(hand);
+            var badgeEntrance = BadgeEntrance(seatIndex);
+            if (outcomeText.Length > 0 && badgeEntrance > 0f)
+            {
+                var tint = hand.Delta > 0 ? CasinoColors.Money : hand.Delta < 0 ? StageText.Body : StageText.Strong;
+                BlackjackTableArt.DrawOutcomeBadge(drawList, new Vector2(fanCenter.X, badgeY), outcomeText, tint,
+                    tint, badgeEntrance, handWidth, scale);
             }
         }
     }
@@ -574,16 +576,35 @@ internal sealed partial class BlackjackTable
         }
 
         DrawBetSpots(drawList, ui, board, scale);
-        DrawBetDisplay(drawList, ui, mySeat, currency, puckCenter, layout.BetSpot, layout.DealerFanCenter, true,
+        DrawBetDisplay(drawList, ui, mySeat, currency, puckCenter, layout.BetSpot, layout.DealerFanCenter, true, true,
             scale);
     }
 
+    internal static bool SettledBadgeShows(ReadOnlySpan<CasinoBlackjackHandDto> hands, float badgeEntrance)
+    {
+        if (badgeEntrance <= 0f)
+        {
+            return false;
+        }
+
+        var count = Math.Min(hands.Length, BlackjackRules.MaxHandsPerSeat);
+        for (var handIndex = 0; handIndex < count; handIndex++)
+        {
+            if (hands[handIndex].Outcome != BlackjackOutcomes.Pending)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private void DrawBetDisplay(ImDrawListPtr drawList, AppSkin ui, int seatIndex, int currency, Vector2 origin,
-        Vector2 anchor, Vector2 dealerAnchor, bool heroChips, float scale)
+        Vector2 anchor, Vector2 dealerAnchor, bool heroChips, bool showPlate, float scale)
     {
         ref readonly var motion = ref motions[seatIndex];
         var practice = currency == CasinoCurrencies.Practice;
-        if (motion.ShownBet > 0)
+        if (motion.ShownBet > 0 && showPlate)
         {
             var flight = motion.BetClock / BetFlightSeconds;
             BlackjackTableArt.DrawFlightDisc(drawList, origin, anchor, flight,

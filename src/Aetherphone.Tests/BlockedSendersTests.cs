@@ -1,5 +1,6 @@
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Message;
+using Aetherphone.Windows.Components;
 using Xunit;
 
 namespace Aetherphone.Tests;
@@ -84,5 +85,25 @@ public sealed class BlockedSendersTests
 
         Assert.False(blocks.IsStale(Now.AddMinutes(5), TimeSpan.FromMinutes(10)));
         Assert.True(blocks.IsStale(Now.AddMinutes(10), TimeSpan.FromMinutes(10)));
+    }
+
+    [Fact]
+    public void TheBlockedRowKeepsItsSentenceAndShowLinkWhole()
+    {
+        Assert.True(ChatTranscript.BlockedRowFitsOneLine(150f, 30f, 6f, 200f));
+        Assert.False(ChatTranscript.BlockedRowFitsOneLine(180f, 30f, 6f, 200f));
+
+        var oneLine = ChatTranscript.BlockedRowTextWidth(new[] { 150f }, 30f, 6f, 200f, out var ownLine);
+        Assert.False(ownLine);
+        Assert.Equal(186f, oneLine);
+
+        var wrapped = ChatTranscript.BlockedRowTextWidth(new[] { 190f, 120f }, 30f, 6f, 200f, out ownLine);
+        Assert.False(ownLine);
+        Assert.Equal(190f, wrapped);
+
+        var showBelow = ChatTranscript.BlockedRowTextWidth(new[] { 160f, 195f }, 30f, 6f, 200f, out ownLine);
+        Assert.True(ownLine);
+        Assert.True(showBelow <= 200f);
+        Assert.Equal(195f, showBelow);
     }
 }

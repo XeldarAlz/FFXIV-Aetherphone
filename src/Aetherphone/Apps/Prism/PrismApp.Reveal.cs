@@ -289,6 +289,7 @@ internal sealed partial class PrismApp
     private void FinishReveal(PrismResultsDto results)
     {
         configuration.PrismRevealedWeek = results.WeekId;
+        configuration.PrismRevealedRevision = results.Revision;
         configuration.Save();
         Go(PrismScreen.Final);
     }

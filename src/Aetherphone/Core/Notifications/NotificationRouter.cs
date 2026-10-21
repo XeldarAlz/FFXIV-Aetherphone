@@ -1,5 +1,6 @@
 using Aetherphone.Core.Announcements;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Campaigns;
 using Aetherphone.Core.Casino;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Feedback;
@@ -24,6 +25,7 @@ internal sealed class NotificationRouter
     private const string MusterAppId = "muster";
     private const string YellowPagesAppId = "yellowpages";
     private const string AnnouncementsAppId = "announcements";
+    private const string LoveIslandAppId = "loveisland";
     private const string SettingsAppId = "settings";
     private const string MusicAppId = "music";
     private const string CasinoAppId = "casino";
@@ -67,6 +69,7 @@ internal sealed class NotificationRouter
     private readonly HuntsLauncher huntsLauncher;
     private readonly JamLauncher jamLauncher;
     private readonly FeedbackLauncher feedbackLauncher;
+    private readonly CampaignLauncher campaignLauncher;
 
     public NotificationRouter(INavigator navigation, NotificationService notifications,
         SocialNotificationService socialNotifications, LinkpearlLauncher linkpearlLauncher,
@@ -75,10 +78,11 @@ internal sealed class NotificationRouter
         AnnouncementsLauncher announcementsLauncher, SafetyLauncher safetyLauncher,
         EncryptionSetupLauncher encryptionSetupLauncher, RadioLauncher radioLauncher,
         CasinoLauncher casinoLauncher, AetherStreamLauncher aetherStreamLauncher, HuntsLauncher huntsLauncher,
-        JamLauncher jamLauncher, FeedbackLauncher feedbackLauncher)
+        JamLauncher jamLauncher, FeedbackLauncher feedbackLauncher, CampaignLauncher campaignLauncher)
     {
         this.jamLauncher = jamLauncher;
         this.feedbackLauncher = feedbackLauncher;
+        this.campaignLauncher = campaignLauncher;
         this.radioLauncher = radioLauncher;
         this.casinoLauncher = casinoLauncher;
         this.aetherStreamLauncher = aetherStreamLauncher;
@@ -165,6 +169,10 @@ internal sealed class NotificationRouter
         else if (notification.AppId == AnnouncementsAppId && !string.IsNullOrEmpty(notification.GroupKey))
         {
             announcementsLauncher.RequestDetail(notification.GroupKey);
+        }
+        else if (notification.AppId == LoveIslandAppId && !string.IsNullOrEmpty(notification.GroupKey))
+        {
+            campaignLauncher.Request(notification.GroupKey);
         }
         else if (notification.AppId == MusicAppId && JamInviteNotification.TryParseCode(notification.GroupKey, out var jamCode))
         {

@@ -30,7 +30,12 @@ internal sealed record PrismWeekDto(
     int Issue = 0,
     int EntryCount = 0,
     PrismJudgeRewardDto? JudgeReward = null,
-    long BallotCoins = 0);
+    long BallotCoins = 0,
+    long ResultsRevision = 0,
+    int FinalistCount = 0,
+    PrismPrizesDto? Prizes = null);
+
+internal sealed record PrismPrizesDto(long[]? Heat = null, long[]? Final = null, int MinHeatSize = 0);
 
 internal sealed record PrismEntryRequest(string MediaKey, int Width, int Height);
 
@@ -65,4 +70,7 @@ internal sealed record PrismResultsDto(
     int Issue = 0,
     int EntryCount = 0,
     string MyImageUrl = "",
-    string HeatLabel = "");
+    string HeatLabel = "",
+    long Revision = 0,
+    int FinalistCount = 0,
+    PrismPrizesDto? Prizes = null);

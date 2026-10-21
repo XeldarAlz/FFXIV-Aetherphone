@@ -39,6 +39,7 @@ internal sealed partial class AethergramApp
     private static readonly TextStyle EmptyTitleStyle = TextStyles.Title2;
     private static readonly TextStyle EmptyBodyStyle = TextStyles.Callout;
     private static readonly PostGridStyle SquareGrid = new(1f, false);
+    private static readonly PostGridStyle ProfileGrid = new(1.3333f, false);
     private static readonly PostGridStyle ExploreGrid = new(1.3333f, true);
     private static readonly SocialUserRowStyle UserRowStyle = new(UserRowHeight, UserRowAvatarRadius, CellPadX, 12f,
         PillHeight, TextStyles.Headline, TextStyles.Subheadline, AethergramInk.Shared.HoverTint);

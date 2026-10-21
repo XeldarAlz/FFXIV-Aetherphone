@@ -248,6 +248,7 @@ internal sealed class ChatTranscript
     private const float DefaultRounding = 14f;
     private const float TailSize = 7f;
     private const float BubbleGap = 3f;
+    private const int BlockedRowMaxLines = 8;
     private const float SenderAvatarRadius = 14f;
     private const float SenderAvatarGap = 8f;
     private const float SenderHeaderGap = 2f;
@@ -813,25 +814,42 @@ internal sealed class ChatTranscript
         var paddingY = 5f * scale;
         var iconBox = 14f * scale;
         var gap = 6f * scale;
-        var actionWidth = Typography.Measure(action, style).X;
-        var textLimit = MathF.Max(1f, rowWidth - gutter - paddingX * 2f - iconBox - gap * 2f - actionWidth);
-        var label = Typography.FitText(message.Body, textLimit, style);
-        var labelWidth = Typography.Measure(label, style).X;
         var lineHeight = Typography.LineHeight(style);
-        var height = lineHeight + paddingY * 2f;
+        var actionWidth = Typography.Measure(action, style).X;
+        var textInset = paddingX + iconBox + gap;
+        var textLimit = MathF.Max(1f, rowWidth - gutter - textInset - paddingX);
+        var bodyWidth = Typography.Measure(message.Body, style).X;
+        var lines = BlockedRowFitsOneLine(bodyWidth, actionWidth, gap, textLimit)
+            ? null
+            : Typography.WrapText(message.Body, style, textLimit);
+        var lineCount = lines is null ? 1 : Math.Clamp(lines.Length, 1, BlockedRowMaxLines);
+        Span<float> lineWidths = stackalloc float[lineCount];
+        for (var index = 0; index < lineCount; index++)
+        {
+            lineWidths[index] = lines is null ? bodyWidth : Typography.Measure(lines[index], style).X;
+        }
+
+        var textWidth = BlockedRowTextWidth(lineWidths, actionWidth, gap, textLimit, out var actionOwnLine);
+        var height = (lineCount + (actionOwnLine ? 1 : 0)) * lineHeight + paddingY * 2f;
         var min = new Vector2(origin.X + gutter, origin.Y);
-        var max = new Vector2(min.X + paddingX * 2f + iconBox + gap + labelWidth + gap + actionWidth, min.Y + height);
+        var max = new Vector2(min.X + textInset + textWidth + paddingX, min.Y + height);
         ConsumeScrollTarget(message.Id, min.Y);
         var hovering = Hovering(min, max);
-        Squircle.Fill(drawList, min, max, height * 0.5f,
+        Squircle.Fill(drawList, min, max, (lineHeight + paddingY * 2f) * 0.5f,
             ImGui.GetColorU32(ChatInk.Wash(model.Theme, hovering ? 0.12f : 0.07f)));
-        var centerY = min.Y + height * 0.5f;
-        AppSkin.Icon(drawList, new Vector2(min.X + paddingX + iconBox * 0.5f, centerY),
+        var lineTop = min.Y + paddingY;
+        AppSkin.Icon(drawList, new Vector2(min.X + paddingX + iconBox * 0.5f, lineTop + lineHeight * 0.5f),
             IconGlyph.Of(FontAwesomeIcon.Ban), model.MutedInk, 0.6f);
-        var labelLeft = min.X + paddingX + iconBox + gap;
-        var lineTop = centerY - lineHeight * 0.5f;
-        Typography.Draw(drawList, new Vector2(labelLeft, lineTop), label, model.MutedInk, style);
-        Typography.Draw(drawList, new Vector2(labelLeft + labelWidth + gap, lineTop), action, model.Accent, style);
+        var labelLeft = min.X + textInset;
+        for (var index = 0; index < lineCount; index++)
+        {
+            Typography.Draw(drawList, new Vector2(labelLeft, lineTop + index * lineHeight),
+                lines is null ? message.Body : lines[index], model.MutedInk, style);
+        }
+
+        var actionTop = lineTop + (actionOwnLine ? lineCount : lineCount - 1) * lineHeight;
+        var actionLeft = actionOwnLine ? labelLeft : labelLeft + lineWidths[lineCount - 1] + gap;
+        Typography.Draw(drawList, new Vector2(actionLeft, actionTop), action, model.Accent, style);
         if (hovering && model.Interactions is { } interactions)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -842,6 +860,29 @@ internal sealed class ChatTranscript
         }
 
         ImGui.SetCursorScreenPos(new Vector2(origin.X, max.Y + BubbleGap * scale));
+    }
+
+    internal static bool BlockedRowFitsOneLine(float bodyWidth, float actionWidth, float gap, float limit) =>
+        bodyWidth + gap + actionWidth <= limit;
+
+    internal static float BlockedRowTextWidth(ReadOnlySpan<float> lineWidths, float actionWidth, float gap,
+        float limit, out bool actionOwnLine)
+    {
+        if (lineWidths.IsEmpty)
+        {
+            actionOwnLine = false;
+            return actionWidth;
+        }
+
+        var last = lineWidths[^1];
+        actionOwnLine = last + gap + actionWidth > limit;
+        var widest = actionOwnLine ? MathF.Max(last, actionWidth) : last + gap + actionWidth;
+        for (var index = 0; index < lineWidths.Length - 1; index++)
+        {
+            widest = MathF.Max(widest, lineWidths[index]);
+        }
+
+        return MathF.Min(widest, MathF.Max(limit, actionWidth));
     }
 
     private void DrawDaySeparator(long unixSeconds, in ChatTranscriptModel model)

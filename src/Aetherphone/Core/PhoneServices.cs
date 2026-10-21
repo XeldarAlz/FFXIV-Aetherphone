@@ -203,6 +203,7 @@ internal sealed class PhoneServices : IDisposable
     public required AdInquiryStore AdInquiries { get; init; }
     public required YellowPagesLauncher YellowPagesLauncher { get; init; }
     public required AnnouncementsLauncher AnnouncementsLauncher { get; init; }
+    public required Campaigns.CampaignLauncher CampaignLauncher { get; init; }
     public required CollectionsCatalogService Collections { get; init; }
     public required CollectionsJournal CollectionsJournal { get; init; }
     public required InventoryCaptureService InventoryCapture { get; init; }
@@ -334,6 +335,7 @@ internal sealed class PhoneServices : IDisposable
         var casinoHistory = new Casino.CasinoHistoryStore(aethernetSession, casinoApi.Casino);
         var casinoSpin = new Casino.CasinoSpinStore(aethernetSession, casinoApi.Casino, coins);
         var realtimeSignals = new RealtimeSignalBus();
+        availability.Follow(realtimeSignals);
         var peerKeys = new PeerKeyDirectory(configuration, aethernet.Keys);
         var conversationKeys = new ConversationKeyStore(aethernet.Keys, keyVault, realtimeSignals);
         var translation = new TranslationService(aethernetSession, aethernet.Translation, configuration);
@@ -620,6 +622,7 @@ internal sealed class PhoneServices : IDisposable
             AdInquiries = adInquiries,
             YellowPagesLauncher = new YellowPagesLauncher(),
             AnnouncementsLauncher = new AnnouncementsLauncher(),
+            CampaignLauncher = new Campaigns.CampaignLauncher(),
             Collections = collections,
             CollectionsJournal = collectionsJournal,
             InventoryCapture = inventoryCapture,

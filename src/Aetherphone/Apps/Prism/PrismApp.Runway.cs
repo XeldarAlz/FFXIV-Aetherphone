@@ -146,13 +146,12 @@ internal sealed partial class PrismApp
         var photo = new Rect(new Vector2(content.Min.X, top),
             new Vector2(content.Max.X, countTop - Metrics.Space.Xl * scale));
         DrawTurningLook(drawList, photo, look, turn, delta);
-        PrismType.Draw(drawList, new Vector2(left, countTop), LookCounter(lookIndex + 1, looks.Length),
+        var counter = LookCounter(lookIndex + 1, looks.Length);
+        PrismType.Draw(drawList, new Vector2(left, countTop), counter, PrismArt.Muted, PrismFace.Label, labelPixels);
+        var aside = lookIndex == 0 && chosen == 0 ? Loc.T(L.Prism.InspectHint) : store.Week?.Title ?? string.Empty;
+        var room = width - PrismType.Measure(counter, PrismFace.Label, labelPixels).X - Metrics.Space.Lg * scale;
+        PrismType.DrawRight(drawList, new Vector2(left + width, countTop), PrismType.FitLabel(aside, labelPixels, room),
             PrismArt.Muted, PrismFace.Label, labelPixels);
-        if (lookIndex == 0 && chosen == 0)
-        {
-            PrismType.DrawRight(drawList, new Vector2(left + width, countTop), Loc.T(L.Prism.InspectHint),
-                PrismArt.Muted, PrismFace.Label, labelPixels);
-        }
 
         PrismType.DrawLines(drawList, new Vector2(left, questionTop), lines, PrismArt.Fore, PrismFace.Headline,
             pixels);
@@ -164,10 +163,10 @@ internal sealed partial class PrismApp
             scoreFill.SnapTo(0f);
         }
 
-        PrismType.Draw(drawList, new Vector2(left, anchorTop), Loc.T(L.Prism.ScoreLow), PrismArt.Muted,
+        PrismType.Draw(drawList, new Vector2(left, anchorTop), Loc.T(L.Prism.ScoreLow), PrismArt.ScoreLowInk,
             PrismFace.Label, labelPixels);
         PrismType.DrawRight(drawList, new Vector2(left + width, anchorTop), Loc.T(L.Prism.ScoreHigh),
-            PrismArt.Muted, PrismFace.Label, labelPixels);
+            PrismArt.ScoreHighInk, PrismFace.Label, labelPixels);
 
         if (chosen > 0 && fill >= ScoreDone)
         {

@@ -88,6 +88,10 @@ internal static class PrismArt
 
     private static readonly string[] Digits = { "1", "2", "3", "4", "5" };
 
+    public static Vector4 ScoreLowInk => AccentRing.Red;
+
+    public static Vector4 ScoreHighInk => AccentRing.Green;
+
     public static float LabelPixels() => LabelUnits * UiScale.Current;
 
     public static float Gutter(float scale) => (EditorialMarginUnits - sidePadding) * scale;

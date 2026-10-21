@@ -280,17 +280,18 @@ internal sealed partial class PrismApp : IResumableApp
         var width = content.Width - gutter * 2f;
         var pixels = PrismType.Fit(title, PrismFace.Headline, width, NoticeMaxUnits * scale,
             NoticeMinUnits * scale, NoticeLines, out var lines);
-        var bodyWidth = PrismType.BalancedWidth(body, TextStyles.Subheadline, width);
-        var bodyHeight = body.Length > 0 ? Typography.MeasureWrappedBlock(body, TextStyles.Subheadline, bodyWidth).Y : 0f;
+        var copy = PrismType.Sentences(body, TextStyles.Subheadline, width);
+        var bodyWidth = PrismType.BalancedWidth(copy, TextStyles.Subheadline, width);
+        var bodyHeight = copy.Length > 0 ? Typography.MeasureWrappedBlock(copy, TextStyles.Subheadline, bodyWidth).Y : 0f;
         var height = lines.Length * PrismType.LineHeight(PrismFace.Headline, pixels) + Metrics.Space.Lg * scale +
                      bodyHeight;
         var bottom = StripRect(content, scale, strips - 1).Min.Y - Metrics.Space.Xxl * scale;
         var top = bottom - height;
         top += PrismType.DrawLines(drawList, new Vector2(content.Min.X + gutter, top), lines, PrismArt.Fore,
             PrismFace.Headline, pixels) + Metrics.Space.Lg * scale;
-        if (body.Length > 0)
+        if (copy.Length > 0)
         {
-            Typography.DrawWrappedLeft(new Vector2(content.Min.X + gutter, top), body, PrismArt.Muted,
+            Typography.DrawWrappedLeft(new Vector2(content.Min.X + gutter, top), copy, PrismArt.Muted,
                 TextStyles.Subheadline, bodyWidth);
         }
 

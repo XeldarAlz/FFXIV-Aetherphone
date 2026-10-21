@@ -109,6 +109,9 @@ internal sealed class CallSignalRouter : IDisposable
             case SignalType.AnnouncePing:
                 signals.PublishAnnouncements();
                 return;
+            case SignalType.CampaignPing:
+                signals.PublishCampaign();
+                return;
             case SignalType.PollPing:
                 signals.PublishPolls();
                 return;
@@ -117,6 +120,9 @@ internal sealed class CallSignalRouter : IDisposable
                 return;
             case SignalType.ServerRestarting:
                 signals.PublishServerRestarting();
+                return;
+            case SignalType.FlagsChanged:
+                signals.PublishFlagsChanged();
                 return;
             case SignalType.ContentRemoved:
                 if (message.ContentId is { Length: > 0 } removedContentId)

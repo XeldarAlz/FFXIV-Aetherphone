@@ -42,9 +42,8 @@ internal sealed partial class PrismApp
         var failure = entryFailed ? store.ActionFailureText : string.Empty;
         var hint = entryFailed
             ? failure.Length > 0 ? failure : Loc.T(L.Common.LoadFailedHint)
-            : entry.Status == PrismPhases.StatusRejected
-                ? entry.RejectReason
-                : entry.Status == PrismPhases.StatusLive ? string.Empty : Loc.T(L.Prism.StatusReviewHint);
+            : entry.Status == PrismPhases.StatusRejected ? entry.RejectReason : string.Empty;
+        hint = PrismType.Sentences(hint, TextStyles.Subheadline, width);
         var hintWidth = PrismType.BalancedWidth(hint, TextStyles.Subheadline, width);
         var hintHeight = hint.Length > 0
             ? Typography.MeasureWrappedBlock(hint, TextStyles.Subheadline, hintWidth).Y + Metrics.Space.Sm * scale
@@ -101,10 +100,6 @@ internal sealed partial class PrismApp
         }
     }
 
-    private static LocString StatusTitle(string status) => status switch
-    {
-        PrismPhases.StatusLive => L.Prism.StatusLiveTitle,
-        PrismPhases.StatusRejected => L.Prism.StatusRejectedTitle,
-        _ => L.Prism.StatusReviewTitle,
-    };
+    private static LocString StatusTitle(string status) =>
+        status == PrismPhases.StatusRejected ? L.Prism.StatusRejectedTitle : L.Prism.StatusLiveTitle;
 }

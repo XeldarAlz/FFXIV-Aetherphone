@@ -351,14 +351,24 @@ internal sealed class HomeLayoutService
         return true;
     }
 
-    public bool Install(string appId)
+    public bool Install(string appId) => Install(appId, false);
+
+    private bool Install(string appId, bool revealed)
     {
         if (!byId.TryGetValue(appId, out var app) || !app.IsAvailable || !installed.Add(appId))
         {
             return false;
         }
 
-        Append(HomeTile.ForApp(app));
+        if (revealed && app.RevealOnFirstPage)
+        {
+            AppendToFirstPage(HomeTile.ForApp(app));
+        }
+        else
+        {
+            Append(HomeTile.ForApp(app));
+        }
+
         Commit();
         InstalledChanged?.Invoke(appId);
         return true;
@@ -896,7 +906,7 @@ internal sealed class HomeLayoutService
         for (var index = 0; index < revealed.Count; index++)
         {
             known.Add(revealed[index]);
-            Install(revealed[index]);
+            Install(revealed[index], true);
         }
 
         revealed.Clear();
@@ -1245,6 +1255,16 @@ internal sealed class HomeLayoutService
         }
 
         pages[^1].Add(tile);
+    }
+
+    private void AppendToFirstPage(HomeTile tile)
+    {
+        if (pages.Count == 0)
+        {
+            pages.Add(new List<HomeTile>());
+        }
+
+        pages[0].Add(tile);
     }
 
     private void Arrange()

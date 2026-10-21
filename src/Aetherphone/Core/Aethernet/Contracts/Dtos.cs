@@ -682,12 +682,24 @@ internal sealed record PollVoteRequest(int Option);
 
 internal sealed record AnnouncementTranslationDto(string Lang, string Title, string Body);
 
+internal sealed record AnnouncementBlockTranslationDto(string Lang, string Text);
+
+internal sealed record AnnouncementBlockDto(
+    string Kind,
+    string Text,
+    string Url,
+    string ImageUrl,
+    int Width,
+    int Height,
+    AnnouncementBlockTranslationDto[]? Translations = null);
+
 internal sealed record AnnouncementDto(
     string Id,
     string Title,
     string Body,
     AnnouncementTranslationDto[] Translations,
-    long CreatedAtUnix) : IIdentified;
+    long CreatedAtUnix,
+    AnnouncementBlockDto[]? Blocks = null) : IIdentified;
 
 internal sealed record AnnouncementPage(AnnouncementDto[] Items, string? NextCursor = null);
 
