@@ -11037,6 +11037,8 @@ internal static class L
         public static readonly LocString ActivityThisMonth = new("prism.activityThisMonth", "This month");
         public static readonly LocString ActivityEarlier = new("prism.activityEarlier", "Earlier");
         public static readonly LocString Published = new("prism.published", "Published");
+        public static readonly LocString NothingToSave = new("prism.nothingToSave", "Nothing equipped to save right now");
+        public static readonly LocString FavouritesEmptyHint = new("prism.favouritesEmptyHint", "Tap Favourite on an outfit and it shows up here.");
     }
 
     internal static class Announcements

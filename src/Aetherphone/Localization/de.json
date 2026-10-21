@@ -5829,6 +5829,8 @@
   "prism.activityThisMonth": "Diesen Monat",
   "prism.activityEarlier": "Früher",
   "prism.published": "Veröffentlicht",
+  "prism.nothingToSave": "Gerade ist nichts zum Speichern angelegt",
+  "prism.favouritesEmptyHint": "Tippe bei einem Outfit auf Favorit, dann erscheint es hier.",
   "announcements.signInRequired": "Melde dich in den Einstellungen bei Aethernet an, um Ankündigungen zu lesen",
   "announcements.signInTitle": "Anmeldung erforderlich",
   "announcements.emptyTitle": "Noch keine Ankündigungen",

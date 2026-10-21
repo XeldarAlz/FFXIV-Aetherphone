@@ -5829,6 +5829,8 @@
   "prism.activityThisMonth": "В этом месяце",
   "prism.activityEarlier": "Ранее",
   "prism.published": "Опубликовано",
+  "prism.nothingToSave": "Сейчас ничего не надето, сохранять нечего",
+  "prism.favouritesEmptyHint": "Нажмите «В избранное» у наряда, и он появится здесь.",
   "announcements.signInRequired": "Войдите в Aethernet в Настройках, чтобы читать объявления",
   "announcements.signInTitle": "Требуется вход",
   "announcements.emptyTitle": "Пока нет объявлений",

@@ -5829,6 +5829,8 @@
   "prism.activityThisMonth": "Este mes",
   "prism.activityEarlier": "Anteriores",
   "prism.published": "Publicado",
+  "prism.nothingToSave": "Ahora no llevas nada que guardar",
+  "prism.favouritesEmptyHint": "Toca Favorito en un atuendo y aparecerá aquí.",
   "announcements.signInRequired": "Inicia sesión en Aethernet en Configuración para leer los anuncios",
   "announcements.signInTitle": "Necesitas iniciar sesión",
   "announcements.emptyTitle": "Aún no hay anuncios",

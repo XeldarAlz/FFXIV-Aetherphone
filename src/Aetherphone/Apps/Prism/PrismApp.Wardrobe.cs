@@ -33,29 +33,37 @@ internal sealed partial class PrismApp
         var right = content.Max.X - gutter;
         var top = DrawMasthead(drawList, content, Loc.T(L.Prism.TabWardrobe), string.Empty, string.Empty, scale, out _);
         var save = Loc.T(L.Prism.SaveWearing);
-        var x = left;
-        if (PrismArt.Button(drawList, new Vector2(x, top), save, scale, out var saveWidth))
-        {
-            SaveWearing();
-        }
-
-        x += saveWidth + Metrics.Space.Sm * scale;
+        var height = PrismArt.StripUnits * scale;
+        var saveRect = new Rect(new Vector2(left, top), new Vector2(right, top + height));
+        var bottom = saveRect.Max.Y;
         if (glamour.HasGlamourer)
         {
             var import = Loc.T(L.Prism.ImportDesigns);
-            if (x + PrismArt.ButtonWidth(import, scale) > right)
+            var gap = Metrics.Space.Md * scale;
+            var half = (right - left - gap) * 0.5f;
+            var inset = height * 0.32f * 2f;
+            var labelPixels = PrismArt.LabelPixels();
+            var stacked = PrismType.Measure(save, PrismFace.Label, labelPixels).X + inset > half ||
+                          PrismType.Measure(import, PrismFace.Label, labelPixels).X + inset > half;
+            var importRect = stacked
+                ? new Rect(new Vector2(left, bottom + gap), new Vector2(right, bottom + gap + height))
+                : new Rect(new Vector2(left + half + gap, top), new Vector2(right, bottom));
+            if (!stacked)
             {
-                x = left;
-                top += PrismArt.ButtonUnits * scale + Metrics.Space.Sm * scale;
+                saveRect = new Rect(saveRect.Min, new Vector2(left + half, bottom));
             }
 
-            if (PrismArt.Button(drawList, new Vector2(x, top), import, scale, out _))
+            bottom = importRect.Max.Y;
+            if (PrismArt.Strip(drawList, importRect, import, string.Empty, false, !wardrobe.Importing) &&
+                wardrobe.StartImport(glamour) == 0)
             {
-                if (wardrobe.StartImport(glamour) == 0)
-                {
-                    ShellToast.Show(Loc.T(L.Prism.DesignsAdded, 0));
-                }
+                ShellToast.Show(Loc.T(L.Prism.DesignsAdded, 0));
             }
+        }
+
+        if (PrismArt.Strip(drawList, saveRect, save, "+", true))
+        {
+            SaveWearing();
         }
 
         var imported = wardrobe.PumpImport(glamour);
@@ -64,7 +72,7 @@ internal sealed partial class PrismApp
             ShellToast.Show(Loc.T(L.Prism.DesignsAdded, imported));
         }
 
-        top += PrismArt.ButtonUnits * scale + Metrics.Space.Lg * scale;
+        top = bottom + Metrics.Space.Lg * scale;
         top = DrawWardrobeFilters(drawList, left, right, top, scale);
         var body = new Rect(new Vector2(content.Min.X, top), content.Max);
         using var surface = AppSurface.BeginEdgeToEdge(body);
@@ -195,6 +203,13 @@ internal sealed partial class PrismApp
                 outfitId = outfit.Id;
                 renaming = false;
             }
+        }
+
+        if (favouritesOnly && shown == 0)
+        {
+            var hint = PrismType.Sentences(Loc.T(L.Prism.FavouritesEmptyHint), TextStyles.Subheadline, width);
+            return top + Typography.DrawWrappedLeft(new Vector2(left, top), hint, PrismArt.Muted, TextStyles.Subheadline,
+                PrismType.BalancedWidth(hint, TextStyles.Subheadline, width));
         }
 
         var rows = (shown + GridColumns - 1) / GridColumns;
@@ -409,15 +424,26 @@ internal sealed partial class PrismApp
     private void SaveWearing()
     {
         wardrobe.Ensure();
-        var gear = glamour.Capture();
-        if (gear.Length == 0)
+        if (wardrobe.Loading)
         {
             return;
         }
 
-        var name = OutfitName(wardrobe.Outfits.Length + 1);
-        wardrobe.Add(new WardrobeOutfit(Guid.NewGuid().ToString("N"), name, glamour.ReadState(), Guid.Empty, gear, false,
-            DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
+        var gear = glamour.Capture();
+        if (gear.Length == 0)
+        {
+            ShellToast.Show(Loc.T(L.Prism.NothingToSave));
+            return;
+        }
+
+        var outfit = new WardrobeOutfit(Guid.NewGuid().ToString("N"), OutfitName(wardrobe.Outfits.Length + 1),
+            glamour.ReadState(), Guid.Empty, gear, false, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+        wardrobe.Add(outfit);
+        Push(PrismScreen.WardrobeOutfit);
+        outfitId = outfit.Id;
+        renaming = true;
+        focusRename = true;
+        renameText = outfit.Name;
     }
 
     private string OutfitName(int number)

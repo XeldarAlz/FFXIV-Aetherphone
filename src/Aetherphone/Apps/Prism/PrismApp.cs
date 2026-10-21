@@ -214,7 +214,15 @@ internal sealed partial class PrismApp : IResumableApp
             onPhoto = false;
             using var inset = AppSurface.ReserveBottom(bottomChrome);
             using var host = TabBar.Host(bar);
-            DrawScreenBody(ImGui.GetWindowDrawList(), full, content, scale);
+            ImGui.PushID(visit);
+            try
+            {
+                DrawScreenBody(ImGui.GetWindowDrawList(), full, content, scale);
+            }
+            finally
+            {
+                ImGui.PopID();
+            }
         }
         finally
         {
@@ -308,6 +316,7 @@ internal sealed partial class PrismApp : IResumableApp
         }
 
         screen = next;
+        visit = ++visitCounter;
         SyncTab(next);
         enterDirection = direction;
         screenAge = 0f;
@@ -369,7 +378,13 @@ internal sealed partial class PrismApp : IResumableApp
         var texture = images.Sized(url, MathF.Max(rect.Width, rect.Height));
         if (texture is null)
         {
-            var placeholder = Loc.T(images.Failed(url) ? L.Common.ImageFailed : L.Common.Loading);
+            var failed = images.Failed(url);
+            if (!failed && !contain)
+            {
+                return rect;
+            }
+
+            var placeholder = Loc.T(failed ? L.Common.ImageFailed : L.Common.Loading);
             var size = PrismType.Measure(placeholder, PrismFace.Label, PrismArt.LabelPixels());
             if (size.X <= rect.Width)
             {

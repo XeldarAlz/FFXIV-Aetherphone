@@ -5829,6 +5829,8 @@
   "prism.activityThisMonth": "This month",
   "prism.activityEarlier": "Earlier",
   "prism.published": "Published",
+  "prism.nothingToSave": "Nothing equipped to save right now",
+  "prism.favouritesEmptyHint": "Tap Favourite on an outfit and it shows up here.",
   "announcements.signInRequired": "Sign in to Aethernet in Settings to read announcements",
   "announcements.signInTitle": "Sign in required",
   "announcements.emptyTitle": "No announcements yet",

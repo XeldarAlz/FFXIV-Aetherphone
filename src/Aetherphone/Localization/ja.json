@@ -5829,6 +5829,8 @@
   "prism.activityThisMonth": "今月",
   "prism.activityEarlier": "それ以前",
   "prism.published": "公開済み",
+  "prism.nothingToSave": "今は保存できる装備がありません",
+  "prism.favouritesEmptyHint": "装いの「お気に入り」をタップすると、ここに表示されます。",
   "announcements.signInRequired": "お知らせを読むには設定からAethernetにログインしてください",
   "announcements.signInTitle": "ログインが必要です",
   "announcements.emptyTitle": "まだお知らせはありません",

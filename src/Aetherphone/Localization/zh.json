@@ -5829,6 +5829,8 @@
   "prism.activityThisMonth": "本月",
   "prism.activityEarlier": "更早",
   "prism.published": "已发布",
+  "prism.nothingToSave": "目前没有可保存的装备",
+  "prism.favouritesEmptyHint": "在一套服装上点按“收藏夹”，它就会出现在这里。",
   "announcements.signInRequired": "请在设置中登录Aethernet以阅读公告",
   "announcements.signInTitle": "需要登录",
   "announcements.emptyTitle": "暂无公告",

@@ -5829,6 +5829,8 @@
   "prism.activityThisMonth": "Ce mois-ci",
   "prism.activityEarlier": "Plus tôt",
   "prism.published": "Publié",
+  "prism.nothingToSave": "Rien d'équipé à enregistrer pour le moment",
+  "prism.favouritesEmptyHint": "Touchez Favori sur une tenue et elle apparaîtra ici.",
   "announcements.signInRequired": "Connectez-vous à Aethernet dans les Paramètres pour lire les annonces",
   "announcements.signInTitle": "Connexion requise",
   "announcements.emptyTitle": "Aucune annonce pour le moment",
