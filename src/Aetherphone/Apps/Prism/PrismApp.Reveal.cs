@@ -33,7 +33,7 @@ internal sealed partial class PrismApp
     private const float RevealTapTopUnits = 56f;
     private const float StoryBarGapUnits = 8f;
     private const float StoryRowGapUnits = 12f;
-    private const float SectionIndexUnits = 44f;
+    private const float SectionIndexUnits = 36f;
     private const float RuleRevealDelay = 0.25f;
     private const float CreditDelay = 0.3f;
     private const float RefractionDelay = 0.05f;
@@ -45,7 +45,6 @@ internal sealed partial class PrismApp
     private readonly List<PrismPlacingDto> finalOrder = new();
     private readonly List<PrismPlacingDto> heatOrder = new();
 
-    private static readonly string[] SectionIndex = { "001", "002", "003", "004" };
     private static readonly Vector4 PodiumShade = new(0f, 0f, 0f, 0.6f);
     private static readonly Vector4 PodiumClear = new(0f, 0f, 0f, 0f);
 
@@ -384,7 +383,7 @@ internal sealed partial class PrismApp
         string label, float scale)
     {
         var labelPixels = PrismArt.LabelPixels();
-        PrismType.Draw(drawList, new Vector2(left, top), SectionIndex[Math.Min(index, SectionIndex.Length - 1)],
+        PrismType.Draw(drawList, new Vector2(left, top), Padded[Math.Min(index + 1, Padded.Length - 1)],
             PrismArt.Muted, PrismFace.Label, labelPixels);
         PrismType.Draw(drawList, new Vector2(left + SectionIndexUnits * scale, top), label,
             PrismArt.Fore, PrismFace.Label, labelPixels);

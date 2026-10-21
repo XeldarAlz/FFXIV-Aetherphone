@@ -222,7 +222,7 @@ internal sealed partial class PrismApp
         top += Metrics.Space.Lg * scale;
         DrawRewardArt(drawList, new Vector2(left + art, top + art), art, kind, 0f, scale);
         var cursor = top;
-        PrismType.Draw(drawList, new Vector2(textLeft, cursor), SectionIndex[kind], PrismArt.Muted, PrismFace.Label,
+        PrismType.Draw(drawList, new Vector2(textLeft, cursor), Padded[kind + 1], PrismArt.Muted, PrismFace.Label,
             labelPixels);
         cursor += labelLine;
         var pixels = PrismType.Fit(Loc.T(RewardTitles[kind]), PrismFace.Headline, textWidth, RewardTitleUnits * scale,
