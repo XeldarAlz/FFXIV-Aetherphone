@@ -563,53 +563,6 @@ internal sealed class GameData
         return true;
     }
 
-    public bool TryFindNpc(string englishName, out string name, out uint territoryId, out uint mapId, out int rawX,
-        out int rawY)
-    {
-        name = string.Empty;
-        territoryId = 0;
-        mapId = 0;
-        rawX = 0;
-        rawY = 0;
-        if (!GameSheets.Available || data.GetExcelSheet<ENpcResident>(Dalamud.Game.ClientLanguage.English) is not { } english)
-        {
-            return false;
-        }
-
-        var ids = new HashSet<uint>();
-        foreach (var resident in english)
-        {
-            if (string.Equals(resident.Singular.ExtractText(), englishName, StringComparison.OrdinalIgnoreCase))
-            {
-                ids.Add(resident.RowId);
-            }
-        }
-
-        if (ids.Count == 0)
-        {
-            return false;
-        }
-
-        foreach (var level in data.GetExcelSheet<Level>())
-        {
-            if (!ids.Contains(level.Object.RowId) || level.Map.RowId == 0)
-            {
-                continue;
-            }
-
-            territoryId = level.Territory.RowId;
-            mapId = level.Map.RowId;
-            rawX = (int)(level.X * 1000f);
-            rawY = (int)(level.Z * 1000f);
-            name = data.GetExcelSheet<ENpcResident>().TryGetRow(level.Object.RowId, out var local)
-                ? local.Singular.ExtractText()
-                : englishName;
-            return true;
-        }
-
-        return false;
-    }
-
     public int EquipSlot(uint itemId)
     {
         if (itemId == 0 || !GameSheets.Available || !data.GetExcelSheet<Item>().TryGetRow(itemId, out var item) ||
@@ -632,11 +585,6 @@ internal sealed class GameData
             : slots.FingerR == 1 || slots.FingerL == 1 ? (int)GearSlot.RingRight
             : GearSlots.None;
     }
-
-    public byte StainShade(byte stainId) =>
-        stainId != 0 && GameSheets.Available && data.GetExcelSheet<Stain>().TryGetRow(stainId, out var stain)
-            ? stain.Shade
-            : (byte)0;
 
     public string StainName(byte stainId)
     {

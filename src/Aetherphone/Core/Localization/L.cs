@@ -10873,23 +10873,6 @@ internal static class L
         public static readonly LocString AddPhoto = new("prism.addPhoto", "Add a photo");
         public static readonly LocString ChangePhoto = new("prism.changePhoto", "Change photo");
         public static readonly LocString UsePhoto = new("prism.usePhoto", "Use this photo");
-        public static readonly LocString FashionReport = new("prism.fashionReport", "Fashion Report");
-        public static readonly LocString FashionWeek = new("prism.fashionWeek", "{0} · Week {1}");
-        public static readonly LocString FashionMissing = new("prism.fashionMissing",
-            "This week's report isn't in yet. It usually arrives a few hours after the Tuesday reset.");
-        public static readonly LocString FillEverySlot = new("prism.fillEverySlot",
-            "Fill every slot except the off hand, both rings included. Glamoured pieces count for hints and dyes.");
-        public static readonly LocString FindOnMap = new("prism.findOnMap", "Find {0} on the map");
-        public static readonly LocString EasySet = new("prism.easySet", "Easy {0} points");
-        public static readonly LocString TryOnSet = new("prism.tryOnSet", "Try on the set");
-        public static readonly LocString AnyDyeable = new("prism.anyDyeable", "Any dyeable piece");
-        public static readonly LocString DyeBonus = new("prism.dyeBonus", "Dye bonus");
-        public static readonly LocString SolutionsFrom = new("prism.solutionsFrom", "Solutions from {0}");
-        public static readonly LocString CheckWearing = new("prism.checkWearing", "Check what I'm wearing");
-        public static readonly LocString WearingScore = new("prism.wearingScore", "Hints {0} of {1}, dyes {2} of {3}");
-        public static readonly LocString StillEmpty = new("prism.stillEmpty", "Still empty: {0}");
-        public static readonly LocString JudgedOnGlamour = new("prism.judgedOnGlamour",
-            "The Fashion Report judges your real glamour, not what Glamourer or Penumbra show.");
         public static readonly LocString Rewards = new("prism.rewards", "Rewards");
         public static readonly LocString RewardsHeadline = new("prism.rewardsHeadline", "Win the week");
         public static readonly LocString RewardsIntro = new("prism.rewardsIntro",

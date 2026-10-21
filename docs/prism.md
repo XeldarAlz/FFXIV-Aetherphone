@@ -93,34 +93,10 @@ Everything is under the signed-in Aethernet session. Paths are built in `Core/Ae
 | `GET /prism/items/{itemId}/glams[?cursor=]` | | `{ items: Glam[], nextCursor }` |
 | `GET /prism/mods/glams?name=&author=[&cursor=]` | | `{ items: Glam[], nextCursor }` |
 | `GET /prism/tags/{tag}/glams[?cursor=]` | | `{ items: Glam[], nextCursor }`; tags are stored lowercase without a leading `#` |
-| `GET /prism/fashion-report?lang=` | | `FashionReport`, see below |
 | `GET /prism/seasons/current` | | `{ id, name, startsAtUnix, endsAtUnix, standings: [{ user, points, rank }], me: { points, rank } }` |
 | `POST /reports` | `{ targetType: "prism_glam", targetId, reason }` | as other reports |
 
 Uploads use `/media/upload-url` with scope `prism`, the same as contest entries.
-
-### Fashion Report
-
-The This week tab can carry the game's weekly Fashion Report, so players can track it without leaving the phone. It is parked for now: the screen and route are built, and `PrismApp.FashionReportShown` hides the button until the team wants it.
-
-`GET /prism/fashion-report?lang=` returns:
-
-```json
-{
-  "week": 455,
-  "theme": "Omega's Jest",
-  "hints": [{ "slot": 3, "hint": "A Pirate's Life", "items": [12345, 12346] }],
-  "dyes": [{ "slot": 2, "colour": "Purple", "stainId": 32 }],
-  "sets": [{ "points": 100, "pieces": [{ "slot": 2, "itemId": 0, "stainId": 32 }, { "slot": 3, "itemId": 12345 }] }],
-  "source": "Kaiyoko Star",
-  "sourceUrl": "https://..."
-}
-```
-
-- `slot` uses the same equipped index as glams. `hint` and `colour` come in the requested language; item and dye names are read from the game on the phone.
-- A set piece with `itemId` 0 means any dyeable piece in that slot.
-- The solutions are community work. The server should only publish them with the source's permission, and the client always shows `source` with a link to `sourceUrl`.
-- The phone adds the rest: which suggested pieces you own, try on (one piece or the whole set), and a map flag on the Masked Rose read from the game's NPC data.
 
 ### The contest on glams
 

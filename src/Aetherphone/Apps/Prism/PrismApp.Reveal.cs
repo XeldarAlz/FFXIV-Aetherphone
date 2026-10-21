@@ -45,7 +45,7 @@ internal sealed partial class PrismApp
     private readonly List<PrismPlacingDto> finalOrder = new();
     private readonly List<PrismPlacingDto> heatOrder = new();
 
-    private static readonly string[] SectionIndex = { "001", "002", "003", "004", "005", "006", "007", "008" };
+    private static readonly string[] SectionIndex = { "001", "002", "003", "004" };
     private static readonly Vector4 PodiumShade = new(0f, 0f, 0f, 0.6f);
     private static readonly Vector4 PodiumClear = new(0f, 0f, 0f, 0f);
 

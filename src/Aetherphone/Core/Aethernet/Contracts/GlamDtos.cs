@@ -85,20 +85,3 @@ internal sealed record GlamSeasonDto(
     long EndsAtUnix = 0,
     GlamStandingDto[]? Standings = null,
     GlamStandingDto? Me = null);
-
-internal sealed record FashionHintDto(int Slot = 0, string Hint = "", uint[]? Items = null);
-
-internal sealed record FashionDyeDto(int Slot = 0, string Colour = "", byte StainId = 0);
-
-internal sealed record FashionPieceDto(int Slot = 0, uint ItemId = 0, byte StainId = 0);
-
-internal sealed record FashionSetDto(int Points = 0, FashionPieceDto[]? Pieces = null);
-
-internal sealed record FashionReportDto(
-    int Week = 0,
-    string Theme = "",
-    FashionHintDto[]? Hints = null,
-    FashionDyeDto[]? Dyes = null,
-    FashionSetDto[]? Sets = null,
-    string Source = "",
-    string SourceUrl = "");

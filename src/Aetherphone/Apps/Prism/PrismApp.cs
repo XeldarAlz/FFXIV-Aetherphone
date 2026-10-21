@@ -41,7 +41,6 @@ internal enum PrismScreen : byte
     Wardrobe,
     WardrobeOutfit,
     WardrobeCover,
-    FashionReport,
 }
 
 internal sealed partial class PrismApp : IResumableApp
@@ -156,7 +155,6 @@ internal sealed partial class PrismApp : IResumableApp
     {
         sinceRefresh = 0f;
         statsFor = null;
-        fashionFor = null;
         store.Refresh();
         if (screen == PrismScreen.Discover && (glams.Lane(discoverScope).NeverLoaded || glams.Lane(discoverScope).Failed))
         {
@@ -269,9 +267,6 @@ internal sealed partial class PrismApp : IResumableApp
                 break;
             case PrismScreen.WardrobeCover:
                 DrawWardrobeCover(drawList, content, scale);
-                break;
-            case PrismScreen.FashionReport:
-                DrawFashionReport(drawList, content, scale);
                 break;
             default:
                 DrawCover(drawList, full, content, scale);

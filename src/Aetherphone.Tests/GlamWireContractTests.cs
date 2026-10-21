@@ -26,24 +26,6 @@ public sealed class GlamWireContractTests
         Assert.Equal("/prism/mods/glams?name=Cute%20Coat&author=Bea&cursor=x",
             GlamClient.ModGlamsPath("Cute Coat", "Bea", "x"));
         Assert.Equal("/prism/tags/summer%20goth/glams?cursor=x", GlamClient.TagGlamsPath("summer goth", "x"));
-        Assert.Equal("/prism/fashion-report?lang=ja", GlamClient.FashionReportPath("ja"));
-    }
-
-    [Fact]
-    public void TheFashionReportParsesHintsDyesAndSets()
-    {
-        var report = JsonSerializer.Deserialize("{\"week\":455,\"theme\":\"Omega's Jest\","
-            + "\"hints\":[{\"slot\":3,\"hint\":\"A Pirate's Life\",\"items\":[45123,45124]}],"
-            + "\"dyes\":[{\"slot\":2,\"colour\":\"Purple\",\"stainId\":32}],"
-            + "\"sets\":[{\"points\":100,\"pieces\":[{\"slot\":2,\"stainId\":32},{\"slot\":3,\"itemId\":45123}]}],"
-            + "\"source\":\"Kaiyoko Star\",\"sourceUrl\":\"https://example.com\"}",
-            AethernetJsonContext.Default.FashionReportDto);
-        Assert.Equal(455, report?.Week);
-        Assert.Equal(3, report?.Hints?[0].Slot);
-        Assert.Equal(45124u, report?.Hints?[0].Items?[1]);
-        Assert.Equal((byte)32, report?.Dyes?[0].StainId);
-        Assert.Equal(0u, report?.Sets?[0].Pieces?[0].ItemId);
-        Assert.Equal("Kaiyoko Star", report?.Source);
     }
 
     [Fact]

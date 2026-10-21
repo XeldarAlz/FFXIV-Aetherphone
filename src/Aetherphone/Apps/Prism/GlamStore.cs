@@ -28,7 +28,6 @@ internal sealed class GlamStore : IDisposable
     public const int MaxPhotos = 4;
 
     private const int MoreLimit = 4;
-    private const int NotFound = 404;
 
     private const int PhotoBaseSize = 1080;
     private const PostAspect GlamAspect = PostAspect.Portrait;
@@ -59,7 +58,6 @@ internal sealed class GlamStore : IDisposable
     private volatile GlamDto? posted;
     private volatile bool detailPending;
     private volatile bool detailMissing;
-    private volatile bool fashionFailed;
     private volatile GlamMore? more;
     private volatile string moreFor = string.Empty;
     private volatile int listOpened;
@@ -67,8 +65,6 @@ internal sealed class GlamStore : IDisposable
     private volatile GlamCollectionDto[] collections = Array.Empty<GlamCollectionDto>();
     private volatile GlamItemDto? item;
     private volatile GlamSeasonDto? season;
-    private volatile FashionReportDto? fashion;
-    private volatile bool fashionLoading;
     private volatile bool posting;
     private volatile bool postFailed;
     private volatile int epoch;
@@ -102,8 +98,6 @@ internal sealed class GlamStore : IDisposable
 
     public bool DetailMissing => detailMissing;
 
-    public bool FashionFailed => fashionFailed;
-
     public GlamDto[] MoreFrom(string glamId) =>
         more is { } shown && shown.GlamId == glamId ? shown.Items : Array.Empty<GlamDto>();
 
@@ -114,10 +108,6 @@ internal sealed class GlamStore : IDisposable
     public GlamItemDto? Item => item;
 
     public GlamSeasonDto? Season => season;
-
-    public FashionReportDto? Fashion => fashion;
-
-    public bool FashionLoading => fashionLoading;
 
     public bool Posting => posting;
 
@@ -523,31 +513,6 @@ internal sealed class GlamStore : IDisposable
     {
         var glamId = glam.Id;
         work.Run("collect", token => client.SetInCollectionAsync(collectionId, glamId, true, token));
-    }
-
-    public void RefreshFashion(string lang)
-    {
-        if (fashionLoading || !session.IsSignedIn)
-        {
-            return;
-        }
-
-        fashionLoading = true;
-        fashionFailed = false;
-        work.Run("fashion report", async token =>
-        {
-            var reported = AepFailure.None;
-            var fetched = await client.FashionReportAsync(lang, token, failure => reported = failure)
-                .ConfigureAwait(false);
-            if (fetched is not null)
-            {
-                fashion = fetched;
-            }
-            else
-            {
-                fashionFailed = reported.StatusCode != NotFound;
-            }
-        }, () => fashionLoading = false);
     }
 
     public void RefreshSeason()

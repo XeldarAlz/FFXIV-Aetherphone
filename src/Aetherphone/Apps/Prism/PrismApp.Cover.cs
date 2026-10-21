@@ -49,16 +49,14 @@ internal sealed partial class PrismApp
 
         if (store.Week is not { } week)
         {
-            DrawFashionButton(drawList, content, content.Min.X + PrismArt.Gutter(scale),
-                DrawMasthead(drawList, content, string.Empty, scale), scale);
+            DrawMasthead(drawList, content, string.Empty, scale);
             DrawWeekMissing(drawList, content, scale);
             return;
         }
 
         if (week.Id.Length == 0 || week.Phase.Length == 0)
         {
-            DrawFashionButton(drawList, content, content.Min.X + PrismArt.Gutter(scale),
-                DrawMasthead(drawList, content, string.Empty, scale), scale);
+            DrawMasthead(drawList, content, string.Empty, scale);
             DrawNotice(drawList, content, Loc.T(L.Prism.NoWeekTitle), Loc.T(L.Prism.NoWeekHint), scale);
             if (store.Results is { } last &&
                 PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(ResultsLabel(last)), "→", true))
@@ -165,33 +163,9 @@ internal sealed partial class PrismApp
             left += width + Metrics.Space.Sm * scale;
         }
 
-        if (PrismArt.Button(drawList, new Vector2(left, top), Loc.T(L.Prism.Rewards), scale, out var rewardsWidth))
+        if (PrismArt.Button(drawList, new Vector2(left, top), Loc.T(L.Prism.Rewards), scale, out _))
         {
             OpenRewards();
-        }
-
-        left += rewardsWidth + Metrics.Space.Sm * scale;
-
-        DrawFashionButton(drawList, content, left, top, scale);
-    }
-
-    private void DrawFashionButton(ImDrawListPtr drawList, Rect content, float left, float top, float scale)
-    {
-        if (!FashionReportShown)
-        {
-            return;
-        }
-
-        var fashion = Loc.T(L.Prism.FashionReport);
-        if (left + PrismArt.ButtonWidth(fashion, scale) > content.Max.X - PrismArt.Gutter(scale))
-        {
-            left = content.Min.X + PrismArt.Gutter(scale);
-            top += PrismArt.ButtonUnits * scale + Metrics.Space.Sm * scale;
-        }
-
-        if (PrismArt.Button(drawList, new Vector2(left, top), fashion, scale, out _))
-        {
-            OpenFashionReport();
         }
     }
 
