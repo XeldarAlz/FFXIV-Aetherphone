@@ -13,6 +13,7 @@ internal sealed partial class PrismApp
     private const float ActivityAvatarUnits = 40f;
     private const float ActivityThumbUnits = 40f;
     private const float ActivityDotUnits = 3f;
+    private const int ActivityBodyLines = 2;
     private const long SecondsPerMinute = 60L;
     private const long WeekSeconds = 7L * 86400L;
     private const long MonthSeconds = 30L * 86400L;
@@ -140,12 +141,6 @@ internal sealed partial class PrismApp
                 TextStyles.Subheadline.Scale);
         }
 
-        if (!item.Read)
-        {
-            drawList.AddCircleFilled(new Vector2(left - Metrics.Space.Sm * scale, middle), ActivityDotUnits * scale,
-                ImGui.GetColorU32(PrismArt.Fore));
-        }
-
         var right = row.Max.X;
         if (!string.IsNullOrEmpty(item.ImageUrl))
         {
@@ -159,15 +154,28 @@ internal sealed partial class PrismApp
         var labelPixels = PrismArt.LabelPixels();
         var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var textLeft = left + avatar + pad;
-        var textTop = middle - labelLine;
+        var lines = PrismType.Wrap(text.Body, PrismFace.Label, labelPixels, right - textLeft);
+        var bodyLines = Math.Min(lines.Length, ActivityBodyLines);
+        var textTop = middle - labelLine * (1 + bodyLines) * 0.5f;
         var timeWidth = PrismType.DrawRight(drawList, new Vector2(right, textTop), text.Time, PrismArt.Muted,
             PrismFace.Label, labelPixels);
+        if (!item.Read)
+        {
+            timeWidth += ActivityDotUnits * scale * 2f + Metrics.Space.Sm * scale;
+            drawList.AddCircleFilled(new Vector2(right - timeWidth + ActivityDotUnits * scale, textTop + labelLine * 0.5f),
+                ActivityDotUnits * scale, ImGui.GetColorU32(PrismArt.Fore));
+        }
+
         var name = placing ? Loc.T(L.Prism.ActivityResults) : SocialActivity.ActorLabel(item);
         PrismType.Draw(drawList, new Vector2(textLeft, textTop),
             PrismType.FitLabel(name, labelPixels, right - timeWidth - pad - textLeft), PrismArt.Fore, PrismFace.Label,
             labelPixels);
-        PrismType.Draw(drawList, new Vector2(textLeft, textTop + labelLine),
-            PrismType.FitLabel(text.Body, labelPixels, right - textLeft), PrismArt.Muted, PrismFace.Label, labelPixels);
+        for (var line = 0; line < bodyLines; line++)
+        {
+            PrismType.Draw(drawList, new Vector2(textLeft, textTop + labelLine * (line + 1)),
+                PrismType.FitLabel(lines[line], labelPixels, right - textLeft), PrismArt.Muted, PrismFace.Label,
+                labelPixels);
+        }
         PrismArt.Hairline(drawList, textLeft, row.Max.X, row.Max.Y, PrismArt.Faint, scale);
         var hovered = UiInteract.Hover(row.Min, row.Max);
         if (hovered)
