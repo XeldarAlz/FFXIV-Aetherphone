@@ -18,7 +18,7 @@ For any privacy question or request, write to **privacy@aetherphone.net**. A pos
 
 **What you post and share.** Posts, comments, photos, videos, voice notes, stories, reactions, poll votes, listings, events, radio stations, game rooms, and anything you send through the Feedback app. A Feedback report also includes your app version, language, game client, region and phone size, unless you turn that off before sending. We also keep who you follow, your contacts and who you block. Kupo confessions are shown to others without your name, but we store them with your account.
 
-**Private messages.** Your ChocoChat, Velvet, Aethergram, Chirper and Yellow Pages conversations, with their photos and voice notes. Whether we can read them is explained under Encrypted messages.
+**Private messages.** Your ChocoChat, Velvet, Aethergram and Yellow Pages conversations, with their photos and voice notes. Whether we can read them is explained under Encrypted messages.
 
 **Velvet.** If you use Velvet: your Velvet profile, posts, connections and messages, when you confirmed that you are 18 or older, and your character's race. Your Velvet profile shows that race to other Velvet users, or another race you choose to show. On the global client we confirm the race from the character's public Lodestone profile and check it again about once a week while you use Velvet. On the Chinese client we use the race the plugin reports.
 
@@ -40,7 +40,7 @@ We do not show advertising, use analytics, tracking or crash-reporting services,
 
 ## Encrypted messages
 
-ChocoChat, Velvet, Aethergram, Chirper and Yellow Pages conversations are end-to-end encrypted, with an encryption key the app creates for you automatically. Messages, photos and voice notes are locked on the sender's device so that only the people in the conversation can read them, and we store them locked. Your key belongs to your account, so every device you link can read your conversations.
+ChocoChat, Velvet, Aethergram and Yellow Pages conversations are end-to-end encrypted, with an encryption key the app creates for you automatically. Messages, photos and voice notes are locked on the sender's device so that only the people in the conversation can read them, and we store them locked. Your key belongs to your account, so every device you link can read your conversations.
 
 We keep a locked backup of your encryption key on our server. Only your recovery code can open it, and we never receive that code.
 

@@ -4,6 +4,7 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Message;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
@@ -402,7 +403,7 @@ internal sealed partial class ChirperApp
             return;
         }
 
-        if (user.CanMessage)
+        if (user.CanMessage && SocialDmSurface.Chirper.Live)
         {
             var messageCenter = new Vector2(pillRight - moreRadius, rowCenterY);
             if (RoundButton.Icon(drawList, messageCenter, moreRadius, PhoneIcons.MessageCircle, ui.Ink,
@@ -669,7 +670,10 @@ internal sealed partial class ChirperApp
         {
             AddSheetItem(PostSheetAction.BadgeProgress, Loc.T(L.Social.BadgeProgress), false);
             AddSheetItem(PostSheetAction.Rules, Loc.T(L.Conduct.Eyebrow), false);
-            AddSheetItem(PostSheetAction.MessagePrivacy, Loc.T(L.Chirper.MessagePrivacy), false);
+            if (SocialDmSurface.Chirper.Live)
+            {
+                AddSheetItem(PostSheetAction.MessagePrivacy, Loc.T(L.Chirper.MessagePrivacy), false);
+            }
         }
         else
         {

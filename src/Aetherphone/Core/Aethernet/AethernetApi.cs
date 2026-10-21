@@ -1,4 +1,5 @@
 using Aetherphone.Core.Aethernet.Clients;
+using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Net;
 
 namespace Aetherphone.Core.Aethernet;
@@ -15,8 +16,8 @@ internal sealed class AethernetApi
         Chats = new ChatClient(net);
         Social = new SocialClient(net);
         Grams = new GramClient(net);
-        GramDm = new DmClient(net, "gram");
-        ChirperDm = new DmClient(net, "chirper");
+        GramDm = new DmClient(net, PairSurface.Gram);
+        ChirperDm = new DmClient(net, PairSurface.Chirper);
         Velvet = new VelvetClient(net);
         Media = new MediaClient(net);
         Safety = new SafetyClient(net, session.Blocks);

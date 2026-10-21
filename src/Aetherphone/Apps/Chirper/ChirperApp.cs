@@ -814,18 +814,31 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             store.EnsureMe();
         }
 
+        var dmsLive = SocialDmSurface.Chirper.Live;
+        var profileSlot = dmsLive ? (int)HomeTab.Profile : (int)HomeTab.Messages;
         tabItems[(int)HomeTab.Feed] = new TabItem(Loc.T(L.Chirper.TabHome), HomeGlyph, HomeActiveGlyph);
         tabItems[(int)HomeTab.Explore] = new TabItem(Loc.T(L.Chirper.TabExplore), ExploreGlyph);
         tabItems[(int)HomeTab.Alerts] = new TabItem(Loc.T(L.Social.ActivityTitle), AlertsGlyph, AlertsActiveGlyph,
             social.UnseenCount(Id));
-        tabItems[(int)HomeTab.Messages] = new TabItem(Loc.T(L.Chirper.InboxTitle), MessagesGlyph,
-            MessagesActiveGlyph, dmStore.UnreadCount, "chirper.inbox");
-        tabItems[(int)HomeTab.Profile] = new TabItem(Loc.T(L.Chirper.TabProfile), PhoneIcons.User,
-            PhoneIcons.UserFilled, CustomIcon: hasAvatar);
-        var result = tabBar.Draw(area, ui, tabItems, (int)homeTab, icons: this);
+        if (dmsLive)
+        {
+            tabItems[(int)HomeTab.Messages] = new TabItem(Loc.T(L.Chirper.InboxTitle), MessagesGlyph,
+                MessagesActiveGlyph, dmStore.UnreadCount, "chirper.inbox");
+        }
+
+        tabItems[profileSlot] = new TabItem(Loc.T(L.Chirper.TabProfile), PhoneIcons.User, PhoneIcons.UserFilled,
+            CustomIcon: hasAvatar);
+        var active = homeTab == HomeTab.Profile ? profileSlot : (int)homeTab;
+        var result = tabBar.Draw(area, ui, tabItems.AsSpan(0, profileSlot + 1), active, icons: this);
         UiAnchors.Report("chirper.tabbar", tabBar.Bounds);
         if (result.Tapped < 0)
         {
+            return;
+        }
+
+        if (result.Tapped == profileSlot)
+        {
+            SelectHomeTab(HomeTab.Profile);
             return;
         }
 
@@ -1007,7 +1020,10 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             AddSheetItem(PostSheetAction.Reactions, Loc.T(L.Chirper.ViewReactions), false);
         }
 
-        AddSheetItem(PostSheetAction.SendInMessage, Loc.T(L.Chirper.SendInMessage), false);
+        if (SocialDmSurface.Chirper.Live)
+        {
+            AddSheetItem(PostSheetAction.SendInMessage, Loc.T(L.Chirper.SendInMessage), false);
+        }
         var mine = store.Me is { } me && me.Id == post.AuthorId;
         if (mine)
         {

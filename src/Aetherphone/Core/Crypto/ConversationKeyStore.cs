@@ -32,7 +32,7 @@ internal sealed class ConversationKeyStore
 
     private static readonly (string Name, bool RotatesGenerations)[] PairSurfaceSpecs =
     {
-        ("velvet", true), ("gram", true), ("ads", false), ("chirper", true),
+        (PairSurface.Velvet, true), (PairSurface.Gram, true), (PairSurface.Ads, false), (PairSurface.Chirper, true),
     };
 
     private readonly KeySurface chatSurface;
@@ -75,17 +75,17 @@ internal sealed class ConversationKeyStore
 
     public static string VelvetScope(string pairKey)
     {
-        return "velvet:" + pairKey;
+        return PairScope(PairSurface.Velvet, pairKey);
     }
 
     public static string GramScope(string pairKey)
     {
-        return "gram:" + pairKey;
+        return PairScope(PairSurface.Gram, pairKey);
     }
 
     public static string AdScope(string pairKey)
     {
-        return "ads:" + pairKey;
+        return PairScope(PairSurface.Ads, pairKey);
     }
 
     public static string PairScope(string surface, string pairKey)

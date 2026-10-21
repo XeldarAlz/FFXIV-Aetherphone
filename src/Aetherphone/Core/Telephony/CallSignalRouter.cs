@@ -1,4 +1,5 @@
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Telephony.Contracts;
 
 namespace Aetherphone.Core.Telephony;
@@ -80,10 +81,10 @@ internal sealed class CallSignalRouter : IDisposable
                 signals.PublishVelvet();
                 return;
             case SignalType.GramPing:
-                signals.PublishDm("gram");
+                signals.PublishDm(PairSurface.Gram);
                 return;
             case SignalType.ChirperPing:
-                signals.PublishDm("chirper");
+                signals.PublishDm(PairSurface.Chirper);
                 return;
             case SignalType.AdPing:
                 signals.PublishAds();

@@ -74,6 +74,8 @@ internal sealed class SocialDmStore : ChatThreadStoreBase<DmMessageDto, DmThread
 
     protected override bool IsThreadMuted(DmThreadDto thread) => thread.Pending;
 
+    protected override bool TickActive => base.TickActive && surface.Live;
+
     public bool IsThreadPending(string otherId)
     {
         var snapshot = ThreadListItems;

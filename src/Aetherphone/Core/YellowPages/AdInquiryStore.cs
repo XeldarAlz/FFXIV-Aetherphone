@@ -125,7 +125,7 @@ internal sealed class AdInquiryStore : ChatThreadStoreBase<AdInquiryMessageDto, 
                 return false;
             }
 
-            var status = await keys.EnsurePairKeysAsync("ads", ownerId, MyUserId, token).ConfigureAwait(false);
+            var status = await keys.EnsurePairKeysAsync(PairSurface.Ads, ownerId, MyUserId, token).ConfigureAwait(false);
             if (!status.CanEncrypt)
             {
                 return false;
@@ -220,7 +220,7 @@ internal sealed class AdInquiryStore : ChatThreadStoreBase<AdInquiryMessageDto, 
             return ChatKeyStatus.None;
         }
 
-        return await keys.EnsurePairKeysAsync("ads", otherId, MyUserId, token).ConfigureAwait(false);
+        return await keys.EnsurePairKeysAsync(PairSurface.Ads, otherId, MyUserId, token).ConfigureAwait(false);
     }
 
     protected override void OnCipherCleared()
@@ -243,7 +243,7 @@ internal sealed class AdInquiryStore : ChatThreadStoreBase<AdInquiryMessageDto, 
         }
 
         adKeysHydrated = true;
-        await keys.HydratePairsAsync("ads", token).ConfigureAwait(false);
+        await keys.HydratePairsAsync(PairSurface.Ads, token).ConfigureAwait(false);
     }
 
     private async Task<string?> EnsureOtherAsync(string threadId, CancellationToken token)
