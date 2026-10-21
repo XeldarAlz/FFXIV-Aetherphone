@@ -380,10 +380,10 @@ internal sealed partial class PrismApp
         }
 
         var anchors = row.Max.Y + gap;
-        PrismType.Draw(drawList, new Vector2(row.Min.X, anchors), Loc.T(L.Prism.ScoreLow), PrismArt.ScoreLowInk,
+        PrismType.Draw(drawList, new Vector2(row.Min.X, anchors), Loc.T(L.Prism.ScoreLow), PrismArt.Muted,
             PrismFace.Label, labelPixels);
         PrismType.DrawRight(drawList, new Vector2(row.Max.X, anchors), Loc.T(L.Prism.ScoreHigh),
-            PrismArt.ScoreHighInk, PrismFace.Label, labelPixels);
+            PrismArt.Muted, PrismFace.Label, labelPixels);
     }
 
     private static void DrawFinalPlate(ImDrawListPtr drawList, Rect plate, float scale)
