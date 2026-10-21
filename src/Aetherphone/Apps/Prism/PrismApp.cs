@@ -186,6 +186,11 @@ internal sealed partial class PrismApp : IResumableApp
         var full = SceneChrome.ScreenFrom(content, context.Theme, scale);
         PrismArt.Follow(context.Theme);
         ImGui.GetWindowDrawList().AddRectFilled(full.Min, full.Max, ImGui.GetColorU32(PrismArt.Back));
+        if (glams.IsSignedIn && screen != PrismScreen.Guide && launcher.TryConsume(Id, out var link))
+        {
+            OpenLink(link);
+        }
+
         if (photoViewer.Active)
         {
             photoViewer.Draw(full, context.Theme);
@@ -195,10 +200,6 @@ internal sealed partial class PrismApp : IResumableApp
         TickRefresh();
         ForgetLoadsOnNewWeek();
         ConsumeSharedPhoto();
-        if (glams.IsSignedIn && launcher.TryConsume(Id, out var link))
-        {
-            OpenLink(link);
-        }
 
         screenAge += MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         var enter = PrismMotion.At(screenAge, 0f, TransitionTiming.PresentSmoothTime);
@@ -370,8 +371,12 @@ internal sealed partial class PrismApp : IResumableApp
         {
             var placeholder = Loc.T(images.Failed(url) ? L.Common.ImageFailed : L.Common.Loading);
             var size = PrismType.Measure(placeholder, PrismFace.Label, PrismArt.LabelPixels());
-            PrismType.Draw(drawList, rect.Center - size * 0.5f, placeholder, PrismArt.Faint, PrismFace.Label,
-                PrismArt.LabelPixels());
+            if (size.X <= rect.Width)
+            {
+                PrismType.Draw(drawList, rect.Center - size * 0.5f, placeholder, PrismArt.Faint, PrismFace.Label,
+                    PrismArt.LabelPixels());
+            }
+
             return rect;
         }
 

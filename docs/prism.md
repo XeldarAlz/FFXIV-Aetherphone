@@ -112,7 +112,7 @@ Prism's activity screen, its home screen badge and its banners read the phone's 
 | `2` follow | someone follows you through Prism, that is a `/follows/{id}` call sent with `X-Aep-App: prism` | actor fields |
 | `22` placing | a week's results are out, one row per entrant | `postId` (the glam published from the entry), `preview` (the week's title), `rank` (the entry's final placing, from 1), `imageUrl` (the glam's cover); actor fields empty |
 
-`rank` and `imageUrl` are new optional fields on the notification row: other apps ignore them, and `imageUrl` draws a thumbnail on any Prism row that has one. Tapping a like or placing opens the glam, a follow opens the follower's profile, and a banner tap lands in the same place.
+Follow requests and accepts (types 14 and 15) belong to Aethergram, which owns the follow graph, so they never carry `app: "prism"`. `rank` and `imageUrl` are new optional fields on the notification row: other apps ignore them, and `imageUrl` draws a thumbnail on any Prism row that has one. Tapping a like or placing opens the glam, a follow opens the follower's profile, and a banner tap lands in the same place.
 
 ### Rules the server enforces
 

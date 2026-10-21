@@ -13,7 +13,6 @@ internal sealed partial class PrismApp
     private const float ActivityAvatarUnits = 40f;
     private const float ActivityThumbUnits = 40f;
     private const float ActivityDotUnits = 3f;
-    private const int ActivityBodyLines = 2;
     private const long SecondsPerMinute = 60L;
     private const long WeekSeconds = 7L * 86400L;
     private const long MonthSeconds = 30L * 86400L;
@@ -25,7 +24,8 @@ internal sealed partial class PrismApp
 
     private readonly Dictionary<string, ActivityText> activityText = new(StringComparer.Ordinal);
 
-    private readonly record struct ActivityText(string Language, string Body, long Minute, string Time);
+    private readonly record struct ActivityText(string Language, float Width, string First, string Second, long Minute,
+        string Time);
 
     private void OpenActivity()
     {
@@ -37,14 +37,15 @@ internal sealed partial class PrismApp
 
     private void OpenLink(SocialDeepLink link)
     {
+        photoViewer.Close();
         OpenTab(PrismTab.Discover);
-        if (link.Kind == SocialLinkKind.Profile)
-        {
-            OpenProfile(new GlamAuthorDto(link.Id));
-        }
-        else
+        if (link.Kind == SocialLinkKind.Post)
         {
             OpenGlam(new GlamDto(link.Id));
+        }
+        else if (link.Id.Length > 0)
+        {
+            OpenProfile(new GlamAuthorDto(link.Id));
         }
     }
 
@@ -67,7 +68,7 @@ internal sealed partial class PrismApp
         var items = activityFeed.Items;
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var bucket = -1;
-        var shown = 0;
+        var sections = 0;
         for (var index = 0; index < items.Length; index++)
         {
             var item = items[index];
@@ -79,16 +80,15 @@ internal sealed partial class PrismApp
             var itemBucket = BucketFor(item.CreatedAtUnix, now);
             if (itemBucket != bucket)
             {
-                cursor = DrawSectionLabel(list, left, cursor + (bucket < 0 ? 0f : Metrics.Space.Lg * scale), width,
-                    itemBucket, Loc.T(ActivityBuckets[itemBucket]), scale);
+                cursor = DrawSectionLabel(list, left, cursor + (sections == 0 ? 0f : Metrics.Space.Lg * scale), width,
+                    sections++, Loc.T(ActivityBuckets[itemBucket]), scale);
                 bucket = itemBucket;
             }
 
             cursor = DrawActivityRow(list, left, cursor, width, item, now, scale);
-            shown++;
         }
 
-        if (shown == 0)
+        if (sections == 0)
         {
             cursor += Typography.DrawWrappedLeft(new Vector2(left, cursor), Loc.T(L.Prism.ActivityEmpty),
                 PrismArt.Muted, TextStyles.Subheadline, width);
@@ -150,12 +150,11 @@ internal sealed partial class PrismApp
             right = frame.Min.X - pad;
         }
 
-        var text = ActivityLines(item, now);
         var labelPixels = PrismArt.LabelPixels();
         var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var textLeft = left + avatar + pad;
-        var lines = PrismType.Wrap(text.Body, PrismFace.Label, labelPixels, right - textLeft);
-        var bodyLines = Math.Min(lines.Length, ActivityBodyLines);
+        var text = ActivityLines(item, now, right - textLeft, labelPixels);
+        var bodyLines = text.Second.Length > 0 ? 2 : text.First.Length > 0 ? 1 : 0;
         var textTop = middle - labelLine * (1 + bodyLines) * 0.5f;
         var timeWidth = PrismType.DrawRight(drawList, new Vector2(right, textTop), text.Time, PrismArt.Muted,
             PrismFace.Label, labelPixels);
@@ -170,12 +169,10 @@ internal sealed partial class PrismApp
         PrismType.Draw(drawList, new Vector2(textLeft, textTop),
             PrismType.FitLabel(name, labelPixels, right - timeWidth - pad - textLeft), PrismArt.Fore, PrismFace.Label,
             labelPixels);
-        for (var line = 0; line < bodyLines; line++)
-        {
-            PrismType.Draw(drawList, new Vector2(textLeft, textTop + labelLine * (line + 1)),
-                PrismType.FitLabel(lines[line], labelPixels, right - textLeft), PrismArt.Muted, PrismFace.Label,
-                labelPixels);
-        }
+        PrismType.Draw(drawList, new Vector2(textLeft, textTop + labelLine), text.First, PrismArt.Muted,
+            PrismFace.Label, labelPixels);
+        PrismType.Draw(drawList, new Vector2(textLeft, textTop + labelLine * 2f), text.Second, PrismArt.Muted,
+            PrismFace.Label, labelPixels);
         PrismArt.Hairline(drawList, textLeft, row.Max.X, row.Max.Y, PrismArt.Faint, scale);
         var hovered = UiInteract.Hover(row.Min, row.Max);
         if (hovered)
@@ -199,10 +196,11 @@ internal sealed partial class PrismApp
         return row.Max.Y;
     }
 
-    private ActivityText ActivityLines(NotificationDto item, long now)
+    private ActivityText ActivityLines(NotificationDto item, long now, float width, float labelPixels)
     {
         var minute = now / SecondsPerMinute;
-        if (activityText.TryGetValue(item.Id, out var cached) && cached.Language == Loc.Current.Code)
+        if (activityText.TryGetValue(item.Id, out var cached) && cached.Language == Loc.Current.Code &&
+            cached.Width == width)
         {
             if (cached.Minute == minute)
             {
@@ -213,7 +211,15 @@ internal sealed partial class PrismApp
         }
         else
         {
-            cached = new ActivityText(Loc.Current.Code, SocialActivity.Body(item), minute,
+            var lines = PrismType.Wrap(SocialActivity.Body(item), PrismFace.Label, labelPixels, width);
+            var second = lines.Length switch
+            {
+                < 2 => string.Empty,
+                2 => PrismType.FitLabel(lines[1], labelPixels, width),
+                _ => PrismType.FitLabel(string.Join(' ', lines, 1, lines.Length - 1), labelPixels, width),
+            };
+            cached = new ActivityText(Loc.Current.Code, width,
+                lines.Length > 0 ? PrismType.FitLabel(lines[0], labelPixels, width) : string.Empty, second, minute,
                 TimeText.Short(item.CreatedAtUnix));
         }
 
