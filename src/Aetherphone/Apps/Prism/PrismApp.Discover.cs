@@ -26,8 +26,10 @@ internal sealed partial class PrismApp
     private static readonly Vector4 CaptionScrimTop = new(0f, 0f, 0f, 0.5f);
     private static readonly Vector4 CaptionScrimBottom = new(0f, 0f, 0f, 0.78f);
 
+    private readonly PullToRefresh discoverPull = new();
     private GlamScope discoverScope = GlamScope.New;
     private int discoverFilter;
+    private Action? refreshDiscoverNow;
 
     private void DrawDiscover(ImDrawListPtr drawList, Rect content, float scale)
     {
@@ -56,6 +58,12 @@ internal sealed partial class PrismApp
         var body = new Rect(new Vector2(content.Min.X, top), content.Max);
         var lane = glams.Lane(discoverScope);
         using var surface = AppSurface.BeginEdgeToEdge(body);
+        if (!searching)
+        {
+            discoverPull.Draw(body, surface.Pull, surface.Dragging, lane.Loading, PrismArt.Muted,
+                refreshDiscoverNow ??= RefreshDiscoverAlways);
+        }
+
         var list = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth() - gutter * 2f;
@@ -86,34 +94,30 @@ internal sealed partial class PrismApp
             var label = Loc.T(ScopeNames[index]);
             var active = discoverScope == ShownScopes[index];
             var width = PrismType.Measure(label, PrismFace.Label, labelPixels).X;
-            if (PrismArt.Link(drawList, new Vector2(x, top), label, active ? PrismArt.Fore : PrismArt.Muted, scale,
-                    labelLine + Metrics.Space.Md * scale) && !active)
+            if (DrawToggleLink(drawList, x, top, label, width, active, labelLine, scale) && !active)
             {
                 discoverScope = ShownScopes[index];
                 RefreshDiscover(false);
             }
 
-            if (active)
-            {
-                PrismArt.Hairline(drawList, x, x + width, top + labelLine, PrismArt.Fore, scale);
-            }
-
             x += width + Metrics.Space.Lg * scale;
         }
 
-        var filter = Loc.T(FilterNames[discoverFilter]);
-        var filterWidth = PrismType.Measure(filter, PrismFace.Label, labelPixels).X;
         var fits = Loc.T(L.Prism.FitsMe);
         var fitsWidth = PrismType.Measure(fits, PrismFace.Label, labelPixels).X;
+        var modded = Loc.T(FilterNames[1]);
+        var moddedWidth = PrismType.Measure(modded, PrismFace.Label, labelPixels).X;
+        var vanilla = Loc.T(FilterNames[2]);
+        var vanillaWidth = PrismType.Measure(vanilla, PrismFace.Label, labelPixels).X;
         var gap = Metrics.Space.Lg * scale;
-        if (x > right - filterWidth - gap - fitsWidth)
+        var cursor = right - fitsWidth - moddedWidth - vanillaWidth - gap * 2f;
+        if (x > cursor)
         {
             top += labelLine + Metrics.Space.Md * scale;
+            cursor = left;
         }
 
-        var fitsLeft = right - filterWidth - gap - fitsWidth;
-        if (PrismArt.Link(drawList, new Vector2(fitsLeft, top), fits, glams.FitsBody ? PrismArt.Fore : PrismArt.Muted,
-                scale, labelLine + Metrics.Space.Md * scale))
+        if (DrawToggleLink(drawList, cursor, top, fits, fitsWidth, glams.FitsBody, labelLine, scale))
         {
             var (race, gender) = glams.FitsBody ? (0, 0) : glamour.TryBody(out var shown, out var shownGender)
                 ? (shown, shownGender)
@@ -122,26 +126,47 @@ internal sealed partial class PrismApp
             RefreshDiscover(true);
         }
 
-        if (glams.FitsBody)
+        cursor += fitsWidth + gap;
+        if (DrawToggleLink(drawList, cursor, top, modded, moddedWidth, discoverFilter == 1, labelLine, scale))
         {
-            PrismArt.Hairline(drawList, fitsLeft, fitsLeft + fitsWidth, top + labelLine, PrismArt.Fore, scale);
+            SetDiscoverFilter(discoverFilter == 1 ? 0 : 1);
         }
 
-        if (PrismArt.Link(drawList, new Vector2(right - filterWidth, top), filter, PrismArt.Muted, scale,
-                labelLine + Metrics.Space.Md * scale))
+        cursor += moddedWidth + gap;
+        if (DrawToggleLink(drawList, cursor, top, vanilla, vanillaWidth, discoverFilter == 2, labelLine, scale))
         {
-            discoverFilter = (discoverFilter + 1) % FilterNames.Length;
-            glams.SetVanillaOnly(discoverFilter switch
-            {
-                1 => false,
-                2 => true,
-                _ => null,
-            });
-            RefreshDiscover(true);
+            SetDiscoverFilter(discoverFilter == 2 ? 0 : 2);
         }
 
         return top + labelLine + Metrics.Space.Lg * scale;
     }
+
+    private static bool DrawToggleLink(ImDrawListPtr drawList, float x, float top, string label, float width,
+        bool active, float labelLine, float scale)
+    {
+        var tapped = PrismArt.Link(drawList, new Vector2(x, top), label, active ? PrismArt.Fore : PrismArt.Muted, scale,
+            labelLine + Metrics.Space.Md * scale);
+        if (active)
+        {
+            PrismArt.Hairline(drawList, x, x + width, top + labelLine, PrismArt.Fore, scale);
+        }
+
+        return tapped;
+    }
+
+    private void SetDiscoverFilter(int filter)
+    {
+        discoverFilter = filter;
+        glams.SetVanillaOnly(filter switch
+        {
+            1 => false,
+            2 => true,
+            _ => null,
+        });
+        RefreshDiscover(true);
+    }
+
+    private void RefreshDiscoverAlways() => RefreshDiscover(true);
 
     private float DrawThemeRow(ImDrawListPtr drawList, float left, float top, float width, float scale)
     {
@@ -204,8 +229,12 @@ internal sealed partial class PrismApp
             var copy = PrismType.Sentences(text, TextStyles.Subheadline, width);
             top += Typography.DrawWrappedLeft(new Vector2(left, top), copy, PrismArt.Muted, TextStyles.Subheadline,
                 PrismType.BalancedWidth(copy, TextStyles.Subheadline, width)) + Metrics.Space.Md * scale;
-            if (lane.Failed &&
-                PrismArt.Link(drawList, new Vector2(left, top), Loc.T(L.Common.Retry), PrismArt.Fore, scale))
+            if (!lane.Failed)
+            {
+                return DrawLaneAction(drawList, left, top, width, scale);
+            }
+
+            if (PrismArt.Link(drawList, new Vector2(left, top), Loc.T(L.Common.Retry), PrismArt.Fore, scale))
             {
                 RetryLane(lane);
             }
@@ -291,6 +320,39 @@ internal sealed partial class PrismApp
         }
 
         return top + rows * (height + gap);
+    }
+
+    private float DrawLaneAction(ImDrawListPtr drawList, float left, float top, float width, float scale)
+    {
+        if (!glams.IsSignedIn || screen is not (PrismScreen.Discover or PrismScreen.Me))
+        {
+            return top + Metrics.Size.TapTarget * scale;
+        }
+
+        var following = screen == PrismScreen.Discover && discoverScope == GlamScope.Following;
+        var saved = screen == PrismScreen.Me && showSaved;
+        var label = following ? L.Prism.ScopePopular : saved ? L.Prism.TabDiscover : L.Prism.PostGlam;
+        var strip = new Rect(new Vector2(left, top), new Vector2(left + width, top + PrismArt.StripUnits * scale));
+        if (!PrismArt.Strip(drawList, strip, Loc.T(label), Arrow, !following && !saved))
+        {
+            return strip.Max.Y + PrismArt.BottomMargin(scale);
+        }
+
+        if (following)
+        {
+            discoverScope = GlamScope.Popular;
+            RefreshDiscover(false);
+        }
+        else if (saved)
+        {
+            OpenTab(PrismTab.Discover);
+        }
+        else
+        {
+            StartCompose();
+        }
+
+        return strip.Max.Y + PrismArt.BottomMargin(scale);
     }
 
     private static void DrawPressVeil(ImDrawListPtr drawList, Vector2 min, Vector2 max, bool hovered)
