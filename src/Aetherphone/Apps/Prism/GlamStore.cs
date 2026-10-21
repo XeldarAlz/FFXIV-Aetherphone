@@ -400,7 +400,7 @@ internal sealed class GlamStore : IDisposable
     }
 
     public void Post(GlamPhotoDraft[] photos, GlamGearDto[] gear, string title, string[] tags, int race, int gender,
-        bool vanilla, Action<bool> onComplete)
+        bool vanilla, string inspiredBy, Action<bool> onComplete)
     {
         if (posting || photos.Length == 0 || !session.IsSignedIn)
         {
@@ -433,7 +433,7 @@ internal sealed class GlamStore : IDisposable
             }
 
             var created = await client.CreateAsync(new CreateGlamRequest(title, uploaded, gear, tags, race, gender, vanilla,
-                string.Empty), token, received => failure = received).ConfigureAwait(false);
+                inspiredBy), token, received => failure = received).ConfigureAwait(false);
             if (created is null)
             {
                 return FailPost(failure);

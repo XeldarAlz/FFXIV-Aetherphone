@@ -49,6 +49,7 @@ internal sealed partial class PrismApp
     private string? introWeek;
     private string wearingKey = string.Empty;
     private string wearingTitle = string.Empty;
+    private string wearingGlamId = string.Empty;
 
     private static bool IsTabRoot(PrismScreen value) =>
         value is PrismScreen.Discover or PrismScreen.Cover or PrismScreen.Wardrobe or PrismScreen.Me;
@@ -67,6 +68,7 @@ internal sealed partial class PrismApp
     {
         wearingKey = key;
         wearingTitle = title;
+        wearingGlamId = string.Empty;
     }
 
     private void DrawWearingBar(ImDrawListPtr drawList, Rect content, float scale)

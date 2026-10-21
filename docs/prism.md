@@ -78,7 +78,7 @@ Everything is under the signed-in Aethernet session. Paths are built in `Core/Ae
 | --- | --- | --- |
 | `GET /prism/glams?scope=new\|popular\|today\|following[&vanilla=true\|false][&race=&gender=][&cursor=]` | | `{ items: Glam[], nextCursor }`; `race` and `gender` (Fits me) keep glams made on that body |
 | `GET /prism/glams/{id}` | | `Glam` |
-| `POST /prism/glams` | `{ title, photos: [{ key, width, height }], gear, tags, race, gender, vanilla, inspiredBy }` | `Glam` |
+| `POST /prism/glams` | `{ title, photos: [{ key, width, height }], gear, tags, race, gender, vanilla, inspiredBy }` | `Glam`; the client sets `inspiredBy` to the glam the poster still has tried on, and the page links back to it |
 | `DELETE /prism/glams/{id}` | | 204 |
 | `PUT` / `DELETE /prism/glams/{id}/like` | | 204 |
 | `POST /prism/glams/{id}/tryon` | | 204, counted once per viewer per day |

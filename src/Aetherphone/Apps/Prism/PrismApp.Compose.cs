@@ -227,7 +227,8 @@ internal sealed partial class PrismApp
 
         postOutcome = OutcomePending;
         postingCover = count > 0 ? photos[0].Path : string.Empty;
-        glams.Post(photos, captured, glamTitle.Trim(), SplitTags(glamTags), race, gender, capturedVanilla, postSettled);
+        glams.Post(photos, captured, glamTitle.Trim(), SplitTags(glamTags), race, gender, capturedVanilla,
+            glamour.TryingOn ? wearingGlamId : string.Empty, postSettled);
     }
 
     private static string[] SplitTags(string text)

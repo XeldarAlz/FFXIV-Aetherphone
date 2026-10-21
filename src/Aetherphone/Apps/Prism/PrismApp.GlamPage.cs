@@ -263,7 +263,20 @@ internal sealed partial class PrismApp
             top += labelLine;
         }
 
-        return DrawTags(drawList, left, top, width, glam.Tags, scale) + Metrics.Space.Lg * scale;
+        top = DrawTags(drawList, left, top, width, glam.Tags, scale);
+        if (glam.InspiredBy.Length > 0)
+        {
+            top += Metrics.Space.Sm * scale;
+            if (PrismArt.Link(drawList, new Vector2(left, top), Loc.T(L.Prism.InspiredBy), PrismArt.Muted, scale,
+                    labelLine + Metrics.Space.Sm * scale))
+            {
+                OpenGlam(new GlamDto(glam.InspiredBy));
+            }
+
+            top += labelLine;
+        }
+
+        return top + Metrics.Space.Lg * scale;
     }
 
     private float DrawTags(ImDrawListPtr drawList, float left, float top, float width, string[]? tags, float scale)
@@ -371,6 +384,7 @@ internal sealed partial class PrismApp
                 StartWearing(key, glam.Title);
                 if (listed)
                 {
+                    wearingGlamId = glam.Id;
                     glams.TriedOn(glam);
                 }
             }
