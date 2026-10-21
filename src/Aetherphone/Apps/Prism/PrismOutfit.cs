@@ -25,9 +25,9 @@ internal sealed class PrismGearRow
 
 internal static class PrismOutfit
 {
-    public static bool Has(PrismGearDto[]? outfit) => outfit is { Length: > 0 };
+    public static bool Has(GlamGearDto[]? outfit) => outfit is { Length: > 0 };
 
-    public static void Fill(List<PrismGearRow> into, PrismGearDto[]? outfit, GameData gameData)
+    public static void Fill(List<PrismGearRow> into, GlamGearDto[]? outfit, GameData gameData)
     {
         into.Clear();
         if (outfit is null)

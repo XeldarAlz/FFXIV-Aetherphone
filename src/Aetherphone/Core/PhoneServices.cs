@@ -11,6 +11,7 @@ using Aetherphone.Core.Fishing;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.GameChat;
 using Aetherphone.Core.Games;
+using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Health;
 using Aetherphone.Core.Honorific;
 using Aetherphone.Core.Housing;
@@ -238,6 +239,7 @@ internal sealed class PhoneServices : IDisposable
     public required Shell.MinimizedLayoutService MinimizedLayout { get; init; }
     public required Shell.MinimizedPreview MinimizedPreview { get; init; }
     public required NameplateTitleService NameplateTitles { get; init; }
+    public required GlamourService Glamour { get; init; }
 
     public static PhoneServices Build(Configuration configuration, IChatGui chatGui, IDataManager dataManager,
         IObjectTable objectTable, IClientState clientState, IFramework framework, IDutyState dutyState,
@@ -654,11 +656,13 @@ internal sealed class PhoneServices : IDisposable
             FeedbackLauncher = new Feedback.FeedbackLauncher(),
             HuntsMapMarkers = huntsMapMarkers,
             NameplateTitles = nameplateTitles,
+            Glamour = new GlamourService(Plugin.PluginInterface),
         };
     }
 
     public void Dispose()
     {
+        Glamour.Dispose();
         NameplateTitles.Dispose();
         CharacterSwitcher.Dispose();
         Looks.Dispose();

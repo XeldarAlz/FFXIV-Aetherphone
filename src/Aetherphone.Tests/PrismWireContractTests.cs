@@ -231,7 +231,7 @@ public sealed class PrismWireContractTests
         Assert.DoesNotContain("outfit", bare);
 
         var shared = JsonSerializer.Serialize(new PrismEntryRequest("k", 810, 1080,
-            Outfit: new[] { new PrismGearDto(2, 45123, 1, 101) }), AethernetJsonContext.Default.PrismEntryRequest);
+            Outfit: new[] { new GlamGearDto(2, 45123, 1, 101) }), AethernetJsonContext.Default.PrismEntryRequest);
         Assert.Contains("\"outfit\":[{\"slot\":2,\"itemId\":45123,\"stain0\":1,\"stain1\":101}]", shared);
 
         var cleared = JsonSerializer.Serialize(new PrismOutfitRequest(null),

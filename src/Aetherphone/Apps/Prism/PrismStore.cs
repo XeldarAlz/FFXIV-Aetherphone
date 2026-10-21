@@ -191,7 +191,7 @@ internal sealed class PrismStore : IDisposable
         week.Id.Length > 0 && (week.Phase == PrismPhases.Results || (week.ResultsAtUnix > 0 &&
             DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= week.ResultsAtUnix));
 
-    public void Enter(string sourcePath, WallpaperCrop crop, PrismGearDto[]? outfit, Action<bool> onComplete)
+    public void Enter(string sourcePath, WallpaperCrop crop, GlamGearDto[]? outfit, Action<bool> onComplete)
     {
         if (rawWeek is not { } current || !BeginAction())
         {
@@ -228,7 +228,7 @@ internal sealed class PrismStore : IDisposable
         }, onComplete, EndAction);
     }
 
-    public void ShareOutfit(PrismGearDto[]? outfit)
+    public void ShareOutfit(GlamGearDto[]? outfit)
     {
         if (week is not { MyEntry: not null } || rawWeek is not { } current || !BeginAction())
         {

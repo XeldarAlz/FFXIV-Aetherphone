@@ -1,7 +1,7 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.GameChat;
-using Aetherphone.Core.Inventory;
+using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -15,7 +15,7 @@ internal sealed partial class PrismApp
 
     private readonly List<PrismGearRow> outfitRows = new();
     private readonly List<PrismGearRow> glamRows = new();
-    private PrismGearDto[] wornOutfit = Array.Empty<PrismGearDto>();
+    private GlamGearDto[] wornOutfit = Array.Empty<GlamGearDto>();
     private PrismScreen outfitReturn = PrismScreen.Cover;
     private PrismPlacingDto? glamPlacing;
     private int tryOnNext = int.MaxValue;
@@ -112,7 +112,7 @@ internal sealed partial class PrismApp
         }
     }
 
-    private void ShareOutfit(bool share, PrismGearDto[]? outfit)
+    private void ShareOutfit(bool share, GlamGearDto[]? outfit)
     {
         configuration.PrismShareOutfit = share;
         configuration.Save();

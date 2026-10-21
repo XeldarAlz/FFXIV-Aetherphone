@@ -10,9 +10,7 @@ internal sealed record PrismEntryDto(
     string Status = "",
     string RejectReason = "",
     string Track = "",
-    PrismGearDto[]? Outfit = null);
-
-internal sealed record PrismGearDto(int Slot = 0, uint ItemId = 0, byte Stain0 = 0, byte Stain1 = 0);
+    GlamGearDto[]? Outfit = null);
 
 internal sealed record PrismJudgeRewardDto(
     long Amount = 0,
@@ -68,9 +66,9 @@ internal sealed record PrismEntryRequest(string MediaKey, int Width, int Height,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     string? Track = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    PrismGearDto[]? Outfit = null);
+    GlamGearDto[]? Outfit = null);
 
-internal sealed record PrismOutfitRequest(PrismGearDto[]? Outfit);
+internal sealed record PrismOutfitRequest(GlamGearDto[]? Outfit);
 
 internal sealed record PrismLookDto(string Id = "", string ImageUrl = "", int Width = 0, int Height = 0);
 
@@ -89,7 +87,7 @@ internal sealed record PrismPlacingDto(
     string DisplayName = "",
     string World = "",
     string Handle = "",
-    PrismGearDto[]? Outfit = null);
+    GlamGearDto[]? Outfit = null);
 
 internal sealed record PrismResultsDto(
     string WeekId = "",

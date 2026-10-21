@@ -1,5 +1,5 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Inventory;
+using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Platform;
