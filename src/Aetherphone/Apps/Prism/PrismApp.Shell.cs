@@ -1,8 +1,12 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Animation;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Prism;
 
@@ -28,15 +32,9 @@ internal readonly record struct PrismStop(
 
 internal sealed partial class PrismApp
 {
-    private const float TabBarUnits = 50f;
-    private const float TabMarkGapUnits = 5f;
-    private const float WearingBarUnits = 40f;
+    private const float WearingBarUnits = 44f;
+    private const float WearingGapUnits = 8f;
     private const int HistoryDepth = 12;
-
-    private static readonly LocString[] TabNames =
-    {
-        L.Prism.TabDiscover, L.Prism.TabWeek, L.Prism.TabWardrobe, L.Prism.TabMe,
-    };
 
     private static readonly PrismScreen[] TabRoots =
     {
@@ -44,6 +42,10 @@ internal sealed partial class PrismApp
     };
 
     private readonly PrismStop[] history = new PrismStop[HistoryDepth];
+    private readonly TabBar tabBar = new();
+    private readonly TabItem[] tabItems = new TabItem[TabRoots.Length];
+    private readonly AppSkin ui = new(AppPalettes.Neutral(AppAccents.For("prism")));
+    private float bottomChrome;
     private int historyDepth;
     private PrismTab tab;
     private string? introWeek;
@@ -58,9 +60,9 @@ internal sealed partial class PrismApp
         value is PrismScreen.GlamDetail or PrismScreen.Compose or PrismScreen.Profile or PrismScreen.GlamList
             or PrismScreen.WardrobeOutfit or PrismScreen.WardrobeCover or PrismScreen.Rewards;
 
-    private static Rect AboveTabBar(Rect content, bool wearing, float scale) =>
-        new(content.Min, new Vector2(content.Max.X,
-            content.Max.Y - (TabBarUnits + (wearing ? WearingBarUnits : 0f)) * scale));
+    private static bool ShowsTabBar(PrismScreen value) =>
+        IsTabRoot(value) || value is PrismScreen.GlamDetail or PrismScreen.Profile or PrismScreen.GlamList
+            or PrismScreen.WardrobeOutfit or PrismScreen.Rewards;
 
     private bool Wearing(string key) => glamour.TryingOn && key.Length > 0 && wearingKey == key;
 
@@ -71,15 +73,21 @@ internal sealed partial class PrismApp
         wearingGlamId = string.Empty;
     }
 
-    private void DrawWearingBar(ImDrawListPtr drawList, Rect content, float scale)
+    private void DrawWearingBar(Rect content, float scale)
     {
-        var top = content.Max.Y - (TabBarUnits + WearingBarUnits) * scale;
-        PrismArt.Hairline(drawList, content.Min.X, content.Max.X, top, PrismArt.Faint, scale);
-        var gutter = PrismArt.Gutter(scale);
-        var left = content.Min.X + gutter;
-        var right = content.Max.X - gutter;
+        var stage = TabBar.ContentArea(content, scale);
+        var height = WearingBarUnits * scale;
+        var side = Metrics.Space.GlassInset * scale;
+        var min = new Vector2(stage.Min.X + side, stage.Max.Y - height);
+        var max = new Vector2(stage.Max.X - side, stage.Max.Y);
+        using var layer = ScreenLayer.Begin("prism.wearing", new Rect(new Vector2(stage.Min.X, min.Y), stage.Max), false);
+        UiInteract.HoverOverlay(new Rect(min, max));
+        var drawList = ImGui.GetWindowDrawList();
+        Material.ThemedGlass(drawList, min, max, height * 0.5f, scale, ui.BackdropColor, TabBar.GlassOpacity);
+        var left = min.X + height * 0.5f;
+        var right = max.X - height * 0.5f;
         var labelPixels = PrismArt.LabelPixels();
-        var y = top + (WearingBarUnits * scale - PrismType.LineHeight(PrismFace.Label, labelPixels)) * 0.5f;
+        var y = min.Y + (height - PrismType.LineHeight(PrismFace.Label, labelPixels)) * 0.5f;
         var wearing = Loc.T(L.Prism.Wearing);
         var off = Loc.T(L.Prism.TakeOff);
         var offWidth = PrismType.Measure(off, PrismFace.Label, labelPixels).X;
@@ -98,40 +106,24 @@ internal sealed partial class PrismApp
         }
     }
 
-    private void DrawTabBar(ImDrawListPtr drawList, Rect content, float scale)
+    private void DrawTabBar(Rect content, PhoneTheme theme)
     {
-        var top = content.Max.Y - TabBarUnits * scale;
-        PrismArt.Hairline(drawList, content.Min.X, content.Max.X, top, PrismArt.Faint, scale);
-        var cell = content.Width / TabNames.Length;
-        var labelPixels = PrismArt.LabelPixels();
-        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
-        var labelTop = top + (TabBarUnits * scale - labelLine) * 0.5f;
-        for (var index = 0; index < TabNames.Length; index++)
+        ui.Theme = theme;
+        ui.Palette = ui.Palette with { Accent = PrismArt.Fore, BackdropTop = PrismArt.Back, BackdropBottom = PrismArt.Back };
+        tabItems[(int)PrismTab.Discover] =
+            new TabItem(Loc.T(L.Prism.TabDiscover), PhoneIcons.Compass, PhoneIcons.CompassFilled);
+        tabItems[(int)PrismTab.Week] = new TabItem(Loc.T(L.Prism.TabWeek), PhoneIcons.Crown);
+        tabItems[(int)PrismTab.Wardrobe] = new TabItem(Loc.T(L.Prism.TabWardrobe), IconGlyph.Of(FontAwesomeIcon.Tshirt));
+        tabItems[(int)PrismTab.Me] = new TabItem(Loc.T(L.Prism.TabMe), PhoneIcons.User, PhoneIcons.UserFilled);
+        TabBarAction? post = glams.IsSignedIn ? new TabBarAction(PhoneIcons.Plus, Loc.T(L.Prism.PostGlam)) : null;
+        var result = tabBar.Draw(content, ui, tabItems, (int)tab, post);
+        if (result.ActionTapped)
         {
-            var min = new Vector2(content.Min.X + cell * index, top);
-            var max = new Vector2(min.X + cell, content.Max.Y);
-            var label = PrismType.FitLabel(Loc.T(TabNames[index]), labelPixels, cell - Metrics.Space.Sm * scale * 2f);
-            var width = PrismType.Measure(label, PrismFace.Label, labelPixels).X;
-            var left = min.X + (cell - width) * 0.5f;
-            var active = (int)tab == index;
-            var hovered = UiInteract.Hover(min, max);
-            PrismType.Draw(drawList, new Vector2(left, labelTop), label, active || hovered ? PrismArt.Fore : PrismArt.Muted,
-                PrismFace.Label, labelPixels);
-            if (active)
-            {
-                PrismArt.Hairline(drawList, left, left + width, labelTop + labelLine + TabMarkGapUnits * scale * 0.5f,
-                    PrismArt.Fore, scale);
-            }
-
-            if (hovered)
-            {
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            }
-
-            if (UiInteract.Click(min, max, hovered) && !active)
-            {
-                OpenTab((PrismTab)index);
-            }
+            StartCompose();
+        }
+        else if (result.Tapped >= 0 && (result.Tapped != (int)tab || !IsTabRoot(screen)))
+        {
+            OpenTab((PrismTab)result.Tapped);
         }
     }
 

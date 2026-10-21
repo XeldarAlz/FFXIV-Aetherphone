@@ -33,13 +33,7 @@ internal sealed partial class PrismApp
         var gutter = PrismArt.Gutter(scale);
         var left = content.Min.X + gutter;
         var right = content.Max.X - gutter;
-        var top = DrawMasthead(drawList, content, DisplayName, Loc.T(L.Prism.PostGlam), string.Empty, scale,
-            out var post);
-        if (post)
-        {
-            StartCompose();
-        }
-
+        var top = DrawMasthead(drawList, content, DisplayName, string.Empty, string.Empty, scale, out _);
         top = DrawSearchRow(drawList, left, right, top, scale);
         if (!searching)
         {

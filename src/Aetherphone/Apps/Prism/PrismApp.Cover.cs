@@ -204,7 +204,9 @@ internal sealed partial class PrismApp
             HeadlineMinUnits * scale, HeadlineLines, out var lines);
         var headlineLine = PrismType.LineHeight(PrismFace.Headline, pixels);
         var eyebrowGap = Metrics.Space.Xs * scale;
-        var bottom = (strips > 0 ? StripRect(content, scale, strips - 1).Min.Y : content.Max.Y - PrismArt.BottomMargin(scale)) -
+        var bottom = (strips > 0
+                         ? StripRect(content, scale, strips - 1).Min.Y
+                         : content.Max.Y - bottomChrome - PrismArt.BottomMargin(scale)) -
                      Metrics.Space.Xl * scale;
         var winnerHeight = winner.Length > 0 ? eyebrowGap + labelLine : 0f;
         var top = bottom - statHeight - Metrics.Space.Xl * scale - lines.Length * headlineLine - winnerHeight -

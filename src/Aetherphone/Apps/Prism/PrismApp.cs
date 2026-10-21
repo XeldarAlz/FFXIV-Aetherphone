@@ -187,29 +187,35 @@ internal sealed partial class PrismApp : IResumableApp
         ConsumeSharedPhoto();
         screenAge += MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         var enter = PrismMotion.At(screenAge, 0f, TransitionTiming.PresentSmoothTime);
+        var bar = ShowsTabBar(screen);
+        var wearing = glamour.TryingOn && IsTabRoot(screen);
+        bottomChrome = bar
+            ? TabBar.ContentInset(scale) + (wearing ? (WearingBarUnits + WearingGapUnits) * scale : 0f)
+            : 0f;
         var stage = ScreenLayer.Begin("prism.stage", full, enter < TransitionTiming.InteractiveProgress);
         try
         {
             onPhoto = false;
-            var area = IsTabRoot(screen) ? AboveTabBar(content, glamour.TryingOn, scale) : content;
-            DrawScreenBody(ImGui.GetWindowDrawList(), full, area, scale);
+            using var inset = AppSurface.ReserveBottom(bottomChrome);
+            using var host = TabBar.Host(bar);
+            DrawScreenBody(ImGui.GetWindowDrawList(), full, content, scale);
         }
         finally
         {
             stage.Transform(PrismMotion.Stage(full, enter, enterDirection, scale));
         }
 
-        if (!IsTabRoot(screen) || photoViewer.Active)
+        if (!bar || photoViewer.Active)
         {
             return;
         }
 
-        if (glamour.TryingOn)
+        if (wearing)
         {
-            DrawWearingBar(ImGui.GetWindowDrawList(), content, scale);
+            DrawWearingBar(content, scale);
         }
 
-        DrawTabBar(ImGui.GetWindowDrawList(), content, scale);
+        DrawTabBar(content, context.Theme);
     }
 
     private void DrawScreenBody(ImDrawListPtr drawList, Rect full, Rect content, float scale)
@@ -422,7 +428,8 @@ internal sealed partial class PrismApp : IResumableApp
     {
         var gutter = PrismArt.Gutter(scale);
         var height = PrismArt.StripUnits * scale;
-        var bottom = content.Max.Y - PrismArt.BottomMargin(scale) - fromBottom * (height + Metrics.Space.Md * scale);
+        var bottom = content.Max.Y - bottomChrome - PrismArt.BottomMargin(scale) -
+                     fromBottom * (height + Metrics.Space.Md * scale);
         return new Rect(new Vector2(content.Min.X + gutter, bottom - height), new Vector2(content.Max.X - gutter, bottom));
     }
 

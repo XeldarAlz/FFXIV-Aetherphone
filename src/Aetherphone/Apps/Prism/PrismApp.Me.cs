@@ -125,9 +125,9 @@ internal sealed partial class PrismApp
             ? content.Min.Y + HeaderGapUnits * scale
             : DrawHeader(drawList, content, string.Empty, string.Empty, true, scale);
         var name = author is null ? string.Empty : author.DisplayName.Length > 0 ? author.DisplayName : author.Handle;
-        var action = Loc.T(mine ? L.Prism.PostGlam : profile is { Following: true } ? L.Prism.Following : L.Prism.Follow);
-        var buttonWidth = PrismArt.ButtonWidth(action, scale);
-        var nameWidth = right - left - buttonWidth - Metrics.Space.Md * scale;
+        var action = mine ? string.Empty : Loc.T(profile is { Following: true } ? L.Prism.Following : L.Prism.Follow);
+        var buttonWidth = mine ? 0f : PrismArt.ButtonWidth(action, scale) + Metrics.Space.Md * scale;
+        var nameWidth = right - left - buttonWidth;
         var pixels = PrismType.Fit(name, PrismFace.Headline, nameWidth, ProfileNameUnits * scale,
             ProfileNameUnits * scale * 0.7f, 1, out var lines);
         var nameTop = top;
@@ -137,16 +137,11 @@ internal sealed partial class PrismApp
             PrismArt.Muted, PrismFace.Label, labelPixels);
         var buttonTop = (nameTop + top + PrismType.LineHeight(PrismFace.Label, labelPixels) -
                          PrismArt.ButtonUnits * scale) * 0.5f;
-        if (PrismArt.Button(drawList, new Vector2(right - buttonWidth, buttonTop), action, scale, out _))
+        if (!mine && author is not null &&
+            PrismArt.Button(drawList, new Vector2(right - PrismArt.ButtonWidth(action, scale), buttonTop), action, scale,
+                out _))
         {
-            if (mine)
-            {
-                StartCompose();
-            }
-            else if (author is not null)
-            {
-                glams.SetFollow(author, profile is not { Following: true });
-            }
+            glams.SetFollow(author, profile is not { Following: true });
         }
 
         top += PrismType.LineHeight(PrismFace.Label, labelPixels) + Metrics.Space.Xl * scale;
