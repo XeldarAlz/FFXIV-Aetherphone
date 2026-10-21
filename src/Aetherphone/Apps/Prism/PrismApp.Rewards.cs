@@ -13,12 +13,12 @@ namespace Aetherphone.Apps.Prism;
 
 internal sealed partial class PrismApp
 {
-    private const float RewardsHeadlineUnits = 56f;
-    private const float RewardsHeadlineMinUnits = 34f;
+    private const float RewardsHeadlineUnits = PrismType.DisplayUnits;
+    private const float RewardsHeadlineMinUnits = PrismType.TitleUnits;
     private const int RewardsHeadlineLines = 2;
     private const float MedalUnits = 30f;
     private const float ChapterArtUnits = 36f;
-    private const float RewardTitleUnits = 24f;
+    private const float RewardTitleUnits = PrismType.HeadingUnits;
     private const float RewardTitleMinShare = 0.75f;
     private const int RewardTitleLines = 2;
     private const float MedalGlyphShare = 1.1f;

@@ -10,8 +10,8 @@ namespace Aetherphone.Apps.Prism;
 
 internal sealed partial class PrismApp
 {
-    private const float GuideTitleUnits = 32f;
-    private const float GuideTitleMinUnits = 22f;
+    private const float GuideTitleUnits = PrismType.TitleUnits;
+    private const float GuideTitleMinUnits = PrismType.HeadingUnits;
     private const int GuideTitleLines = 2;
     private const float GuidePlateDelay = 0.04f;
     private const float GuideCopyDelay = 0.12f;

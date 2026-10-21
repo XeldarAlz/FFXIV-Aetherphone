@@ -18,7 +18,7 @@ internal enum GlamListKind : byte
 
 internal sealed partial class PrismApp
 {
-    private const float ProfileNameUnits = 30f;
+    private const float ProfileNameUnits = PrismType.TitleUnits;
     private const string MarketAppId = "market";
 
     private bool showSaved;

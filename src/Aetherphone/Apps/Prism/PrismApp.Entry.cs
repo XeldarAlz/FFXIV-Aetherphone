@@ -9,8 +9,8 @@ namespace Aetherphone.Apps.Prism;
 
 internal sealed partial class PrismApp
 {
-    private const float StatusMaxUnits = 32f;
-    private const float StatusMinUnits = 24f;
+    private const float StatusMaxUnits = PrismType.TitleUnits;
+    private const float StatusMinUnits = PrismType.HeadingUnits;
     private const float TagDelay = 0.2f;
     private const float TagStamp = 0.35f;
 

@@ -11,7 +11,7 @@ namespace Aetherphone.Apps.Prism;
 internal sealed partial class PrismApp
 {
     private const int MaxTracks = 3;
-    private const float TrackNameUnits = 28f;
+    private const float TrackNameUnits = PrismType.HeadingUnits;
 
     private readonly CachedText[] trackTabTexts = new CachedText[MaxTracks];
     private readonly CachedText[] trackCountTexts = new CachedText[MaxTracks];

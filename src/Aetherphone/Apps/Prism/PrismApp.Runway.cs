@@ -13,7 +13,7 @@ internal sealed partial class PrismApp
 {
     private const float DoneNumeralUnits = 120f;
     private const float DoneNumeralMinUnits = 48f;
-    private const float QuestionUnits = 24f;
+    private const float QuestionUnits = PrismType.HeadingUnits;
     private const float ScoreRowUnits = 52f;
     private const float ScoreDone = 0.97f;
     private const float TurnShift = 0.35f;

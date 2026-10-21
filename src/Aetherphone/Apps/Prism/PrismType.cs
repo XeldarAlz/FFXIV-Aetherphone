@@ -14,6 +14,10 @@ internal enum PrismFace : byte
 
 internal static class PrismType
 {
+    public const float DisplayUnits = 48f;
+    public const float TitleUnits = 32f;
+    public const float HeadingUnits = 24f;
+
     private const float LabelLeading = 1.45f;
     private const float HeadlineLeading = 1.02f;
     private const int CacheLimit = 256;

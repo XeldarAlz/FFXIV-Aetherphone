@@ -18,8 +18,8 @@ internal sealed partial class PrismApp
 {
     private const float MutedOnPhoto = 0.72f;
     private const float ThumbUnits = 44f;
-    private const float DetailTitleUnits = 28f;
-    private const float DetailTitleMinUnits = 20f;
+    private const float DetailTitleUnits = PrismType.TitleUnits;
+    private const float DetailTitleMinUnits = PrismType.HeadingUnits;
     private const string Arrow = "→";
 
     private readonly Dictionary<string, string> handleLines = new(StringComparer.Ordinal);

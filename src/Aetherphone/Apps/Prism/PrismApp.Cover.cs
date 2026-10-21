@@ -11,11 +11,11 @@ namespace Aetherphone.Apps.Prism;
 
 internal sealed partial class PrismApp
 {
-    private const float MastheadUnits = 24f;
-    private const float HeadlineMaxUnits = 48f;
-    private const float HeadlineMinUnits = 26f;
+    private const float MastheadUnits = PrismType.HeadingUnits;
+    private const float HeadlineMaxUnits = PrismType.DisplayUnits;
+    private const float HeadlineMinUnits = PrismType.HeadingUnits;
     private const int HeadlineLines = 1;
-    private const float StatUnits = 24f;
+    private const float StatUnits = PrismType.HeadingUnits;
     private const float CoverZoom = 0.06f;
     private const float RuleDelay = 0.05f;
     private const float CreditsDelay = 0.12f;

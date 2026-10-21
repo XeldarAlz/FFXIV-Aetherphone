@@ -12,7 +12,7 @@ internal sealed partial class PrismApp
 {
     private const int GridColumns = 2;
     private const float TileShadeShare = 0.4f;
-    private const float ThemeTitleUnits = 22f;
+    private const float ThemeTitleUnits = PrismType.HeadingUnits;
 
     private static readonly LocString[] ScopeNames = { L.Prism.ScopeNew, L.Prism.ScopePopular, L.Prism.ScopeFollowing };
     private static readonly GlamScope[] ShownScopes = { GlamScope.New, GlamScope.Popular, GlamScope.Following };
