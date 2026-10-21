@@ -10841,6 +10841,7 @@ internal static class L
         public static readonly LocString ModdedStamp = new("prism.moddedStamp", "Modded");
         public static readonly LocPlural TriedOnCount = new("prism.triedOnCount", "Tried on {0} time", "Tried on {0} times");
         public static readonly LocString TakeOff = new("prism.takeOff", "Take it off");
+        public static readonly LocString Wearing = new("prism.wearing", "Wearing");
         public static readonly LocString TryOnGlam = new("prism.tryOnGlam", "Try on");
         public static readonly LocString Save = new("prism.save", "Save");
         public static readonly LocString Saved = new("prism.saved", "Saved");

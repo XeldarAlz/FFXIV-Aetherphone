@@ -17,6 +17,7 @@ internal sealed partial class PrismApp
 {
     private const float TabBarUnits = 50f;
     private const float TabMarkGapUnits = 5f;
+    private const float WearingBarUnits = 40f;
     private const int HistoryDepth = 12;
 
     private static readonly LocString[] TabNames =
@@ -32,6 +33,8 @@ internal sealed partial class PrismApp
     private readonly PrismScreen[] history = new PrismScreen[HistoryDepth];
     private int historyDepth;
     private PrismTab tab;
+    private string wearingKey = string.Empty;
+    private string wearingTitle = string.Empty;
 
     private static bool IsTabRoot(PrismScreen value) =>
         value is PrismScreen.Discover or PrismScreen.Cover or PrismScreen.Wardrobe or PrismScreen.Me;
@@ -40,8 +43,44 @@ internal sealed partial class PrismApp
         value is PrismScreen.GlamDetail or PrismScreen.Compose or PrismScreen.Profile or PrismScreen.GlamList
             or PrismScreen.WardrobeOutfit;
 
-    private static Rect AboveTabBar(Rect content, float scale) =>
-        new(content.Min, new Vector2(content.Max.X, content.Max.Y - TabBarUnits * scale));
+    private static Rect AboveTabBar(Rect content, bool wearing, float scale) =>
+        new(content.Min, new Vector2(content.Max.X,
+            content.Max.Y - (TabBarUnits + (wearing ? WearingBarUnits : 0f)) * scale));
+
+    private bool Wearing(string key) => glamour.TryingOn && key.Length > 0 && wearingKey == key;
+
+    private void StartWearing(string key, string title)
+    {
+        wearingKey = key;
+        wearingTitle = title;
+    }
+
+    private void DrawWearingBar(ImDrawListPtr drawList, Rect content, float scale)
+    {
+        var top = content.Max.Y - (TabBarUnits + WearingBarUnits) * scale;
+        PrismArt.Hairline(drawList, content.Min.X, content.Max.X, top, PrismArt.Faint, scale);
+        var gutter = PrismArt.Gutter(scale);
+        var left = content.Min.X + gutter;
+        var right = content.Max.X - gutter;
+        var labelPixels = PrismArt.LabelPixels();
+        var y = top + (WearingBarUnits * scale - PrismType.LineHeight(PrismFace.Label, labelPixels)) * 0.5f;
+        var wearing = Loc.T(L.Prism.Wearing);
+        var off = Loc.T(L.Prism.TakeOff);
+        var offWidth = PrismType.Measure(off, PrismFace.Label, labelPixels).X;
+        PrismType.Draw(drawList, new Vector2(left, y), wearing, PrismArt.Muted, PrismFace.Label, labelPixels);
+        var titleLeft = left + PrismType.Measure(wearing, PrismFace.Label, labelPixels).X + Metrics.Space.Sm * scale;
+        var room = right - offWidth - Metrics.Space.Md * scale - titleLeft;
+        if (room > 0f && wearingTitle.Length > 0)
+        {
+            PrismType.Draw(drawList, new Vector2(titleLeft, y), PrismType.FitLabel(wearingTitle, labelPixels, room),
+                PrismArt.Fore, PrismFace.Label, labelPixels);
+        }
+
+        if (PrismArt.Link(drawList, new Vector2(right - offWidth, y), off, PrismArt.Fore, scale))
+        {
+            glamour.Revert();
+        }
+    }
 
     private void DrawTabBar(ImDrawListPtr drawList, Rect content, float scale)
     {

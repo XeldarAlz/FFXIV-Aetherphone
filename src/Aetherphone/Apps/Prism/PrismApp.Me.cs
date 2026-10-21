@@ -232,7 +232,8 @@ internal sealed partial class PrismApp
             if (PrismArt.Link(drawList, new Vector2(left + width - PrismType.Measure(Loc.T(L.Prism.TryOnGlam),
                     PrismFace.Label, PrismArt.LabelPixels()).X, top), Loc.T(L.Prism.TryOnGlam), PrismArt.Muted, scale))
             {
-                glamour.TryOnPiece(new GlamGearDto(ItemId: listItemId));
+                glamour.TryOnPiece(new GlamGearDto(gameData.EquipSlot(listItemId), listItemId));
+                StartWearing(string.Empty, listTitle);
             }
         }
 

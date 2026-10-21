@@ -14,6 +14,7 @@ internal sealed class GlamourService : IDisposable
     private bool glamourerReady;
     private bool probed;
     private bool tryingOn;
+    private string before = string.Empty;
 
     public GlamourService(IDalamudPluginInterface pluginInterface)
     {
@@ -144,11 +145,7 @@ internal sealed class GlamourService : IDisposable
             return;
         }
 
-        if (tryingOn)
-        {
-            Revert();
-        }
-
+        var replacing = Prepare();
         for (var index = 0; index < gear.Length; index++)
         {
             var piece = gear[index];
@@ -158,12 +155,7 @@ internal sealed class GlamourService : IDisposable
             }
         }
 
-        if (HasPenumbra && ApplyMods(gear))
-        {
-            penumbra.Redraw();
-        }
-
-        tryingOn = true;
+        WearMods(gear, replacing);
     }
 
     public void TryOnPiece(GlamGearDto piece)
@@ -175,8 +167,8 @@ internal sealed class GlamourService : IDisposable
 
         if (HasGlamourer && GearSlots.IsGear(piece.Slot))
         {
+            Snapshot();
             glamourer.SetItem((GearSlot)piece.Slot, piece.ItemId, piece.Stain0, piece.Stain1);
-            tryingOn = true;
             return;
         }
 
@@ -193,9 +185,10 @@ internal sealed class GlamourService : IDisposable
         tryingOn = false;
         if (HasGlamourer)
         {
-            glamourer.RevertEquipment();
+            RestoreEquipment();
         }
 
+        before = string.Empty;
         if (HasPenumbra)
         {
             penumbra.ClearTemporary();
@@ -207,29 +200,28 @@ internal sealed class GlamourService : IDisposable
 
     public bool ApplyState(string state, GlamGearDto[] gear)
     {
-        if (!HasGlamourer || !glamourer.ApplyState(state))
+        if (!HasGlamourer || state.Length == 0)
         {
             return false;
         }
 
-        if (HasPenumbra && ApplyMods(gear))
-        {
-            penumbra.Redraw();
-        }
-
-        tryingOn = true;
-        return true;
+        var replacing = Prepare();
+        var applied = glamourer.ApplyState(state);
+        WearMods(applied ? gear : Array.Empty<GlamGearDto>(), replacing);
+        return applied;
     }
 
     public bool ApplyDesign(Guid id)
     {
-        if (!HasGlamourer || !glamourer.ApplyDesign(id))
+        if (!HasGlamourer)
         {
             return false;
         }
 
-        tryingOn = true;
-        return true;
+        var replacing = Prepare();
+        var applied = glamourer.ApplyDesign(id);
+        WearMods(Array.Empty<GlamGearDto>(), replacing);
+        return applied;
     }
 
     public Dictionary<Guid, (string, string, uint, bool)> Designs() =>
@@ -244,6 +236,50 @@ internal sealed class GlamourService : IDisposable
         Revert();
         penumbra.Dispose();
         glamourer.Dispose();
+    }
+
+    private void Snapshot()
+    {
+        if (tryingOn)
+        {
+            return;
+        }
+
+        before = glamourer.State();
+        tryingOn = true;
+    }
+
+    private bool Prepare()
+    {
+        if (!tryingOn)
+        {
+            Snapshot();
+            return false;
+        }
+
+        RestoreEquipment();
+        if (HasPenumbra)
+        {
+            penumbra.ClearTemporary();
+        }
+
+        return true;
+    }
+
+    private void WearMods(GlamGearDto[] gear, bool replacing)
+    {
+        if (HasPenumbra && (ApplyMods(gear) || replacing))
+        {
+            penumbra.Redraw();
+        }
+    }
+
+    private void RestoreEquipment()
+    {
+        if (before.Length == 0 || !glamourer.ApplyState(before))
+        {
+            glamourer.RevertEquipment();
+        }
     }
 
     private static void TryOnInGame(GlamGearDto[] gear)

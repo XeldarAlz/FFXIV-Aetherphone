@@ -1,3 +1,4 @@
+using Aetherphone.Core.Glamour;
 using Dalamud.Game;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin.Services;
@@ -560,6 +561,29 @@ internal sealed class GameData
         iconId = item.Icon;
         itemLevel = (int)item.LevelItem.RowId;
         return true;
+    }
+
+    public int EquipSlot(uint itemId)
+    {
+        if (itemId == 0 || !GameSheets.Available || !data.GetExcelSheet<Item>().TryGetRow(itemId, out var item) ||
+            !item.EquipSlotCategory.IsValid)
+        {
+            return GearSlots.None;
+        }
+
+        var slots = item.EquipSlotCategory.Value;
+        return slots.MainHand == 1 ? (int)GearSlot.MainHand
+            : slots.OffHand == 1 ? (int)GearSlot.OffHand
+            : slots.Body == 1 ? (int)GearSlot.Body
+            : slots.Head == 1 ? (int)GearSlot.Head
+            : slots.Gloves == 1 ? (int)GearSlot.Hands
+            : slots.Legs == 1 ? (int)GearSlot.Legs
+            : slots.Feet == 1 ? (int)GearSlot.Feet
+            : slots.Ears == 1 ? (int)GearSlot.Ears
+            : slots.Neck == 1 ? (int)GearSlot.Neck
+            : slots.Wrists == 1 ? (int)GearSlot.Wrists
+            : slots.FingerR == 1 || slots.FingerL == 1 ? (int)GearSlot.RingRight
+            : GearSlots.None;
     }
 
     public string StainName(byte stainId)

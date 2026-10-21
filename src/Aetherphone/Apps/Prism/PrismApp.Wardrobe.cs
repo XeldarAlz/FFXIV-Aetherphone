@@ -134,7 +134,7 @@ internal sealed partial class PrismApp
             var placed = 0;
             for (var pieceIndex = 0; pieceIndex < outfit.Gear.Length && placed < CollagePieces; pieceIndex++)
             {
-                if (!gameData.TryGetItem(outfit.Gear[pieceIndex].ItemId, out _, out var iconId, out _))
+                if (!GearItem(outfit.Gear[pieceIndex].ItemId, out _, out var iconId))
                 {
                     continue;
                 }
@@ -190,9 +190,10 @@ internal sealed partial class PrismApp
         var half = (width - gap) * 0.5f;
         var wear = new Rect(new Vector2(left, cursor), new Vector2(left + half, cursor + height));
         var favourite = new Rect(new Vector2(left + half + gap, cursor), new Vector2(left + width, cursor + height));
-        if (PrismArt.Strip(list, wear, Loc.T(glamour.TryingOn ? L.Prism.TakeOff : L.Prism.PutOn), Arrow, true))
+        var wearing = Wearing(outfit.Id);
+        if (PrismArt.Strip(list, wear, Loc.T(wearing ? L.Prism.TakeOff : L.Prism.PutOn), Arrow, true))
         {
-            if (glamour.TryingOn)
+            if (wearing)
             {
                 glamour.Revert();
             }
@@ -241,6 +242,7 @@ internal sealed partial class PrismApp
 
     private void WearOutfit(WardrobeOutfit outfit)
     {
+        StartWearing(outfit.Id, outfit.Name);
         if (outfit.DesignId != Guid.Empty && glamour.ApplyDesign(outfit.DesignId))
         {
             return;

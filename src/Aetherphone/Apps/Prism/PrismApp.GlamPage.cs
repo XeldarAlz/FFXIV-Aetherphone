@@ -21,6 +21,7 @@ internal sealed partial class PrismApp
     private const string Arrow = "→";
 
     private readonly Dictionary<string, string> handleLines = new(StringComparer.Ordinal);
+    private readonly Dictionary<uint, (string Name, uint Icon)> itemRows = new();
     private string statsFor = string.Empty;
     private CachedText ownedText;
     private CachedText modsText;
@@ -37,6 +38,29 @@ internal sealed partial class PrismApp
         photoIndex = 0;
         statsFor = string.Empty;
         Push(PrismScreen.GlamDetail);
+    }
+
+    private static string WearKey(GlamDto glam) =>
+        glam.Id.Length > 0 ? glam.Id : glam.Photos is { Length: > 0 } photos ? photos[0].Url : string.Empty;
+
+    private bool GearItem(uint itemId, out string name, out uint iconId)
+    {
+        if (!itemRows.TryGetValue(itemId, out var row))
+        {
+            if (!gameData.TryGetItem(itemId, out var found, out var icon, out _))
+            {
+                name = string.Empty;
+                iconId = 0;
+                return false;
+            }
+
+            row = (found, icon);
+            itemRows[itemId] = row;
+        }
+
+        name = row.Name;
+        iconId = row.Icon;
+        return true;
     }
 
     private string AuthorLine(GlamAuthorDto? author)
@@ -208,16 +232,22 @@ internal sealed partial class PrismApp
         var half = listed ? (width - gap) * 0.5f : width;
         var tryOn = new Rect(new Vector2(left, top), new Vector2(left + half, top + height));
         var save = new Rect(new Vector2(left + half + gap, top), new Vector2(left + width, top + height));
-        if (PrismArt.Strip(drawList, tryOn, Loc.T(glamour.TryingOn ? L.Prism.TakeOff : L.Prism.TryOnGlam), Arrow, true))
+        var key = WearKey(glam);
+        var wearing = Wearing(key);
+        if (PrismArt.Strip(drawList, tryOn, Loc.T(wearing ? L.Prism.TakeOff : L.Prism.TryOnGlam), Arrow, true))
         {
-            if (glamour.TryingOn)
+            if (wearing)
             {
                 glamour.Revert();
             }
             else
             {
                 glamour.TryOn(glam.Gear ?? Array.Empty<GlamGearDto>());
-                glams.TriedOn(glam);
+                StartWearing(key, glam.Title);
+                if (listed)
+                {
+                    glams.TriedOn(glam);
+                }
             }
         }
 
@@ -314,7 +344,7 @@ internal sealed partial class PrismApp
         var labelPixels = PrismArt.LabelPixels();
         var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var icon = GearIconUnits * scale;
-        if (gameData.TryGetItem(piece.ItemId, out var name, out var iconId, out _))
+        if (GearItem(piece.ItemId, out var name, out var iconId))
         {
             GameIconTile.Draw(drawList, textures, iconId, new Vector2(left, top), new Vector2(left + icon, top + icon), 0f,
                 scale);
@@ -338,6 +368,7 @@ internal sealed partial class PrismApp
             PrismArt.Link(drawList, new Vector2(left + width - tryWidth, top), tryLabel, PrismArt.Muted, scale))
         {
             glamour.TryOnPiece(piece);
+            StartWearing(string.Empty, name);
         }
 
         var dyes = DyeLine(piece.Stain0, piece.Stain1);
@@ -359,17 +390,12 @@ internal sealed partial class PrismApp
 
     private string DyeLine(byte stain0, byte stain1)
     {
-        var first = gameData.StainName(stain0);
-        var second = gameData.StainName(stain1);
-        if (second.Length == 0)
-        {
-            return first;
-        }
-
-        var key = HashCode.Combine(stain0, stain1);
+        var key = stain0 | stain1 << 8;
         if (!dyeLines.TryGetValue(key, out var line))
         {
-            line = first.Length == 0 ? second : string.Concat(first, ", ", second);
+            var first = gameData.StainName(stain0);
+            var second = gameData.StainName(stain1);
+            line = first.Length == 0 ? second : second.Length == 0 ? first : string.Concat(first, ", ", second);
             dyeLines[key] = line;
         }
 

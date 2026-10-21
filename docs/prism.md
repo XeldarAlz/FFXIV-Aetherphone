@@ -20,7 +20,7 @@ A glam is one outfit with up to four portrait (3:4) photos. Everything about the
 
 ### Trying a glam on
 
-With Glamourer, Try on sets each slot with `Glamourer.SetItem.V3` (once, equipment only) and switches on the glam's mods that the viewer has installed with `Penumbra.SetTemporaryModSettingsPlayer.V5`, matched by mod name and with the poster's options. Nothing in the viewer's collections changes; leaving the glam reverts the gear with `Glamourer.RevertState` and drops the temporary settings with `Penumbra.RemoveAllTemporaryModSettingsPlayer.V5` under Prism's own key. Without Glamourer, Try on falls back to the game's own Try On window for each item, with its dyes.
+With Glamourer, Try on sets each slot with `Glamourer.SetItem.V3` (once, equipment only) and switches on the glam's mods that the viewer has installed with `Penumbra.SetTemporaryModSettingsPlayer.V5`, matched by mod name and with the poster's options. Nothing in the viewer's collections changes. The try on stays on while the viewer browses or leaves the phone (a Wearing bar above Prism's tabs takes it off), and comes off when the plugin unloads. Taking it off puts back the Glamourer state saved just before the first try on (falling back to `Glamourer.RevertState`), so a look the viewer had on survives, and drops the temporary settings with `Penumbra.RemoveAllTemporaryModSettingsPlayer.V5` under Prism's own key. Without Glamourer, Try on falls back to the game's own Try On window for each item, with its dyes.
 
 ### Mod links
 

@@ -173,12 +173,20 @@ internal sealed partial class PrismApp : IResumableApp
     {
         onPhoto = false;
         var root = IsTabRoot(screen);
-        var area = root ? AboveTabBar(content, scale) : content;
+        var wearing = root && glamour.TryingOn;
+        var area = root ? AboveTabBar(content, wearing, scale) : content;
         DrawScreenBody(drawList, full, area, scale);
-        if (root)
+        if (!root)
         {
-            DrawTabBar(drawList, content, scale);
+            return;
         }
+
+        if (wearing)
+        {
+            DrawWearingBar(drawList, content, scale);
+        }
+
+        DrawTabBar(drawList, content, scale);
     }
 
     private void DrawScreenBody(ImDrawListPtr drawList, Rect full, Rect content, float scale)
@@ -245,11 +253,6 @@ internal sealed partial class PrismApp : IResumableApp
         if (next != screen)
         {
             store.ClearFailure();
-        }
-
-        if (next != screen && screen == PrismScreen.GlamDetail && glamour.TryingOn)
-        {
-            glamour.Revert();
         }
 
         screen = next;
