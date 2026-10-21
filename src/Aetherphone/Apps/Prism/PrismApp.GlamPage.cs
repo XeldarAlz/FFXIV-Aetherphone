@@ -285,13 +285,15 @@ internal sealed partial class PrismApp
 
         top = tryOn.Max.Y + Metrics.Space.Md * scale;
         var labelPixels = PrismArt.LabelPixels();
-        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
+        var row = PrismType.LineHeight(PrismFace.Label, labelPixels) + Metrics.Space.Sm * scale;
         if (listed && PrismArt.Link(drawList, new Vector2(left, top), Loc.T(glam.Liked ? L.Prism.Liked : L.Prism.Like),
-                glam.Liked ? PrismArt.Fore : PrismArt.Muted, scale))
+                glam.Liked ? PrismArt.Fore : PrismArt.Muted, scale, row))
         {
             glams.ToggleLike(glam);
         }
 
+        var leftRows = listed ? 2 : 1;
+        DrawWardrobeLink(drawList, left, top + row * (leftRows - 1), glam, key, row, scale);
         var lines = 0;
         if (totalPieces > 0)
         {
@@ -302,13 +304,13 @@ internal sealed partial class PrismApp
 
         if (totalMods > 0)
         {
-            PrismType.DrawRight(drawList, new Vector2(left + width, top + labelLine * lines),
+            PrismType.DrawRight(drawList, new Vector2(left + width, top + row * lines),
                 glamour.HasPenumbra ? ModsLine() : Loc.T(L.Prism.ModsNeedPenumbra), PrismArt.Muted, PrismFace.Label,
                 labelPixels);
             lines++;
         }
 
-        top += labelLine * Math.Max(lines, listed ? 1 : 0) + Metrics.Space.Md * scale;
+        top += row * Math.Max(lines, leftRows) + Metrics.Space.Sm * scale;
         LocString? note = !glamour.HasGlamourer ? L.Prism.TryOnWithoutGlamourer
             : ownedPieces < totalPieces && !OwnedItems.StorageLoaded ? L.Prism.OpenStorage : null;
         if (note is { } shown)
@@ -318,6 +320,29 @@ internal sealed partial class PrismApp
         }
 
         return top + Metrics.Space.Lg * scale;
+    }
+
+    private void DrawWardrobeLink(ImDrawListPtr drawList, float left, float top, GlamDto glam, string key, float row,
+        float scale)
+    {
+        wardrobe.Ensure();
+        var saved = wardrobe.FindByGlam(key);
+        var label = Loc.T(saved is null ? L.Prism.AddToWardrobe : L.Prism.InWardrobe);
+        if (!PrismArt.Link(drawList, new Vector2(left, top), label, PrismArt.Muted, scale, row))
+        {
+            return;
+        }
+
+        if (saved is not null)
+        {
+            Push(PrismScreen.WardrobeOutfit);
+            outfitId = saved.Id;
+            renaming = false;
+            return;
+        }
+
+        wardrobe.Add(new WardrobeOutfit(Guid.NewGuid().ToString("N"), glam.Title, string.Empty, Guid.Empty,
+            glam.Gear ?? Array.Empty<GlamGearDto>(), false, DateTimeOffset.UtcNow.ToUnixTimeSeconds(), key));
     }
 
     private string OwnedLine()

@@ -5695,6 +5695,8 @@
   "prism.vendorPrice": "Продаётся у торговцев за {0} гил",
   "prism.owned": "Есть",
   "prism.installed": "Установлен",
+  "prism.addToWardrobe": "Добавить в гардероб",
+  "prism.inWardrobe": "В вашем гардеробе",
   "prism.checkMarket": "Цены на рынке",
   "prism.glamOfTheDay": "Гламур дня",
   "prism.seasonStanding": "{0}: место {1}, очков: {2}",

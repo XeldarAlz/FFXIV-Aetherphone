@@ -14,7 +14,8 @@ internal sealed record WardrobeOutfit(
     Guid DesignId,
     GlamGearDto[] Gear,
     bool Favourite,
-    long CreatedAtUnix);
+    long CreatedAtUnix,
+    string? GlamKey = null);
 
 internal sealed class WardrobeStore
 {
@@ -64,6 +65,20 @@ internal sealed class WardrobeStore
         for (var index = 0; index < current.Length; index++)
         {
             if (current[index].Id == id)
+            {
+                return current[index];
+            }
+        }
+
+        return null;
+    }
+
+    public WardrobeOutfit? FindByGlam(string glamKey)
+    {
+        var current = outfits;
+        for (var index = 0; index < current.Length; index++)
+        {
+            if (glamKey.Length > 0 && current[index].GlamKey == glamKey)
             {
                 return current[index];
             }

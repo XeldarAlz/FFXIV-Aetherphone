@@ -5695,6 +5695,8 @@
   "prism.vendorPrice": "NPC販売：{0}ギル",
   "prism.owned": "所持",
   "prism.installed": "導入済み",
+  "prism.addToWardrobe": "ワードローブに追加",
+  "prism.inWardrobe": "ワードローブにあります",
   "prism.checkMarket": "相場を見る",
   "prism.glamOfTheDay": "今日のミラプリ",
   "prism.seasonStanding": "{0}：{1}位、{2}ポイント",

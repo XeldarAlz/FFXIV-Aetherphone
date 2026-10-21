@@ -5695,6 +5695,8 @@
   "prism.vendorPrice": "Satıcılarda {0} gil",
   "prism.owned": "Sende var",
   "prism.installed": "Kurulu",
+  "prism.addToWardrobe": "Gardıroba ekle",
+  "prism.inWardrobe": "Gardırobunda",
   "prism.checkMarket": "Piyasaya bak",
   "prism.glamOfTheDay": "Günün glamı",
   "prism.seasonStanding": "{0}: {1}. sıra, {2} puan",

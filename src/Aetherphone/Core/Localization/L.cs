@@ -10854,6 +10854,8 @@ internal static class L
         public static readonly LocString VendorPrice = new("prism.vendorPrice", "Sold by vendors for {0} gil");
         public static readonly LocString Owned = new("prism.owned", "Owned");
         public static readonly LocString Installed = new("prism.installed", "Installed");
+        public static readonly LocString AddToWardrobe = new("prism.addToWardrobe", "Add to wardrobe");
+        public static readonly LocString InWardrobe = new("prism.inWardrobe", "In your wardrobe");
         public static readonly LocString CheckMarket = new("prism.checkMarket", "Check market");
         public static readonly LocString GlamOfTheDay = new("prism.glamOfTheDay", "Glam of the day");
         public static readonly LocString SeasonStanding = new("prism.seasonStanding", "{0}: rank {1}, {2} points");

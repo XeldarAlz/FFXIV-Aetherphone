@@ -5695,6 +5695,8 @@
   "prism.vendorPrice": "Vendido por mercadores por {0} gil",
   "prism.owned": "Você tem",
   "prism.installed": "Instalado",
+  "prism.addToWardrobe": "Adicionar ao guarda-roupa",
+  "prism.inWardrobe": "No seu guarda-roupa",
   "prism.checkMarket": "Ver mercado",
   "prism.glamOfTheDay": "Glamour do dia",
   "prism.seasonStanding": "{0}: posição {1}, {2} pontos",

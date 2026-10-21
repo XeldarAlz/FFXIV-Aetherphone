@@ -5695,6 +5695,8 @@
   "prism.vendorPrice": "Bei Händlern für {0} Gil erhältlich",
   "prism.owned": "Im Besitz",
   "prism.installed": "Installiert",
+  "prism.addToWardrobe": "Zur Garderobe hinzufügen",
+  "prism.inWardrobe": "In deiner Garderobe",
   "prism.checkMarket": "Markt prüfen",
   "prism.glamOfTheDay": "Projektion des Tages",
   "prism.seasonStanding": "{0}: Platz {1}, {2} Punkte",
