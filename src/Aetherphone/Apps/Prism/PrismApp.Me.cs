@@ -125,17 +125,19 @@ internal sealed partial class PrismApp
             ? content.Min.Y + HeaderGapUnits * scale
             : DrawHeader(drawList, content, string.Empty, string.Empty, true, scale);
         var name = author is null ? string.Empty : author.DisplayName.Length > 0 ? author.DisplayName : author.Handle;
-        var pixels = PrismType.Fit(name, PrismFace.Headline, right - left, ProfileNameUnits * scale,
+        var action = Loc.T(mine ? L.Prism.PostGlam : profile is { Following: true } ? L.Prism.Following : L.Prism.Follow);
+        var buttonWidth = PrismArt.ButtonWidth(action, scale);
+        var nameWidth = right - left - buttonWidth - Metrics.Space.Md * scale;
+        var pixels = PrismType.Fit(name, PrismFace.Headline, nameWidth, ProfileNameUnits * scale,
             ProfileNameUnits * scale * 0.7f, 1, out var lines);
         var nameTop = top;
         top += PrismType.DrawLines(drawList, new Vector2(left, top), lines, PrismArt.Fore, PrismFace.Headline, pixels);
         var labelPixels = PrismArt.LabelPixels();
-        PrismType.Draw(drawList, new Vector2(left, top), AuthorLine(author), PrismArt.Muted, PrismFace.Label, labelPixels);
-        var action = Loc.T(mine ? L.Prism.PostGlam : profile is { Following: true } ? L.Prism.Following : L.Prism.Follow);
+        PrismType.Draw(drawList, new Vector2(left, top), PrismType.FitLabel(AuthorLine(author), labelPixels, nameWidth),
+            PrismArt.Muted, PrismFace.Label, labelPixels);
         var buttonTop = (nameTop + top + PrismType.LineHeight(PrismFace.Label, labelPixels) -
                          PrismArt.ButtonUnits * scale) * 0.5f;
-        if (PrismArt.Button(drawList, new Vector2(right - PrismArt.ButtonWidth(action, scale), buttonTop), action, scale,
-                out _))
+        if (PrismArt.Button(drawList, new Vector2(right - buttonWidth, buttonTop), action, scale, out _))
         {
             if (mine)
             {

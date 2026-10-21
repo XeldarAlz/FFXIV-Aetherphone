@@ -30,6 +30,7 @@ internal sealed partial class PrismApp
     private CachedText wonText;
     private CachedText countText;
     private CachedText totalText;
+    private CachedText rewardsText;
     private float introDelay;
 
     private void DrawCover(ImDrawListPtr drawList, Rect full, Rect content, float scale)
@@ -152,11 +153,12 @@ internal sealed partial class PrismApp
     private void DrawCoverButtons(ImDrawListPtr drawList, Rect content, float top, PrismWeekDto week, float scale)
     {
         var labelPixels = PrismArt.LabelPixels();
-        var gap = Metrics.Space.Sm * scale;
-        var right = content.Max.X - PrismArt.Gutter(scale);
-        var rewards = Loc.T(L.Prism.Rewards);
-        var arrowWidth = PrismType.Measure(Arrow, PrismFace.Label, labelPixels).X;
-        var rewardsLeft = right - arrowWidth - gap - PrismType.Measure(rewards, PrismFace.Label, labelPixels).X;
+        var rewardsKey = Loc.Current.Code.GetHashCode(StringComparison.Ordinal);
+        var rewards = rewardsText.IsCurrent(rewardsKey)
+            ? rewardsText.Value
+            : rewardsText.Store(rewardsKey, Loc.T(L.Prism.Rewards) + " " + Arrow);
+        var rewardsLeft = content.Max.X - PrismArt.Gutter(scale) -
+                          PrismType.Measure(rewards, PrismFace.Label, labelPixels).X;
         var tabsTop = top;
         top = DrawTrackTabs(drawList, content, top, scale, out var tabsRight);
         var rewardsTop = top > tabsTop && tabsRight + Metrics.Space.Xl * scale <= rewardsLeft
@@ -167,7 +169,6 @@ internal sealed partial class PrismApp
             OpenRewards();
         }
 
-        PrismType.DrawRight(drawList, new Vector2(right, rewardsTop), Arrow, PrismArt.Fore, PrismFace.Label, labelPixels);
         if (week.MyEntry is not null && week.Phase != PrismPhases.Entering &&
             PrismArt.Button(drawList, new Vector2(content.Min.X + PrismArt.Gutter(scale), top), Loc.T(L.Prism.YourLook),
                 scale, out _))

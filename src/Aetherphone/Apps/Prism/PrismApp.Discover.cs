@@ -144,11 +144,11 @@ internal sealed partial class PrismApp
         }
 
         var labelPixels = PrismArt.LabelPixels();
-        var pad = Metrics.Space.Md * scale;
+        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var gap = Metrics.Space.Sm * scale;
-        var row = new Rect(new Vector2(left, top),
-            new Vector2(left + width, top + PrismType.LineHeight(PrismFace.Label, labelPixels) + pad * 2f));
-        var y = top + pad;
+        var height = MathF.Max(labelLine + Metrics.Space.Md * scale * 2f, Metrics.Size.TapTarget * scale);
+        var row = new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
+        var y = top + (height - labelLine) * 0.5f;
         PrismArt.Hairline(drawList, row.Min.X, row.Max.X, row.Min.Y, PrismArt.Faint, scale);
         PrismArt.Hairline(drawList, row.Min.X, row.Max.X, row.Max.Y, PrismArt.Faint, scale);
         var action = Loc.T(week.Phase != PrismPhases.Entering ? L.Prism.JudgeHeat
@@ -295,8 +295,10 @@ internal sealed partial class PrismApp
             labelPixels);
         var pixels = PrismType.Fit(glam.Title, PrismFace.Headline, textWidth, PrismType.TitleUnits * scale,
             PrismType.HeadingUnits * scale, 3, out var lines);
-        var y = photo.Max.Y - lines.Length * PrismType.LineHeight(PrismFace.Headline, pixels) -
-                Metrics.Space.Xs * scale - labelLine * (glam.TryOns > 0 ? 2f : 1f);
+        var textTop = top + labelLine + Metrics.Space.Xs * scale;
+        var y = MathF.Max(textTop, photo.Max.Y - lines.Length * PrismType.LineHeight(PrismFace.Headline, pixels) -
+                                   Metrics.Space.Xs * scale - labelLine * (glam.TryOns > 0 ? 2f : 1f));
+        drawList.PushClipRect(new Vector2(textLeft, textTop), new Vector2(left + width, photo.Max.Y), true);
         y += PrismType.DrawLines(drawList, new Vector2(textLeft, y), lines, PrismArt.Fore, PrismFace.Headline, pixels) +
              Metrics.Space.Xs * scale;
         PrismType.Draw(drawList, new Vector2(textLeft, y), PrismType.FitLabel(AuthorLine(glam.Author), labelPixels,
@@ -307,6 +309,8 @@ internal sealed partial class PrismApp
                 PrismType.FitLabel(TriedOnLine(glam.TryOns), labelPixels, textWidth), PrismArt.Muted, PrismFace.Label,
                 labelPixels);
         }
+
+        drawList.PopClipRect();
 
         var hovered = UiInteract.Hover(photo.Min, new Vector2(left + width, photo.Max.Y));
         if (hovered)
