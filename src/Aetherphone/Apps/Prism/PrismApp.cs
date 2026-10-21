@@ -214,7 +214,15 @@ internal sealed partial class PrismApp : IResumableApp
             onPhoto = false;
             using var inset = AppSurface.ReserveBottom(bottomChrome);
             using var host = TabBar.Host(bar);
-            DrawScreenBody(ImGui.GetWindowDrawList(), full, content, scale);
+            ImGui.PushID(visit);
+            try
+            {
+                DrawScreenBody(ImGui.GetWindowDrawList(), full, content, scale);
+            }
+            finally
+            {
+                ImGui.PopID();
+            }
         }
         finally
         {
@@ -308,6 +316,7 @@ internal sealed partial class PrismApp : IResumableApp
         }
 
         screen = next;
+        visit = ++visitCounter;
         SyncTab(next);
         enterDirection = direction;
         screenAge = 0f;

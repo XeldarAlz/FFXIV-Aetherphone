@@ -28,7 +28,8 @@ internal readonly record struct PrismStop(
     GlamModDto? Mod,
     string Tag,
     string Title,
-    string OutfitId);
+    string OutfitId,
+    int Visit);
 
 internal sealed partial class PrismApp
 {
@@ -45,9 +46,12 @@ internal sealed partial class PrismApp
     private readonly TabBar tabBar = new();
     private readonly TabItem[] tabItems = new TabItem[TabRoots.Length];
     private readonly AppSkin ui = new(AppPalettes.Neutral(AppAccents.For("prism")));
+    private readonly int[] rootVisits = { -1, -2, -3, -4 };
     private float bottomChrome;
     private int historyDepth;
     private PrismTab tab;
+    private int visit = -1;
+    private int visitCounter;
     private string? introWeek;
     private string wearingKey = string.Empty;
     private string wearingTitle = string.Empty;
@@ -125,7 +129,12 @@ internal sealed partial class PrismApp
         {
             StartCompose();
         }
-        else if (result.Tapped >= 0 && (result.Tapped != (int)tab || !IsTabRoot(screen)))
+        else if (result.Tapped == (int)tab && IsTabRoot(screen))
+        {
+            rootVisits[(int)tab] = ++visitCounter;
+            visit = rootVisits[(int)tab];
+        }
+        else if (result.Tapped >= 0)
         {
             OpenTab((PrismTab)result.Tapped);
         }
@@ -136,6 +145,7 @@ internal sealed partial class PrismApp
         var direction = next < tab || next == tab && !IsTabRoot(screen) ? -1 : 1;
         historyDepth = 0;
         Go(TabRoots[(int)next], direction);
+        visit = rootVisits[(int)next];
         if (next == PrismTab.Discover)
         {
             RefreshDiscover(false);
@@ -168,7 +178,7 @@ internal sealed partial class PrismApp
         }
 
         history[historyDepth++] = new PrismStop(screen, glams.Detail, glams.Profile?.User, showSaved, listKind,
-            listItemId, listMod, listTag, listTitle, outfitId);
+            listItemId, listMod, listTag, listTitle, outfitId, visit);
 
         Go(next);
     }
@@ -178,12 +188,14 @@ internal sealed partial class PrismApp
         if (historyDepth == 0)
         {
             Go(TabRoots[(int)tab], -1);
+            visit = rootVisits[(int)tab];
             return;
         }
 
         var stop = history[--historyDepth];
         history[historyDepth] = default;
         Go(stop.Screen, -1);
+        visit = stop.Visit;
         Restore(stop);
     }
 
