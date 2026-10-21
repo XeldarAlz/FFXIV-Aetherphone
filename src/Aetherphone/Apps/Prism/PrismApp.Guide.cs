@@ -387,9 +387,11 @@ internal sealed partial class PrismApp
     {
         var labelPixels = PrismArt.LabelPixels();
         var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
-        var heatHeight = plate.Height * PlateHeatShare;
-        var heatWidth = heatHeight * PrismStore.EntryRatio;
-        var gap = MathF.Max(0f, (plate.Width - heatWidth * HeatLetters.Length) / (HeatLetters.Length + 1));
+        var minGap = Metrics.Space.Sm * scale;
+        var heatWidth = MathF.Min(plate.Height * PlateHeatShare * PrismStore.EntryRatio,
+            (plate.Width - minGap * (HeatLetters.Length + 1)) / HeatLetters.Length);
+        var heatHeight = heatWidth / PrismStore.EntryRatio;
+        var gap = (plate.Width - heatWidth * HeatLetters.Length) / (HeatLetters.Length + 1);
         var finalTop = plate.Min.Y + heatHeight + labelLine + plate.Height * PlateLinkShare;
         var final = Portrait(plate.Center.X, finalTop, plate.Max.Y - finalTop);
         var link = ImGui.GetColorU32(PrismArt.Faint);
