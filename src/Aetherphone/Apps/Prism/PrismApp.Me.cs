@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
@@ -20,6 +21,8 @@ internal sealed partial class PrismApp
 {
     private const float ProfileNameUnits = PrismType.TitleUnits;
     private const float ProfileAvatarUnits = 64f;
+    private const float PlacingMedalShare = 0.75f;
+    private const long CompactFrom = 10000;
     private const string MarketAppId = "market";
 
     private bool showSaved;
@@ -123,13 +126,11 @@ internal sealed partial class PrismApp
         var left = content.Min.X + gutter;
         var right = content.Max.X - gutter;
         var top = mine
-            ? content.Min.Y + HeaderGapUnits * scale
+            ? DrawMasthead(drawList, content, Loc.T(L.Prism.TabMe), string.Empty, string.Empty, scale, out _)
             : DrawHeader(drawList, content, string.Empty, string.Empty, true, scale);
-        var action = mine ? string.Empty : Loc.T(profile is { Following: true } ? L.Prism.Following : L.Prism.Follow);
-        var buttonWidth = mine ? 0f : PrismArt.ButtonWidth(action, scale) + Metrics.Space.Md * scale;
         var avatar = ProfileAvatarUnits * scale;
         var textLeft = left + avatar + Metrics.Space.Md * scale;
-        var nameWidth = right - textLeft - buttonWidth;
+        var nameWidth = right - textLeft;
         var name = AuthorName(author);
         var pixels = PrismType.Fit(name, PrismFace.Headline, nameWidth, ProfileNameUnits * scale,
             ProfileNameUnits * scale * 0.7f, 1, out var lines);
@@ -145,19 +146,24 @@ internal sealed partial class PrismApp
             pixels);
         PrismType.Draw(drawList, new Vector2(textLeft, textTop),
             PrismType.FitLabel(AuthorLine(author), labelPixels, nameWidth), PrismArt.Muted, PrismFace.Label, labelPixels);
-        if (!mine && author is not null &&
-            PrismArt.Button(drawList, new Vector2(right - PrismArt.ButtonWidth(action, scale),
-                middle - PrismArt.ButtonUnits * scale * 0.5f), action, scale, out _))
-        {
-            glams.SetFollow(author, profile is not { Following: true });
-        }
-
         top += rowHeight + Metrics.Space.Xl * scale;
         top = DrawProfileStats(drawList, left, top, right - left, profile, scale);
+        if (!mine && author is not null)
+        {
+            var following = profile is { Following: true };
+            var strip = new Rect(new Vector2(left, top), new Vector2(right, top + PrismArt.StripUnits * scale));
+            if (PrismArt.Strip(drawList, strip, Loc.T(following ? L.Prism.Following : L.Prism.Follow), string.Empty,
+                    !following, true, following ? UiSound.ToggleOff : UiSound.ToggleOn))
+            {
+                glams.SetFollow(author, !following);
+            }
+
+            top = strip.Max.Y + Metrics.Space.Xl * scale;
+        }
+
         if (mine)
         {
-            top = DrawSeasonLine(drawList, left, top, scale);
-            top = DrawProfileToggle(drawList, left, top, scale);
+            top = DrawSeasonLine(drawList, left, top, right - left, scale);
         }
 
         var body = new Rect(new Vector2(content.Min.X, top), content.Max);
@@ -166,7 +172,11 @@ internal sealed partial class PrismApp
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth() - gutter * 2f;
         var cursor = DrawPlacings(list, origin.X + gutter, origin.Y, width, profile, scale);
-        if (cursor > origin.Y)
+        if (mine)
+        {
+            cursor = DrawProfileToggle(list, origin.X + gutter, cursor, scale);
+        }
+        else if (cursor > origin.Y)
         {
             cursor = DrawSectionLabel(list, origin.X + gutter, cursor, width, 1, Loc.T(L.Prism.StatGlams), scale);
         }
@@ -200,10 +210,12 @@ internal sealed partial class PrismApp
     private static string Count(ref CachedText cache, long value)
     {
         var key = HashCode.Combine(value, Loc.Current.Code);
-        return cache.IsCurrent(key) ? cache.Value : cache.Store(key, value.ToString("N0", Loc.Culture));
+        return cache.IsCurrent(key)
+            ? cache.Value
+            : cache.Store(key, value >= CompactFrom ? NumberText.Compact(value) : value.ToString("N0", Loc.Culture));
     }
 
-    private float DrawSeasonLine(ImDrawListPtr drawList, float left, float top, float scale)
+    private float DrawSeasonLine(ImDrawListPtr drawList, float left, float top, float width, float scale)
     {
         if (glams.Season is not { Me: { Rank: > 0 } standing } season)
         {
@@ -216,8 +228,9 @@ internal sealed partial class PrismApp
             : seasonText.Store(key, Loc.T(L.Prism.SeasonStanding, season.Name, standing.Rank,
                 standing.Points.ToString("N0", Loc.Culture)));
         var labelPixels = PrismArt.LabelPixels();
-        PrismType.Draw(drawList, new Vector2(left, top), line, PrismArt.Fore, PrismFace.Label, labelPixels);
-        return top + PrismType.LineHeight(PrismFace.Label, labelPixels) + Metrics.Space.Lg * scale;
+        return top + PrismType.DrawLines(drawList, new Vector2(left, top),
+            PrismType.Wrap(line, PrismFace.Label, labelPixels, width), PrismArt.Fore, PrismFace.Label, labelPixels) +
+               Metrics.Space.Lg * scale;
     }
 
     private float DrawProfileToggle(ImDrawListPtr drawList, float left, float top, float scale)
@@ -252,7 +265,7 @@ internal sealed partial class PrismApp
     private float DrawPlacings(ImDrawListPtr drawList, float left, float top, float width, GlamProfileDto? profile,
         float scale)
     {
-        if (showSaved || profile?.Placings is not { Length: > 0 } placings)
+        if (profile?.Placings is not { Length: > 0 } placings)
         {
             return top;
         }
@@ -260,15 +273,35 @@ internal sealed partial class PrismApp
         top = DrawSectionLabel(drawList, left, top, width, 0, Loc.T(L.Prism.PlacingsHeading), scale);
         var labelPixels = PrismArt.LabelPixels();
         var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
+        var radius = labelLine * PlacingMedalShare;
+        var line = MathF.Max(radius * 2f, labelLine);
+        var column = RankColumnUnits * scale;
         for (var index = 0; index < placings.Length; index++)
         {
             var placing = placings[index];
-            PrismType.Draw(drawList, new Vector2(left, top), Plain[Math.Clamp(placing.Rank, 0, Plain.Length - 1)],
-                PrismArt.Fore, PrismFace.Label, labelPixels);
-            PrismType.Draw(drawList, new Vector2(left + RankColumnUnits * scale, top),
-                PrismType.FitLabel(placing.Title, labelPixels, width - RankColumnUnits * scale), PrismArt.Fore,
+            var middle = top + line * 0.5f;
+            var center = new Vector2(left + radius, middle);
+            var numeral = Plain[Math.Clamp(placing.Rank, 0, Plain.Length - 1)];
+            var podium = placing.Rank is >= 1 and <= 3;
+            var face = podium ? PrismFace.Numerals : PrismFace.Label;
+            var numeralPixels = podium ? radius : labelPixels;
+            if (podium)
+            {
+                PrismArt.Medal(drawList, center, radius, placing.Rank, 0f, scale);
+            }
+
+            PrismType.Draw(drawList, center - PrismType.Measure(numeral, face, numeralPixels) * 0.5f, numeral,
+                PrismArt.Fore, face, numeralPixels);
+            var textTop = middle - labelLine * 0.5f;
+            var trackWidth = placing.Track.Length > 0
+                ? PrismType.DrawRight(drawList, new Vector2(left + width, textTop), PrismTracks.Name(placing.Track),
+                    PrismArt.Muted, PrismFace.Label, labelPixels)
+                : 0f;
+            PrismType.Draw(drawList, new Vector2(left + column, textTop),
+                PrismType.FitLabel(placing.Title, labelPixels,
+                    width - column - trackWidth - (trackWidth > 0f ? Metrics.Space.Lg * scale : 0f)), PrismArt.Fore,
                 PrismFace.Label, labelPixels);
-            top += labelLine + Metrics.Space.Sm * scale;
+            top += line + Metrics.Space.Sm * scale;
         }
 
         return top + Metrics.Space.Lg * scale;
@@ -323,24 +356,28 @@ internal sealed partial class PrismApp
         var pixels = PrismType.Fit(listTitle, PrismFace.Headline, width, DetailTitleUnits * scale,
             DetailTitleMinUnits * scale, 2, out var lines);
         top += PrismType.DrawLines(drawList, new Vector2(left, top), lines, PrismArt.Fore, PrismFace.Headline, pixels);
+        var labelPixels = PrismArt.LabelPixels();
+        var tryLabel = Loc.T(L.Prism.TryOnGlam);
+        var tryWidth = listKind == GlamListKind.Item ? PrismType.Measure(tryLabel, PrismFace.Label, labelPixels).X : 0f;
         if (listKind == GlamListKind.Item && glams.Item is { } item && item.ItemId == listItemId)
         {
             var key = HashCode.Combine(item.GlamCount, Loc.Current.Code);
             var count = listCountText.IsCurrent(key)
                 ? listCountText.Value
                 : listCountText.Store(key, Loc.Plural(L.Prism.WornInGlams, item.GlamCount));
-            PrismType.Draw(drawList, new Vector2(left, top), count, PrismArt.Muted, PrismFace.Label, PrismArt.LabelPixels());
+            PrismType.Draw(drawList, new Vector2(left, top),
+                PrismType.FitLabel(count, labelPixels, width - tryWidth - Metrics.Space.Lg * scale), PrismArt.Muted,
+                PrismFace.Label, labelPixels);
         }
 
-        if (listKind == GlamListKind.Item && PrismArt.Link(drawList, new Vector2(left + width -
-                PrismType.Measure(Loc.T(L.Prism.TryOnGlam), PrismFace.Label, PrismArt.LabelPixels()).X, top),
-                Loc.T(L.Prism.TryOnGlam), PrismArt.Muted, scale))
+        if (listKind == GlamListKind.Item &&
+            PrismArt.Link(drawList, new Vector2(left + width - tryWidth, top), tryLabel, PrismArt.Muted, scale))
         {
             glamour.TryOnPiece(new GlamGearDto(gameData.EquipSlot(listItemId), listItemId));
             StartWearing(string.Empty, listTitle);
         }
 
-        top += PrismType.LineHeight(PrismFace.Label, PrismArt.LabelPixels()) + Metrics.Space.Lg * scale;
+        top += PrismType.LineHeight(PrismFace.Label, labelPixels) + Metrics.Space.Lg * scale;
         if (listKind == GlamListKind.Item)
         {
             top = DrawItemSources(drawList, left, top, scale);
