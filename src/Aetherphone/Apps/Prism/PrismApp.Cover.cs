@@ -102,7 +102,7 @@ internal sealed partial class PrismApp
         var below = DrawMasthead(drawList, content, DisplayName, Loc.T(L.Prism.HowItWorks), under, scale, out var guide);
         if (guide)
         {
-            StartGuide();
+            StartGuide(PrismTab.Week);
         }
 
         return below;

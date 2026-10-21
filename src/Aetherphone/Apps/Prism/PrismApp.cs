@@ -50,6 +50,7 @@ internal sealed partial class PrismApp : IResumableApp
     private const float NoticeMinUnits = 24f;
     private const int NoticeLines = 3;
     private const int LoadedAtLimit = 512;
+    private const int GuideVersion = 2;
 
     private readonly PrismStore store;
     private readonly GlamStore glams;
@@ -131,11 +132,11 @@ internal sealed partial class PrismApp : IResumableApp
 
     public void OnOpened()
     {
-        if (!configuration.PrismGuideSeen)
+        if (configuration.PrismGuideVersion < GuideVersion)
         {
-            configuration.PrismGuideSeen = true;
+            configuration.PrismGuideVersion = GuideVersion;
             configuration.Save();
-            StartGuide();
+            StartGuide(PrismTab.Discover);
         }
         else
         {

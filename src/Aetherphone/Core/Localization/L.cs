@@ -10909,7 +10909,17 @@ internal static class L
         public static readonly LocString ImportDesigns = new("prism.importDesigns", "Import Glamourer designs");
         public static readonly LocString SurpriseMe = new("prism.surpriseMe", "Surprise me");
         public static readonly LocString GuideIntroTitle = new("prism.guideIntroTitle", "Welcome to Prism");
-        public static readonly LocString GuideIntroBody = new("prism.guideIntroBody", "A weekly glamour contest. Dress for the theme, judge other players' glams and see who makes the podium.");
+        public static readonly LocString GuideIntroBody = new("prism.guideIntroBody",
+            "Share glams, try on anyone's and keep a wardrobe of your own. There's a contest every week too.");
+        public static readonly LocString GuideTryTitle = new("prism.guideTryTitle", "Try on any glam");
+        public static readonly LocString GuideTryBody = new("prism.guideTryBody",
+            "Every glam lists its gear, dyes and mods. Try on puts it on your character with Glamourer, with the mods you have.");
+        public static readonly LocString GuidePostTitle = new("prism.guidePostTitle", "Post your own");
+        public static readonly LocString GuidePostBody = new("prism.guidePostBody",
+            "Pick up to four photos. Prism reads your gear, dyes and mods and links each mod to its page. It never hosts mod files.");
+        public static readonly LocString GuideWardrobeTitle = new("prism.guideWardrobeTitle", "Keep a wardrobe");
+        public static readonly LocString GuideWardrobeBody = new("prism.guideWardrobeBody",
+            "Save what you're wearing, bring in Glamourer designs or add any glam, then put it back on in one tap. Only you can see it.");
         public static readonly LocString GetStarted = new("prism.getStarted", "Get started");
         public static readonly LocString Skip = new("prism.skip", "Skip");
         public static readonly LocString ResultsOut = new("prism.resultsOut", "Results are in");
