@@ -60,6 +60,14 @@ internal sealed partial class PrismApp
         Push(PrismScreen.GlamList);
     }
 
+    private void OpenModGlams(GlamModDto mod)
+    {
+        listKind = GlamListKind.Mod;
+        listTitle = mod.Name;
+        glams.OpenMod(mod.Name, mod.Author);
+        Push(PrismScreen.GlamList);
+    }
+
     private void DrawProfile(ImDrawListPtr drawList, Rect content, float scale)
     {
         if (!glams.IsSignedIn)

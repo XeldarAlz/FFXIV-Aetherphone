@@ -364,8 +364,11 @@ internal sealed partial class PrismApp
             var mod = mods[index];
             var (line, allowed) = ModLine(mod);
             var room = width - (allowed ? getWidth + Metrics.Space.Md * scale : 0f);
-            PrismType.Draw(drawList, new Vector2(left, top), PrismType.FitLabel(line, labelPixels, room),
-                PrismArt.Fore, PrismFace.Label, labelPixels);
+            if (PrismArt.Link(drawList, new Vector2(left, top), PrismType.FitLabel(line, labelPixels, room), PrismArt.Fore,
+                    scale))
+            {
+                OpenModGlams(mod);
+            }
             if (allowed && PrismArt.Link(drawList, new Vector2(left + width - getWidth, top), get, PrismArt.Muted, scale))
             {
                 UrlActions.AskThenOpen(mod.Link);
