@@ -45,6 +45,7 @@ internal sealed partial class PrismApp
     private readonly PrismStop[] history = new PrismStop[HistoryDepth];
     private int historyDepth;
     private PrismTab tab;
+    private string? introWeek;
     private string wearingKey = string.Empty;
     private string wearingTitle = string.Empty;
 
@@ -115,8 +116,8 @@ internal sealed partial class PrismApp
                 PrismFace.Label, labelPixels);
             if (active)
             {
-                PrismArt.SpectrumRule(drawList, left, left + width, labelTop + labelLine + TabMarkGapUnits * scale * 0.5f,
-                    scale);
+                PrismArt.Hairline(drawList, left, left + width, labelTop + labelLine + TabMarkGapUnits * scale * 0.5f,
+                    PrismArt.Fore, scale);
             }
 
             if (hovered)
@@ -147,7 +148,13 @@ internal sealed partial class PrismApp
         }
         else if (next == PrismTab.Week)
         {
-            introDelay = IntroSeconds;
+            var week = store.Week?.Id ?? string.Empty;
+            if (week != introWeek)
+            {
+                introWeek = week;
+                introDelay = IntroSeconds;
+            }
+
             store.Refresh();
         }
     }

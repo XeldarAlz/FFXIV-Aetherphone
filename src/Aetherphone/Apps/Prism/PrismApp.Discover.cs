@@ -33,18 +33,13 @@ internal sealed partial class PrismApp
         var gutter = PrismArt.Gutter(scale);
         var left = content.Min.X + gutter;
         var right = content.Max.X - gutter;
-        var top = content.Min.Y + HeaderGapUnits * scale;
-        PrismType.Draw(drawList, new Vector2(left, top), DisplayName, PrismArt.Fore, PrismFace.Headline,
-            MastheadUnits * scale);
-        var post = Loc.T(L.Prism.PostGlam);
-        if (PrismArt.Button(drawList, new Vector2(right - PrismArt.ButtonWidth(post, scale), top), post, scale, out _))
+        var top = DrawMasthead(drawList, content, DisplayName, Loc.T(L.Prism.PostGlam), string.Empty, scale,
+            out var post);
+        if (post)
         {
             StartCompose();
         }
 
-        top += PrismType.LineHeight(PrismFace.Headline, MastheadUnits * scale) + Metrics.Space.Md * scale;
-        PrismArt.SpectrumRule(drawList, left, right, top, scale);
-        top += Metrics.Space.Lg * scale;
         top = DrawScopeRow(drawList, left, right, top, scale);
         var body = new Rect(new Vector2(content.Min.X, top), content.Max);
         var lane = glams.Lane(discoverScope);

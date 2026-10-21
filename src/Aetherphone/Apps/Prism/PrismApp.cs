@@ -48,6 +48,7 @@ internal sealed partial class PrismApp : IResumableApp
     private const float NoticeMaxUnits = 40f;
     private const float NoticeMinUnits = 24f;
     private const int NoticeLines = 3;
+    private const int LoadedAtLimit = 512;
 
     private readonly PrismStore store;
     private readonly GlamStore glams;
@@ -142,6 +143,10 @@ internal sealed partial class PrismApp : IResumableApp
     {
         sinceRefresh = 0f;
         store.Refresh();
+        if (screen == PrismScreen.Discover && (glams.Lane(discoverScope).NeverLoaded || glams.Lane(discoverScope).Failed))
+        {
+            glams.Refresh(discoverScope);
+        }
     }
 
     public void OnClosed()
@@ -172,32 +177,26 @@ internal sealed partial class PrismApp : IResumableApp
         var stage = ScreenLayer.Begin("prism.stage", full, enter < TransitionTiming.InteractiveProgress);
         try
         {
-            DrawScreen(ImGui.GetWindowDrawList(), full, content, scale);
+            onPhoto = false;
+            var area = IsTabRoot(screen) ? AboveTabBar(content, glamour.TryingOn, scale) : content;
+            DrawScreenBody(ImGui.GetWindowDrawList(), full, area, scale);
         }
         finally
         {
             stage.Transform(PrismMotion.Stage(full, enter, enterDirection, scale));
         }
-    }
 
-    private void DrawScreen(ImDrawListPtr drawList, Rect full, Rect content, float scale)
-    {
-        onPhoto = false;
-        var root = IsTabRoot(screen);
-        var wearing = root && glamour.TryingOn;
-        var area = root ? AboveTabBar(content, wearing, scale) : content;
-        DrawScreenBody(drawList, full, area, scale);
-        if (!root)
+        if (!IsTabRoot(screen) || photoViewer.Active)
         {
             return;
         }
 
-        if (wearing)
+        if (glamour.TryingOn)
         {
-            DrawWearingBar(drawList, content, scale);
+            DrawWearingBar(ImGui.GetWindowDrawList(), content, scale);
         }
 
-        DrawTabBar(drawList, content, scale);
+        DrawTabBar(ImGui.GetWindowDrawList(), content, scale);
     }
 
     private void DrawScreenBody(ImDrawListPtr drawList, Rect full, Rect content, float scale)
@@ -339,6 +338,11 @@ internal sealed partial class PrismApp : IResumableApp
         var now = ImGui.GetTime();
         if (!loadedAt.TryGetValue(url, out var seen))
         {
+            if (loadedAt.Count >= LoadedAtLimit)
+            {
+                loadedAt.Clear();
+            }
+
             seen = now;
             loadedAt[url] = seen;
         }

@@ -220,7 +220,7 @@ internal sealed class WardrobeStore
 
                 var path = PathFor(contentId);
                 var temp = path + ".tmp";
-                File.WriteAllText(temp, JsonConvert.SerializeObject(snapshot));
+                File.WriteAllText(temp, JsonConvert.SerializeObject(loadedFor == contentId ? outfits : snapshot));
                 File.Move(temp, path, true);
             }
             catch (Exception exception)

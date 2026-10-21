@@ -23,7 +23,8 @@ internal sealed partial class PrismApp
 
     private readonly Dictionary<string, string> handleLines = new(StringComparer.Ordinal);
     private readonly Dictionary<uint, (string Name, uint Icon)> itemRows = new();
-    private string statsFor = string.Empty;
+    private string? statsFor;
+    private bool statsStorage;
     private CachedText ownedText;
     private CachedText modsText;
     private CachedText triedText;
@@ -43,7 +44,7 @@ internal sealed partial class PrismApp
     {
         glams.Open(glam);
         photoIndex = 0;
-        statsFor = string.Empty;
+        statsFor = null;
     }
 
     private IDalamudTextureWrap? ViewerPage(int index) =>
@@ -115,12 +116,16 @@ internal sealed partial class PrismApp
 
     private void RefreshStats(GlamDto glam)
     {
-        if (statsFor == glam.Id)
+        var key = WearKey(glam);
+        var storage = OwnedItems.StorageLoaded;
+        if (statsFor == key && statsStorage == storage)
         {
             return;
         }
 
-        statsFor = glam.Id;
+        statsFor = key;
+        statsStorage = storage;
+        modLines.Clear();
         var gear = glam.Gear ?? Array.Empty<GlamGearDto>();
         ownedPieces = GlamourService.OwnedPieces(gear, out totalPieces);
         missingMods = glamour.MissingMods(gear, out totalMods);

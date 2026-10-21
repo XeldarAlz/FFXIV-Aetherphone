@@ -99,21 +99,29 @@ internal sealed partial class PrismApp
 
     private float DrawMasthead(ImDrawListPtr drawList, Rect content, string under, float scale)
     {
+        var below = DrawMasthead(drawList, content, DisplayName, Loc.T(L.Prism.HowItWorks), under, scale, out var guide);
+        if (guide)
+        {
+            StartGuide();
+        }
+
+        return below;
+    }
+
+    private float DrawMasthead(ImDrawListPtr drawList, Rect content, string title, string action, string under,
+        float scale, out bool acted)
+    {
         var gutter = PrismArt.Gutter(scale);
         var top = content.Min.Y + HeaderGapUnits * scale;
         var pixels = MastheadUnits * scale;
         var labelPixels = PrismArt.LabelPixels();
         var mark = PrismMotion.Mark(drawList);
-        PrismType.Draw(drawList, new Vector2(content.Min.X + gutter, top), DisplayName, PrismArt.Fore,
-            PrismFace.Headline, pixels);
-        var nameBottom = top + PrismType.Measure(DisplayName, PrismFace.Headline, pixels).Y;
-        var guide = Loc.T(L.Prism.HowItWorks);
+        PrismType.Draw(drawList, new Vector2(content.Min.X + gutter, top), title, PrismArt.Fore, PrismFace.Headline,
+            pixels);
+        var nameBottom = top + PrismType.Measure(title, PrismFace.Headline, pixels).Y;
         var buttonTop = (top + nameBottom - PrismArt.ButtonUnits * scale) * 0.5f;
-        if (PrismArt.Button(drawList, new Vector2(content.Max.X - gutter - PrismArt.ButtonWidth(guide, scale),
-                buttonTop), guide, scale, out _))
-        {
-            StartGuide();
-        }
+        acted = action.Length > 0 && PrismArt.Button(drawList,
+            new Vector2(content.Max.X - gutter - PrismArt.ButtonWidth(action, scale), buttonTop), action, scale, out _);
 
         var rule = top + PrismType.LineHeight(PrismFace.Headline, pixels) + HeaderGapUnits * scale;
         var gap = rule - nameBottom;

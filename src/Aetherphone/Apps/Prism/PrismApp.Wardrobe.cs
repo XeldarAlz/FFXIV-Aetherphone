@@ -25,12 +25,7 @@ internal sealed partial class PrismApp
         var gutter = PrismArt.Gutter(scale);
         var left = content.Min.X + gutter;
         var right = content.Max.X - gutter;
-        var top = content.Min.Y + HeaderGapUnits * scale;
-        PrismType.Draw(drawList, new Vector2(left, top), Loc.T(L.Prism.TabWardrobe), PrismArt.Fore, PrismFace.Headline,
-            MastheadUnits * scale);
-        top += PrismType.LineHeight(PrismFace.Headline, MastheadUnits * scale) + Metrics.Space.Md * scale;
-        PrismArt.Hairline(drawList, left, right, top, PrismArt.Fore, scale);
-        top += Metrics.Space.Lg * scale;
+        var top = DrawMasthead(drawList, content, Loc.T(L.Prism.TabWardrobe), string.Empty, string.Empty, scale, out _);
         var save = Loc.T(L.Prism.SaveWearing);
         var x = left;
         if (PrismArt.Button(drawList, new Vector2(x, top), save, scale, out var saveWidth))
