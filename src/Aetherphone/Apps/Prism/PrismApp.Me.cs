@@ -21,6 +21,7 @@ internal sealed partial class PrismApp
 {
     private const float ProfileNameUnits = PrismType.TitleUnits;
     private const float ProfileAvatarUnits = 64f;
+    private const float PlacingMedalShare = 0.75f;
     private const string MarketAppId = "market";
 
     private bool showSaved;
@@ -268,15 +269,35 @@ internal sealed partial class PrismApp
         top = DrawSectionLabel(drawList, left, top, width, 0, Loc.T(L.Prism.PlacingsHeading), scale);
         var labelPixels = PrismArt.LabelPixels();
         var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
+        var radius = labelLine * PlacingMedalShare;
+        var line = MathF.Max(radius * 2f, labelLine);
+        var column = RankColumnUnits * scale;
         for (var index = 0; index < placings.Length; index++)
         {
             var placing = placings[index];
-            PrismType.Draw(drawList, new Vector2(left, top), Plain[Math.Clamp(placing.Rank, 0, Plain.Length - 1)],
-                PrismArt.Fore, PrismFace.Label, labelPixels);
-            PrismType.Draw(drawList, new Vector2(left + RankColumnUnits * scale, top),
-                PrismType.FitLabel(placing.Title, labelPixels, width - RankColumnUnits * scale), PrismArt.Fore,
+            var middle = top + line * 0.5f;
+            var center = new Vector2(left + radius, middle);
+            var numeral = Plain[Math.Clamp(placing.Rank, 0, Plain.Length - 1)];
+            var podium = placing.Rank is >= 1 and <= 3;
+            var face = podium ? PrismFace.Numerals : PrismFace.Label;
+            var numeralPixels = podium ? radius : labelPixels;
+            if (podium)
+            {
+                PrismArt.Medal(drawList, center, radius, placing.Rank, 0f, scale);
+            }
+
+            PrismType.Draw(drawList, center - PrismType.Measure(numeral, face, numeralPixels) * 0.5f, numeral,
+                PrismArt.Fore, face, numeralPixels);
+            var textTop = middle - labelLine * 0.5f;
+            var trackWidth = placing.Track.Length > 0
+                ? PrismType.DrawRight(drawList, new Vector2(left + width, textTop), PrismTracks.Name(placing.Track),
+                    PrismArt.Muted, PrismFace.Label, labelPixels)
+                : 0f;
+            PrismType.Draw(drawList, new Vector2(left + column, textTop),
+                PrismType.FitLabel(placing.Title, labelPixels,
+                    width - column - trackWidth - (trackWidth > 0f ? Metrics.Space.Lg * scale : 0f)), PrismArt.Fore,
                 PrismFace.Label, labelPixels);
-            top += labelLine + Metrics.Space.Sm * scale;
+            top += line + Metrics.Space.Sm * scale;
         }
 
         return top + Metrics.Space.Lg * scale;
