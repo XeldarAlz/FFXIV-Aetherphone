@@ -233,8 +233,11 @@ internal sealed partial class PrismApp
                 likeBloomAt = ImGui.GetTime();
                 likeBloomOnPhoto = true;
             }
-            else if ((!likeable || !photoLike.SwallowedTap(glam.Id)) &&
-                     UiInteract.Click(frame.Min, frame.Max, hovered))
+            else if (!likeable && UiInteract.Click(frame.Min, frame.Max, hovered))
+            {
+                photoViewer.Open(this, photos.Length, photoIndex, viewerPage);
+            }
+            else if (likeable && !photoLike.SwallowedTap(glam.Id) && UiInteract.Click(frame.Min, frame.Max, hovered))
             {
                 photoTap.Arm(glam.Id);
             }
@@ -563,6 +566,10 @@ internal sealed partial class PrismApp
                     likeBloomId = glam.Id;
                     likeBloomAt = ImGui.GetTime();
                     likeBloomOnPhoto = false;
+                }
+                else
+                {
+                    likeBloomId = string.Empty;
                 }
             }
 

@@ -51,7 +51,7 @@ internal sealed partial class PrismApp
     private CachedText rewardText;
 
     private bool HeatInProgress => store.Ballot is { } ballot && ReferenceEquals(ratingBallot, ballot) &&
-                                   lookIndex > 0 && lookIndex < stars.Length;
+                                   stars.Length > 0 && stars[0] is not null && lookIndex < stars.Length;
 
     private void StartJudging()
     {

@@ -275,7 +275,7 @@ internal sealed partial class PrismApp
         var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var radius = labelLine * PlacingMedalShare;
         var line = MathF.Max(radius * 2f, labelLine);
-        var column = RankColumnUnits * scale;
+        var column = MathF.Max(RankColumnUnits * scale, radius * 2f + Metrics.Space.Sm * scale);
         for (var index = 0; index < placings.Length; index++)
         {
             var placing = placings[index];
@@ -284,7 +284,7 @@ internal sealed partial class PrismApp
             var numeral = Plain[Math.Clamp(placing.Rank, 0, Plain.Length - 1)];
             var podium = placing.Rank is >= 1 and <= 3;
             var face = podium ? PrismFace.Numerals : PrismFace.Label;
-            var numeralPixels = podium ? radius : labelPixels;
+            var numeralPixels = podium ? radius / Plugin.Fonts.Zoom : labelPixels;
             if (podium)
             {
                 PrismArt.Medal(drawList, center, radius, placing.Rank, 0f, scale);

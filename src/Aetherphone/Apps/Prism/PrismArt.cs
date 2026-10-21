@@ -298,8 +298,9 @@ internal static class PrismArt
 
     public static void Swatch(ImDrawListPtr drawList, Rect rect, int tint)
     {
-        var from = ImGui.GetColorU32(Vector4.Lerp(Back, Fore, SwatchBase + SwatchStep * (tint % SwatchTones)));
-        var to = ImGui.GetColorU32(Vector4.Lerp(Back, Fore, SwatchFloor));
+        var from = ImGui.GetColorU32(Vector4.Lerp(PhotoInks.Back, PhotoInks.Fore,
+            SwatchBase + SwatchStep * (tint % SwatchTones)));
+        var to = ImGui.GetColorU32(Vector4.Lerp(PhotoInks.Back, PhotoInks.Fore, SwatchFloor));
         drawList.AddRectFilledMultiColor(rect.Min, rect.Max, from, from, to, to);
         var fade = new Vector2(rect.Min.X, rect.Max.Y - rect.Height * SwatchShadeShare);
         drawList.AddRectFilledMultiColor(fade, rect.Max, ImGui.GetColorU32(ShadeClear), ImGui.GetColorU32(ShadeClear),
