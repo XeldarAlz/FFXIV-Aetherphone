@@ -78,13 +78,13 @@ internal sealed partial class PrismApp
             onPhoto = true;
         }
 
+        PrismArt.OverPhoto(backdrop.Length > 0);
         var below = DrawMasthead(drawList, content, cover is null || won ? string.Empty : CreditLine(cover), scale);
         var buttons = PrismMotion.Mark(drawList);
         DrawCoverButtons(drawList, content, below, week, scale);
         PrismMotion.Rise(drawList, buttons, PrismMotion.At(screenAge, introDelay + CreditsDelay, Motion.PageSettle),
             0f);
         var strips = HasPrimary(week) || store.Results is not null ? 1 : 0;
-        PrismArt.OverPhoto(backdrop.Length > 0);
         var steps = DrawCoverStory(drawList, content, week, won ? WonLine(cover!) : string.Empty, strips, scale);
         var strip = PrismMotion.Mark(drawList);
         DrawCoverStrip(drawList, content, week, scale);
