@@ -61,8 +61,10 @@ internal sealed partial class PrismApp
         }
     }
 
-    private float DrawTrackTabs(ImDrawListPtr drawList, Rect content, float top, float scale)
+    private float DrawTrackTabs(ImDrawListPtr drawList, Rect content, float top, float scale, out float right)
     {
+        var x = content.Min.X + PrismArt.Gutter(scale);
+        right = x;
         var tracks = store.Tracks;
         if (tracks.Length < 2)
         {
@@ -72,7 +74,6 @@ internal sealed partial class PrismApp
         var labelPixels = PrismArt.LabelPixels();
         var line = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var pad = MathF.Max(0f, (Metrics.Size.TapTarget * scale - line) * 0.5f);
-        var x = content.Min.X + PrismArt.Gutter(scale);
         var count = Math.Min(tracks.Length, MaxTracks);
         for (var index = 0; index < count; index++)
         {
@@ -100,7 +101,8 @@ internal sealed partial class PrismApp
                 store.SelectTrack(track.Id);
             }
 
-            x += width + Metrics.Space.Xl * scale;
+            right = x + width;
+            x = right + Metrics.Space.Xl * scale;
         }
 
         return top + line + Metrics.Space.Lg * scale;

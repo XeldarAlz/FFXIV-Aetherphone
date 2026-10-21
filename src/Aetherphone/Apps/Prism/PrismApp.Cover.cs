@@ -151,28 +151,28 @@ internal sealed partial class PrismApp
 
     private void DrawCoverButtons(ImDrawListPtr drawList, Rect content, float top, PrismWeekDto week, float scale)
     {
-        top = DrawTrackTabs(drawList, content, top, scale);
-        var left = content.Min.X + PrismArt.Gutter(scale);
-        if (week.MyEntry is not null && week.Phase != PrismPhases.Entering)
-        {
-            if (PrismArt.Button(drawList, new Vector2(left, top), Loc.T(L.Prism.YourLook), scale, out var width))
-            {
-                Go(PrismScreen.Entry);
-            }
-
-            left += width + Metrics.Space.Sm * scale;
-        }
-
+        var labelPixels = PrismArt.LabelPixels();
+        var gap = Metrics.Space.Sm * scale;
+        var right = content.Max.X - PrismArt.Gutter(scale);
         var rewards = Loc.T(L.Prism.Rewards);
-        if (left + PrismArt.ButtonWidth(rewards, scale) > content.Max.X - PrismArt.Gutter(scale))
-        {
-            left = content.Min.X + PrismArt.Gutter(scale);
-            top += PrismArt.ButtonUnits * scale + Metrics.Space.Sm * scale;
-        }
-
-        if (PrismArt.Button(drawList, new Vector2(left, top), rewards, scale, out _))
+        var arrowWidth = PrismType.Measure(Arrow, PrismFace.Label, labelPixels).X;
+        var rewardsLeft = right - arrowWidth - gap - PrismType.Measure(rewards, PrismFace.Label, labelPixels).X;
+        var tabsTop = top;
+        top = DrawTrackTabs(drawList, content, top, scale, out var tabsRight);
+        var rewardsTop = top > tabsTop && tabsRight + Metrics.Space.Xl * scale <= rewardsLeft
+            ? tabsTop
+            : top + (PrismArt.ButtonUnits * scale - labelPixels) * 0.5f;
+        if (PrismArt.Link(drawList, new Vector2(rewardsLeft, rewardsTop), rewards, PrismArt.Fore, scale))
         {
             OpenRewards();
+        }
+
+        PrismType.DrawRight(drawList, new Vector2(right, rewardsTop), Arrow, PrismArt.Fore, PrismFace.Label, labelPixels);
+        if (week.MyEntry is not null && week.Phase != PrismPhases.Entering &&
+            PrismArt.Button(drawList, new Vector2(content.Min.X + PrismArt.Gutter(scale), top), Loc.T(L.Prism.YourLook),
+                scale, out _))
+        {
+            Go(PrismScreen.Entry);
         }
     }
 

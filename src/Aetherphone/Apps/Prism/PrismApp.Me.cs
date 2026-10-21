@@ -127,11 +127,15 @@ internal sealed partial class PrismApp
         var name = author is null ? string.Empty : author.DisplayName.Length > 0 ? author.DisplayName : author.Handle;
         var pixels = PrismType.Fit(name, PrismFace.Headline, right - left, ProfileNameUnits * scale,
             ProfileNameUnits * scale * 0.7f, 1, out var lines);
+        var nameTop = top;
         top += PrismType.DrawLines(drawList, new Vector2(left, top), lines, PrismArt.Fore, PrismFace.Headline, pixels);
         var labelPixels = PrismArt.LabelPixels();
         PrismType.Draw(drawList, new Vector2(left, top), AuthorLine(author), PrismArt.Muted, PrismFace.Label, labelPixels);
         var action = Loc.T(mine ? L.Prism.PostGlam : profile is { Following: true } ? L.Prism.Following : L.Prism.Follow);
-        if (PrismArt.Button(drawList, new Vector2(right - PrismArt.ButtonWidth(action, scale), top), action, scale, out _))
+        var buttonTop = (nameTop + top + PrismType.LineHeight(PrismFace.Label, labelPixels) -
+                         PrismArt.ButtonUnits * scale) * 0.5f;
+        if (PrismArt.Button(drawList, new Vector2(right - PrismArt.ButtonWidth(action, scale), buttonTop), action, scale,
+                out _))
         {
             if (mine)
             {
@@ -143,7 +147,7 @@ internal sealed partial class PrismApp
             }
         }
 
-        top += PrismArt.ButtonUnits * scale + Metrics.Space.Lg * scale;
+        top += PrismType.LineHeight(PrismFace.Label, labelPixels) + Metrics.Space.Xl * scale;
         top = DrawProfileStats(drawList, left, top, right - left, profile, mine, scale);
         if (mine)
         {
@@ -157,6 +161,11 @@ internal sealed partial class PrismApp
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth() - gutter * 2f;
         var cursor = DrawPlacings(list, origin.X + gutter, origin.Y, width, profile, scale);
+        if (cursor > origin.Y)
+        {
+            cursor = DrawSectionLabel(list, origin.X + gutter, cursor, width, 1, Loc.T(L.Prism.StatGlams), scale);
+        }
+
         cursor = DrawLaneGrid(list, body, origin.X + gutter, cursor, width, glams.List,
             showSaved ? L.Prism.SavedEmptyHint : L.Prism.ProfileEmptyHint, scale);
         ImGui.Dummy(new Vector2(width, cursor - origin.Y));
