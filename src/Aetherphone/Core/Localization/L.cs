@@ -10890,6 +10890,24 @@ internal static class L
         public static readonly LocString StillEmpty = new("prism.stillEmpty", "Still empty: {0}");
         public static readonly LocString JudgedOnGlamour = new("prism.judgedOnGlamour",
             "The Fashion Report judges your real glamour, not what Glamourer or Penumbra show.");
+        public static readonly LocString Rewards = new("prism.rewards", "Rewards");
+        public static readonly LocString RewardsHeadline = new("prism.rewardsHeadline", "Win the week");
+        public static readonly LocString RewardsIntro = new("prism.rewardsIntro",
+            "Every week Prism crowns its best glams. This is what they take home.");
+        public static readonly LocString Badges = new("prism.badges", "Badges");
+        public static readonly LocString Frames = new("prism.frames", "Frames");
+        public static readonly LocString RewardBadgeTitle = new("prism.rewardBadgeTitle", "Podium badges");
+        public static readonly LocString RewardBadgeBody = new("prism.rewardBadgeBody",
+            "Finish on a podium and a badge joins your profile, worn next to your name across Aetherphone.");
+        public static readonly LocString RewardFrameTitle = new("prism.rewardFrameTitle", "Winner's frame");
+        public static readonly LocString RewardFrameBody = new("prism.rewardFrameBody",
+            "Winners wear a Prism frame around their avatar for a while, so everyone can see who took the week.");
+        public static readonly LocString RewardCoinTitle = new("prism.rewardCoinTitle", "Aether Coin");
+        public static readonly LocString RewardCoinBody = new("prism.rewardCoinBody",
+            "Heat podiums and the final pay out Aether Coin, and judging heats earns a little too.");
+        public static readonly LocString RewardGilTitle = new("prism.rewardGilTitle", "Gil");
+        public static readonly LocString RewardGilBody = new("prism.rewardGilBody",
+            "The very best glams can win gil as well.");
         public static readonly LocString TryOnGlam = new("prism.tryOnGlam", "Try on");
         public static readonly LocString Save = new("prism.save", "Save");
         public static readonly LocString Saved = new("prism.saved", "Saved");
@@ -10953,10 +10971,6 @@ internal static class L
         public static readonly LocString JudgeRewardEach = new("prism.judgeRewardEach", "+{0} Aether Coin for every heat you judge");
         public static readonly LocString JudgeRewardLeft = new("prism.judgeRewardLeft", "+{0} Aether Coin a heat, {1} left this week");
         public static readonly LocString JudgeRewardSpent = new("prism.judgeRewardSpent", "No judging Aether Coin left this week");
-        public static readonly LocString Prizes = new("prism.prizes", "Prizes");
-        public static readonly LocString HeatWinners = new("prism.heatWinners", "Heat winners");
-        public static readonly LocString Judging = new("prism.judging", "Judging");
-        public static readonly LocString MinHeatSize = new("prism.minHeatSize", "Heats pay out with {0} glams or more");
         public static readonly LocPlural FrameDays =
             new("prism.frameDays", "Yours to wear for {0} day", "Yours to wear for {0} days");
         public static readonly LocString GilSent = new("prism.gilSent",

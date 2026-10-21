@@ -41,6 +41,7 @@ internal static class PrismArt
     private const float FogAlpha = 0.6f;
     private const float EditorialMarginUnits = 20f;
     private const float SwatchStrength = 0.6f;
+    private const int MedalSegments = 48;
     private const float SwatchShadeShare = 0.45f;
 
     public static readonly Vector4 Bone = new(0.957f, 0.945f, 0.918f, 1f);
@@ -266,6 +267,24 @@ internal static class PrismArt
         var fade = new Vector2(rect.Min.X, rect.Max.Y - rect.Height * SwatchShadeShare);
         drawList.AddRectFilledMultiColor(fade, rect.Max, ImGui.GetColorU32(ShadeClear), ImGui.GetColorU32(ShadeClear),
             ImGui.GetColorU32(ShadeMid), ImGui.GetColorU32(ShadeMid));
+    }
+
+    public static void Medal(ImDrawListPtr drawList, Vector2 center, float radius, int tint, float turn, float scale)
+    {
+        drawList.AddCircleFilled(center, radius,
+            ImGui.GetColorU32(Vector4.Lerp(Back, Spectrum[tint % Spectrum.Length], SwatchStrength)), MedalSegments);
+        SpectrumRing(drawList, center, radius, turn, MathF.Max(1f, 2f * scale));
+    }
+
+    public static void SpectrumRing(ImDrawListPtr drawList, Vector2 center, float radius, float turn, float thickness)
+    {
+        var step = MathF.PI * 2f / Spectrum.Length;
+        for (var index = 0; index < Spectrum.Length; index++)
+        {
+            var start = turn - MathF.PI * 0.5f + step * index;
+            drawList.PathArcTo(center, radius, start, start + step, MedalSegments / Spectrum.Length);
+            drawList.PathStroke(ImGui.GetColorU32(Spectrum[index]), ImDrawFlags.None, thickness);
+        }
     }
 
     public static void SpectrumRule(ImDrawListPtr drawList, float left, float right, float y, float scale)

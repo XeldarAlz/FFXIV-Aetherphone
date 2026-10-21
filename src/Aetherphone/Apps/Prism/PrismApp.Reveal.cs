@@ -361,13 +361,10 @@ internal sealed partial class PrismApp
             StartReveal();
         }
 
-        if (PrismRewards.HasPrizes(Prizes))
+        cursor += finalOrder.Count > 0 ? Metrics.Size.TapTarget * scale : 0f;
+        if (PrismArt.Link(list, new Vector2(left, cursor), Loc.T(L.Prism.WhatWinnersGet), PrismArt.Muted, scale))
         {
-            cursor += finalOrder.Count > 0 ? Metrics.Size.TapTarget * scale : 0f;
-            if (PrismArt.Link(list, new Vector2(left, cursor), Loc.T(L.Prism.WhatWinnersGet), PrismArt.Muted, scale))
-            {
-                OpenPrizes();
-            }
+            OpenRewards();
         }
 
         cursor += Metrics.Size.TapTarget * scale + PrismArt.BottomMargin(scale);

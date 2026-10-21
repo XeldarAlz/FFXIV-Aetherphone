@@ -56,7 +56,8 @@ internal sealed partial class PrismApp
 
     private static bool IsLibraryScreen(PrismScreen value) =>
         value is PrismScreen.GlamDetail or PrismScreen.Compose or PrismScreen.Profile or PrismScreen.GlamList
-            or PrismScreen.WardrobeOutfit or PrismScreen.WardrobeCover or PrismScreen.FashionReport;
+            or PrismScreen.WardrobeOutfit or PrismScreen.WardrobeCover or PrismScreen.FashionReport
+            or PrismScreen.Rewards;
 
     private static Rect AboveTabBar(Rect content, bool wearing, float scale) =>
         new(content.Min, new Vector2(content.Max.X,

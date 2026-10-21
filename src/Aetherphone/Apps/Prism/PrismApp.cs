@@ -29,7 +29,7 @@ internal enum PrismScreen : byte
     Reveal,
     Final,
     Guide,
-    Prizes,
+    Rewards,
     Outfit,
     Track,
     Discover,
@@ -236,8 +236,8 @@ internal sealed partial class PrismApp : IResumableApp
             case PrismScreen.Guide:
                 DrawGuide(drawList, content, scale);
                 break;
-            case PrismScreen.Prizes:
-                DrawPrizes(drawList, content, scale);
+            case PrismScreen.Rewards:
+                DrawRewards(drawList, content, scale);
                 break;
             case PrismScreen.Outfit:
                 DrawOutfit(drawList, content, scale);
@@ -315,7 +315,6 @@ internal sealed partial class PrismApp : IResumableApp
                 Go(screen switch
                 {
                     PrismScreen.Pick => pickReturn,
-                    PrismScreen.Prizes => prizesReturn,
                     PrismScreen.Outfit => outfitReturn,
                     _ => PrismScreen.Cover,
                 }, -1);

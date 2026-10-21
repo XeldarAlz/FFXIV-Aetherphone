@@ -165,15 +165,12 @@ internal sealed partial class PrismApp
             left += width + Metrics.Space.Sm * scale;
         }
 
-        if (PrismRewards.HasPrizes(Prizes))
+        if (PrismArt.Button(drawList, new Vector2(left, top), Loc.T(L.Prism.Rewards), scale, out var rewardsWidth))
         {
-            if (PrismArt.Button(drawList, new Vector2(left, top), Loc.T(L.Prism.Prizes), scale, out var prizesWidth))
-            {
-                OpenPrizes();
-            }
-
-            left += prizesWidth + Metrics.Space.Sm * scale;
+            OpenRewards();
         }
+
+        left += rewardsWidth + Metrics.Space.Sm * scale;
 
         DrawFashionButton(drawList, content, left, top, scale);
     }

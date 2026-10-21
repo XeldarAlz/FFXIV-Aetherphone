@@ -20,9 +20,6 @@ internal sealed class PrismPrizeRow
     public readonly BadgeStyle? Badge;
     public readonly FrameStyle? Frame;
     public readonly int FrameDays;
-    public CachedText CoinText;
-    public CachedText GilText;
-    public CachedText DaysText;
 
     public PrismPrizeRow(int rank, long coins, long gil = 0, BadgeStyle? badge = null, FrameStyle? frame = null,
         int frameDays = 0)
