@@ -86,7 +86,7 @@ internal sealed partial class PrismApp
         SyncRewardArt();
         var top = DrawHeader(drawList, content, string.Empty, IssueLine(store.Week?.Issue ?? 0), true, scale);
         var body = new Rect(new Vector2(content.Min.X, top), content.Max);
-        using var surface = AppSurface.BeginEdgeToEdge(body);
+        using var surface = BeginBody(body);
         var list = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var gutter = PrismArt.Gutter(scale);

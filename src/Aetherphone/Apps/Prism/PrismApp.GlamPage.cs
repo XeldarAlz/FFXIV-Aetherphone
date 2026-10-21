@@ -136,7 +136,7 @@ internal sealed partial class PrismApp
         RefreshStats(glam);
         DrawGlamMenu(drawList, content, glam, scale);
         var body = new Rect(new Vector2(content.Min.X, top), content.Max);
-        using var surface = AppSurface.BeginEdgeToEdge(body);
+        using var surface = BeginBody(body);
         var list = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth() - gutter * 2f;

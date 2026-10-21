@@ -29,13 +29,15 @@ internal readonly record struct PrismStop(
     string Tag,
     string Title,
     string OutfitId,
-    int Visit);
+    float Scroll);
 
 internal sealed partial class PrismApp
 {
     private const float WearingBarUnits = 44f;
     private const float WearingGapUnits = 8f;
     private const int HistoryDepth = 12;
+    private const float KeepScroll = -1f;
+    private const float RestoreWaitSeconds = 3f;
 
     private static readonly PrismScreen[] TabRoots =
     {
@@ -46,12 +48,12 @@ internal sealed partial class PrismApp
     private readonly TabBar tabBar = new();
     private readonly TabItem[] tabItems = new TabItem[TabRoots.Length];
     private readonly AppSkin ui = new(AppPalettes.Neutral(AppAccents.For("prism")));
-    private readonly int[] rootVisits = { -1, -2, -3, -4 };
     private float bottomChrome;
     private int historyDepth;
     private PrismTab tab;
-    private int visit = -1;
-    private int visitCounter;
+    private float bodyScroll;
+    private PrismScreen bodyScreen;
+    private float pendingScroll = KeepScroll;
     private string? introWeek;
     private string wearingKey = string.Empty;
     private string wearingTitle = string.Empty;
@@ -131,8 +133,7 @@ internal sealed partial class PrismApp
         }
         else if (result.Tapped == (int)tab && IsTabRoot(screen))
         {
-            rootVisits[(int)tab] = ++visitCounter;
-            visit = rootVisits[(int)tab];
+            pendingScroll = 0f;
         }
         else if (result.Tapped >= 0)
         {
@@ -145,7 +146,7 @@ internal sealed partial class PrismApp
         var direction = next < tab || next == tab && !IsTabRoot(screen) ? -1 : 1;
         historyDepth = 0;
         Go(TabRoots[(int)next], direction);
-        visit = rootVisits[(int)next];
+        pendingScroll = KeepScroll;
         if (next == PrismTab.Discover)
         {
             RefreshDiscover(false);
@@ -178,7 +179,7 @@ internal sealed partial class PrismApp
         }
 
         history[historyDepth++] = new PrismStop(screen, glams.Detail, glams.Profile?.User, showSaved, listKind,
-            listItemId, listMod, listTag, listTitle, outfitId, visit);
+            listItemId, listMod, listTag, listTitle, outfitId, bodyScreen == screen ? bodyScroll : 0f);
 
         Go(next);
     }
@@ -188,15 +189,38 @@ internal sealed partial class PrismApp
         if (historyDepth == 0)
         {
             Go(TabRoots[(int)tab], -1);
-            visit = rootVisits[(int)tab];
+            pendingScroll = KeepScroll;
             return;
         }
 
         var stop = history[--historyDepth];
         history[historyDepth] = default;
         Go(stop.Screen, -1);
-        visit = stop.Visit;
+        pendingScroll = stop.Scroll;
         Restore(stop);
+    }
+
+    private AppSurface.SurfaceScope BeginBody(Rect body)
+    {
+        var surface = AppSurface.BeginEdgeToEdge(body);
+        if (pendingScroll == 0f)
+        {
+            surface.JumpToTop();
+            pendingScroll = KeepScroll;
+        }
+        else if (pendingScroll > 0f)
+        {
+            var reach = ImGui.GetScrollMaxY();
+            if (reach >= pendingScroll || screenAge >= RestoreWaitSeconds)
+            {
+                surface.JumpTo(MathF.Min(pendingScroll, reach));
+                pendingScroll = KeepScroll;
+            }
+        }
+
+        bodyScroll = ImGui.GetScrollY();
+        bodyScreen = screen;
+        return surface;
     }
 
     private void Restore(in PrismStop stop)

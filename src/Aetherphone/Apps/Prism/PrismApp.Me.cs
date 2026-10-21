@@ -167,7 +167,7 @@ internal sealed partial class PrismApp
         }
 
         var body = new Rect(new Vector2(content.Min.X, top), content.Max);
-        using var surface = AppSurface.BeginEdgeToEdge(body);
+        using var surface = BeginBody(body);
         var list = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth() - gutter * 2f;
@@ -383,7 +383,7 @@ internal sealed partial class PrismApp
             top = DrawItemSources(drawList, left, top, scale);
         }
         var body = new Rect(new Vector2(content.Min.X, top), content.Max);
-        using var surface = AppSurface.BeginEdgeToEdge(body);
+        using var surface = BeginBody(body);
         var list = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var scrollWidth = ScrollLayout.StableContentWidth() - gutter * 2f;

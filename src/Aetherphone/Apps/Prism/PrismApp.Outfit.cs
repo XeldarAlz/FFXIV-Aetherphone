@@ -64,7 +64,7 @@ internal sealed partial class PrismApp
         var strips = shared && entry is not null ? 2 : 1;
         var body = new Rect(new Vector2(content.Min.X, top),
             new Vector2(content.Max.X, StripRect(content, scale, strips - 1).Min.Y - Metrics.Space.Lg * scale));
-        using (AppSurface.BeginEdgeToEdge(body))
+        using (BeginBody(body))
         {
             var list = ImGui.GetWindowDrawList();
             var origin = ImGui.GetCursorScreenPos();

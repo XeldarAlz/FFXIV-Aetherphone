@@ -75,7 +75,7 @@ internal sealed partial class PrismApp
         top = bottom + Metrics.Space.Lg * scale;
         top = DrawWardrobeFilters(drawList, left, right, top, scale);
         var body = new Rect(new Vector2(content.Min.X, top), content.Max);
-        using var surface = AppSurface.BeginEdgeToEdge(body);
+        using var surface = BeginBody(body);
         var list = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth() - gutter * 2f;
@@ -227,7 +227,7 @@ internal sealed partial class PrismApp
         var top = DrawHeader(drawList, content, string.Empty, string.Empty, true, scale);
         var gutter = PrismArt.Gutter(scale);
         var body = new Rect(new Vector2(content.Min.X, top), content.Max);
-        using var surface = AppSurface.BeginEdgeToEdge(body);
+        using var surface = BeginBody(body);
         var list = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth() - gutter * 2f;

@@ -29,6 +29,7 @@ internal sealed partial class PrismApp
     private readonly PullToRefresh discoverPull = new();
     private GlamScope discoverScope = GlamScope.New;
     private int discoverFilter;
+    private bool todayResolved;
     private Action? refreshDiscoverNow;
 
     private void DrawDiscover(ImDrawListPtr drawList, Rect content, float scale)
@@ -57,7 +58,7 @@ internal sealed partial class PrismApp
 
         var body = new Rect(new Vector2(content.Min.X, top), content.Max);
         var lane = glams.Lane(discoverScope);
-        using var surface = AppSurface.BeginEdgeToEdge(body);
+        using var surface = BeginBody(body);
         if (!searching)
         {
             discoverPull.Draw(body, surface.Pull, surface.Dragging, lane.Loading, PrismArt.Muted,
@@ -426,9 +427,17 @@ internal sealed partial class PrismApp
     private float DrawDayHero(ImDrawListPtr drawList, float left, float top, float width, float scale)
     {
         var today = glams.Lane(GlamScope.Today);
-        if (today.Items.Length == 0 && !today.Loading)
+        if (today.Items.Length == 0)
         {
-            return top;
+            if (!today.Loading)
+            {
+                todayResolved = true;
+            }
+
+            if (todayResolved)
+            {
+                return top;
+            }
         }
 
         var gap = Metrics.Space.Sm * scale;
