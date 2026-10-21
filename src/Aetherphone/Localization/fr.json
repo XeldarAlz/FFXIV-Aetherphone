@@ -5670,6 +5670,8 @@
   "prism.tabMe": "Moi",
   "prism.scopeNew": "Nouveau",
   "prism.scopePopular": "Populaire",
+  "prism.searchHint": "Rechercher des objets ou des #tags",
+  "prism.glamsTagged": "Mirages avec {0}",
   "prism.scopeFollowing": "Abonnements",
   "prism.filterAll": "Tout",
   "prism.filterModded": "Moddé",

@@ -41,13 +41,24 @@ internal sealed partial class PrismApp
             StartCompose();
         }
 
-        top = DrawScopeRow(drawList, left, right, top, scale);
+        top = DrawSearchRow(drawList, left, right, top, scale);
+        if (!searching)
+        {
+            top = DrawScopeRow(drawList, left, right, top, scale);
+        }
+
         var body = new Rect(new Vector2(content.Min.X, top), content.Max);
         var lane = glams.Lane(discoverScope);
         using var surface = AppSurface.BeginEdgeToEdge(body);
         var list = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth() - gutter * 2f;
+        if (searching)
+        {
+            ImGui.Dummy(new Vector2(width, DrawSearchResults(list, origin.X + gutter, origin.Y, width, scale) - origin.Y));
+            return;
+        }
+
         var cursor = DrawThemeCard(list, origin.X + gutter, origin.Y, width, scale);
         cursor = DrawDayHero(list, origin.X + gutter, cursor, width, scale);
         cursor = DrawLaneGrid(list, body, origin.X + gutter, cursor, width, lane,

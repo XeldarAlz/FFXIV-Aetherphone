@@ -31,6 +31,7 @@ A link is clickable only when it is `https` on an allowed host: `xivmodarchive.c
 
 - Owned pieces count the bags, armoury, glamour dresser and armoire (`Core/Glamour/OwnedItems.cs`). The dresser and armoire only count once the player has opened them this session, and the glam page says so.
 - An item's page shows whether you own it, its gil vendor price and a market board link, from the phone's market index. The server only sends the glam count and what the item is worn with.
+- Search on Discover matches tradable gear by name through the market index and opens that item's glams, so untradable pieces are only reachable from a glam that uses them. Typing `#text` offers the tag.
 - Without Penumbra the glam page says mods need it and a new post is stamped vanilla; without Glamourer it says Try on uses the game's window.
 
 ## Server contract

@@ -5670,6 +5670,8 @@
   "prism.tabMe": "Ben",
   "prism.scopeNew": "Yeni",
   "prism.scopePopular": "Popüler",
+  "prism.searchHint": "Eşya veya #etiket ara",
+  "prism.glamsTagged": "{0} etiketli glamlar",
   "prism.scopeFollowing": "Takip",
   "prism.filterAll": "Tümü",
   "prism.filterModded": "Modlu",

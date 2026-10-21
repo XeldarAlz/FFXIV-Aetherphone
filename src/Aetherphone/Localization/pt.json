@@ -5670,6 +5670,8 @@
   "prism.tabMe": "Eu",
   "prism.scopeNew": "Novo",
   "prism.scopePopular": "Popular",
+  "prism.searchHint": "Buscar itens ou #tags",
+  "prism.glamsTagged": "Glamours com {0}",
   "prism.scopeFollowing": "Seguindo",
   "prism.filterAll": "Tudo",
   "prism.filterModded": "Com mods",

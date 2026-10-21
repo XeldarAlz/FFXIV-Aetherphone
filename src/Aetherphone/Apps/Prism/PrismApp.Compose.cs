@@ -152,6 +152,12 @@ internal sealed partial class PrismApp
         var labelPixels = PrismArt.LabelPixels();
         PrismType.Draw(drawList, new Vector2(left, top), label, PrismArt.Muted, PrismFace.Label, labelPixels);
         top += PrismType.LineHeight(PrismFace.Label, labelPixels);
+        return DrawInput(drawList, left, top, width, hint, id, ref text, maxLength, scale) + Metrics.Space.Lg * scale;
+    }
+
+    private float DrawInput(ImDrawListPtr drawList, float left, float top, float width, string hint, string id,
+        ref string text, int maxLength, float scale)
+    {
         var height = FieldUnits * scale;
         ImGui.SetCursorScreenPos(new Vector2(left, top + (height - ImGui.GetFrameHeight()) * 0.5f));
         ImGui.SetNextItemWidth(width);
@@ -164,7 +170,7 @@ internal sealed partial class PrismApp
         ImGui.PopStyleColor(3);
         PrismArt.Hairline(drawList, left, left + width, top + height, ImGui.IsItemActive() ? PrismArt.Fore : PrismArt.Faint,
             scale);
-        return top + height + Metrics.Space.Lg * scale;
+        return top + height;
     }
 
     private string CapturedLine()

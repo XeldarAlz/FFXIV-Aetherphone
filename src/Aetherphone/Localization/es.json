@@ -5670,6 +5670,8 @@
   "prism.tabMe": "Yo",
   "prism.scopeNew": "Nuevo",
   "prism.scopePopular": "Popular",
+  "prism.searchHint": "Busca objetos o #etiquetas",
+  "prism.glamsTagged": "Glamours con {0}",
   "prism.scopeFollowing": "Siguiendo",
   "prism.filterAll": "Todo",
   "prism.filterModded": "Con mods",

@@ -5670,6 +5670,8 @@
   "prism.tabMe": "Me",
   "prism.scopeNew": "New",
   "prism.scopePopular": "Popular",
+  "prism.searchHint": "Search items or #tags",
+  "prism.glamsTagged": "Glams tagged {0}",
   "prism.scopeFollowing": "Following",
   "prism.filterAll": "All",
   "prism.filterModded": "Modded",

@@ -5670,6 +5670,8 @@
   "prism.tabMe": "Я",
   "prism.scopeNew": "Новое",
   "prism.scopePopular": "Популярное",
+  "prism.searchHint": "Поиск предметов или #тегов",
+  "prism.glamsTagged": "Гламуры с {0}",
   "prism.scopeFollowing": "Подписки",
   "prism.filterAll": "Все",
   "prism.filterModded": "С модами",
