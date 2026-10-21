@@ -130,14 +130,15 @@ internal sealed partial class PrismApp
         var avatar = ProfileAvatarUnits * scale;
         var textLeft = left + avatar + Metrics.Space.Md * scale;
         var nameWidth = right - textLeft - buttonWidth;
-        var pixels = PrismType.Fit(AuthorName(author), PrismFace.Headline, nameWidth, ProfileNameUnits * scale,
+        var name = AuthorName(author);
+        var pixels = PrismType.Fit(name, PrismFace.Headline, nameWidth, ProfileNameUnits * scale,
             ProfileNameUnits * scale * 0.7f, 1, out var lines);
         var labelPixels = PrismArt.LabelPixels();
         var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var block = lines.Length * PrismType.LineHeight(PrismFace.Headline, pixels) + labelLine;
         var rowHeight = MathF.Max(avatar, block);
         var middle = top + rowHeight * 0.5f;
-        DrawAuthorAvatar(drawList, new Vector2(left + avatar * 0.5f, middle), avatar * 0.5f, author,
+        DrawAuthorAvatar(drawList, new Vector2(left + avatar * 0.5f, middle), avatar * 0.5f, name, author?.AvatarUrl,
             TextStyles.Title3.Scale);
         var textTop = middle - block * 0.5f;
         textTop += PrismType.DrawLines(drawList, new Vector2(textLeft, textTop), lines, PrismArt.Fore, PrismFace.Headline,

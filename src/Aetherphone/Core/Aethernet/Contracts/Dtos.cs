@@ -600,7 +600,9 @@ internal sealed record NotificationDto(
     int ActorBadges = 0,
     bool Read = false,
     string[]? ActorBadgeIds = null,
-    string ActorFrameId = "") : IIdentified;
+    string ActorFrameId = "",
+    int Rank = 0,
+    string? ImageUrl = null) : IIdentified;
 
 internal sealed record NotificationPage(
     NotificationDto[] Items,

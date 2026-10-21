@@ -2,6 +2,7 @@ using System.Text.Json;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Social;
 using Xunit;
 
 namespace Aetherphone.Tests;
@@ -73,6 +74,27 @@ public sealed class GlamWireContractTests
         Assert.Equal("{\"title\":\"Studious magic\",\"photos\":[{\"key\":\"k_1\",\"width\":810,\"height\":1080}],"
             + "\"gear\":[{\"slot\":3,\"itemId\":45123,\"stain0\":12,\"stain1\":0}],\"tags\":[\"cute\"],\"race\":6,"
             + "\"gender\":1,\"vanilla\":false,\"inspiredBy\":\"\"}", json);
+    }
+
+    [Fact]
+    public void PrismActivityRowsCarryTheirRankAndThumbnail()
+    {
+        var page = JsonSerializer.Deserialize("{\"items\":[{\"id\":\"n_1\",\"type\":22,\"app\":\"prism\","
+            + "\"postId\":\"g_1\",\"actorId\":\"\",\"actorName\":\"\",\"actorDisplayName\":\"\",\"actorHandle\":\"\","
+            + "\"preview\":\"Midnight Garden\",\"createdAtUnix\":1792540000,\"rank\":2,\"imageUrl\":\"https://x/1.jpg\"},"
+            + "{\"id\":\"n_2\",\"type\":0,\"app\":\"prism\",\"postId\":\"g_1\",\"actorId\":\"u_1\",\"actorName\":\"Ada\","
+            + "\"actorDisplayName\":\"Ada Moon\",\"actorHandle\":\"ada.moon\",\"createdAtUnix\":1792530000}],"
+            + "\"unreadByApp\":{\"prism\":2}}", AethernetJsonContext.Default.NotificationPage);
+        var placing = page!.Items[0];
+        Assert.Equal(SocialActivity.TypePlacing, placing.Type);
+        Assert.Equal(2, placing.Rank);
+        Assert.Equal("https://x/1.jpg", placing.ImageUrl);
+        Assert.True(SocialActivity.OpensPost(placing));
+        Assert.Equal("Your glam placed #2 in Midnight Garden", SocialActivity.Body(placing));
+        Assert.Equal(0, page.Items[1].Rank);
+        Assert.Null(page.Items[1].ImageUrl);
+        Assert.Equal("liked your glam", SocialActivity.Body(page.Items[1]));
+        Assert.Equal(2, page.UnreadByApp?["prism"]);
     }
 
     [Fact]

@@ -31,6 +31,7 @@ internal sealed class NotificationRouter
     private const string AetherStreamAppId = "aetherstream";
     private const string HuntsAppId = "hunts";
     private const string FeedbackAppId = "feedback";
+    private const string PrismAppId = "prism";
     private const int TypeLike = 0;
     private const int TypeComment = 1;
     private const int TypeFollow = 2;
@@ -47,6 +48,7 @@ internal sealed class NotificationRouter
     private const int TypeAdInquiry = 19;
     private const int TypeMissedCall = 20;
     private const int TypeRadioLive = 21;
+    private const int TypePlacing = 22;
     private const string CallGroupPrefix = "call:";
     private readonly INavigator navigation;
     private readonly NotificationService notifications;
@@ -213,7 +215,7 @@ internal sealed class NotificationRouter
 
     private static SocialDeepLink? SocialLinkFor(PhoneNotification notification)
     {
-        if (notification.AppId is not (ChirperAppId or AethergramAppId or VelvetAppId))
+        if (notification.AppId is not (ChirperAppId or AethergramAppId or VelvetAppId or PrismAppId))
         {
             return null;
         }
@@ -221,7 +223,7 @@ internal sealed class NotificationRouter
         return notification.SocialType switch
         {
             TypeLike or TypeComment or TypeCommentLike or TypeMention or TypeCommentMention or TypePhotoTag
-                or TypeRepost or TypeQuote
+                or TypeRepost or TypeQuote or TypePlacing
                 when !string.IsNullOrEmpty(notification.PostId)
                 => new SocialDeepLink(SocialLinkKind.Post, notification.PostId!),
             TypeFollow or TypeConnectRequest or TypeConnectAccept or TypeFollowAccept

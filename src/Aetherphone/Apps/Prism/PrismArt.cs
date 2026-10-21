@@ -10,7 +10,11 @@ internal static class PrismArt
 {
     public const float StripUnits = 46f;
     public const float ButtonUnits = 30f;
+    public const float IconUnits = 24f;
     public const int Stars = 5;
+
+    private const float IconDotUnits = 4f;
+    private const float IconDotShare = 0.4f;
 
     private const float LabelUnits = 13f;
     private const float ScoreDigitUnits = 24f;
@@ -197,6 +201,28 @@ internal static class PrismArt
         }
 
         PrismType.Draw(drawList, topLeft + new Vector2(lead, 0f), label, hovered ? Fore : color, PrismFace.Label, pixels);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return UiInteract.Click(min, max, hovered);
+    }
+
+    public static bool Icon(ImDrawListPtr drawList, Vector2 center, string glyph, bool dot, float scale)
+    {
+        var size = IconUnits * scale;
+        var half = MathF.Max(size, Metrics.Size.TapTarget * scale) * 0.5f;
+        var min = center - new Vector2(half, half);
+        var max = center + new Vector2(half, half);
+        var hovered = UiInteract.Hover(min, max);
+        PhoneIcon.Draw(drawList, center, glyph, hovered ? Muted : Fore, size);
+        if (dot)
+        {
+            drawList.AddCircleFilled(center + new Vector2(size, -size) * IconDotShare, IconDotUnits * scale,
+                ImGui.GetColorU32(ScoreLowInk));
+        }
+
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

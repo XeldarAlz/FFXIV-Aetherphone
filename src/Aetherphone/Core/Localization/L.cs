@@ -10993,6 +10993,16 @@ internal static class L
         public static readonly LocString StatusMoved = new("prism.statusMoved", "Moved");
         public static readonly LocString StatusMovedTitle = new("prism.statusMovedTitle",
             "Your glam moved to the other contest");
+        public static readonly LocString ActivityLiked = new("prism.activityLiked", "liked your glam");
+        public static readonly LocString ActivityPlaced = new("prism.activityPlaced", "Your glam placed #{0} in {1}");
+        public static readonly LocString ActivityResults = new("prism.activityResults", "Results are in");
+        public static readonly LocString ActivityEmpty = new("prism.activityEmpty",
+            "Likes, follows and contest results show up here.");
+        public static readonly LocString Activity = new("prism.activity", "Activity");
+        public static readonly LocString ActivityToday = new("prism.activityToday", "Today");
+        public static readonly LocString ActivityThisWeek = new("prism.activityThisWeek", "This week");
+        public static readonly LocString ActivityThisMonth = new("prism.activityThisMonth", "This month");
+        public static readonly LocString ActivityEarlier = new("prism.activityEarlier", "Earlier");
     }
 
     internal static class Announcements

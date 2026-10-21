@@ -16,6 +16,7 @@ internal static class NotificationChannels
         new("messages", L.Apps.Linkpearl, AppAccents.For("messages")),
         new("chirper", L.Apps.Chirper, AppAccents.For("chirper")),
         new("aethergram", L.Apps.Aethergram, AppAccents.For("aethergram")),
+        new("prism", L.Apps.Prism, AppAccents.For("prism")),
         new("velvet", L.Apps.Velvet, AppAccents.For("velvet")),
         new("market", L.Apps.Market, AppAccents.For("market")),
         new("venues", L.Apps.Venues, AppAccents.For("venues")),

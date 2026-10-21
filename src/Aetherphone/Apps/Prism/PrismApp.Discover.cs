@@ -33,7 +33,13 @@ internal sealed partial class PrismApp
         var gutter = PrismArt.Gutter(scale);
         var left = content.Min.X + gutter;
         var right = content.Max.X - gutter;
-        var top = DrawMasthead(drawList, content, DisplayName, string.Empty, string.Empty, scale, out _);
+        var top = DrawMasthead(drawList, content, DisplayName, string.Empty, string.Empty, scale, out var activity,
+            PhoneIcons.Heart, social.UnseenCount(Id) > 0);
+        if (activity)
+        {
+            OpenActivity();
+        }
+
         top = DrawSearchRow(drawList, left, right, top, scale);
         if (!searching)
         {

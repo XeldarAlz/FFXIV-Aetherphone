@@ -110,7 +110,7 @@ internal sealed partial class PrismApp
     }
 
     private float DrawMasthead(ImDrawListPtr drawList, Rect content, string title, string action, string under,
-        float scale, out bool acted)
+        float scale, out bool acted, string icon = "", bool dot = false)
     {
         var gutter = PrismArt.Gutter(scale);
         var top = content.Min.Y + HeaderGapUnits * scale;
@@ -121,8 +121,12 @@ internal sealed partial class PrismApp
             pixels);
         var nameBottom = top + PrismType.Measure(title, PrismFace.Headline, pixels).Y;
         var buttonTop = (top + nameBottom - PrismArt.ButtonUnits * scale) * 0.5f;
-        acted = action.Length > 0 && PrismArt.Button(drawList,
-            new Vector2(content.Max.X - gutter - PrismArt.ButtonWidth(action, scale), buttonTop), action, scale, out _);
+        acted = action.Length > 0
+            ? PrismArt.Button(drawList, new Vector2(content.Max.X - gutter - PrismArt.ButtonWidth(action, scale),
+                buttonTop), action, scale, out _)
+            : icon.Length > 0 && PrismArt.Icon(drawList,
+                new Vector2(content.Max.X - gutter - PrismArt.IconUnits * scale * 0.5f, (top + nameBottom) * 0.5f),
+                icon, dot, scale);
 
         var rule = top + PrismType.LineHeight(PrismFace.Headline, pixels) + HeaderGapUnits * scale;
         var gap = rule - nameBottom;

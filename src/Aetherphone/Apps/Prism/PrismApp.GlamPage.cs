@@ -250,7 +250,8 @@ internal sealed partial class PrismApp
         var avatarRadius = labelLine * BylineAvatarShare;
         var avatar = new Rect(new Vector2(left, top + labelLine * 0.5f - avatarRadius),
             new Vector2(left + avatarRadius * 2f, top + labelLine * 0.5f + avatarRadius));
-        DrawAuthorAvatar(drawList, avatar.Center, avatarRadius, glam.Author, TextStyles.Caption2.Scale);
+        DrawAuthorAvatar(drawList, avatar.Center, avatarRadius, AuthorName(glam.Author), glam.Author?.AvatarUrl,
+            TextStyles.Caption2.Scale);
         var handleLeft = avatar.Max.X + Metrics.Space.Sm * scale;
         if (glam.Author is not { Id.Length: > 0 } who)
         {
@@ -334,10 +335,10 @@ internal sealed partial class PrismApp
     private static string AuthorName(GlamAuthorDto? author) =>
         author is null ? string.Empty : author.DisplayName.Length > 0 ? author.DisplayName : author.Handle;
 
-    private void DrawAuthorAvatar(ImDrawListPtr drawList, Vector2 center, float radius, GlamAuthorDto? author,
+    private void DrawAuthorAvatar(ImDrawListPtr drawList, Vector2 center, float radius, string name, string? avatarUrl,
         float monogramScale) =>
-        AvatarView.Draw(drawList, center, radius, PrismArt.Muted, Initials.Of(AuthorName(author)), monogramScale,
-            images.Avatar(author?.AvatarUrl, radius * 2f), AvatarSegments);
+        AvatarView.Draw(drawList, center, radius, PrismArt.Muted, Initials.Of(name), monogramScale,
+            images.Avatar(avatarUrl, radius * 2f), AvatarSegments);
 
     private string TriedOnLine(long tryOns)
     {

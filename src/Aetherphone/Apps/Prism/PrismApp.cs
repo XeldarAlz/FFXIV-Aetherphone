@@ -8,9 +8,11 @@ using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Market;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Report;
 using Aetherphone.Core.Sharing;
+using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
@@ -41,6 +43,7 @@ internal enum PrismScreen : byte
     Wardrobe,
     WardrobeOutfit,
     WardrobeCover,
+    Activity,
 }
 
 internal sealed partial class PrismApp : IResumableApp
@@ -67,6 +70,9 @@ internal sealed partial class PrismApp : IResumableApp
     private readonly MarketItemIndex marketIndex;
     private readonly MarketLauncher marketLauncher;
     private readonly ShareService share;
+    private readonly SocialNotificationService social;
+    private readonly SocialLauncher launcher;
+    private readonly SocialActivityFeed activityFeed;
     private readonly PhotoComposeSession pickSession;
     private readonly ImageIntake pickIntake = new();
     private readonly PhotoViewerOverlay photoViewer = new();
@@ -89,7 +95,8 @@ internal sealed partial class PrismApp : IResumableApp
     public PrismApp(AethernetSession session, AethernetApi api, RemoteImageCache images, PhotoLibrary library,
         WallpaperImageCache wallpaperImages, Configuration configuration, ConfirmService confirm,
         ReportService report, GameData gameData, ITextureProvider textures, GlamourService glamour,
-        MarketItemIndex marketIndex, MarketLauncher marketLauncher, ShareService share)
+        MarketItemIndex marketIndex, MarketLauncher marketLauncher, ShareService share,
+        SocialNotificationService social, SocialLauncher launcher)
     {
         store = new PrismStore(session, api);
         glams = new GlamStore(session, api);
@@ -105,6 +112,9 @@ internal sealed partial class PrismApp : IResumableApp
         this.marketIndex = marketIndex;
         this.marketLauncher = marketLauncher;
         this.share = share;
+        this.social = social;
+        this.launcher = launcher;
+        activityFeed = new SocialActivityFeed(SocialActivity.PrismApp, session, api.Account);
         pickSession = new PhotoComposeSession(library, wallpaperImages);
         composeSession = new PhotoComposeSession(library, wallpaperImages);
         wardrobe = new WardrobeStore(Plugin.PluginInterface.ConfigDirectory.FullName);
@@ -118,7 +128,7 @@ internal sealed partial class PrismApp : IResumableApp
     public string Id => "prism";
     public string DisplayName => Loc.T(L.Apps.Prism);
     public string Glyph => "Pr";
-    public int BadgeCount => 0;
+    public int BadgeCount => social.UnseenCount(Id);
     public bool WantsSystemTheme => !onPhoto;
 
     public ShareKindSet AcceptedShares => store.IsSignedIn ? ShareKindSet.Photo : ShareKindSet.None;
@@ -185,6 +195,11 @@ internal sealed partial class PrismApp : IResumableApp
         TickRefresh();
         ForgetLoadsOnNewWeek();
         ConsumeSharedPhoto();
+        if (glams.IsSignedIn && launcher.TryConsume(Id, out var link))
+        {
+            OpenLink(link);
+        }
+
         screenAge += MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         var enter = PrismMotion.At(screenAge, 0f, TransitionTiming.PresentSmoothTime);
         var bar = ShowsTabBar(screen);
@@ -274,6 +289,9 @@ internal sealed partial class PrismApp : IResumableApp
                 break;
             case PrismScreen.WardrobeCover:
                 DrawWardrobeCover(drawList, content, scale);
+                break;
+            case PrismScreen.Activity:
+                DrawActivity(drawList, content, scale);
                 break;
             default:
                 DrawCover(drawList, full, content, scale);

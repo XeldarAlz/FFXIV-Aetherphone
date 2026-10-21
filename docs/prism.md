@@ -1,6 +1,6 @@
 # Prism
 
-Prism is the phone's glamour app: a library of glams people share, a weekly contest that runs on the same glams, and a private wardrobe for your own outfits. Modded glams come first and vanilla glams sit alongside them with a stamp of their own. Prism never hosts a mod file: a glam names its mods and links to where they live.
+Prism is the phone's glamour app: a library of glams people share, a weekly contest that runs on the same glams, and a private wardrobe for your own outfits. Modded glams come first and vanilla glams sit alongside them, marked on each glam's own page. Prism never hosts a mod file: a glam names its mods and links to where they live.
 
 ## The glam
 
@@ -101,6 +101,18 @@ Uploads use `/media/upload-url` with scope `prism`, the same as contest entries.
 ### The contest on glams
 
 A contest entry keeps today's routes (`PUT /prism/weeks/{id}/entry`, tracks, ballots, results). Its `outfit` now carries the full glam gear with mods. While the week runs the entry stays nameless and out of every feed. When results are out the server publishes it as a glam on the author's profile with `weekId` and `placing` set, and a glam that is already public can't be entered. Each podium placing in the results carries that glam's `glamId`, so tapping a winner opens the full glam page (likes, saves, try on); without it the client shows the placing's photo and outfit read only.
+
+### Activity
+
+Prism's activity screen, its home screen badge and its banners read the phone's shared notifications, the same rows Aethergram and Chirper use (`NotificationDto`; type numbers in `Core/Social/SocialActivity.cs`): `GET /notifications?app=prism[&cursor=]`, `unreadByApp.prism` on the global poll, and `POST /notifications/read { upToUnix, app: "prism" }` when the player opens the screen. Rows carry `app: "prism"` and ping the realtime social channel like any other notification. Prism needs three types:
+
+| Type | Sent when | Fields |
+| --- | --- | --- |
+| `0` like | someone likes one of your glams, once per liker per glam | actor fields, `postId` (the glam id), `preview` (the glam title), `imageUrl` (the glam's cover photo) |
+| `2` follow | someone follows you through Prism, that is a `/follows/{id}` call sent with `X-Aep-App: prism` | actor fields |
+| `22` placing | a week's results are out, one row per entrant | `postId` (the glam published from the entry), `preview` (the week's title), `rank` (the entry's final placing, from 1), `imageUrl` (the glam's cover); actor fields empty |
+
+`rank` and `imageUrl` are new optional fields on the notification row: other apps ignore them, and `imageUrl` draws a thumbnail on any Prism row that has one. Tapping a like or placing opens the glam, a follow opens the follower's profile, and a banner tap lands in the same place.
 
 ### Rules the server enforces
 
