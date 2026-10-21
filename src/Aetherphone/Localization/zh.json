@@ -5697,6 +5697,8 @@
   "prism.installed": "已安装",
   "prism.addToWardrobe": "加入衣橱",
   "prism.inWardrobe": "已在衣橱中",
+  "prism.bodyFemale": "{0}・女性",
+  "prism.bodyMale": "{0}・男性",
   "prism.checkMarket": "查看市场",
   "prism.glamOfTheDay": "今日幻化",
   "prism.seasonStanding": "{0}：第 {1} 名，{2} 分",

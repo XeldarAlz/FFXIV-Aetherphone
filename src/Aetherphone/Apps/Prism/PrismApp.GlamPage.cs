@@ -29,6 +29,7 @@ internal sealed partial class PrismApp
     private CachedText ownedText;
     private CachedText modsText;
     private CachedText triedText;
+    private CachedText bodyText;
     private int ownedPieces;
     private int totalPieces;
     private int missingMods;
@@ -243,10 +244,39 @@ internal sealed partial class PrismApp
                 ? triedText.Value
                 : triedText.Store(key, Loc.Plural(L.Prism.TriedOnCount, (int)Math.Min(glam.TryOns, int.MaxValue)));
             PrismType.Draw(drawList, new Vector2(left, top), tried, PrismArt.Muted, PrismFace.Label, labelPixels);
+        }
+
+        var body = BodyLine(glam.Race, glam.Gender);
+        if (body.Length > 0)
+        {
+            PrismType.DrawRight(drawList, new Vector2(left + width, top), body, PrismArt.Muted, PrismFace.Label,
+                labelPixels);
+        }
+
+        if (glam.TryOns > 0 || body.Length > 0)
+        {
             top += labelLine;
         }
 
         return top + Metrics.Space.Lg * scale;
+    }
+
+    private string BodyLine(int race, int gender)
+    {
+        if (race <= 0)
+        {
+            return string.Empty;
+        }
+
+        var key = HashCode.Combine(race, gender, Loc.Current.Code);
+        if (bodyText.IsCurrent(key))
+        {
+            return bodyText.Value;
+        }
+
+        var name = gameData.RaceName((uint)race, gender == 1);
+        return bodyText.Store(key,
+            name.Length == 0 ? string.Empty : Loc.T(gender == 1 ? L.Prism.BodyFemale : L.Prism.BodyMale, name));
     }
 
     private float DrawGlamActions(ImDrawListPtr drawList, float left, float top, float width, GlamDto glam, float scale)
