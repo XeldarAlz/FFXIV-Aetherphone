@@ -9,6 +9,8 @@ internal static class HousingDistricts
     public const int PlotsPerDivision = 30;
     public const int PlotsPerWard = PlotsPerDivision * 2;
     public const int DefaultWards = 30;
+    public const byte WardIntendedUse = 13;
+    public const byte InteriorIntendedUse = 14;
 
     public const uint MistId = 339u;
     public const uint LavenderBedsId = 340u;
