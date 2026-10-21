@@ -46,8 +46,14 @@ internal sealed class WeatherControl : IDisposable
     {
         if (id != NoWeather && CanControl)
         {
-            weatherOverride = id;
+            OverrideWeather(id);
         }
+    }
+
+    private void OverrideWeather(byte id)
+    {
+        weatherOverride = id;
+        weather.LiveOverridden = id != NoWeather;
     }
 
     public void SetTime(int minuteOfDay)
@@ -65,7 +71,7 @@ internal sealed class WeatherControl : IDisposable
             return;
         }
 
-        weatherOverride = NoWeather;
+        OverrideWeather(NoWeather);
         var natural = weather.NaturalNow();
         if (!GameMemory.Attached)
         {
@@ -199,7 +205,7 @@ internal sealed class WeatherControl : IDisposable
 
     private void OnTerritoryChanged(uint _)
     {
-        weatherOverride = NoWeather;
+        OverrideWeather(NoWeather);
         ClearTime();
     }
 

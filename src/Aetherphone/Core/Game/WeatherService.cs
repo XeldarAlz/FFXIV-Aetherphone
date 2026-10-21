@@ -23,7 +23,6 @@ internal sealed class WeatherService
     private const long RealSecondsPerEorzeaDay = 4200;
     private const long EstateReadIntervalMilliseconds = 1_000;
     private const long EstateRetryIntervalMilliseconds = 100;
-    private const uint HousingInteriorUse = 14;
     private const uint TownUse = 0;
     private const uint OverworldUse = 1;
     private const uint FieldOperationOrder = uint.MaxValue - 1;
@@ -112,6 +111,11 @@ internal sealed class WeatherService
         if (district != 0)
         {
             Forecast(district, into, count);
+            if (LiveOverridden && into.Count > 0 && LiveRenderedWeather() is { } overridden)
+            {
+                into[0] = into[0] with { Weather = overridden };
+            }
+
             return;
         }
 
@@ -134,6 +138,8 @@ internal sealed class WeatherService
         }
     }
 
+    public bool LiveOverridden { get; set; }
+
     public uint CurrentTerritory
     {
         get
@@ -145,6 +151,11 @@ internal sealed class WeatherService
 
     private uint EstateDistrict()
     {
+        if (!GameSheets.Available)
+        {
+            return 0;
+        }
+
         var territoryId = clientState.TerritoryType;
         var now = Environment.TickCount64;
         if (territoryId != estateTerritory)
@@ -152,37 +163,41 @@ internal sealed class WeatherService
             estateTerritory = territoryId;
             estateInterior = IsHousingInterior(territoryId);
             estateResolved = false;
+            estateReadAtTick = 0;
             if (!estateInterior)
             {
                 heldDistrict = HousingDistricts.TryGet(territoryId, out _) ? territoryId : 0;
             }
         }
-        else
+
+        if (!estateInterior)
         {
-            var interval = estateResolved ? EstateReadIntervalMilliseconds : EstateRetryIntervalMilliseconds;
-            if (now - estateReadAtTick < interval)
-            {
-                return estateDistrict;
-            }
+            estateDistrict = 0;
+            return 0;
+        }
+
+        var interval = estateResolved ? EstateReadIntervalMilliseconds : EstateRetryIntervalMilliseconds;
+        if (now - estateReadAtTick < interval)
+        {
+            return estateDistrict;
         }
 
         estateReadAtTick = now;
-        var district = territoryId == 0 ? 0 : LocationShare.CurrentEstateDistrict();
+        var district = LocationShare.CurrentEstateDistrict();
         estateResolved = district != 0;
         if (estateResolved)
         {
             heldDistrict = district;
         }
 
-        estateDistrict = estateResolved || !estateInterior ? district : heldDistrict;
+        estateDistrict = estateResolved ? district : heldDistrict;
         return estateDistrict;
     }
 
     private bool IsHousingInterior(uint territoryId)
     {
-        return territoryId != 0 && GameSheets.Available &&
-            data.GetExcelSheet<TerritoryType>().TryGetRow(territoryId, out var territory) &&
-            territory.TerritoryIntendedUse.RowId == HousingInteriorUse;
+        return territoryId != 0 && data.GetExcelSheet<TerritoryType>().TryGetRow(territoryId, out var territory) &&
+            territory.TerritoryIntendedUse.RowId == HousingDistricts.InteriorIntendedUse;
     }
 
     public string ZoneName(uint territoryId)
