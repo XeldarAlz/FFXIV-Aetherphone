@@ -69,7 +69,7 @@ Everything is under the signed-in Aethernet session. Paths are built in `Core/Ae
 
 - `slot` is the equipped index (0 main hand, 1 off hand, 2 head, 3 body, 4 hands, 6 legs, 7 feet, 8 ears, 9 neck, 10 wrists, 11 right ring, 12 left ring); `-1` holds character mods and has no item. `optional` (default false) marks a piece the glam works without.
 - `race` is the game's Race sheet row and `gender` is 0 male, 1 female.
-- `likes` is exact only for the author; everyone else gets 0.
+- `likes` is the glam's like count, the same for every viewer.
 - `weekId` and `placing` are set when the glam came from a contest entry, once the week's results are out.
 
 ### Routes
@@ -83,7 +83,7 @@ Everything is under the signed-in Aethernet session. Paths are built in `Core/Ae
 | `PUT` / `DELETE /prism/glams/{id}/like` | | 204 |
 | `POST /prism/glams/{id}/tryon` | | 204, counted once per viewer per day |
 | `GET /users/{id}/glams[?cursor=]` | | `{ items: Glam[], nextCursor }` |
-| `GET /users/{id}/prism` | | `{ user, following, glamCount, tryOnsReceived, likesReceived (own only), placings: [{ weekId, title, rank, track }] }`; follow and unfollow use the existing `/follows/{id}` |
+| `GET /users/{id}/prism` | | `{ user, following, glamCount, tryOnsReceived, likesReceived, placings: [{ weekId, title, rank, track }] }`; follow and unfollow use the existing `/follows/{id}` |
 | `GET /me/prism/collections` | | `[{ id, name, count, coverUrl }]`; the `saved` collection always exists |
 | `POST /me/prism/collections` | `{ name }` | the collection |
 | `DELETE /prism/collections/{id}` | | 204 |

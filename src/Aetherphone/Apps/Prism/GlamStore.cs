@@ -370,8 +370,7 @@ internal sealed class GlamStore : IDisposable
     public void ToggleLike(GlamDto glam)
     {
         var liked = !glam.Liked;
-        var mine = glam.Author?.Id == MyId;
-        Replace(glam with { Liked = liked, Likes = mine ? Math.Max(0, glam.Likes + (liked ? 1 : -1)) : glam.Likes });
+        Replace(glam with { Liked = liked, Likes = Math.Max(0, glam.Likes + (liked ? 1 : -1)) });
         work.Run("like", async token =>
         {
             if (!await client.LikeAsync(glam.Id, liked, token).ConfigureAwait(false))

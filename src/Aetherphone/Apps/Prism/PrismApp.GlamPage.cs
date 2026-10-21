@@ -451,7 +451,7 @@ internal sealed partial class PrismApp
         top = tryOn.Max.Y + Metrics.Space.Md * scale;
         var labelPixels = PrismArt.LabelPixels();
         var row = PrismType.LineHeight(PrismFace.Label, labelPixels) + Metrics.Space.Sm * scale;
-        if (listed && PrismArt.Link(drawList, new Vector2(left, top), Loc.T(glam.Liked ? L.Prism.Liked : L.Prism.Like),
+        if (listed && PrismArt.Link(drawList, new Vector2(left, top), glam.Likes > 0 ? NumberText.Compact(glam.Likes) : Loc.T(L.Prism.Like),
                 glam.Liked ? PrismArt.Fore : PrismArt.Muted, scale, row,
                 glam.Liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart))
         {

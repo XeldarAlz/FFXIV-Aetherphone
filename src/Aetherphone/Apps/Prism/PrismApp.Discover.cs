@@ -242,8 +242,20 @@ internal sealed partial class PrismApp
             PrismType.Draw(drawList, new Vector2(x + pad, max.Y - pad - labelLine * 2f),
                 PrismType.FitLabel(glam.Title, labelPixels, column - pad * 2f), PrismArt.PhotoFore, PrismFace.Label,
                 labelPixels);
+            var likesWidth = 0f;
+            if (glam.Likes > 0)
+            {
+                var bottom = max.Y - pad - labelLine;
+                likesWidth = PrismType.DrawRight(drawList, new Vector2(max.X - pad, bottom),
+                    NumberText.Compact(glam.Likes), PrismArt.PhotoFore, PrismFace.Label, labelPixels);
+                PhoneIcon.Draw(drawList, new Vector2(max.X - pad - likesWidth - gap - labelPixels * 0.5f,
+                    bottom + labelLine * 0.5f), glam.Liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart,
+                    PrismArt.PhotoFore, labelPixels);
+                likesWidth += labelPixels + gap * 2f;
+            }
+
             PrismType.Draw(drawList, new Vector2(x + pad, max.Y - pad - labelLine),
-                PrismType.FitLabel(AuthorLine(glam.Author), labelPixels, column - pad * 2f),
+                PrismType.FitLabel(AuthorLine(glam.Author), labelPixels, column - pad * 2f - likesWidth),
                 Palette.WithAlpha(PrismArt.PhotoFore, MutedOnPhoto), PrismFace.Label, labelPixels);
             drawList.PopClipRect();
             var hovered = UiInteract.Hover(min, max);

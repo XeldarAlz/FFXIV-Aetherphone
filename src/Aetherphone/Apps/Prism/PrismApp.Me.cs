@@ -153,7 +153,7 @@ internal sealed partial class PrismApp
         }
 
         top += rowHeight + Metrics.Space.Xl * scale;
-        top = DrawProfileStats(drawList, left, top, right - left, profile, mine, scale);
+        top = DrawProfileStats(drawList, left, top, right - left, profile, scale);
         if (mine)
         {
             top = DrawSeasonLine(drawList, left, top, scale);
@@ -181,7 +181,7 @@ internal sealed partial class PrismApp
     }
 
     private float DrawProfileStats(ImDrawListPtr drawList, float left, float top, float width, GlamProfileDto? profile,
-        bool mine, float scale)
+        float scale)
     {
         var column = (width - Metrics.Space.Lg * scale * 2f) / 3f;
         var step = column + Metrics.Space.Lg * scale;
@@ -189,11 +189,8 @@ internal sealed partial class PrismApp
             Count(ref glamCountText, profile?.GlamCount ?? 0), scale);
         DrawStat(drawList, new Vector2(left + step, top), column, Loc.T(L.Prism.StatTriedOn),
             Count(ref triedCountText, profile?.TryOnsReceived ?? 0), scale);
-        if (mine)
-        {
-            DrawStat(drawList, new Vector2(left + step * 2f, top), column, Loc.T(L.Prism.StatLikes),
-                Count(ref likeCountText, profile?.LikesReceived ?? 0), scale);
-        }
+        DrawStat(drawList, new Vector2(left + step * 2f, top), column, Loc.T(L.Prism.StatLikes),
+            Count(ref likeCountText, profile?.LikesReceived ?? 0), scale);
 
         var labelLine = PrismType.LineHeight(PrismFace.Label, PrismArt.LabelPixels());
         return top + Metrics.Space.Md * scale + labelLine + PrismType.LineHeight(PrismFace.Headline, StatUnits * scale) +

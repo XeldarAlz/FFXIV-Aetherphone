@@ -10893,7 +10893,6 @@ internal static class L
         public static readonly LocString Save = new("prism.save", "Save");
         public static readonly LocString Saved = new("prism.saved", "Saved");
         public static readonly LocString Like = new("prism.like", "Like");
-        public static readonly LocString Liked = new("prism.liked", "Liked");
         public static readonly LocString OwnPieces = new("prism.ownPieces", "You own {0} of {1} pieces");
         public static readonly LocString ModsInstalled = new("prism.modsInstalled", "{0} of {1} mods installed");
         public static readonly LocString GearHeading = new("prism.gearHeading", "Gear");
