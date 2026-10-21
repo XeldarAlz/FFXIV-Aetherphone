@@ -221,6 +221,17 @@ internal sealed class GlamourService : IDisposable
         return true;
     }
 
+    public bool ApplyDesign(Guid id)
+    {
+        if (!HasGlamourer || !glamourer.ApplyDesign(id))
+        {
+            return false;
+        }
+
+        tryingOn = true;
+        return true;
+    }
+
     public Dictionary<Guid, (string, string, uint, bool)> Designs() =>
         HasGlamourer ? glamourer.Designs() : new Dictionary<Guid, (string, string, uint, bool)>();
 

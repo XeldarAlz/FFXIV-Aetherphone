@@ -64,7 +64,9 @@ internal sealed record GlamProfileDto(
     int GlamCount = 0,
     long TryOnsReceived = 0,
     long LikesReceived = 0,
-    GlamPlacingDto[]? Placings = null);
+    GlamPlacingDto[]? Placings = null,
+    bool Following = false,
+    GlamAuthorDto? User = null);
 
 internal sealed record GlamCollectionDto(string Id = "", string Name = "", int Count = 0, string CoverUrl = "");
 

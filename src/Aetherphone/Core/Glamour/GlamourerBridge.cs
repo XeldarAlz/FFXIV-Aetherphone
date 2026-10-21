@@ -21,6 +21,7 @@ internal sealed class GlamourerBridge : IDisposable
     private readonly ICallGateSubscriber<Dictionary<Guid, (string, string, uint, bool)>> designListGate;
     private readonly ICallGateSubscriber<Guid, JObject?> designGate;
     private readonly ICallGateSubscriber<string, string, (int, Guid)> addDesignGate;
+    private readonly ICallGateSubscriber<Guid, int, uint, ulong, int> applyDesignGate;
     private readonly ICallGateSubscriber<object> initializedGate;
     private readonly ICallGateSubscriber<object> disposedGate;
     private volatile bool readySignaled;
@@ -39,6 +40,7 @@ internal sealed class GlamourerBridge : IDisposable
             .GetIpcSubscriber<Dictionary<Guid, (string, string, uint, bool)>>("Glamourer.GetDesignListExtended");
         designGate = pluginInterface.GetIpcSubscriber<Guid, JObject?>("Glamourer.GetDesignJObject");
         addDesignGate = pluginInterface.GetIpcSubscriber<string, string, (int, Guid)>("Glamourer.AddDesign");
+        applyDesignGate = pluginInterface.GetIpcSubscriber<Guid, int, uint, ulong, int>("Glamourer.ApplyDesign");
         initializedGate = pluginInterface.GetIpcSubscriber<object>("Glamourer.Initialized");
         disposedGate = pluginInterface.GetIpcSubscriber<object>("Glamourer.Disposed");
         initializedGate.Subscribe(OnReady);
@@ -132,6 +134,10 @@ internal sealed class GlamourerBridge : IDisposable
         var design = Call(() => designGate.InvokeFunc(id), null, "GetDesignJObject");
         return design is null ? string.Empty : design.ToString(Newtonsoft.Json.Formatting.None);
     }
+
+    public bool ApplyDesign(Guid id) =>
+        Call(() => applyDesignGate.InvokeFunc(id, PenumbraBridge.PlayerIndex, 0, OnceFlag | EquipmentFlag), -1,
+            "ApplyDesign") == Success;
 
     public bool AddDesign(string state, string name)
     {

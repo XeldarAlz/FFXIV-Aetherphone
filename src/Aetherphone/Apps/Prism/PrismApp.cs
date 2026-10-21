@@ -4,6 +4,7 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Game;
+using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Photos;
@@ -30,6 +31,14 @@ internal enum PrismScreen : byte
     Outfit,
     Glam,
     Track,
+    Discover,
+    GlamDetail,
+    Compose,
+    Me,
+    Profile,
+    GlamList,
+    Wardrobe,
+    WardrobeOutfit,
 }
 
 internal sealed partial class PrismApp : IResumableApp
@@ -41,6 +50,8 @@ internal sealed partial class PrismApp : IResumableApp
     private const int NoticeLines = 3;
 
     private readonly PrismStore store;
+    private readonly GlamStore glams;
+    private readonly GlamourService glamour;
     private readonly RemoteImageCache images;
     private readonly PhotoLibrary library;
     private readonly Configuration configuration;
@@ -67,9 +78,11 @@ internal sealed partial class PrismApp : IResumableApp
 
     public PrismApp(AethernetSession session, AethernetApi api, RemoteImageCache images, PhotoLibrary library,
         WallpaperImageCache wallpaperImages, Configuration configuration, ConfirmService confirm,
-        ReportService report, GameData gameData, ITextureProvider textures)
+        ReportService report, GameData gameData, ITextureProvider textures, GlamourService glamour)
     {
         store = new PrismStore(session, api);
+        glams = new GlamStore(session, api);
+        this.glamour = glamour;
         this.images = images;
         this.library = library;
         this.configuration = configuration;
@@ -78,6 +91,9 @@ internal sealed partial class PrismApp : IResumableApp
         this.gameData = gameData;
         this.textures = textures;
         pickSession = new PhotoComposeSession(library, wallpaperImages);
+        composeSession = new PhotoComposeSession(library, wallpaperImages);
+        wardrobe = new WardrobeStore(Plugin.PluginInterface.ConfigDirectory.FullName);
+        postSettled = SettlePost;
         withdraw = store.Withdraw;
         ballotSettled = SettleBallot;
         entrySettled = SettleEntry;
@@ -111,8 +127,7 @@ internal sealed partial class PrismApp : IResumableApp
         }
         else
         {
-            Go(PrismScreen.Cover);
-            introDelay = IntroSeconds;
+            OpenTab(PrismTab.Discover);
         }
 
         sinceRefresh = 0f;
@@ -158,6 +173,17 @@ internal sealed partial class PrismApp : IResumableApp
     private void DrawScreen(ImDrawListPtr drawList, Rect full, Rect content, float scale)
     {
         onPhoto = false;
+        var root = IsTabRoot(screen);
+        var area = root ? AboveTabBar(content, scale) : content;
+        DrawScreenBody(drawList, full, area, scale);
+        if (root)
+        {
+            DrawTabBar(drawList, content, scale);
+        }
+    }
+
+    private void DrawScreenBody(ImDrawListPtr drawList, Rect full, Rect content, float scale)
+    {
         switch (screen)
         {
             case PrismScreen.Entry:
@@ -190,6 +216,28 @@ internal sealed partial class PrismApp : IResumableApp
             case PrismScreen.Track:
                 DrawTrackChoice(drawList, content, scale);
                 break;
+            case PrismScreen.Discover:
+                DrawDiscover(drawList, content, scale);
+                break;
+            case PrismScreen.GlamDetail:
+                DrawGlamDetail(drawList, content, scale);
+                break;
+            case PrismScreen.Compose:
+                DrawCompose(drawList, content, scale);
+                break;
+            case PrismScreen.Me:
+            case PrismScreen.Profile:
+                DrawProfile(drawList, content, scale);
+                break;
+            case PrismScreen.GlamList:
+                DrawGlamList(drawList, content, scale);
+                break;
+            case PrismScreen.Wardrobe:
+                DrawWardrobe(drawList, content, scale);
+                break;
+            case PrismScreen.WardrobeOutfit:
+                DrawWardrobeOutfit(drawList, content, scale);
+                break;
             default:
                 DrawCover(drawList, full, content, scale);
                 break;
@@ -203,7 +251,13 @@ internal sealed partial class PrismApp : IResumableApp
             store.ClearFailure();
         }
 
+        if (next != screen && screen == PrismScreen.GlamDetail && glamour.TryingOn)
+        {
+            glamour.Revert();
+        }
+
         screen = next;
+        SyncTab(next);
         enterDirection = direction;
         screenAge = 0f;
         introDelay = 0f;
@@ -217,7 +271,12 @@ internal sealed partial class PrismApp : IResumableApp
         float height;
         if (back)
         {
-            if (PrismArt.Link(drawList, row.Min, Loc.T(L.Prism.Back), PrismArt.Muted, scale))
+            var backClicked = PrismArt.Link(drawList, row.Min, Loc.T(L.Prism.Back), PrismArt.Muted, scale);
+            if (backClicked && IsLibraryScreen(screen))
+            {
+                GoBack();
+            }
+            else if (backClicked)
             {
                 Go(screen switch
                 {
@@ -389,6 +448,8 @@ internal sealed partial class PrismApp : IResumableApp
     public void Dispose()
     {
         pickSession.Dispose();
+        composeSession.Dispose();
         store.Dispose();
+        glams.Dispose();
     }
 }

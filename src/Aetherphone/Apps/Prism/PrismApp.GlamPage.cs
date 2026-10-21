@@ -1,0 +1,402 @@
+using Aetherphone.Core;
+using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Confirm;
+using Aetherphone.Core.Glamour;
+using Aetherphone.Core.Localization;
+using Aetherphone.Core.Theme;
+using Aetherphone.Core.Report;
+using Aetherphone.Windows;
+using Aetherphone.Windows.Components;
+using Aetherphone.Windows.Widgets;
+using Dalamud.Bindings.ImGui;
+
+namespace Aetherphone.Apps.Prism;
+
+internal sealed partial class PrismApp
+{
+    private const float MutedOnPhoto = 0.72f;
+    private const float ThumbUnits = 44f;
+    private const float DetailTitleUnits = 28f;
+    private const float DetailTitleMinUnits = 20f;
+    private const string Arrow = "→";
+
+    private readonly Dictionary<string, string> handleLines = new(StringComparer.Ordinal);
+    private string statsFor = string.Empty;
+    private CachedText ownedText;
+    private CachedText modsText;
+    private CachedText triedText;
+    private int ownedPieces;
+    private int totalPieces;
+    private int missingMods;
+    private int totalMods;
+    private int photoIndex;
+
+    private void OpenGlam(GlamDto glam)
+    {
+        glams.Open(glam);
+        photoIndex = 0;
+        statsFor = string.Empty;
+        Push(PrismScreen.GlamDetail);
+    }
+
+    private string AuthorLine(GlamAuthorDto? author)
+    {
+        if (author is null || author.Handle.Length == 0)
+        {
+            return author?.DisplayName ?? string.Empty;
+        }
+
+        if (!handleLines.TryGetValue(author.Handle, out var line))
+        {
+            line = "@" + author.Handle;
+            handleLines[author.Handle] = line;
+        }
+
+        return line;
+    }
+
+    private void DrawGlamDetail(ImDrawListPtr drawList, Rect content, float scale)
+    {
+        if (glams.Detail is not { } glam)
+        {
+            GoBack();
+            return;
+        }
+
+        RefreshStats(glam);
+        var top = DrawHeader(drawList, content, string.Empty, string.Empty, true, scale);
+        var gutter = PrismArt.Gutter(scale);
+        DrawGlamMenu(drawList, content, glam, scale);
+        var body = new Rect(new Vector2(content.Min.X, top), content.Max);
+        using var surface = AppSurface.BeginEdgeToEdge(body);
+        var list = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ScrollLayout.StableContentWidth() - gutter * 2f;
+        var left = origin.X + gutter;
+        var cursor = DrawGlamPhotos(list, left, origin.Y, width, glam, scale);
+        cursor = DrawGlamHeading(list, left, cursor, width, glam, scale);
+        cursor = DrawGlamActions(list, left, cursor, width, glam, scale);
+        cursor = DrawGear(list, left, cursor, width, glam, scale);
+        ImGui.Dummy(new Vector2(width, cursor - origin.Y + PrismArt.BottomMargin(scale)));
+    }
+
+    private void RefreshStats(GlamDto glam)
+    {
+        if (statsFor == glam.Id)
+        {
+            return;
+        }
+
+        statsFor = glam.Id;
+        var gear = glam.Gear ?? Array.Empty<GlamGearDto>();
+        ownedPieces = GlamourService.OwnedPieces(gear, out totalPieces);
+        missingMods = glamour.MissingMods(gear, out totalMods);
+    }
+
+    private void DrawGlamMenu(ImDrawListPtr drawList, Rect content, GlamDto glam, float scale)
+    {
+        var labelPixels = PrismArt.LabelPixels();
+        var gutter = PrismArt.Gutter(scale);
+        var top = content.Min.Y + HeaderGapUnits * scale;
+        var width = PrismType.Measure(MoreGlyph, PrismFace.Label, labelPixels).X;
+        if (!PrismArt.Link(drawList, new Vector2(content.Max.X - gutter - width, top), MoreGlyph, PrismArt.Muted, scale))
+        {
+            return;
+        }
+
+        if (glam.Author?.Id == glams.MyId)
+        {
+            confirm.Ask(new ConfirmRequest
+            {
+                Title = Loc.T(L.Prism.DeleteGlamTitle),
+                Message = Loc.T(L.Prism.DeleteGlamBody),
+                ConfirmLabel = Loc.T(L.Common.Delete),
+                CancelLabel = Loc.T(L.Common.Cancel),
+                Danger = true,
+                Confirm = () =>
+                {
+                    glams.Delete(glam);
+                    GoBack();
+                },
+            });
+            return;
+        }
+
+        report.Open(new ReportPrompt
+        {
+            Title = Loc.T(L.Prism.ReportGlam),
+            Submit = (reason, done) => glams.Report(glam.Id, reason, done),
+        });
+    }
+
+    private float DrawGlamPhotos(ImDrawListPtr drawList, float left, float top, float width, GlamDto glam, float scale)
+    {
+        var photos = glam.Photos ?? Array.Empty<GlamPhotoDto>();
+        var height = width / GlamStore.PhotoRatio;
+        var frame = new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
+        drawList.AddRectFilled(frame.Min, frame.Max, ImGui.GetColorU32(Palette.WithAlpha(PrismArt.Fore, PickFillAlpha)));
+        photoIndex = Math.Clamp(photoIndex, 0, Math.Max(0, photos.Length - 1));
+        if (photos.Length > 0)
+        {
+            DrawLook(drawList, frame, photos[photoIndex].Url, false);
+        }
+
+        var cursor = frame.Max.Y + Metrics.Space.Sm * scale;
+        if (photos.Length < 2)
+        {
+            return cursor + Metrics.Space.Md * scale;
+        }
+
+        var thumb = ThumbUnits * scale;
+        for (var index = 0; index < photos.Length; index++)
+        {
+            var min = new Vector2(left + index * (thumb + Metrics.Space.Sm * scale), cursor);
+            var max = new Vector2(min.X + thumb, min.Y + thumb / GlamStore.PhotoRatio);
+            DrawLook(drawList, new Rect(min, max), photos[index].Url, false);
+            drawList.AddRect(min, max, ImGui.GetColorU32(index == photoIndex ? PrismArt.Fore : PrismArt.Faint), 0f,
+                ImDrawFlags.None, 1f);
+            var hovered = UiInteract.Hover(min, max);
+            if (UiInteract.Click(min, max, hovered))
+            {
+                photoIndex = index;
+            }
+        }
+
+        return cursor + thumb / GlamStore.PhotoRatio + Metrics.Space.Lg * scale;
+    }
+
+    private float DrawGlamHeading(ImDrawListPtr drawList, float left, float top, float width, GlamDto glam, float scale)
+    {
+        var labelPixels = PrismArt.LabelPixels();
+        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
+        var pixels = PrismType.Fit(glam.Title, PrismFace.Headline, width, DetailTitleUnits * scale,
+            DetailTitleMinUnits * scale, 2, out var lines);
+        top += PrismType.DrawLines(drawList, new Vector2(left, top), lines, PrismArt.Fore, PrismFace.Headline, pixels) +
+               Metrics.Space.Xs * scale;
+        var author = AuthorLine(glam.Author);
+        if (glam.Author is { } who && PrismArt.Link(drawList, new Vector2(left, top), author, PrismArt.Muted, scale))
+        {
+            OpenProfile(who);
+        }
+
+        var stamp = Loc.T(glam.Vanilla ? L.Prism.VanillaStamp : L.Prism.ModdedStamp);
+        PrismType.DrawRight(drawList, new Vector2(left + width, top), stamp, PrismArt.Fore, PrismFace.Label, labelPixels);
+        top += labelLine;
+        if (glam.TryOns > 0)
+        {
+            var key = HashCode.Combine(glam.TryOns, Loc.Current.Code);
+            var tried = triedText.IsCurrent(key)
+                ? triedText.Value
+                : triedText.Store(key, Loc.Plural(L.Prism.TriedOnCount, (int)Math.Min(glam.TryOns, int.MaxValue)));
+            PrismType.Draw(drawList, new Vector2(left, top), tried, PrismArt.Muted, PrismFace.Label, labelPixels);
+            top += labelLine;
+        }
+
+        return top + Metrics.Space.Lg * scale;
+    }
+
+    private float DrawGlamActions(ImDrawListPtr drawList, float left, float top, float width, GlamDto glam, float scale)
+    {
+        var height = PrismArt.StripUnits * scale;
+        var gap = Metrics.Space.Md * scale;
+        var half = (width - gap) * 0.5f;
+        var tryOn = new Rect(new Vector2(left, top), new Vector2(left + half, top + height));
+        var save = new Rect(new Vector2(left + half + gap, top), new Vector2(left + width, top + height));
+        if (PrismArt.Strip(drawList, tryOn, Loc.T(glamour.TryingOn ? L.Prism.TakeOff : L.Prism.TryOnGlam), Arrow, true))
+        {
+            if (glamour.TryingOn)
+            {
+                glamour.Revert();
+            }
+            else
+            {
+                glamour.TryOn(glam.Gear ?? Array.Empty<GlamGearDto>());
+                glams.TriedOn(glam);
+            }
+        }
+
+        if (PrismArt.Strip(drawList, save, Loc.T(glam.Saved ? L.Prism.Saved : L.Prism.Save), string.Empty, false))
+        {
+            glams.ToggleSave(glam);
+        }
+
+        top = tryOn.Max.Y + Metrics.Space.Md * scale;
+        var labelPixels = PrismArt.LabelPixels();
+        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
+        if (PrismArt.Link(drawList, new Vector2(left, top), Loc.T(glam.Liked ? L.Prism.Liked : L.Prism.Like),
+                glam.Liked ? PrismArt.Fore : PrismArt.Muted, scale))
+        {
+            glams.ToggleLike(glam);
+        }
+
+        var owned = OwnedLine();
+        PrismType.DrawRight(drawList, new Vector2(left + width, top), owned, PrismArt.Muted, PrismFace.Label, labelPixels);
+        top += labelLine;
+        if (totalMods > 0)
+        {
+            PrismType.DrawRight(drawList, new Vector2(left + width, top), ModsLine(), PrismArt.Muted, PrismFace.Label,
+                labelPixels);
+            top += labelLine;
+        }
+
+        return top + Metrics.Space.Xl * scale;
+    }
+
+    private string OwnedLine()
+    {
+        var key = HashCode.Combine(ownedPieces, totalPieces, Loc.Current.Code);
+        return ownedText.IsCurrent(key)
+            ? ownedText.Value
+            : ownedText.Store(key, Loc.T(L.Prism.OwnPieces, ownedPieces, totalPieces));
+    }
+
+    private string ModsLine()
+    {
+        var key = HashCode.Combine(totalMods - missingMods, totalMods, Loc.Current.Code);
+        return modsText.IsCurrent(key)
+            ? modsText.Value
+            : modsText.Store(key, Loc.T(L.Prism.ModsInstalled, totalMods - missingMods, totalMods));
+    }
+
+    private float DrawGear(ImDrawListPtr drawList, float left, float top, float width, GlamDto glam, float scale)
+    {
+        var gear = glam.Gear ?? Array.Empty<GlamGearDto>();
+        if (gear.Length == 0)
+        {
+            return top;
+        }
+
+        top = DrawSectionLabel(drawList, left, top, width, 0, Loc.T(L.Prism.GearHeading), scale);
+        for (var index = 0; index < gear.Length; index++)
+        {
+            if (gear[index].ItemId != 0)
+            {
+                top = DrawGearRow(drawList, left, top, width, gear[index], scale);
+            }
+        }
+
+        for (var index = 0; index < gear.Length; index++)
+        {
+            if (gear[index].ItemId == 0 && gear[index].Mods is { Length: > 0 } mods)
+            {
+                top = DrawSectionLabel(drawList, left, top + Metrics.Space.Lg * scale, width, 1,
+                    Loc.T(L.Prism.CharacterHeading), scale);
+                top = DrawModChips(drawList, left, top, width, mods, scale);
+            }
+        }
+
+        return top;
+    }
+
+    private float DrawGearRow(ImDrawListPtr drawList, float left, float top, float width, GlamGearDto piece, float scale)
+    {
+        var labelPixels = PrismArt.LabelPixels();
+        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
+        var icon = GearIconUnits * scale;
+        if (gameData.TryGetItem(piece.ItemId, out var name, out var iconId, out _))
+        {
+            GameIconTile.Draw(drawList, textures, iconId, new Vector2(left, top), new Vector2(left + icon, top + icon), 0f,
+                scale);
+        }
+
+        var textLeft = left + icon + Metrics.Space.Md * scale;
+        var tryLabel = Loc.T(L.Prism.TryOnGlam);
+        var tryWidth = PrismType.Measure(tryLabel, PrismFace.Label, labelPixels).X;
+        var room = width - (textLeft - left) - tryWidth - Metrics.Space.Md * scale;
+        if (PrismArt.Link(drawList, new Vector2(textLeft, top), PrismType.FitLabel(name, labelPixels, room), PrismArt.Fore,
+                scale))
+        {
+            OpenItemGlams(piece.ItemId);
+        }
+
+        if (PrismArt.Link(drawList, new Vector2(left + width - tryWidth, top), tryLabel, PrismArt.Muted, scale))
+        {
+            glamour.TryOnPiece(piece);
+        }
+
+        var dyes = DyeLine(piece.Stain0, piece.Stain1);
+        if (dyes.Length > 0)
+        {
+            PrismType.Draw(drawList, new Vector2(textLeft, top + labelLine), PrismType.FitLabel(dyes, labelPixels, room),
+                PrismArt.Muted, PrismFace.Label, labelPixels);
+        }
+
+        var bottom = top + MathF.Max(icon, labelLine * 2f) + Metrics.Space.Sm * scale;
+        if (piece.Mods is { Length: > 0 } mods)
+        {
+            bottom = DrawModChips(drawList, textLeft, bottom, width - (textLeft - left), mods, scale);
+        }
+
+        PrismArt.Hairline(drawList, left, left + width, bottom, PrismArt.Faint, scale);
+        return bottom + Metrics.Space.Md * scale;
+    }
+
+    private string DyeLine(byte stain0, byte stain1)
+    {
+        var first = gameData.StainName(stain0);
+        var second = gameData.StainName(stain1);
+        if (second.Length == 0)
+        {
+            return first;
+        }
+
+        var key = HashCode.Combine(stain0, stain1);
+        if (!dyeLines.TryGetValue(key, out var line))
+        {
+            line = first.Length == 0 ? second : string.Concat(first, ", ", second);
+            dyeLines[key] = line;
+        }
+
+        return line;
+    }
+
+    private readonly Dictionary<int, string> dyeLines = new();
+
+    private float DrawModChips(ImDrawListPtr drawList, float left, float top, float width, GlamModDto[] mods, float scale)
+    {
+        var labelPixels = PrismArt.LabelPixels();
+        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
+        var getKey = Loc.Current.Code.GetHashCode(StringComparison.Ordinal);
+        var get = getText.IsCurrent(getKey) ? getText.Value : getText.Store(getKey, Loc.T(L.Prism.GetMod) + " " + Arrow);
+        var getWidth = PrismType.Measure(get, PrismFace.Label, labelPixels).X;
+        for (var index = 0; index < mods.Length; index++)
+        {
+            var mod = mods[index];
+            var (line, allowed) = ModLine(mod);
+            var room = width - (allowed ? getWidth + Metrics.Space.Md * scale : 0f);
+            PrismType.Draw(drawList, new Vector2(left, top), PrismType.FitLabel(line, labelPixels, room),
+                PrismArt.Fore, PrismFace.Label, labelPixels);
+            if (allowed && PrismArt.Link(drawList, new Vector2(left + width - getWidth, top), get, PrismArt.Muted, scale))
+            {
+                UrlActions.AskThenOpen(mod.Link);
+            }
+
+            top += labelLine;
+        }
+
+        return top + Metrics.Space.Sm * scale;
+    }
+
+    private readonly Dictionary<GlamModDto, (string Line, bool Allowed)> modLines = new();
+    private CachedText getText;
+    private string linesLanguage = string.Empty;
+
+    private (string Line, bool Allowed) ModLine(GlamModDto mod)
+    {
+        if (!ReferenceEquals(linesLanguage, Loc.Current.Code))
+        {
+            linesLanguage = Loc.Current.Code;
+            modLines.Clear();
+            dyeLines.Clear();
+        }
+
+        if (!modLines.TryGetValue(mod, out var cached))
+        {
+            cached = (mod.Author.Length > 0 ? Loc.T(L.Prism.ModBy, mod.Name, mod.Author) : mod.Name,
+                ModLinks.IsAllowed(mod.Link));
+            modLines[mod] = cached;
+        }
+
+        return cached;
+    }
+}

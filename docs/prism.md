@@ -75,7 +75,7 @@ Everything is under the signed-in Aethernet session. Paths are built in `Core/Ae
 | `PUT` / `DELETE /prism/glams/{id}/like` | | 204 |
 | `POST /prism/glams/{id}/tryon` | | 204, counted once per viewer per day |
 | `GET /users/{id}/glams[?cursor=]` | | `{ items: Glam[], nextCursor }` |
-| `GET /users/{id}/prism` | | `{ glamCount, tryOnsReceived, likesReceived (own only), placings: [{ weekId, title, rank, track }] }` |
+| `GET /users/{id}/prism` | | `{ user, following, glamCount, tryOnsReceived, likesReceived (own only), placings: [{ weekId, title, rank, track }] }`; follow and unfollow use the existing `/follows/{id}` |
 | `GET /me/prism/collections` | | `[{ id, name, count, coverUrl }]`; the `saved` collection always exists |
 | `POST /me/prism/collections` | `{ name }` | the collection |
 | `DELETE /prism/collections/{id}` | | 204 |
