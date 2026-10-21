@@ -23,6 +23,7 @@ internal sealed partial class PrismApp
 
     private readonly Dictionary<string, string> handleLines = new(StringComparer.Ordinal);
     private readonly Dictionary<uint, (string Name, uint Icon)> itemRows = new();
+    private readonly HashSet<uint> ownedIds = new();
     private string? statsFor;
     private bool statsStorage;
     private CachedText ownedText;
@@ -127,7 +128,7 @@ internal sealed partial class PrismApp
         statsStorage = storage;
         modLines.Clear();
         var gear = glam.Gear ?? Array.Empty<GlamGearDto>();
-        ownedPieces = GlamourService.OwnedPieces(gear, out totalPieces);
+        ownedPieces = GlamourService.OwnedPieces(gear, out totalPieces, ownedIds);
         missingMods = glamour.MissingMods(gear, out totalMods);
     }
 
@@ -411,6 +412,12 @@ internal sealed partial class PrismApp
             StartWearing(string.Empty, name);
         }
 
+        if (interactive && screen == PrismScreen.GlamDetail && ownedIds.Contains(piece.ItemId))
+        {
+            PrismType.DrawRight(drawList, new Vector2(left + width, top + labelLine), Loc.T(L.Prism.Owned), PrismArt.Muted,
+                PrismFace.Label, labelPixels);
+        }
+
         var dyes = DyeLine(piece.Stain0, piece.Stain1);
         if (dyes.Length > 0)
         {
@@ -455,9 +462,13 @@ internal sealed partial class PrismApp
         for (var index = 0; index < mods.Length; index++)
         {
             var mod = mods[index];
-            var (line, allowed) = ModLine(mod);
-            allowed &= interactive;
-            var room = width - (allowed ? getWidth + Metrics.Space.Md * scale : 0f);
+            var (line, allowed, installed) = ModLine(mod);
+            installed &= interactive;
+            allowed &= interactive && !installed;
+            var have = installed ? Loc.T(L.Prism.Installed) : string.Empty;
+            var haveWidth = installed ? PrismType.Measure(have, PrismFace.Label, labelPixels).X : 0f;
+            var side = allowed ? getWidth : haveWidth;
+            var room = width - (side > 0f ? side + Metrics.Space.Md * scale : 0f);
             var fitted = PrismType.FitLabel(line, labelPixels, room);
             if (!interactive)
             {
@@ -466,6 +477,12 @@ internal sealed partial class PrismApp
             else if (PrismArt.Link(drawList, new Vector2(left, top), fitted, PrismArt.Fore, scale, pitch))
             {
                 OpenModGlams(mod);
+            }
+
+            if (installed)
+            {
+                PrismType.DrawRight(drawList, new Vector2(left + width, top), have, PrismArt.Muted, PrismFace.Label,
+                    labelPixels);
             }
 
             if (allowed && PrismArt.Link(drawList, new Vector2(left + width - getWidth, top), get, PrismArt.Muted, scale,
@@ -480,11 +497,11 @@ internal sealed partial class PrismApp
         return top + Metrics.Space.Sm * scale;
     }
 
-    private readonly Dictionary<GlamModDto, (string Line, bool Allowed)> modLines = new();
+    private readonly Dictionary<GlamModDto, (string Line, bool Allowed, bool Installed)> modLines = new();
     private CachedText getText;
     private string linesLanguage = string.Empty;
 
-    private (string Line, bool Allowed) ModLine(GlamModDto mod)
+    private (string Line, bool Allowed, bool Installed) ModLine(GlamModDto mod)
     {
         if (!ReferenceEquals(linesLanguage, Loc.Current.Code))
         {
@@ -496,7 +513,7 @@ internal sealed partial class PrismApp
         if (!modLines.TryGetValue(mod, out var cached))
         {
             cached = (mod.Author.Length > 0 ? Loc.T(L.Prism.ModBy, mod.Name, mod.Author) : mod.Name,
-                ModLinks.IsAllowed(mod.Link));
+                ModLinks.IsAllowed(mod.Link), glamour.HasMod(mod));
             modLines[mod] = cached;
         }
 

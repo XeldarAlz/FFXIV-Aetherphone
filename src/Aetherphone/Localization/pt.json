@@ -5693,6 +5693,8 @@
   "prism.designsAdded": "Designs adicionados: {0}",
   "prism.youOwnThis": "Você já tem",
   "prism.vendorPrice": "Vendido por mercadores por {0} gil",
+  "prism.owned": "Você tem",
+  "prism.installed": "Instalado",
   "prism.checkMarket": "Ver mercado",
   "prism.glamOfTheDay": "Glamour do dia",
   "prism.seasonStanding": "{0}: posição {1}, {2} pontos",

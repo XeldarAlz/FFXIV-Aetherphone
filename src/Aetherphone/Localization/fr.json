@@ -5693,6 +5693,8 @@
   "prism.designsAdded": "Designs ajoutés : {0}",
   "prism.youOwnThis": "Vous l'avez déjà",
   "prism.vendorPrice": "Vendu par les marchands pour {0} gils",
+  "prism.owned": "Possédé",
+  "prism.installed": "Installé",
   "prism.checkMarket": "Voir le marché",
   "prism.glamOfTheDay": "Mirage du jour",
   "prism.seasonStanding": "{0} : rang {1}, {2} points",

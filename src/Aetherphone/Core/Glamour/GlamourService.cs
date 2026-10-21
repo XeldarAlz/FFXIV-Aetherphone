@@ -126,10 +126,14 @@ internal sealed class GlamourService : IDisposable
         return missing;
     }
 
-    public static int OwnedPieces(GlamGearDto[] gear, out int total)
+    public bool HasMod(GlamModDto mod) =>
+        HasPenumbra && ModAttribution.MatchFolder(penumbra.ModList(), mod).Length > 0;
+
+    public static int OwnedPieces(GlamGearDto[] gear, out int total, HashSet<uint>? owned = null)
     {
+        owned?.Clear();
         total = 0;
-        var owned = 0;
+        var count = 0;
         for (var index = 0; index < gear.Length; index++)
         {
             var itemId = gear[index].ItemId;
@@ -141,11 +145,12 @@ internal sealed class GlamourService : IDisposable
             total++;
             if (OwnedItems.Owns(itemId))
             {
-                owned++;
+                count++;
+                owned?.Add(itemId);
             }
         }
 
-        return owned;
+        return count;
     }
 
     public void TryOn(GlamGearDto[] gear)

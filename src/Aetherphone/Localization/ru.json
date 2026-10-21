@@ -5693,6 +5693,8 @@
   "prism.designsAdded": "Добавлено дизайнов: {0}",
   "prism.youOwnThis": "Уже есть у вас",
   "prism.vendorPrice": "Продаётся у торговцев за {0} гил",
+  "prism.owned": "Есть",
+  "prism.installed": "Установлен",
   "prism.checkMarket": "Цены на рынке",
   "prism.glamOfTheDay": "Гламур дня",
   "prism.seasonStanding": "{0}: место {1}, очков: {2}",

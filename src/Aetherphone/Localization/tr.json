@@ -5693,6 +5693,8 @@
   "prism.designsAdded": "Eklenen tasarım: {0}",
   "prism.youOwnThis": "Sende var",
   "prism.vendorPrice": "Satıcılarda {0} gil",
+  "prism.owned": "Sende var",
+  "prism.installed": "Kurulu",
   "prism.checkMarket": "Piyasaya bak",
   "prism.glamOfTheDay": "Günün glamı",
   "prism.seasonStanding": "{0}: {1}. sıra, {2} puan",

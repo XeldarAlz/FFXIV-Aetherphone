@@ -148,6 +148,7 @@ internal sealed partial class PrismApp : IResumableApp
     public void OnResumed()
     {
         sinceRefresh = 0f;
+        statsFor = null;
         store.Refresh();
         if (screen == PrismScreen.Discover && (glams.Lane(discoverScope).NeverLoaded || glams.Lane(discoverScope).Failed))
         {

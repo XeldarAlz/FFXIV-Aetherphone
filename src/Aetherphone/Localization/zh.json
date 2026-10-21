@@ -5693,6 +5693,8 @@
   "prism.designsAdded": "已添加 {0} 个设计",
   "prism.youOwnThis": "你已拥有",
   "prism.vendorPrice": "NPC 出售：{0} 金币",
+  "prism.owned": "已拥有",
+  "prism.installed": "已安装",
   "prism.checkMarket": "查看市场",
   "prism.glamOfTheDay": "今日幻化",
   "prism.seasonStanding": "{0}：第 {1} 名，{2} 分",

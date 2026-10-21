@@ -5693,6 +5693,8 @@
   "prism.designsAdded": "Designs hinzugefügt: {0}",
   "prism.youOwnThis": "Hast du schon",
   "prism.vendorPrice": "Bei Händlern für {0} Gil erhältlich",
+  "prism.owned": "Im Besitz",
+  "prism.installed": "Installiert",
   "prism.checkMarket": "Markt prüfen",
   "prism.glamOfTheDay": "Projektion des Tages",
   "prism.seasonStanding": "{0}: Platz {1}, {2} Punkte",
