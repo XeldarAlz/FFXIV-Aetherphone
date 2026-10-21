@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Photos;
@@ -12,6 +13,7 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Prism;
 
@@ -25,6 +27,8 @@ internal enum PrismScreen : byte
     Final,
     Guide,
     Prizes,
+    Outfit,
+    Glam,
 }
 
 internal sealed partial class PrismApp : IResumableApp
@@ -41,6 +45,8 @@ internal sealed partial class PrismApp : IResumableApp
     private readonly Configuration configuration;
     private readonly ConfirmService confirm;
     private readonly ReportService report;
+    private readonly GameData gameData;
+    private readonly ITextureProvider textures;
     private readonly PhotoComposeSession pickSession;
     private readonly ImageIntake pickIntake = new();
     private readonly Action withdraw;
@@ -60,7 +66,7 @@ internal sealed partial class PrismApp : IResumableApp
 
     public PrismApp(AethernetSession session, AethernetApi api, RemoteImageCache images, PhotoLibrary library,
         WallpaperImageCache wallpaperImages, Configuration configuration, ConfirmService confirm,
-        ReportService report)
+        ReportService report, GameData gameData, ITextureProvider textures)
     {
         store = new PrismStore(session, api);
         this.images = images;
@@ -68,6 +74,8 @@ internal sealed partial class PrismApp : IResumableApp
         this.configuration = configuration;
         this.confirm = confirm;
         this.report = report;
+        this.gameData = gameData;
+        this.textures = textures;
         pickSession = new PhotoComposeSession(library, wallpaperImages);
         withdraw = store.Withdraw;
         ballotSettled = SettleBallot;
@@ -172,6 +180,12 @@ internal sealed partial class PrismApp : IResumableApp
             case PrismScreen.Prizes:
                 DrawPrizes(drawList, content, scale);
                 break;
+            case PrismScreen.Outfit:
+                DrawOutfit(drawList, content, scale);
+                break;
+            case PrismScreen.Glam:
+                DrawGlam(drawList, content, scale);
+                break;
             default:
                 DrawCover(drawList, full, content, scale);
                 break;
@@ -205,6 +219,8 @@ internal sealed partial class PrismApp : IResumableApp
                 {
                     PrismScreen.Pick => pickReturn,
                     PrismScreen.Prizes => prizesReturn,
+                    PrismScreen.Outfit => outfitReturn,
+                    PrismScreen.Glam => PrismScreen.Final,
                     _ => PrismScreen.Cover,
                 }, -1);
             }

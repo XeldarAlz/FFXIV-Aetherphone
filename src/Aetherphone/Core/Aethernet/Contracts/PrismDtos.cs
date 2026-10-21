@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Aetherphone.Core.Aethernet.Contracts;
 
 internal sealed record PrismEntryDto(
@@ -6,7 +8,10 @@ internal sealed record PrismEntryDto(
     int Width = 0,
     int Height = 0,
     string Status = "",
-    string RejectReason = "");
+    string RejectReason = "",
+    PrismGearDto[]? Outfit = null);
+
+internal sealed record PrismGearDto(int Slot = 0, uint ItemId = 0, byte Stain0 = 0, byte Stain1 = 0);
 
 internal sealed record PrismJudgeRewardDto(
     long Amount = 0,
@@ -48,7 +53,11 @@ internal sealed record PrismPrizeDto(
     FrameDescriptorDto? Frame = null,
     int FrameDays = 0);
 
-internal sealed record PrismEntryRequest(string MediaKey, int Width, int Height);
+internal sealed record PrismEntryRequest(string MediaKey, int Width, int Height,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    PrismGearDto[]? Outfit = null);
+
+internal sealed record PrismOutfitRequest(PrismGearDto[]? Outfit);
 
 internal sealed record PrismLookDto(string Id = "", string ImageUrl = "", int Width = 0, int Height = 0);
 
@@ -66,7 +75,8 @@ internal sealed record PrismPlacingDto(
     int Height = 0,
     string DisplayName = "",
     string World = "",
-    string Handle = "");
+    string Handle = "",
+    PrismGearDto[]? Outfit = null);
 
 internal sealed record PrismResultsDto(
     string WeekId = "",

@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Inventory;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Platform;
@@ -64,10 +65,20 @@ internal sealed partial class PrismApp
         if (PrismArt.Strip(drawList, strip, label, "→", true, pickSession.HasSelection && !store.Busy,
                 UiSound.Shutter))
         {
-            store.Enter(pickSession.FirstSelected, pickSession.CropsArray()[0], entrySettled);
+            store.Enter(pickSession.FirstSelected, pickSession.CropsArray()[0],
+                configuration.PrismShareOutfit ? EquippedOutfit.Read() : null, entrySettled);
         }
 
-        var gridBottom = strip.Min.Y - Metrics.Space.Lg * scale;
+        var gridBottom = strip.Min.Y - Metrics.Space.Lg * scale -
+                         PrismType.LineHeight(PrismFace.Label, PrismArt.LabelPixels());
+        if (PrismArt.Link(drawList, new Vector2(strip.Min.X, gridBottom),
+                Loc.T(configuration.PrismShareOutfit ? L.Prism.SharingOutfit : L.Prism.ShareOutfit), PrismArt.Muted,
+                scale))
+        {
+            OpenOutfit();
+        }
+
+        gridBottom -= Metrics.Space.Xl * scale;
         if (store.Failed(PrismAction.Enter) && !store.Busy)
         {
             var reason = store.ActionFailureText;

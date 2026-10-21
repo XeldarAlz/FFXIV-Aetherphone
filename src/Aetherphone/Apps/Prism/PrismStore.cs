@@ -33,6 +33,7 @@ internal enum PrismAction : byte
     Withdraw,
     Ballot,
     Submit,
+    Outfit,
 }
 
 internal sealed class PrismStore : IDisposable
@@ -154,7 +155,7 @@ internal sealed class PrismStore : IDisposable
         week.Id.Length > 0 && (week.Phase == PrismPhases.Results || (week.ResultsAtUnix > 0 &&
             DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= week.ResultsAtUnix));
 
-    public void Enter(string sourcePath, WallpaperCrop crop, Action<bool> onComplete)
+    public void Enter(string sourcePath, WallpaperCrop crop, PrismGearDto[]? outfit, Action<bool> onComplete)
     {
         if (week is not { } current || !BeginAction())
         {
@@ -175,7 +176,7 @@ internal sealed class PrismStore : IDisposable
                 return Fail(PrismAction.Enter, failure);
             }
 
-            var request = new PrismEntryRequest(upload.Key, baked.Width, baked.Height);
+            var request = new PrismEntryRequest(upload.Key, baked.Width, baked.Height, outfit);
             var entry = await client.EnterAsync(current.Id, request, token, received => failure = received)
                 .ConfigureAwait(false);
             if (entry is null)
@@ -186,6 +187,28 @@ internal sealed class PrismStore : IDisposable
             week = current with { MyEntry = entry };
             return true;
         }, onComplete, EndAction);
+    }
+
+    public void ShareOutfit(PrismGearDto[]? outfit)
+    {
+        if (week is not { MyEntry: not null } current || !BeginAction())
+        {
+            return;
+        }
+
+        work.Run("outfit", async token =>
+        {
+            var failure = AepFailure.None;
+            var entry = await client.ShareOutfitAsync(current.Id, new PrismOutfitRequest(outfit), token,
+                received => failure = received).ConfigureAwait(false);
+            if (entry is null)
+            {
+                return Fail(PrismAction.Outfit, failure);
+            }
+
+            week = current with { MyEntry = entry };
+            return true;
+        }, NoCompletion, EndAction);
     }
 
     public void Withdraw()
