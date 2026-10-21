@@ -5672,6 +5672,7 @@
   "prism.scopePopular": "Beliebt",
   "prism.searchHint": "Gegenstände oder #Tags suchen",
   "prism.glamsTagged": "Projektionen mit {0}",
+  "prism.noMatches": "Keine Treffer gefunden",
   "prism.scopeFollowing": "Gefolgt",
   "prism.filterAll": "Alle",
   "prism.filterModded": "Gemoddet",

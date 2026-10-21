@@ -5672,6 +5672,7 @@
   "prism.scopePopular": "热门",
   "prism.searchHint": "搜索物品或 #标签",
   "prism.glamsTagged": "带有 {0} 的幻化",
+  "prism.noMatches": "未找到匹配项",
   "prism.scopeFollowing": "关注",
   "prism.filterAll": "全部",
   "prism.filterModded": "使用模组",

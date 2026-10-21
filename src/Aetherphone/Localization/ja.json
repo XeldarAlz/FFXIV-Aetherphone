@@ -5672,6 +5672,7 @@
   "prism.scopePopular": "人気",
   "prism.searchHint": "アイテムや#タグを検索",
   "prism.glamsTagged": "{0}のミラプリ",
+  "prism.noMatches": "一致する結果はありません",
   "prism.scopeFollowing": "フォロー中",
   "prism.filterAll": "すべて",
   "prism.filterModded": "Mod使用",

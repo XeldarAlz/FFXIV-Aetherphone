@@ -5672,6 +5672,7 @@
   "prism.scopePopular": "Популярное",
   "prism.searchHint": "Поиск предметов или #тегов",
   "prism.glamsTagged": "Гламуры с {0}",
+  "prism.noMatches": "Ничего не найдено",
   "prism.scopeFollowing": "Подписки",
   "prism.filterAll": "Все",
   "prism.filterModded": "С модами",

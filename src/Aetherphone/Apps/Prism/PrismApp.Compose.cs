@@ -17,6 +17,7 @@ internal sealed partial class PrismApp
     private const int TagsMaxLength = 80;
     private const int MaxTags = 6;
     private const float FieldUnits = 34f;
+    private const double RecaptureSeconds = 1.0;
 
     private readonly PhotoComposeSession composeSession;
     private readonly Action<bool> postSettled;
@@ -30,6 +31,7 @@ internal sealed partial class PrismApp
     private string postedCover = string.Empty;
     private string postedId = string.Empty;
     private CachedText capturedText;
+    private double recaptureAt;
 
     private void StartCompose()
     {
@@ -102,10 +104,11 @@ internal sealed partial class PrismApp
             TextStyles.Subheadline, width);
         top += Typography.DrawWrappedLeft(new Vector2(left, top), note, PrismArt.Muted, TextStyles.Subheadline,
             PrismType.BalancedWidth(note, TextStyles.Subheadline, width)) + Metrics.Space.Lg * scale;
-        DrawStillTryingOn(drawList, left, top, width, scale, out var tookOff);
-        if (tookOff)
+        DrawStillTryingOn(drawList, left, top, width, scale, out _);
+        if (RecaptureDue())
         {
             captured = glamour.Capture();
+            capturedVanilla = GlamourService.IsVanilla(captured) && PhotosAreVanilla();
         }
 
         var strip = StripRect(content, scale);
@@ -140,10 +143,22 @@ internal sealed partial class PrismApp
         if (PrismArt.Link(drawList, new Vector2(left, top), Loc.T(L.Prism.TakeOff), PrismArt.Fore, scale))
         {
             glamour.Revert();
+            recaptureAt = ImGui.GetTime() + RecaptureSeconds;
             tookOff = true;
         }
 
         return top + Metrics.Size.TapTarget * scale;
+    }
+
+    private bool RecaptureDue()
+    {
+        if (recaptureAt <= 0d || ImGui.GetTime() < recaptureAt)
+        {
+            return false;
+        }
+
+        recaptureAt = 0d;
+        return true;
     }
 
     private float DrawField(ImDrawListPtr drawList, float left, float top, float width, string label, string hint,

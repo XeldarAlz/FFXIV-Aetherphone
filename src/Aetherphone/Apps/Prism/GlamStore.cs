@@ -142,7 +142,10 @@ internal sealed class GlamStore : IDisposable
         epoch++;
         for (var index = 0; index < discover.Length; index++)
         {
-            discover[index].Clear();
+            if (index != (int)GlamScope.Today)
+            {
+                discover[index].Clear();
+            }
         }
     }
 
@@ -155,16 +158,17 @@ internal sealed class GlamStore : IDisposable
         }
 
         var key = ScopeKeys[(int)scope];
-        var only = vanillaOnly;
-        var fits = body;
-        var started = epoch;
+        var daily = scope == GlamScope.Today;
+        var only = daily ? null : vanillaOnly;
+        var fits = daily ? default : body;
+        var started = daily ? -1 : epoch;
         lane.Loading = true;
         work.Run("discover", async token =>
         {
             var reported = AepFailure.None;
             var page = await client.FeedAsync(key, only, fits, null, token, failure => reported = failure)
                 .ConfigureAwait(false);
-            if (started != epoch)
+            if (started >= 0 && started != epoch)
             {
                 return;
             }
@@ -178,7 +182,7 @@ internal sealed class GlamStore : IDisposable
             lane.ApplyRefresh(page.Items ?? Array.Empty<GlamDto>(), page.NextCursor);
         }, () =>
         {
-            if (started == epoch)
+            if (started < 0 || started == epoch)
             {
                 lane.Loading = false;
             }
@@ -195,20 +199,21 @@ internal sealed class GlamStore : IDisposable
         }
 
         var key = ScopeKeys[(int)scope];
-        var only = vanillaOnly;
-        var fits = body;
-        var started = epoch;
+        var daily = scope == GlamScope.Today;
+        var only = daily ? null : vanillaOnly;
+        var fits = daily ? default : body;
+        var started = daily ? -1 : epoch;
         lane.LoadingMore = true;
         work.Run("discover more", async token =>
         {
             var page = await client.FeedAsync(key, only, fits, cursor, token).ConfigureAwait(false);
-            if (page is not null && started == epoch)
+            if (page is not null && (started < 0 || started == epoch))
             {
                 lane.ApplyMore(page.Items ?? Array.Empty<GlamDto>(), page.NextCursor);
             }
         }, () =>
         {
-            if (started == epoch)
+            if (started < 0 || started == epoch)
             {
                 lane.LoadingMore = false;
             }

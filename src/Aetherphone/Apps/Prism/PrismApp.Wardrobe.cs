@@ -137,7 +137,7 @@ internal sealed partial class PrismApp
                 continue;
             }
 
-            var covered = DrawCover(drawList, new Rect(min, max), outfit.Cover);
+            var covered = DrawOutfitCover(drawList, new Rect(min, max), outfit.Cover);
             if (covered)
             {
                 drawList.AddRectFilledMultiColor(new Vector2(x, max.Y - height * TileShadeShare), max,
@@ -202,13 +202,13 @@ internal sealed partial class PrismApp
         var width = ScrollLayout.StableContentWidth() - gutter * 2f;
         var left = origin.X + gutter;
         var cursor = origin.Y;
-        if (outfit.Cover is not null)
+        if (outfit.Cover is { } cover && !wallpaperImages.Failed(cover.Path))
         {
             var photo = new Rect(new Vector2(left, cursor),
                 new Vector2(left + width, cursor + width / GlamStore.PhotoRatio));
             list.AddRectFilled(photo.Min, photo.Max,
                 ImGui.GetColorU32(Palette.WithAlpha(PrismArt.Fore, PickFillAlpha)));
-            DrawCover(list, photo, outfit.Cover);
+            DrawOutfitCover(list, photo, cover);
             cursor = photo.Max.Y + Metrics.Space.Lg * scale;
         }
 
@@ -327,7 +327,7 @@ internal sealed partial class PrismApp
         return top + PrismType.LineHeight(PrismFace.Label, PrismArt.LabelPixels()) + Metrics.Space.Lg * scale;
     }
 
-    private bool DrawCover(ImDrawListPtr drawList, Rect rect, WardrobeCover? cover)
+    private bool DrawOutfitCover(ImDrawListPtr drawList, Rect rect, WardrobeCover? cover)
     {
         if (cover is null || wallpaperImages.Get(cover.Path) is not { } texture)
         {

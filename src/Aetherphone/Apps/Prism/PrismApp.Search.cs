@@ -10,7 +10,7 @@ namespace Aetherphone.Apps.Prism;
 internal sealed partial class PrismApp
 {
     private const int SearchLimit = 12;
-    private const int SearchScan = 48;
+    private const int SearchScan = 400;
     private const int QueryMaxLength = 60;
 
     private readonly List<MarketItemRef> searchHits = new();
@@ -19,6 +19,8 @@ internal sealed partial class PrismApp
     private string searchedFor = string.Empty;
     private string searchTag = string.Empty;
     private string searchTagLabel = string.Empty;
+    private string searchLanguage = string.Empty;
+    private bool searchItems;
     private bool searchIndexed;
     private bool searching;
 
@@ -43,19 +45,25 @@ internal sealed partial class PrismApp
 
     private void UpdateSearch()
     {
-        if (discoverQuery == searchedFor && searchIndexed == marketIndex.Ready)
+        if (discoverQuery == searchedFor && searchIndexed == marketIndex.Ready &&
+            ReferenceEquals(searchLanguage, Loc.Current.Code))
         {
             return;
         }
 
         searchedFor = discoverQuery;
         searchIndexed = marketIndex.Ready;
+        searchLanguage = Loc.Current.Code;
         searchFound.Clear();
         var query = discoverQuery.Trim();
         searching = query.Length > 0;
-        searchTag = query.TrimStart('#').Trim().ToLowerInvariant();
-        searchTagLabel = searchTag.Length > 0 ? Loc.T(L.Prism.GlamsTagged, TagLabel(searchTag)) : string.Empty;
-        if (!searching || query[0] == '#')
+        searchItems = searching && query[0] != '#';
+        var word = query.TrimStart('#').Trim().ToLowerInvariant();
+        searchTag = word.Length > 0 && (query[0] == '#' || word.IndexOf(' ') < 0) ? word : string.Empty;
+        searchTagLabel = searchTag.Length > 0
+            ? Loc.T(L.Prism.GlamsTagged, string.Concat("#", searchTag))
+            : string.Empty;
+        if (!searchItems)
         {
             return;
         }
@@ -105,6 +113,14 @@ internal sealed partial class PrismApp
 
             top += row;
             PrismArt.Hairline(drawList, left, left + width, top, PrismArt.Faint, scale);
+        }
+
+        if (searchItems && searchFound.Count == 0)
+        {
+            PrismType.Draw(drawList, new Vector2(left, top + Metrics.Space.Md * scale),
+                Loc.T(marketIndex.Ready ? L.Prism.NoMatches : L.Common.Loading), PrismArt.Muted, PrismFace.Label,
+                labelPixels);
+            top += labelLine + Metrics.Space.Md * scale;
         }
 
         return top + PrismArt.BottomMargin(scale);

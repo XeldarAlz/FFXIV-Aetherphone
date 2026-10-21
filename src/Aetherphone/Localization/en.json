@@ -5672,6 +5672,7 @@
   "prism.scopePopular": "Popular",
   "prism.searchHint": "Search items or #tags",
   "prism.glamsTagged": "Glams tagged {0}",
+  "prism.noMatches": "No matches found",
   "prism.scopeFollowing": "Following",
   "prism.filterAll": "All",
   "prism.filterModded": "Modded",
