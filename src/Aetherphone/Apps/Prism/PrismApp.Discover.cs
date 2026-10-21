@@ -218,8 +218,12 @@ internal sealed partial class PrismApp
             PrismType.Draw(drawList, new Vector2(x + pad, max.Y - pad - labelLine * 2f),
                 PrismType.FitLabel(glam.Title, labelPixels, column - pad * 2f), PrismArt.PhotoFore, PrismFace.Label,
                 labelPixels);
+            var stamp = Loc.T(glam.Vanilla ? L.Prism.VanillaStamp : L.Prism.ModdedStamp);
+            var stampWidth = PrismType.Measure(stamp, PrismFace.Label, labelPixels).X;
+            PrismType.DrawRight(drawList, new Vector2(max.X - pad, max.Y - pad - labelLine), stamp, PrismArt.PhotoFore,
+                PrismFace.Label, labelPixels);
             PrismType.Draw(drawList, new Vector2(x + pad, max.Y - pad - labelLine),
-                PrismType.FitLabel(AuthorLine(glam.Author), labelPixels, column - pad * 2f),
+                PrismType.FitLabel(AuthorLine(glam.Author), labelPixels, column - pad * 3f - stampWidth),
                 Palette.WithAlpha(PrismArt.PhotoFore, MutedOnPhoto), PrismFace.Label, labelPixels);
             drawList.PopClipRect();
             var hovered = UiInteract.Hover(min, max);
