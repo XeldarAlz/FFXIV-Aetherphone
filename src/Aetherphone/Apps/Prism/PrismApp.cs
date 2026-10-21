@@ -6,6 +6,7 @@ using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Market;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Report;
@@ -60,6 +61,8 @@ internal sealed partial class PrismApp : IResumableApp
     private readonly ReportService report;
     private readonly GameData gameData;
     private readonly ITextureProvider textures;
+    private readonly MarketItemIndex marketIndex;
+    private readonly MarketLauncher marketLauncher;
     private readonly PhotoComposeSession pickSession;
     private readonly ImageIntake pickIntake = new();
     private readonly PhotoViewerOverlay photoViewer = new();
@@ -81,7 +84,8 @@ internal sealed partial class PrismApp : IResumableApp
 
     public PrismApp(AethernetSession session, AethernetApi api, RemoteImageCache images, PhotoLibrary library,
         WallpaperImageCache wallpaperImages, Configuration configuration, ConfirmService confirm,
-        ReportService report, GameData gameData, ITextureProvider textures, GlamourService glamour)
+        ReportService report, GameData gameData, ITextureProvider textures, GlamourService glamour,
+        MarketItemIndex marketIndex, MarketLauncher marketLauncher)
     {
         store = new PrismStore(session, api);
         glams = new GlamStore(session, api);
@@ -93,6 +97,8 @@ internal sealed partial class PrismApp : IResumableApp
         this.report = report;
         this.gameData = gameData;
         this.textures = textures;
+        this.marketIndex = marketIndex;
+        this.marketLauncher = marketLauncher;
         pickSession = new PhotoComposeSession(library, wallpaperImages);
         composeSession = new PhotoComposeSession(library, wallpaperImages);
         wardrobe = new WardrobeStore(Plugin.PluginInterface.ConfigDirectory.FullName);

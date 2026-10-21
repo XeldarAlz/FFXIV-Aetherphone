@@ -137,14 +137,15 @@ internal sealed partial class PrismApp
         var direction = next >= tab ? 1 : -1;
         historyDepth = 0;
         Go(TabRoots[(int)next], direction);
-        if (next == PrismTab.Discover && glams.Lane(discoverScope).NeverLoaded)
+        if (next == PrismTab.Discover)
         {
-            glams.Refresh(discoverScope);
+            RefreshDiscover(false);
         }
         else if (next == PrismTab.Me)
         {
             showSaved = false;
             OpenOwnProfile();
+            glams.RefreshSeason();
         }
         else if (next == PrismTab.Week)
         {

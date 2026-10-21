@@ -1,6 +1,7 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
@@ -17,6 +18,7 @@ internal enum GlamListKind : byte
 internal sealed partial class PrismApp
 {
     private const float ProfileNameUnits = 30f;
+    private const string MarketAppId = "market";
 
     private bool showSaved;
     private GlamListKind listKind;
@@ -27,6 +29,9 @@ internal sealed partial class PrismApp
     private CachedText triedCountText;
     private CachedText likeCountText;
     private CachedText listCountText;
+    private CachedText vendorText;
+    private CachedText seasonText;
+    private bool listOwned;
 
     private void OpenOwnProfile()
     {
@@ -75,6 +80,8 @@ internal sealed partial class PrismApp
     {
         if (listKind == GlamListKind.Item)
         {
+            listOwned = OwnedItems.Owns(listItemId);
+            marketIndex.EnsureBuilt();
             glams.OpenItem(listItemId);
         }
         else if (listMod is { } mod)
@@ -123,6 +130,7 @@ internal sealed partial class PrismApp
         top = DrawProfileStats(drawList, left, top, right - left, profile, mine, scale);
         if (mine)
         {
+            top = DrawSeasonLine(drawList, left, top, scale);
             top = DrawProfileToggle(drawList, left, top, scale);
         }
 
@@ -165,6 +173,23 @@ internal sealed partial class PrismApp
     {
         var key = HashCode.Combine(value, Loc.Current.Code);
         return cache.IsCurrent(key) ? cache.Value : cache.Store(key, value.ToString("N0", Loc.Culture));
+    }
+
+    private float DrawSeasonLine(ImDrawListPtr drawList, float left, float top, float scale)
+    {
+        if (glams.Season is not { Me: { Rank: > 0 } standing } season)
+        {
+            return top;
+        }
+
+        var key = HashCode.Combine(season.Name, standing.Rank, standing.Points, Loc.Current.Code);
+        var line = seasonText.IsCurrent(key)
+            ? seasonText.Value
+            : seasonText.Store(key, Loc.T(L.Prism.SeasonStanding, season.Name, standing.Rank,
+                standing.Points.ToString("N0", Loc.Culture)));
+        var labelPixels = PrismArt.LabelPixels();
+        PrismType.Draw(drawList, new Vector2(left, top), line, PrismArt.Fore, PrismFace.Label, labelPixels);
+        return top + PrismType.LineHeight(PrismFace.Label, labelPixels) + Metrics.Space.Lg * scale;
     }
 
     private float DrawProfileToggle(ImDrawListPtr drawList, float left, float top, float scale)
@@ -221,6 +246,46 @@ internal sealed partial class PrismApp
         return top + Metrics.Space.Lg * scale;
     }
 
+    private float DrawItemSources(ImDrawListPtr drawList, float left, float top, float scale)
+    {
+        var labelPixels = PrismArt.LabelPixels();
+        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
+        var start = top;
+        if (listOwned)
+        {
+            PrismType.Draw(drawList, new Vector2(left, top), Loc.T(L.Prism.YouOwnThis), PrismArt.Fore, PrismFace.Label,
+                labelPixels);
+            top += labelLine;
+        }
+
+        if (marketIndex.TryGet(listItemId, out var market))
+        {
+            if (market.VendorPrice > 0)
+            {
+                var key = HashCode.Combine(market.VendorPrice, Loc.Current.Code);
+                var price = vendorText.IsCurrent(key)
+                    ? vendorText.Value
+                    : vendorText.Store(key, Loc.T(L.Prism.VendorPrice, market.VendorPrice.ToString("N0", Loc.Culture)));
+                PrismType.Draw(drawList, new Vector2(left, top), price, PrismArt.Muted, PrismFace.Label, labelPixels);
+                top += labelLine;
+            }
+
+            if (navigation.IsAvailable(MarketAppId))
+            {
+                top += Metrics.Space.Sm * scale;
+                if (PrismArt.Link(drawList, new Vector2(left, top), Loc.T(L.Prism.CheckMarket), PrismArt.Fore, scale))
+                {
+                    marketLauncher.RequestItem(listItemId);
+                    navigation.Open(MarketAppId);
+                }
+
+                top += labelLine + Metrics.Space.Md * scale;
+            }
+        }
+
+        return top > start ? top + Metrics.Space.Lg * scale : top;
+    }
+
     private void DrawGlamList(ImDrawListPtr drawList, Rect content, float scale)
     {
         var top = DrawHeader(drawList, content, string.Empty, string.Empty, true, scale);
@@ -237,15 +302,21 @@ internal sealed partial class PrismApp
                 ? listCountText.Value
                 : listCountText.Store(key, Loc.Plural(L.Prism.WornInGlams, item.GlamCount));
             PrismType.Draw(drawList, new Vector2(left, top), count, PrismArt.Muted, PrismFace.Label, PrismArt.LabelPixels());
-            if (PrismArt.Link(drawList, new Vector2(left + width - PrismType.Measure(Loc.T(L.Prism.TryOnGlam),
-                    PrismFace.Label, PrismArt.LabelPixels()).X, top), Loc.T(L.Prism.TryOnGlam), PrismArt.Muted, scale))
-            {
-                glamour.TryOnPiece(new GlamGearDto(gameData.EquipSlot(listItemId), listItemId));
-                StartWearing(string.Empty, listTitle);
-            }
+        }
+
+        if (listKind == GlamListKind.Item && PrismArt.Link(drawList, new Vector2(left + width -
+                PrismType.Measure(Loc.T(L.Prism.TryOnGlam), PrismFace.Label, PrismArt.LabelPixels()).X, top),
+                Loc.T(L.Prism.TryOnGlam), PrismArt.Muted, scale))
+        {
+            glamour.TryOnPiece(new GlamGearDto(gameData.EquipSlot(listItemId), listItemId));
+            StartWearing(string.Empty, listTitle);
         }
 
         top += PrismType.LineHeight(PrismFace.Label, PrismArt.LabelPixels()) + Metrics.Space.Lg * scale;
+        if (listKind == GlamListKind.Item)
+        {
+            top = DrawItemSources(drawList, left, top, scale);
+        }
         var body = new Rect(new Vector2(content.Min.X, top), content.Max);
         using var surface = AppSurface.BeginEdgeToEdge(body);
         var list = ImGui.GetWindowDrawList();

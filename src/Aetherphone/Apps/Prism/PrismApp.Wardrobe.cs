@@ -18,6 +18,9 @@ internal sealed partial class PrismApp
     private string outfitId = string.Empty;
     private bool favouritesOnly;
     private CachedText outfitNameText;
+    private bool renaming;
+    private bool focusRename;
+    private string renameText = string.Empty;
 
     private void DrawWardrobe(ImDrawListPtr drawList, Rect content, float scale)
     {
@@ -160,6 +163,7 @@ internal sealed partial class PrismApp
             {
                 Push(PrismScreen.WardrobeOutfit);
                 outfitId = outfit.Id;
+                renaming = false;
             }
         }
 
@@ -183,10 +187,7 @@ internal sealed partial class PrismApp
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth() - gutter * 2f;
         var left = origin.X + gutter;
-        var pixels = PrismType.Fit(outfit.Name, PrismFace.Headline, width, DetailTitleUnits * scale,
-            DetailTitleMinUnits * scale, 2, out var lines);
-        var cursor = origin.Y + PrismType.DrawLines(list, new Vector2(left, origin.Y), lines, PrismArt.Fore,
-            PrismFace.Headline, pixels) + Metrics.Space.Lg * scale;
+        var cursor = DrawOutfitName(list, left, origin.Y, width, outfit, scale);
         var height = PrismArt.StripUnits * scale;
         var gap = Metrics.Space.Md * scale;
         var half = (width - gap) * 0.5f;
@@ -248,6 +249,46 @@ internal sealed partial class PrismApp
 
         cursor += PrismType.LineHeight(PrismFace.Label, PrismArt.LabelPixels());
         ImGui.Dummy(new Vector2(width, cursor - origin.Y + PrismArt.BottomMargin(scale)));
+    }
+
+    private float DrawOutfitName(ImDrawListPtr drawList, float left, float top, float width, WardrobeOutfit outfit,
+        float scale)
+    {
+        if (renaming)
+        {
+            if (focusRename)
+            {
+                ImGui.SetKeyboardFocusHere();
+                focusRename = false;
+            }
+
+            top = DrawField(drawList, left, top, width, Loc.T(L.Prism.TitleLabel), outfit.Name, "##outfitName",
+                ref renameText, TitleMaxLength, scale);
+            if (PrismArt.Link(drawList, new Vector2(left, top), Loc.T(L.Prism.Done), PrismArt.Fore, scale))
+            {
+                renaming = false;
+                var name = renameText.Trim();
+                if (name.Length > 0 && name != outfit.Name)
+                {
+                    wardrobe.Update(outfit with { Name = name });
+                }
+            }
+
+            return top + Metrics.Size.TapTarget * scale;
+        }
+
+        var pixels = PrismType.Fit(outfit.Name, PrismFace.Headline, width, DetailTitleUnits * scale,
+            DetailTitleMinUnits * scale, 2, out var lines);
+        top += PrismType.DrawLines(drawList, new Vector2(left, top), lines, PrismArt.Fore, PrismFace.Headline, pixels) +
+               Metrics.Space.Xs * scale;
+        if (PrismArt.Link(drawList, new Vector2(left, top), Loc.T(L.Prism.Rename), PrismArt.Muted, scale))
+        {
+            renaming = true;
+            focusRename = true;
+            renameText = outfit.Name;
+        }
+
+        return top + PrismType.LineHeight(PrismFace.Label, PrismArt.LabelPixels()) + Metrics.Space.Lg * scale;
     }
 
     private void WearOutfit(WardrobeOutfit outfit)

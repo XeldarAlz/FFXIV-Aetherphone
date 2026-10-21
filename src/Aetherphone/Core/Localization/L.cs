@@ -10850,6 +10850,12 @@ internal static class L
         public static readonly LocString PostsAsVanilla = new("prism.postsAsVanilla",
             "Mods are read through Penumbra. Without it, this glam posts as vanilla.");
         public static readonly LocString DesignsAdded = new("prism.designsAdded", "Designs added: {0}");
+        public static readonly LocString YouOwnThis = new("prism.youOwnThis", "You have this one");
+        public static readonly LocString VendorPrice = new("prism.vendorPrice", "Sold by vendors for {0} gil");
+        public static readonly LocString CheckMarket = new("prism.checkMarket", "Check market");
+        public static readonly LocString GlamOfTheDay = new("prism.glamOfTheDay", "Glam of the day");
+        public static readonly LocString SeasonStanding = new("prism.seasonStanding", "{0}: rank {1}, {2} points");
+        public static readonly LocString Rename = new("prism.rename", "Rename");
         public static readonly LocString TryOnGlam = new("prism.tryOnGlam", "Try on");
         public static readonly LocString Save = new("prism.save", "Save");
         public static readonly LocString Saved = new("prism.saved", "Saved");

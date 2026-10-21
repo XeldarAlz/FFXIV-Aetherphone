@@ -48,6 +48,7 @@ internal sealed partial class PrismApp
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth() - gutter * 2f;
         var cursor = DrawThemeCard(list, origin.X + gutter, origin.Y, width, scale);
+        cursor = DrawDayHero(list, origin.X + gutter, cursor, width, scale);
         cursor = DrawLaneGrid(list, body, origin.X + gutter, cursor, width, lane,
             discoverScope == GlamScope.Following ? L.Prism.FollowingEmptyHint : L.Prism.DiscoverEmptyHint, scale);
         ImGui.Dummy(new Vector2(width, cursor - origin.Y));
@@ -70,10 +71,7 @@ internal sealed partial class PrismApp
             if (PrismArt.Link(drawList, new Vector2(x, top), label, active ? PrismArt.Fore : PrismArt.Muted, scale) && !active)
             {
                 discoverScope = (GlamScope)index;
-                if (glams.Lane(discoverScope).NeverLoaded)
-                {
-                    glams.Refresh(discoverScope);
-                }
+                RefreshDiscover(false);
             }
 
             if (active)
@@ -100,7 +98,7 @@ internal sealed partial class PrismApp
                 2 => true,
                 _ => null,
             });
-            glams.Refresh(discoverScope);
+            RefreshDiscover(true);
         }
 
         return top + labelLine + Metrics.Space.Lg * scale;
@@ -218,6 +216,61 @@ internal sealed partial class PrismApp
         }
 
         return top + rows * (height + gap);
+    }
+
+    private void RefreshDiscover(bool always)
+    {
+        if (always || glams.Lane(discoverScope).NeverLoaded)
+        {
+            glams.Refresh(discoverScope);
+        }
+
+        if (discoverScope != GlamScope.Today && (always || glams.Lane(GlamScope.Today).NeverLoaded))
+        {
+            glams.Refresh(GlamScope.Today);
+        }
+    }
+
+    private float DrawDayHero(ImDrawListPtr drawList, float left, float top, float width, float scale)
+    {
+        if (discoverScope == GlamScope.Today || glams.Lane(GlamScope.Today).Items is not { Length: > 0 } today)
+        {
+            return top;
+        }
+
+        var glam = today[0];
+        var gap = Metrics.Space.Sm * scale;
+        var column = (width - gap * (GridColumns - 1)) / GridColumns;
+        var photo = new Rect(new Vector2(left, top), new Vector2(left + column, top + column / GlamStore.PhotoRatio));
+        drawList.AddRectFilled(photo.Min, photo.Max, ImGui.GetColorU32(Palette.WithAlpha(PrismArt.Fore, PickFillAlpha)));
+        DrawLook(drawList, photo, Cover(glam), false);
+        var labelPixels = PrismArt.LabelPixels();
+        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
+        var textLeft = photo.Max.X + Metrics.Space.Md * scale;
+        var textWidth = left + width - textLeft;
+        PrismType.Draw(drawList, new Vector2(textLeft, top), Loc.T(L.Prism.GlamOfTheDay), PrismArt.Muted, PrismFace.Label,
+            labelPixels);
+        var y = top + labelLine + Metrics.Space.Xs * scale;
+        var pixels = PrismType.Fit(glam.Title, PrismFace.Headline, textWidth, ThemeTitleUnits * scale,
+            ThemeTitleUnits * scale * 0.75f, 3, out var lines);
+        y += PrismType.DrawLines(drawList, new Vector2(textLeft, y), lines, PrismArt.Fore, PrismFace.Headline, pixels) +
+             Metrics.Space.Xs * scale;
+        PrismType.Draw(drawList, new Vector2(textLeft, y), PrismType.FitLabel(AuthorLine(glam.Author), labelPixels,
+            textWidth), PrismArt.Muted, PrismFace.Label, labelPixels);
+        PrismType.Draw(drawList, new Vector2(textLeft, photo.Max.Y - labelLine),
+            Loc.T(glam.Vanilla ? L.Prism.VanillaStamp : L.Prism.ModdedStamp), PrismArt.Fore, PrismFace.Label, labelPixels);
+        var hovered = UiInteract.Hover(photo.Min, new Vector2(left + width, photo.Max.Y));
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        if (UiInteract.Click(photo.Min, new Vector2(left + width, photo.Max.Y), hovered))
+        {
+            OpenGlam(glam);
+        }
+
+        return photo.Max.Y + Metrics.Space.Xl * scale;
     }
 
     private void RetryLane(FeedLane<GlamDto> lane)
