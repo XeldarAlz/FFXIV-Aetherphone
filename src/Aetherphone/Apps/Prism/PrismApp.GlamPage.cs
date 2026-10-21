@@ -327,6 +327,20 @@ internal sealed partial class PrismApp
         return top + PrismType.LineHeight(PrismFace.Label, labelPixels);
     }
 
+    private static bool HasCharacterMods(GlamDto glam)
+    {
+        var gear = glam.Gear ?? Array.Empty<GlamGearDto>();
+        for (var index = 0; index < gear.Length; index++)
+        {
+            if (gear[index].ItemId == 0 && gear[index].Mods is { Length: > 0 })
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private string TagLabel(string tag)
     {
         if (!tagLabels.TryGetValue(tag, out var label))
@@ -355,7 +369,8 @@ internal sealed partial class PrismApp
         var name = author.DisplayName.Length > 0 ? author.DisplayName : AuthorLine(author);
         var key = HashCode.Combine(name, Loc.Current.Code);
         var title = moreText.IsCurrent(key) ? moreText.Value : moreText.Store(key, Loc.T(L.Prism.MoreFrom, name));
-        top = DrawSectionLabel(drawList, left, top + Metrics.Space.Xl * scale, width, 2, title, scale);
+        top = DrawSectionLabel(drawList, left, top + Metrics.Space.Xl * scale, width, HasCharacterMods(glam) ? 2 : 1,
+            title, scale);
         return DrawGlamGrid(drawList, left, top, width, more, scale);
     }
 
