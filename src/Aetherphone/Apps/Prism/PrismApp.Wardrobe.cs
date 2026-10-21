@@ -2,6 +2,8 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Theme;
+using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
@@ -21,6 +23,7 @@ internal sealed partial class PrismApp
     private bool renaming;
     private bool focusRename;
     private string renameText = string.Empty;
+    private string coverFor = string.Empty;
 
     private void DrawWardrobe(ImDrawListPtr drawList, Rect content, float scale)
     {
@@ -134,8 +137,19 @@ internal sealed partial class PrismApp
                 continue;
             }
 
-            PrismArt.Swatch(drawList, new Rect(min, max), (int)(outfit.CreatedAtUnix % int.MaxValue));
-            var placed = 0;
+            var covered = DrawCover(drawList, new Rect(min, max), outfit.Cover);
+            if (covered)
+            {
+                drawList.AddRectFilledMultiColor(new Vector2(x, max.Y - height * TileShadeShare), max,
+                    ImGui.GetColorU32(TileClear), ImGui.GetColorU32(TileClear), ImGui.GetColorU32(TileShade),
+                    ImGui.GetColorU32(TileShade));
+            }
+            else
+            {
+                PrismArt.Swatch(drawList, new Rect(min, max), (int)(outfit.CreatedAtUnix % int.MaxValue));
+            }
+
+            var placed = covered ? CollagePieces : 0;
             for (var pieceIndex = 0; pieceIndex < outfit.Gear.Length && placed < CollagePieces; pieceIndex++)
             {
                 if (!GearItem(outfit.Gear[pieceIndex].ItemId, out _, out var iconId))
@@ -187,7 +201,18 @@ internal sealed partial class PrismApp
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth() - gutter * 2f;
         var left = origin.X + gutter;
-        var cursor = DrawOutfitName(list, left, origin.Y, width, outfit, scale);
+        var cursor = origin.Y;
+        if (outfit.Cover is not null)
+        {
+            var photo = new Rect(new Vector2(left, cursor),
+                new Vector2(left + width, cursor + width / GlamStore.PhotoRatio));
+            list.AddRectFilled(photo.Min, photo.Max,
+                ImGui.GetColorU32(Palette.WithAlpha(PrismArt.Fore, PickFillAlpha)));
+            DrawCover(list, photo, outfit.Cover);
+            cursor = photo.Max.Y + Metrics.Space.Lg * scale;
+        }
+
+        cursor = DrawOutfitName(list, left, cursor, width, outfit, scale);
         var height = PrismArt.StripUnits * scale;
         var gap = Metrics.Space.Md * scale;
         var half = (width - gap) * 0.5f;
@@ -281,14 +306,72 @@ internal sealed partial class PrismApp
             DetailTitleMinUnits * scale, 2, out var lines);
         top += PrismType.DrawLines(drawList, new Vector2(left, top), lines, PrismArt.Fore, PrismFace.Headline, pixels) +
                Metrics.Space.Xs * scale;
-        if (PrismArt.Link(drawList, new Vector2(left, top), Loc.T(L.Prism.Rename), PrismArt.Muted, scale))
+        var rename = Loc.T(L.Prism.Rename);
+        if (PrismArt.Link(drawList, new Vector2(left, top), rename, PrismArt.Muted, scale))
         {
             renaming = true;
             focusRename = true;
             renameText = outfit.Name;
         }
 
+        var photoLeft = left + PrismType.Measure(rename, PrismFace.Label, PrismArt.LabelPixels()).X +
+                        Metrics.Space.Xl * scale;
+        if (PrismArt.Link(drawList, new Vector2(photoLeft, top),
+                Loc.T(outfit.Cover is null ? L.Prism.AddPhoto : L.Prism.ChangePhoto), PrismArt.Muted, scale))
+        {
+            Push(PrismScreen.WardrobeCover);
+            coverFor = outfit.Id;
+            composeSession.Open(true);
+        }
+
         return top + PrismType.LineHeight(PrismFace.Label, PrismArt.LabelPixels()) + Metrics.Space.Lg * scale;
+    }
+
+    private bool DrawCover(ImDrawListPtr drawList, Rect rect, WardrobeCover? cover)
+    {
+        if (cover is null || wallpaperImages.Get(cover.Path) is not { } texture)
+        {
+            return false;
+        }
+
+        var (uv0, uv1) = new WallpaperCrop(cover.Zoom, cover.CenterX, cover.CenterY)
+            .ComputeUv(texture.Size, rect.Width / MathF.Max(1f, rect.Height));
+        drawList.AddImage(texture.Handle, rect.Min, rect.Max, uv0, uv1);
+        return true;
+    }
+
+    private void DrawWardrobeCover(ImDrawListPtr drawList, Rect content, float scale)
+    {
+        if (wardrobe.Find(coverFor) is not { } outfit)
+        {
+            GoBack();
+            return;
+        }
+
+        composeSession.ConsumePendingImport();
+        var top = DrawHeader(drawList, content, string.Empty, string.Empty, true, scale);
+        var paneHeight = MathF.Min(content.Width, (content.Max.Y - top) * PickPaneFraction);
+        var pane = new Rect(new Vector2(content.Min.X, top), new Vector2(content.Max.X, top + paneHeight));
+        composeSession.DrawPickPane(pane, scale, PickStyle, GlamStore.PhotoRatio, false, true, Loc.T(L.Prism.AddPhoto));
+        var strip = StripRect(content, scale);
+        if (PrismArt.Strip(drawList, strip, Loc.T(L.Prism.UsePhoto), string.Empty, true, composeSession.HasSelection))
+        {
+            var crop = composeSession.CropsArray()[0];
+            wardrobe.Update(outfit with
+            {
+                Cover = new WardrobeCover(composeSession.FirstSelected, crop.Zoom, crop.CenterX, crop.CenterY),
+            });
+            GoBack();
+            return;
+        }
+
+        var gridRect = new Rect(new Vector2(content.Min.X, pane.Max.Y + Metrics.Space.Md * scale),
+            new Vector2(content.Max.X, strip.Min.Y - Metrics.Space.Lg * scale));
+        using (AppSurface.BeginEdgeToEdge(gridRect))
+        {
+            composeSession.DrawPickGrid(gridRect, scale, PickStyle, false, Loc.T(L.Common.ImportFromPc),
+                Loc.T(L.Prism.AddPhoto));
+        }
     }
 
     private void WearOutfit(WardrobeOutfit outfit)

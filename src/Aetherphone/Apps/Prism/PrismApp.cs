@@ -40,6 +40,7 @@ internal enum PrismScreen : byte
     GlamList,
     Wardrobe,
     WardrobeOutfit,
+    WardrobeCover,
 }
 
 internal sealed partial class PrismApp : IResumableApp
@@ -57,6 +58,7 @@ internal sealed partial class PrismApp : IResumableApp
     private readonly GlamourService glamour;
     private readonly RemoteImageCache images;
     private readonly PhotoLibrary library;
+    private readonly WallpaperImageCache wallpaperImages;
     private readonly Configuration configuration;
     private readonly ConfirmService confirm;
     private readonly ReportService report;
@@ -94,6 +96,7 @@ internal sealed partial class PrismApp : IResumableApp
         this.glamour = glamour;
         this.images = images;
         this.library = library;
+        this.wallpaperImages = wallpaperImages;
         this.configuration = configuration;
         this.confirm = confirm;
         this.report = report;
@@ -261,6 +264,9 @@ internal sealed partial class PrismApp : IResumableApp
                 break;
             case PrismScreen.WardrobeOutfit:
                 DrawWardrobeOutfit(drawList, content, scale);
+                break;
+            case PrismScreen.WardrobeCover:
+                DrawWardrobeCover(drawList, content, scale);
                 break;
             default:
                 DrawCover(drawList, full, content, scale);

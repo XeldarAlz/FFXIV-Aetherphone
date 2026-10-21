@@ -10868,6 +10868,9 @@ internal static class L
         public static readonly LocString GlamOfTheDay = new("prism.glamOfTheDay", "Glam of the day");
         public static readonly LocString SeasonStanding = new("prism.seasonStanding", "{0}: rank {1}, {2} points");
         public static readonly LocString Rename = new("prism.rename", "Rename");
+        public static readonly LocString AddPhoto = new("prism.addPhoto", "Add a photo");
+        public static readonly LocString ChangePhoto = new("prism.changePhoto", "Change photo");
+        public static readonly LocString UsePhoto = new("prism.usePhoto", "Use this photo");
         public static readonly LocString TryOnGlam = new("prism.tryOnGlam", "Try on");
         public static readonly LocString Save = new("prism.save", "Save");
         public static readonly LocString Saved = new("prism.saved", "Saved");

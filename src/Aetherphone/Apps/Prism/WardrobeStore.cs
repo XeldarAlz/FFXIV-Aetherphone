@@ -15,7 +15,10 @@ internal sealed record WardrobeOutfit(
     GlamGearDto[] Gear,
     bool Favourite,
     long CreatedAtUnix,
-    string? GlamKey = null);
+    string? GlamKey = null,
+    WardrobeCover? Cover = null);
+
+internal sealed record WardrobeCover(string Path, float Zoom, float CenterX, float CenterY);
 
 internal sealed class WardrobeStore
 {
