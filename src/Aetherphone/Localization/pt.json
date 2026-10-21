@@ -5828,6 +5828,8 @@
   "prism.activityThisWeek": "Esta semana",
   "prism.activityThisMonth": "Este mês",
   "prism.activityEarlier": "Anteriores",
+  "prism.nothingToSave": "Nada equipado para salvar agora",
+  "prism.favouritesEmptyHint": "Toque em Favoritar em um visual e ele aparece aqui.",
   "announcements.signInRequired": "Entre no Aethernet em Ajustes para ler os avisos",
   "announcements.signInTitle": "É necessário entrar",
   "announcements.emptyTitle": "Nenhum aviso ainda",
