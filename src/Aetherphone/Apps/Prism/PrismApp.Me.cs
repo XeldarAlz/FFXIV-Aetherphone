@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
@@ -123,13 +124,11 @@ internal sealed partial class PrismApp
         var left = content.Min.X + gutter;
         var right = content.Max.X - gutter;
         var top = mine
-            ? content.Min.Y + HeaderGapUnits * scale
+            ? DrawMasthead(drawList, content, Loc.T(L.Prism.TabMe), string.Empty, string.Empty, scale, out _)
             : DrawHeader(drawList, content, string.Empty, string.Empty, true, scale);
-        var action = mine ? string.Empty : Loc.T(profile is { Following: true } ? L.Prism.Following : L.Prism.Follow);
-        var buttonWidth = mine ? 0f : PrismArt.ButtonWidth(action, scale) + Metrics.Space.Md * scale;
         var avatar = ProfileAvatarUnits * scale;
         var textLeft = left + avatar + Metrics.Space.Md * scale;
-        var nameWidth = right - textLeft - buttonWidth;
+        var nameWidth = right - textLeft;
         var name = AuthorName(author);
         var pixels = PrismType.Fit(name, PrismFace.Headline, nameWidth, ProfileNameUnits * scale,
             ProfileNameUnits * scale * 0.7f, 1, out var lines);
@@ -145,19 +144,24 @@ internal sealed partial class PrismApp
             pixels);
         PrismType.Draw(drawList, new Vector2(textLeft, textTop),
             PrismType.FitLabel(AuthorLine(author), labelPixels, nameWidth), PrismArt.Muted, PrismFace.Label, labelPixels);
-        if (!mine && author is not null &&
-            PrismArt.Button(drawList, new Vector2(right - PrismArt.ButtonWidth(action, scale),
-                middle - PrismArt.ButtonUnits * scale * 0.5f), action, scale, out _))
-        {
-            glams.SetFollow(author, profile is not { Following: true });
-        }
-
         top += rowHeight + Metrics.Space.Xl * scale;
         top = DrawProfileStats(drawList, left, top, right - left, profile, scale);
+        if (!mine && author is not null)
+        {
+            var following = profile is { Following: true };
+            var strip = new Rect(new Vector2(left, top), new Vector2(right, top + PrismArt.StripUnits * scale));
+            if (PrismArt.Strip(drawList, strip, Loc.T(following ? L.Prism.Following : L.Prism.Follow), string.Empty,
+                    !following, true, following ? UiSound.ToggleOff : UiSound.ToggleOn))
+            {
+                glams.SetFollow(author, !following);
+            }
+
+            top = strip.Max.Y + Metrics.Space.Xl * scale;
+        }
+
         if (mine)
         {
             top = DrawSeasonLine(drawList, left, top, scale);
-            top = DrawProfileToggle(drawList, left, top, scale);
         }
 
         var body = new Rect(new Vector2(content.Min.X, top), content.Max);
@@ -166,7 +170,11 @@ internal sealed partial class PrismApp
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth() - gutter * 2f;
         var cursor = DrawPlacings(list, origin.X + gutter, origin.Y, width, profile, scale);
-        if (cursor > origin.Y)
+        if (mine)
+        {
+            cursor = DrawProfileToggle(list, origin.X + gutter, cursor, scale);
+        }
+        else if (cursor > origin.Y)
         {
             cursor = DrawSectionLabel(list, origin.X + gutter, cursor, width, 1, Loc.T(L.Prism.StatGlams), scale);
         }
@@ -252,7 +260,7 @@ internal sealed partial class PrismApp
     private float DrawPlacings(ImDrawListPtr drawList, float left, float top, float width, GlamProfileDto? profile,
         float scale)
     {
-        if (showSaved || profile?.Placings is not { Length: > 0 } placings)
+        if (profile?.Placings is not { Length: > 0 } placings)
         {
             return top;
         }
