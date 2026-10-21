@@ -23,6 +23,7 @@ internal sealed partial class PrismApp
     private readonly Action<bool> postSettled;
     private GlamGearDto[] captured = Array.Empty<GlamGearDto>();
     private bool composeDetails;
+    private bool focusTitle;
     private bool capturedVanilla;
     private string glamTitle = string.Empty;
     private string glamTags = string.Empty;
@@ -70,6 +71,7 @@ internal sealed partial class PrismApp
             captured = glamour.Capture();
             capturedVanilla = GlamourService.IsVanilla(captured) && PhotosAreVanilla();
             composeDetails = true;
+            focusTitle = true;
         }
 
         var gridRect = new Rect(new Vector2(content.Min.X, pane.Max.Y + Metrics.Space.Md * scale),
@@ -86,6 +88,12 @@ internal sealed partial class PrismApp
         var gutter = PrismArt.Gutter(scale);
         var left = content.Min.X + gutter;
         var width = content.Width - gutter * 2f;
+        if (focusTitle)
+        {
+            ImGui.SetKeyboardFocusHere();
+            focusTitle = false;
+        }
+
         top = DrawField(drawList, left, top, width, Loc.T(L.Prism.TitleLabel), Loc.T(L.Prism.TitleHint), "##glamTitle",
             ref glamTitle, TitleMaxLength, scale);
         top = DrawField(drawList, left, top, width, Loc.T(L.Prism.TagsLabel), Loc.T(L.Prism.TagsHint), "##glamTags",
@@ -283,6 +291,7 @@ internal sealed partial class PrismApp
         {
             postedId = created.Id;
             postedCover = postingCover;
+            UiFeedback.Play(UiSound.Success);
             Go(PrismScreen.GlamDetail);
             ShowGlam(created);
         }
