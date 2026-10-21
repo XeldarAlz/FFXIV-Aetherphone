@@ -100,6 +100,7 @@ internal sealed class SocialActivityFeed
             }
             finally
             {
+                loaded = true;
                 loading = false;
             }
         });
