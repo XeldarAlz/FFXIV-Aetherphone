@@ -101,7 +101,7 @@ Uploads use `/media/upload-url` with scope `prism`, the same as contest entries.
 
 ### Fashion Report
 
-The This week tab carries the game's weekly Fashion Report, so players can track it without leaving the phone.
+The This week tab can carry the game's weekly Fashion Report, so players can track it without leaving the phone. It is parked for now: the screen and route are built, and `PrismApp.FashionReportShown` hides the button until the team wants it.
 
 `GET /prism/fashion-report?lang=` returns:
 

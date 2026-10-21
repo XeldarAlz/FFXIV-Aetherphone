@@ -17,6 +17,9 @@ internal sealed partial class PrismApp
     // The Fashion Report NPC, matched by her English name in the game's ENpcResident sheet.
     private const string MaskedRose = "Masked Rose";
 
+    // Parked until the team wants the Fashion Report on This week; set to true to show its button again.
+    private static readonly bool FashionReportShown = false;
+
     private static readonly LocString[] SlotNames =
     {
         L.Inventory.SlotMainHand, L.Inventory.SlotOffHand, L.Inventory.SlotHead, L.Inventory.SlotBody,

@@ -177,6 +177,11 @@ internal sealed partial class PrismApp
 
     private void DrawFashionButton(ImDrawListPtr drawList, Rect content, float left, float top, float scale)
     {
+        if (!FashionReportShown)
+        {
+            return;
+        }
+
         var fashion = Loc.T(L.Prism.FashionReport);
         if (left + PrismArt.ButtonWidth(fashion, scale) > content.Max.X - PrismArt.Gutter(scale))
         {
