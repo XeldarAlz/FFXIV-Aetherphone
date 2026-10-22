@@ -11100,6 +11100,16 @@ internal static class L
         public static readonly LocString FollowingEmptyTitle = new("prism.followingEmptyTitle",
             "Nothing from people you follow");
         public static readonly LocString ActivityEmptyTitle = new("prism.activityEmptyTitle", "No activity yet");
+        public static readonly LocString OnYourCharacter = new("prism.onYourCharacter", "On your character");
+        public static readonly LocPlural PieceCount = new("prism.pieceCount", "{0} piece", "{0} pieces");
+        public static readonly LocPlural ModCount = new("prism.modCount", "{0} mod", "{0} mods");
+        public static readonly LocString OwnedCount = new("prism.ownedCount", "You own {0}");
+        public static readonly LocString InstalledCount = new("prism.installedCount", "{0} installed");
+        public static readonly LocString TryOnPiece = new("prism.tryOnPiece", "Try on piece");
+        public static readonly LocString ModAuthor = new("prism.modAuthor", "by {0}");
+        public static readonly LocString Accessories = new("prism.accessories", "Accessories");
+        public static readonly LocString Weapon = new("prism.weapon", "Weapon");
+        public static readonly LocString More = new("prism.more", "More");
     }
 
     internal static class Announcements
