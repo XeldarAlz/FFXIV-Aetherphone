@@ -37,6 +37,16 @@ internal sealed partial class PrismApp
     private const int GlamsTab = 0;
     private const int SavedTab = 1;
     private const int PlacingsTab = 2;
+    private const int TipEditProfile = 0;
+    private const int TipMore = 1;
+    private const int TipSave = 2;
+    private const int TipFavourite = 3;
+    private const int TipEdit = 4;
+    private const int TipBoardFirst = 8;
+    private const int TipPieceFirst = 24;
+    private const int TipCount = 40;
+
+    private static readonly string[] TipIds = BuildTipIds();
 
     private readonly string[] profileTabs = new string[3];
     private readonly int[] profileTabKinds = new int[3];
@@ -466,8 +476,8 @@ internal sealed partial class PrismApp
         if (mine)
         {
             var reach = Metrics.Size.TapTarget * scale;
-            if (RoundButton.Icon(drawList, new Vector2(right - reach * 0.5f, middle), reach * 0.5f, PhoneIcons.Pencil,
-                    controls, ButtonStyle.Plain, Loc.T(L.Prism.EditProfile)))
+            if (IconButton(drawList, new Vector2(right - reach * 0.5f, middle), PhoneIcons.Pencil, TipEditProfile,
+                    Loc.T(L.Prism.EditProfile), scale))
             {
                 navigation.Open(SettingsAppId);
             }
@@ -729,6 +739,28 @@ internal sealed partial class PrismApp
         bottom = ImGui.GetCursorScreenPos().Y;
         ImGui.SetCursorScreenPos(resume);
         return bottom;
+    }
+
+    private static string[] BuildTipIds()
+    {
+        var ids = new string[TipCount];
+        for (var index = 0; index < ids.Length; index++)
+        {
+            ids[index] = string.Concat("prism.tip.", index.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
+
+        return ids;
+    }
+
+    private bool IconButton(ImDrawListPtr drawList, Vector2 center, string glyph, int tip, string tooltip, float scale,
+        Vector4? glyphInk = null)
+    {
+        var radius = Metrics.Size.TapTarget * 0.5f * scale;
+        var clicked = RoundButton.Icon(drawList, center, radius, glyph, controls, ButtonStyle.Plain, glyphInk: glyphInk);
+        var extent = new Vector2(radius, radius);
+        HoverTooltip.Show(TipIds[Math.Min(tip, TipCount - 1)], new Rect(center - extent, center + extent), tooltip,
+            HoverLabelSide.Above);
+        return clicked;
     }
 
     private static void DrawTileHover(ImDrawListPtr drawList, Rect photo, float scale)

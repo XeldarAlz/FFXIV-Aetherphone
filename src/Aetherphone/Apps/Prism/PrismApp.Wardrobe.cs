@@ -131,8 +131,8 @@ internal sealed partial class PrismApp
         var canShuffle = wardrobe.Outfits.Length > 1;
         if (canImport || canShuffle)
         {
-            if (RoundButton.Icon(drawList, new Vector2(right - height * 0.5f, middle), height * 0.5f, PhoneIcons.Dots,
-                    controls, ButtonStyle.Plain, Loc.T(L.Prism.More)))
+            if (IconButton(drawList, new Vector2(right - height * 0.5f, middle), PhoneIcons.Dots, TipMore,
+                    Loc.T(L.Prism.More), scale))
             {
                 sheetCount = 0;
                 AddSheetAction(canImport, WardrobeAction.Import);
@@ -152,8 +152,7 @@ internal sealed partial class PrismApp
         var saved = labelled
             ? DrawButton(drawList, new Rect(new Vector2(saveLeft, top), new Vector2(right, top + height)), save,
                 ButtonStyle.Solid, scale)
-            : RoundButton.Icon(drawList, new Vector2(right - height * 0.5f, middle), height * 0.5f, PhoneIcons.Plus,
-                controls, ButtonStyle.Plain, save);
+            : IconButton(drawList, new Vector2(right - height * 0.5f, middle), PhoneIcons.Plus, TipSave, save, scale);
         if (saved)
         {
             SaveWearing();
@@ -328,7 +327,7 @@ internal sealed partial class PrismApp
                     scale);
                 if (showEmpty)
                 {
-                    BoardTooltip(tile, piece);
+                    BoardTooltip(tile, piece, TipIds[TipBoardFirst + slot + 1]);
                 }
 
                 return;
@@ -341,20 +340,20 @@ internal sealed partial class PrismApp
         }
     }
 
-    private void BoardTooltip(Rect tile, GlamGearDto piece)
+    private void BoardTooltip(Rect tile, GlamGearDto piece, string tip)
     {
         for (var index = 0; index < fitPieces.Count; index++)
         {
             if (ReferenceEquals(fitPieces[index].Piece, piece))
             {
-                HoverTooltip.Show(tile, fitPieces[index].Name);
+                HoverTooltip.Show(tip, tile, fitPieces[index].Name);
                 return;
             }
         }
 
         if (piece.ItemId == 0 && fitModsTitle.Length > 0)
         {
-            HoverTooltip.Show(tile, fitModsTitle);
+            HoverTooltip.Show(tip, tile, fitModsTitle);
         }
     }
 
@@ -460,15 +459,15 @@ internal sealed partial class PrismApp
             }
         }
 
-        if (RoundButton.Icon(drawList, new Vector2(right - reach * 1.5f, middle), reach * 0.5f,
-                outfit.Favourite ? PhoneIcons.StarFilled : PhoneIcons.Star, controls, ButtonStyle.Plain,
-                Loc.T(outfit.Favourite ? L.Prism.Unfavourite : L.Prism.Favourite)))
+        if (IconButton(drawList, new Vector2(right - reach * 1.5f, middle),
+                outfit.Favourite ? PhoneIcons.StarFilled : PhoneIcons.Star, TipFavourite,
+                Loc.T(outfit.Favourite ? L.Prism.Unfavourite : L.Prism.Favourite), scale))
         {
             wardrobe.Update(outfit with { Favourite = !outfit.Favourite });
         }
 
-        if (RoundButton.Icon(drawList, new Vector2(right - reach * 0.5f, middle), reach * 0.5f, PhoneIcons.Pencil,
-                controls, ButtonStyle.Plain, Loc.T(L.Prism.Edit)))
+        if (IconButton(drawList, new Vector2(right - reach * 0.5f, middle), PhoneIcons.Pencil, TipEdit,
+                Loc.T(L.Prism.Edit), scale))
         {
             OpenFitSheet(outfit);
         }
@@ -494,14 +493,14 @@ internal sealed partial class PrismApp
         for (var index = 0; index < fitPieces.Count; index++)
         {
             ImGui.PushID(index);
-            top = DrawFitPiece(drawList, left, right, top, fitPieces[index], scale);
+            top = DrawFitPiece(drawList, left, right, top, fitPieces[index], index, scale);
             ImGui.PopID();
         }
 
         return top;
     }
 
-    private float DrawFitPiece(ImDrawListPtr drawList, float left, float right, float top, in FitPiece piece,
+    private float DrawFitPiece(ImDrawListPtr drawList, float left, float right, float top, in FitPiece piece, int tip,
         float scale)
     {
         var row = new Rect(new Vector2(left, top), new Vector2(right, top + FitRowHeight(scale)));
@@ -527,8 +526,8 @@ internal sealed partial class PrismApp
             drawList.AddCircle(mark, OwnedMarkUnits * scale, ImGui.GetColorU32(PrismArt.Fore), 0, Metrics.Stroke.Thin * scale);
         }
 
-        if (RoundButton.Icon(drawList, tryCenter, reach * 0.5f, PhoneIcons.Wand, controls, ButtonStyle.Plain,
-                Loc.T(L.Prism.TryOnGlam), glyphInk: PrismArt.Muted))
+        if (IconButton(drawList, tryCenter, PhoneIcons.Wand, TipPieceFirst + tip, Loc.T(L.Prism.TryOnGlam), scale,
+                PrismArt.Muted))
         {
             glamour.TryOnPiece(piece.Piece);
             StartWearing(string.Empty, piece.Name);
