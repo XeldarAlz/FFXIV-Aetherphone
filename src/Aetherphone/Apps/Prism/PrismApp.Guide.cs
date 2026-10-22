@@ -35,6 +35,10 @@ internal sealed partial class PrismApp
     private const float PlatePhotoShare = 0.52f;
     private const float PlateTileIconShare = 0.28f;
     private const float PlateTilePadShare = 0.08f;
+    private const float PlateStripBars = 1.6f;
+    private const float PlateBylineShare = 0.45f;
+    private const float PlateTitleGapBars = 1.4f;
+    private const float PlateTitleShare = 0.8f;
 
     private static readonly LocString[] GuideTitles =
     {
@@ -200,15 +204,16 @@ internal sealed partial class PrismApp
         var rule = frame.Min.Y + pad + PrismType.LineHeight(PrismFace.Label, labelPixels);
         PrismArt.SpectrumRule(drawList, frame.Min.X + pad, frame.Max.X - pad, rule, scale);
         var bar = frame.Height * PlateBarShare;
-        var strip = new Rect(new Vector2(frame.Min.X + pad, frame.Max.Y - pad - bar * 1.6f),
+        var strip = new Rect(new Vector2(frame.Min.X + pad, frame.Max.Y - pad - bar * PlateStripBars),
             new Vector2(frame.Max.X - pad, frame.Max.Y - pad));
         drawList.AddRectFilled(strip.Min, strip.Max, ImGui.GetColorU32(PrismArt.PhotoFore));
         var line = strip.Min.Y - pad - bar * 0.5f;
         drawList.AddRectFilled(new Vector2(strip.Min.X, line),
-            new Vector2(strip.Min.X + strip.Width * 0.45f, line + bar * 0.5f),
+            new Vector2(strip.Min.X + strip.Width * PlateBylineShare, line + bar * 0.5f),
             ImGui.GetColorU32(Palette.WithAlpha(PrismArt.PhotoFore, PlateBarFaint)));
-        line -= bar * 1.4f;
-        drawList.AddRectFilled(new Vector2(strip.Min.X, line), new Vector2(strip.Min.X + strip.Width * 0.8f, line + bar),
+        line -= bar * PlateTitleGapBars;
+        drawList.AddRectFilled(new Vector2(strip.Min.X, line),
+            new Vector2(strip.Min.X + strip.Width * PlateTitleShare, line + bar),
             ImGui.GetColorU32(PrismArt.PhotoFore));
     }
 
