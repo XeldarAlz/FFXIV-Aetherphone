@@ -5742,6 +5742,8 @@
   "prism.characterHeading": "Personaje",
   "prism.getMod": "Conseguirlo",
   "prism.modBy": "{0} de {1}",
+  "prism.leaveOutMod": "Quitar",
+  "prism.addBackMod": "Volver a añadir",
   "prism.photosHint": "Elige hasta 4 fotos. La primera es la portada.",
   "prism.titleLabel": "Título",
   "prism.titleHint": "Ponle nombre a tu glamour",

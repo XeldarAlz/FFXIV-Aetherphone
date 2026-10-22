@@ -11,6 +11,8 @@ using Dalamud.Game.ClientState.Objects.Enums;
 
 namespace Aetherphone.Apps.Prism;
 
+internal readonly record struct CapturedMod(string Key, string Label);
+
 internal sealed partial class PrismApp
 {
     private const int TitleMaxLength = 60;
@@ -20,6 +22,10 @@ internal sealed partial class PrismApp
     private const double RecaptureSeconds = 1.0;
 
     private readonly PhotoComposeSession composeSession;
+    private readonly HashSet<string> droppedMods = new(StringComparer.Ordinal);
+    private CapturedMod[] capturedMods = Array.Empty<CapturedMod>();
+    private GlamGearDto[]? capturedModsFor;
+    private string? capturedModsLanguage;
     private readonly Action<bool> postSettled;
     private GlamGearDto[] captured = Array.Empty<GlamGearDto>();
     private bool composeDetails;
@@ -31,12 +37,15 @@ internal sealed partial class PrismApp
     private string postingCover = string.Empty;
     private string postedCover = string.Empty;
     private string postedId = string.Empty;
+    private int composeDraft;
+    private int postingDraft;
     private CachedText capturedText;
     private double recaptureAt;
 
     private void StartCompose()
     {
-        postOutcome = OutcomePending;
+        composeDraft++;
+        droppedMods.Clear();
         composeSession.Open(false);
         composeSession.MaxPhotos = GlamStore.MaxPhotos;
         composeDetails = false;
@@ -50,7 +59,6 @@ internal sealed partial class PrismApp
 
     private void DrawCompose(ImDrawListPtr drawList, Rect content, float scale)
     {
-        ConsumePostOutcome();
         composeSession.ConsumePendingImport();
         var top = DrawHeader(drawList, content, string.Empty, Loc.T(L.Prism.PostGlam), true, scale);
         if (composeDetails)
@@ -98,21 +106,6 @@ internal sealed partial class PrismApp
             ref glamTitle, TitleMaxLength, scale);
         top = DrawField(drawList, left, top, width, Loc.T(L.Prism.TagsLabel), Loc.T(L.Prism.TagsHint), "##glamTags",
             ref glamTags, TagsMaxLength, scale);
-        var labelPixels = PrismArt.LabelPixels();
-        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
-        PrismType.Draw(drawList, new Vector2(left, top), Loc.T(L.Prism.CapturedHeading), PrismArt.Muted, PrismFace.Label,
-            labelPixels);
-        PrismType.DrawRight(drawList, new Vector2(left + width, top),
-            Loc.T(capturedVanilla ? L.Prism.VanillaStamp : L.Prism.ModdedStamp), PrismArt.Fore, PrismFace.Label,
-            labelPixels);
-        top += labelLine;
-        PrismType.Draw(drawList, new Vector2(left, top), CapturedLine(), PrismArt.Fore, PrismFace.Label, labelPixels);
-        top += labelLine + Metrics.Space.Sm * scale;
-        var note = PrismType.Sentences(Loc.T(glamour.HasPenumbra ? L.Prism.CapturedNote : L.Prism.PostsAsVanilla),
-            TextStyles.Subheadline, width);
-        top += Typography.DrawWrappedLeft(new Vector2(left, top), note, PrismArt.Muted, TextStyles.Subheadline,
-            PrismType.BalancedWidth(note, TextStyles.Subheadline, width)) + Metrics.Space.Lg * scale;
-        DrawStillTryingOn(drawList, left, top, width, scale, out _);
         if (RecaptureDue())
         {
             captured = glamour.Capture();
@@ -120,13 +113,27 @@ internal sealed partial class PrismApp
         }
 
         var strip = StripRect(content, scale);
+        var failure = string.Empty;
+        var failureHeight = 0f;
         if (glams.PostFailed && !glams.Posting)
         {
             var reason = glams.PostFailureText;
-            var text = reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint);
-            var height = Typography.MeasureWrappedBlock(text, TextStyles.Subheadline, width).Y;
-            Typography.DrawWrappedLeft(new Vector2(left, strip.Min.Y - Metrics.Space.Lg * scale - height), text,
-                PrismArt.Muted, TextStyles.Subheadline, width);
+            failure = reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint);
+            failureHeight = Typography.MeasureWrappedBlock(failure, TextStyles.Subheadline, width).Y;
+            Typography.DrawWrappedLeft(new Vector2(left, strip.Min.Y - Metrics.Space.Lg * scale - failureHeight),
+                failure, PrismArt.Muted, TextStyles.Subheadline, width);
+            failureHeight += Metrics.Space.Lg * scale;
+        }
+
+        var body = new Rect(new Vector2(content.Min.X, top),
+            new Vector2(content.Max.X, strip.Min.Y - Metrics.Space.Lg * scale - failureHeight));
+        using (BeginBody(body))
+        {
+            var list = ImGui.GetWindowDrawList();
+            var origin = ImGui.GetCursorScreenPos();
+            var bodyWidth = ScrollLayout.StableContentWidth() - gutter * 2f;
+            var cursor = DrawCaptured(list, origin.X + gutter, origin.Y, bodyWidth, scale);
+            ImGui.Dummy(new Vector2(bodyWidth, cursor - origin.Y));
         }
 
         var label = Loc.T(glams.Posting ? L.Prism.Posting : L.Prism.Post);
@@ -196,18 +203,111 @@ internal sealed partial class PrismApp
         return top + height;
     }
 
+    private float DrawCaptured(ImDrawListPtr drawList, float left, float top, float width, float scale)
+    {
+        var labelPixels = PrismArt.LabelPixels();
+        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
+        PrismType.Draw(drawList, new Vector2(left, top), Loc.T(L.Prism.CapturedHeading), PrismArt.Muted, PrismFace.Label,
+            labelPixels);
+        PrismType.DrawRight(drawList, new Vector2(left + width, top),
+            Loc.T(capturedVanilla ? L.Prism.VanillaStamp : L.Prism.ModdedStamp), PrismArt.Fore, PrismFace.Label,
+            labelPixels);
+        top += labelLine;
+        SyncCapturedMods();
+        PrismType.Draw(drawList, new Vector2(left, top), CapturedLine(), PrismArt.Fore, PrismFace.Label, labelPixels);
+        top += labelLine + Metrics.Space.Sm * scale;
+        var note = PrismType.Sentences(Loc.T(glamour.HasPenumbra ? L.Prism.CapturedNote : L.Prism.PostsAsVanilla),
+            TextStyles.Subheadline, width);
+        top += Typography.DrawWrappedLeft(new Vector2(left, top), note, PrismArt.Muted, TextStyles.Subheadline,
+            PrismType.BalancedWidth(note, TextStyles.Subheadline, width)) + Metrics.Space.Md * scale;
+        var leaveOut = Loc.T(L.Prism.LeaveOutMod);
+        var addBack = Loc.T(L.Prism.AddBackMod);
+        var actionWidth = MathF.Max(PrismType.Measure(leaveOut, PrismFace.Label, labelPixels).X,
+            PrismType.Measure(addBack, PrismFace.Label, labelPixels).X);
+        var rowHeight = Metrics.Size.TapTarget * scale;
+        for (var index = 0; index < capturedMods.Length; index++)
+        {
+            var mod = capturedMods[index];
+            var dropped = droppedMods.Contains(mod.Key);
+            var textTop = top + (rowHeight - labelLine) * 0.5f;
+            var room = width - actionWidth - Metrics.Space.Md * scale;
+            PrismType.Draw(drawList, new Vector2(left, textTop), PrismType.FitLabel(mod.Label, labelPixels, room),
+                dropped ? PrismArt.Muted : PrismArt.Fore, PrismFace.Label, labelPixels);
+            var action = dropped ? addBack : leaveOut;
+            var actionLeft = left + width - PrismType.Measure(action, PrismFace.Label, labelPixels).X;
+            if (PrismArt.Link(drawList, new Vector2(actionLeft, textTop), action, PrismArt.Muted, scale, rowHeight))
+            {
+                if (dropped)
+                {
+                    droppedMods.Remove(mod.Key);
+                }
+                else
+                {
+                    droppedMods.Add(mod.Key);
+                }
+            }
+
+            PrismArt.Hairline(drawList, left, left + width, top + rowHeight, PrismArt.Faint, scale);
+            top += rowHeight;
+        }
+
+        if (capturedMods.Length > 0)
+        {
+            top += Metrics.Space.Lg * scale;
+        }
+
+        return DrawStillTryingOn(drawList, left, top, width, scale) + PrismArt.BottomMargin(scale);
+    }
+
+    private void SyncCapturedMods()
+    {
+        if (ReferenceEquals(captured, capturedModsFor) && ReferenceEquals(Loc.Current.Code, capturedModsLanguage))
+        {
+            return;
+        }
+
+        capturedModsFor = captured;
+        capturedModsLanguage = Loc.Current.Code;
+        var count = 0;
+        for (var index = 0; index < captured.Length; index++)
+        {
+            count += captured[index].Mods?.Length ?? 0;
+        }
+
+        var mods = new CapturedMod[count];
+        var next = 0;
+        for (var index = 0; index < captured.Length; index++)
+        {
+            var pieceMods = captured[index].Mods ?? Array.Empty<GlamModDto>();
+            for (var modIndex = 0; modIndex < pieceMods.Length; modIndex++)
+            {
+                var mod = pieceMods[modIndex];
+                mods[next++] = new CapturedMod(PostedMods.Key(captured[index].Slot, mod),
+                    mod.Author.Length > 0 ? Loc.T(L.Prism.ModBy, mod.Name, mod.Author) : mod.Name);
+            }
+        }
+
+        capturedMods = mods;
+    }
+
     private string CapturedLine()
     {
         var pieces = 0;
-        var mods = 0;
         for (var index = 0; index < captured.Length; index++)
         {
             if (captured[index].ItemId != 0)
             {
                 pieces++;
             }
+        }
 
-            mods += captured[index].Mods?.Length ?? 0;
+        var mods = 0;
+        for (var index = 0; index < capturedMods.Length; index++)
+        {
+            if (!droppedMods.Contains(capturedMods[index].Key))
+            {
+                mods++;
+            }
         }
 
         var key = HashCode.Combine(pieces, mods, Loc.Current.Code);
@@ -234,6 +334,7 @@ internal sealed partial class PrismApp
     {
         captured = glamour.Capture(out var race, out var gender);
         capturedVanilla = GlamourService.IsVanilla(captured) && PhotosAreVanilla();
+        captured = PostedMods.Without(captured, droppedMods);
         var paths = composeSession.SelectedArray();
         var crops = composeSession.CropsArray();
         var count = Math.Min(paths.Length, GlamStore.MaxPhotos);
@@ -249,6 +350,7 @@ internal sealed partial class PrismApp
         }
 
         postOutcome = OutcomePending;
+        postingDraft = composeDraft;
         postingCover = count > 0 ? photos[0].Path : string.Empty;
         glams.Post(photos, captured, glamTitle.Trim(), SplitTags(glamTags), race, gender, capturedVanilla,
             glamour.TryingOn ? wearingGlamId : string.Empty, postSettled);
@@ -287,13 +389,20 @@ internal sealed partial class PrismApp
         }
 
         postOutcome = OutcomePending;
-        if (outcome == OutcomeSent && glams.Posted is { } created)
+        if (outcome != OutcomeSent || glams.Posted is not { } created)
         {
-            postedId = created.Id;
-            postedCover = postingCover;
-            UiFeedback.Play(UiSound.Success);
-            Go(PrismScreen.GlamDetail);
-            ShowGlam(created);
+            return;
         }
+
+        postedId = created.Id;
+        postedCover = postingCover;
+        UiFeedback.Play(UiSound.Success);
+        if (screen != PrismScreen.Compose || postingDraft != composeDraft)
+        {
+            return;
+        }
+
+        Go(PrismScreen.GlamDetail);
+        ShowGlam(created);
     }
 }

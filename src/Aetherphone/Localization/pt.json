@@ -5742,6 +5742,8 @@
   "prism.characterHeading": "Personagem",
   "prism.getMod": "Obter",
   "prism.modBy": "{0} de {1}",
+  "prism.leaveOutMod": "Remover",
+  "prism.addBackMod": "Adicionar de volta",
   "prism.photosHint": "Escolha até 4 fotos. A primeira é a capa.",
   "prism.titleLabel": "Título",
   "prism.titleHint": "Dê um nome ao seu glamour",

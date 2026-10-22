@@ -5742,6 +5742,8 @@
   "prism.characterHeading": "Персонаж",
   "prism.getMod": "Получить",
   "prism.modBy": "{0}, автор: {1}",
+  "prism.leaveOutMod": "Убрать",
+  "prism.addBackMod": "Вернуть",
   "prism.photosHint": "Выберите до 4 фото. Первое станет обложкой.",
   "prism.titleLabel": "Название",
   "prism.titleHint": "Назовите свой гламур",

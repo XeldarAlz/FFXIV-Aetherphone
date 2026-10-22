@@ -10933,6 +10933,8 @@ internal static class L
         public static readonly LocString CharacterHeading = new("prism.characterHeading", "Character");
         public static readonly LocString GetMod = new("prism.getMod", "Get it");
         public static readonly LocString ModBy = new("prism.modBy", "{0} by {1}");
+        public static readonly LocString LeaveOutMod = new("prism.leaveOutMod", "Leave out");
+        public static readonly LocString AddBackMod = new("prism.addBackMod", "Add back");
         public static readonly LocString PhotosHint = new("prism.photosHint", "Pick up to 4 photos. The first one is the cover.");
         public static readonly LocString TitleLabel = new("prism.titleLabel", "Title");
         public static readonly LocString TitleHint = new("prism.titleHint", "Name your glam");

@@ -203,6 +203,7 @@ internal sealed partial class PrismApp : IResumableApp
         TickRefresh();
         ForgetLoadsOnNewWeek();
         ConsumeSharedPhoto();
+        ConsumePostOutcome();
 
         screenAge += MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         var enter = PrismMotion.At(screenAge, 0f, TransitionTiming.PresentSmoothTime);

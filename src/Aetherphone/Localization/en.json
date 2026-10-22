@@ -5742,6 +5742,8 @@
   "prism.characterHeading": "Character",
   "prism.getMod": "Get it",
   "prism.modBy": "{0} by {1}",
+  "prism.leaveOutMod": "Leave out",
+  "prism.addBackMod": "Add back",
   "prism.photosHint": "Pick up to 4 photos. The first one is the cover.",
   "prism.titleLabel": "Title",
   "prism.titleHint": "Name your glam",

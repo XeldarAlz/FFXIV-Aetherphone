@@ -5742,6 +5742,8 @@
   "prism.characterHeading": "キャラクター",
   "prism.getMod": "入手",
   "prism.modBy": "{0}（作者：{1}）",
+  "prism.leaveOutMod": "外す",
+  "prism.addBackMod": "戻す",
   "prism.photosHint": "写真を4枚まで選べます。1枚目がカバーになります。",
   "prism.titleLabel": "タイトル",
   "prism.titleHint": "ミラプリに名前をつけましょう",

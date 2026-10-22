@@ -5742,6 +5742,8 @@
   "prism.characterHeading": "Personnage",
   "prism.getMod": "Obtenir",
   "prism.modBy": "{0} par {1}",
+  "prism.leaveOutMod": "Retirer",
+  "prism.addBackMod": "Remettre",
   "prism.photosHint": "Choisissez jusqu'à 4 photos. La première sert de couverture.",
   "prism.titleLabel": "Titre",
   "prism.titleHint": "Donnez un nom à votre mirage",

@@ -5742,6 +5742,8 @@
   "prism.characterHeading": "Karakter",
   "prism.getMod": "Edin",
   "prism.modBy": "{0}, {1} tarafından",
+  "prism.leaveOutMod": "Çıkar",
+  "prism.addBackMod": "Geri ekle",
   "prism.photosHint": "En fazla 4 fotoğraf seç. İlki kapak olur.",
   "prism.titleLabel": "Başlık",
   "prism.titleHint": "Glamına bir ad ver",

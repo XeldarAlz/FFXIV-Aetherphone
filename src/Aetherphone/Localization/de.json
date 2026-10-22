@@ -5742,6 +5742,8 @@
   "prism.characterHeading": "Charakter",
   "prism.getMod": "Holen",
   "prism.modBy": "{0} von {1}",
+  "prism.leaveOutMod": "Weglassen",
+  "prism.addBackMod": "Wieder hinzufügen",
   "prism.photosHint": "Wähle bis zu 4 Fotos. Das erste ist das Titelbild.",
   "prism.titleLabel": "Titel",
   "prism.titleHint": "Gib deiner Projektion einen Namen",

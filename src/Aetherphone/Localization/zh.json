@@ -5742,6 +5742,8 @@
   "prism.characterHeading": "角色",
   "prism.getMod": "获取",
   "prism.modBy": "{0}，作者 {1}",
+  "prism.leaveOutMod": "移除",
+  "prism.addBackMod": "加回",
   "prism.photosHint": "最多选择 4 张照片，第一张为封面。",
   "prism.titleLabel": "标题",
   "prism.titleHint": "为你的幻化命名",
