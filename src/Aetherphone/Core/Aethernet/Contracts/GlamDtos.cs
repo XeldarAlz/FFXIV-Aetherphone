@@ -68,10 +68,6 @@ internal sealed record GlamProfileDto(
     bool Following = false,
     GlamAuthorDto? User = null);
 
-internal sealed record GlamCollectionDto(string Id = "", string Name = "", int Count = 0, string CoverUrl = "");
-
-internal sealed record GlamCollectionRequest(string Name);
-
 internal sealed record GlamWornWithDto(uint ItemId = 0, int Count = 0);
 
 internal sealed record GlamItemDto(uint ItemId = 0, int GlamCount = 0, GlamWornWithDto[]? WornWith = null);

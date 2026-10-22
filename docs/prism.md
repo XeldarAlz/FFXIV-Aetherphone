@@ -104,7 +104,7 @@ A contest entry keeps today's routes (`PUT /prism/weeks/{id}/entry`, tracks, bal
 
 ### Prizes
 
-Each podium place pays coins through its coin rule, plus whatever the moderator console adds: gil, a badge, and a frame for good or for a number of days. Badges, frames and coins go out when the final is counted. Gil is traded by hand from the console's payout list, so the rewards page says it can take a few days. The team cannot trade on the Chinese servers, so a Chinese account (a Rising Stones id) that wins a gil place is paid that place's `chineseCoins` instead under the `prism.gil.cn` coin rule, and no gil is owed; `PrismPrizeDto.chineseCoins` carries the amount and the rewards page tells Chinese players about the swap.
+Each podium place pays coins through its coin rule, plus whatever the moderator console adds: gil, a badge, and a frame for good or for a number of days. Badges, frames and coins go out when the final is counted. Gil is traded by hand from the console's payout list, so the rewards page says it can take a few days. The team cannot trade on the Chinese servers, so a Chinese account (a Rising Stones id) that wins a gil place is paid that place's `chineseCoins` instead under the `prism.gil.cn` coin rule, and no gil is owed; each prize's `chineseCoins` carries the amount, and the rewards page tells Chinese players about the swap.
 
 A moderator can end a week early with the console's step buttons and, once its results are out, start the next week's round at once (`POST /mod/api/prism/rounds/start-next`). That round uses the next week's id and scheduled theme, runs its usual lengths from the moment it starts, and is the current round until the calendar reaches its week.
 
