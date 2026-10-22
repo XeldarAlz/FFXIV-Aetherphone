@@ -64,7 +64,8 @@ internal sealed partial class PrismApp
         var row = ActionRow(content, scale);
         var label = Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.EnterThisLook);
         var ready = pickSession.HasSelection && !store.Busy && (!VanillaEntry || DraftPieces() > 0);
-        if (DrawButton(drawList, row, label, ButtonStyle.Solid, scale, enabled: ready, id: PickPrimaryId))
+        if (DrawButton(drawList, row, label, ButtonStyle.Solid, scale, enabled: ready, id: PickPrimaryId,
+                tapSound: UiSound.Shutter))
         {
             var (race, gender) = WornBody();
             RememberEntryDrops();
