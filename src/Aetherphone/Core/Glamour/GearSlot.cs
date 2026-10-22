@@ -20,6 +20,7 @@ internal static class GearSlots
 {
     public const int None = -1;
 
+    private const int RetiredWaistSlot = 5;
     private const byte GlamourerLeftRing = 14;
 
     private static readonly (string Token, GearSlot Slot)[] PathTokens =
@@ -35,7 +36,7 @@ internal static class GearSlots
         GearSlot.Feet, GearSlot.Ears, GearSlot.Neck, GearSlot.Wrists, GearSlot.RingRight, GearSlot.RingLeft,
     };
 
-    public static bool IsGear(int slot) => slot is >= 0 and <= (int)GearSlot.RingLeft && slot != 5;
+    public static bool IsGear(int slot) => slot is >= 0 and <= (int)GearSlot.RingLeft && slot != RetiredWaistSlot;
 
     public static byte GlamourerSlot(GearSlot slot) =>
         slot == GearSlot.RingLeft ? GlamourerLeftRing : (byte)((byte)slot + 1);
