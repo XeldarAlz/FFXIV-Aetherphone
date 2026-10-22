@@ -249,7 +249,7 @@ internal sealed partial class PrismApp
 
         var editing = EditingEntryOutfit;
         var ready = !store.Busy && (!vanilla || !editing || DraftPieces() > 0);
-        if (PrismArt.Strip(drawList, strip, Loc.T(editing ? L.Prism.SaveOutfit : L.Prism.Done), string.Empty, true,
+        if (PrismArt.Strip(drawList, strip, Loc.T(editing ? L.Prism.Save : L.Prism.Done), string.Empty, true,
                 ready))
         {
             if (editing)

@@ -11030,7 +11030,6 @@ internal static class L
         public static readonly LocPlural ModsSummary = new("prism.modsSummary", "{0} mod credited", "{0} mods credited");
         public static readonly LocString EditGear = new("prism.editGear", "Edit gear");
         public static readonly LocString EditMods = new("prism.editMods", "Edit mods");
-        public static readonly LocString SaveOutfit = new("prism.saveOutfit", "Save");
         public static readonly LocString WinnersOutfit = new("prism.winnersOutfit", "The winner's outfit");
         public static readonly LocString OutfitCaveat = new("prism.outfitCaveat",
             "Saved when they entered, so it may not match the photo.");
