@@ -144,15 +144,23 @@ internal sealed partial class PrismApp
         }
 
         var save = Loc.T(L.Prism.SaveWearing);
-        var saveWidth = ButtonWidth([save], (right - left) * 0.6f, scale);
-        var saveRect = new Rect(new Vector2(right - saveWidth, top), new Vector2(right, top + height));
-        if (DrawButton(drawList, saveRect, save, ButtonStyle.Solid, scale))
+        var heading = Loc.T(L.Prism.TabWardrobe);
+        var saveWidth = ButtonWidth([save], float.MaxValue, scale);
+        var labelled = left + Typography.Measure(heading, PrismType.Title).X + Metrics.Space.Md * scale <=
+                       right - saveWidth;
+        var saveLeft = labelled ? right - saveWidth : right - height;
+        var saved = labelled
+            ? DrawButton(drawList, new Rect(new Vector2(saveLeft, top), new Vector2(right, top + height)), save,
+                ButtonStyle.Solid, scale)
+            : RoundButton.Icon(drawList, new Vector2(right - height * 0.5f, middle), height * 0.5f, PhoneIcons.Plus,
+                controls, ButtonStyle.Plain, save);
+        if (saved)
         {
             SaveWearing();
         }
 
-        var title = Typography.FitText(Loc.T(L.Prism.TabWardrobe),
-            MathF.Max(1f, saveRect.Min.X - Metrics.Space.Md * scale - left), PrismType.Title);
+        var title = Typography.FitText(heading, MathF.Max(1f, saveLeft - Metrics.Space.Md * scale - left),
+            PrismType.Title);
         Typography.Draw(drawList, new Vector2(left, middle - Typography.LineHeight(PrismType.Title) * 0.5f), title,
             PrismArt.Fore, PrismType.Title);
         return top + height;

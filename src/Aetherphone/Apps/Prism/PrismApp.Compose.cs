@@ -116,9 +116,12 @@ internal sealed partial class PrismApp
         acted = DrawButton(drawList, new Rect(new Vector2(row.Max.X - trailing, row.Min.Y), row.Max), action,
             ButtonStyle.Solid, scale, enabled: enabled, id: "prism.headerAction");
         var side = MathF.Max(leading, trailing) + Metrics.Space.Sm * scale;
-        var title = Typography.FitText(heading, MathF.Max(1f, row.Width - side * 2f), PrismType.Headline);
-        var size = Typography.Measure(title, PrismType.Headline);
-        Typography.Draw(drawList, row.Center - size * 0.5f, title, PrismArt.Fore, PrismType.Headline);
+        var room = MathF.Max(1f, row.Width - side * 2f);
+        var style = new TextStyle(Typography.FitScale(heading, room, PrismType.Headline.Scale, PrismType.Caption.Scale,
+            PrismType.Headline.Weight), PrismType.Headline.Weight);
+        var title = Typography.FitText(heading, room, style);
+        var size = Typography.Measure(title, style);
+        Typography.Draw(drawList, row.Center - size * 0.5f, title, PrismArt.Fore, style);
         return row.Max.Y;
     }
 

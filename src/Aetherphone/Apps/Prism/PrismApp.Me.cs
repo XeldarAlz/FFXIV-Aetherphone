@@ -498,25 +498,28 @@ internal sealed partial class PrismApp
             return top + height;
         }
 
-        if (mine && glams.Season is { Me: { Rank: > 0 } standing })
-        {
-            var rankKey = HashCode.Combine(standing.Rank, Loc.Current.Code);
-            var rank = profileRankText.IsCurrent(rankKey)
-                ? profileRankText.Value
-                : profileRankText.Store(rankKey, Loc.T(L.Prism.SeasonRank, standing.Rank));
-            var fitted = Typography.FitText(rank, (right - left) * 0.4f, PrismType.Caption);
-            var size = Typography.Measure(fitted, PrismType.Caption);
-            Typography.Draw(drawList, new Vector2(right - size.X, top + (height - size.Y) * 0.5f), fitted,
-                PrismArt.Muted, PrismType.Caption);
-            right -= size.X + Metrics.Space.Md * scale;
-        }
-
         var key = HashCode.Combine(stats.GlamCount, stats.TryOnsReceived, stats.LikesReceived, Loc.Current.Code);
         var line = profileStatsText.IsCurrent(key)
             ? profileStatsText.Value
             : profileStatsText.Store(key, string.Concat(Loc.Plural(L.Prism.GlamCount, stats.GlamCount), MetaSeparator,
                 Loc.Plural(L.Prism.TriedOnTotal, Clamp(stats.TryOnsReceived)), MetaSeparator,
                 Loc.Plural(L.Prism.LikeCount, Clamp(stats.LikesReceived))));
+        if (mine && glams.Season is { Me: { Rank: > 0 } standing })
+        {
+            var rankKey = HashCode.Combine(standing.Rank, Loc.Current.Code);
+            var rank = profileRankText.IsCurrent(rankKey)
+                ? profileRankText.Value
+                : profileRankText.Store(rankKey, Loc.T(L.Prism.SeasonRank, standing.Rank));
+            var size = Typography.Measure(rank, PrismType.Caption);
+            var room = right - size.X - Metrics.Space.Md * scale;
+            if (left + Typography.Measure(line, PrismType.Body).X <= room)
+            {
+                Typography.Draw(drawList, new Vector2(right - size.X, top + (height - size.Y) * 0.5f), rank,
+                    PrismArt.Muted, PrismType.Caption);
+                right = room;
+            }
+        }
+
         var fittedLine = Typography.FitText(line, MathF.Max(1f, right - left), PrismType.Body);
         var lineSize = Typography.Measure(fittedLine, PrismType.Body);
         Typography.Draw(drawList, new Vector2(left, top + (height - lineSize.Y) * 0.5f), fittedLine, PrismArt.Fore,
