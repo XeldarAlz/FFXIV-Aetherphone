@@ -113,8 +113,7 @@ internal sealed partial class PrismApp
         DrawTrackDots(drawList, photo, count, page,
             CoverPlacing(store.LastWeekResults(tracks[page].Id)) is null ? PrismArt.Fore : PrismArt.PhotoFore, scale);
         var inset = PhotoInset(full, content);
-        var tip = PhotoTips(photo, inset, scale) ? Loc.T(L.Prism.Back) : string.Empty;
-        if (DrawPhotoButton(drawList, photo, inset, 0, PhoneIcons.ChevronLeft, tip, scale))
+        if (DrawPhotoButton(drawList, photo, inset, 0, PhoneIcons.ChevronLeft, Loc.T(L.Prism.Back), scale))
         {
             LeaveScreen();
         }

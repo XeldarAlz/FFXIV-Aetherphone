@@ -42,11 +42,7 @@ internal sealed partial class PrismApp
     private const int TipSave = 2;
     private const int TipFavourite = 3;
     private const int TipEdit = 4;
-    private const int TipBoardFirst = 8;
     private const int TipPieceFirst = 24;
-    private const int TipCount = 40;
-
-    private static readonly string[] TipIds = BuildTipIds();
 
     private readonly string[] profileTabs = new string[3];
     private readonly int[] profileTabKinds = new int[3];
@@ -715,25 +711,13 @@ internal sealed partial class PrismApp
         return bottom;
     }
 
-    private static string[] BuildTipIds()
-    {
-        var ids = new string[TipCount];
-        for (var index = 0; index < ids.Length; index++)
-        {
-            ids[index] = string.Concat("prism.tip.", index.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        }
-
-        return ids;
-    }
-
     private bool IconButton(ImDrawListPtr drawList, Vector2 center, string glyph, int tip, string tooltip, float scale,
         Vector4? glyphInk = null)
     {
-        var radius = Metrics.Size.TapTarget * 0.5f * scale;
-        var clicked = RoundButton.Icon(drawList, center, radius, glyph, controls, ButtonStyle.Plain, glyphInk: glyphInk);
-        var extent = new Vector2(radius, radius);
-        HoverTooltip.Show(TipIds[Math.Min(tip, TipCount - 1)], new Rect(center - extent, center + extent), tooltip,
-            HoverLabelSide.Above);
+        ImGui.PushID(tip);
+        var clicked = RoundButton.Icon(drawList, center, Metrics.Size.TapTarget * 0.5f * scale, glyph, controls,
+            ButtonStyle.Plain, tooltip, glyphInk: glyphInk);
+        ImGui.PopID();
         return clicked;
     }
 

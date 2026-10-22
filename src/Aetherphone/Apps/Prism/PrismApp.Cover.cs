@@ -82,15 +82,12 @@ internal sealed partial class PrismApp
         DrawCoverTitle(drawList, photo, content, open ? week.Title : Loc.T(L.Prism.NoWeekTitle), open,
             coverCredit, week.PreviousWeekId.Length > 0, scale);
         var inset = PhotoInset(full, content);
-        var tips = PhotoTips(photo, inset, scale);
-        if (DrawPhotoButton(drawList, photo, inset, 1, PhoneIcons.HelpCircle,
-                tips ? Loc.T(L.Prism.HowItWorks) : string.Empty, scale))
+        if (DrawPhotoButton(drawList, photo, inset, 1, PhoneIcons.HelpCircle, Loc.T(L.Prism.HowItWorks), scale))
         {
             StartGuide(tab);
         }
 
-        if (DrawPhotoButton(drawList, photo, inset, 2, RewardsGlyph, tips ? Loc.T(L.Prism.Rewards) : string.Empty,
-                scale))
+        if (DrawPhotoButton(drawList, photo, inset, 2, RewardsGlyph, Loc.T(L.Prism.Rewards), scale))
         {
             OpenRewards();
         }
@@ -117,10 +114,6 @@ internal sealed partial class PrismApp
             new Rect(new Vector2(content.Min.X, y), new Vector2(content.Max.X, y + Button.LargeHeight * scale)), week,
             open, scale);
     }
-
-    private static bool PhotoTips(Rect photo, float inset, float scale) =>
-        UiInteract.HoverWindowOnly(photo.Min,
-            new Vector2(photo.Max.X, photo.Min.Y + inset + (Metrics.Size.TapTarget + Metrics.Space.Md) * scale));
 
     private void DrawCoverPhoto(ImDrawListPtr drawList, Rect photo, string url, PrismPlacingDto? credit, float scale)
     {

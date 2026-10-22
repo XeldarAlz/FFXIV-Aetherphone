@@ -326,7 +326,7 @@ internal sealed partial class PrismApp
                     scale);
                 if (showEmpty)
                 {
-                    BoardTooltip(tile, piece, TipIds[TipBoardFirst + slot + 1]);
+                    BoardTooltip(tile, piece);
                 }
 
                 return;
@@ -339,20 +339,20 @@ internal sealed partial class PrismApp
         }
     }
 
-    private void BoardTooltip(Rect tile, GlamGearDto piece, string tip)
+    private void BoardTooltip(Rect tile, GlamGearDto piece)
     {
         for (var index = 0; index < fitPieces.Count; index++)
         {
             if (ReferenceEquals(fitPieces[index].Piece, piece))
             {
-                HoverTooltip.Show(tip, tile, fitPieces[index].Name);
+                HoverTooltip.Show(tile, fitPieces[index].Name);
                 return;
             }
         }
 
         if (piece.ItemId == 0 && fitModsTitle.Length > 0)
         {
-            HoverTooltip.Show(tip, tile, fitModsTitle);
+            HoverTooltip.Show(tile, fitModsTitle);
         }
     }
 
