@@ -116,7 +116,17 @@ internal sealed partial class PrismApp
     private void FollowSkin(PhoneTheme theme)
     {
         ui.Theme = theme;
-        ui.Palette = ui.Palette with { Accent = PrismArt.Fore, BackdropTop = PrismArt.Back, BackdropBottom = PrismArt.Back };
+        ui.Palette = ui.Palette with
+        {
+            Accent = PrismArt.Fore,
+            TitleInk = PrismArt.Fore,
+            BodyInk = PrismArt.Fore,
+            MutedInk = PrismArt.Muted,
+            Hairline = PrismArt.Faint,
+            BackdropTop = PrismArt.Back,
+            BackdropBottom = PrismArt.Back,
+            FieldSurface = Surfaces.Fill(PrismArt.Fore, FillLevel.Tertiary),
+        };
     }
 
     private void DrawTabBar(Rect content)

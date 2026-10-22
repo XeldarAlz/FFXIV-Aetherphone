@@ -221,6 +221,7 @@ internal sealed partial class PrismApp : IResumableApp
         var content = context.Content;
         var full = SceneChrome.ScreenFrom(content, context.Theme, scale);
         PrismArt.Follow(context.Theme);
+        FollowSkin(context.Theme);
         FollowTheme(context.Theme);
         ImGui.GetWindowDrawList().AddRectFilled(full.Min, full.Max, ImGui.GetColorU32(PrismArt.Back));
         if (glams.IsSignedIn && screen != PrismScreen.Guide && launcher.TryConsume(Id, out var link))
@@ -433,14 +434,7 @@ internal sealed partial class PrismApp : IResumableApp
         followedTheme = theme;
         controls = new ControlInk(PrismArt.Fore, PrismArt.Fore, PrismArt.Muted, theme.Danger);
         photoControls = new ControlInk(PrismArt.PhotoFore, PrismArt.PhotoFore, PrismArt.PhotoMuted, theme.Danger);
-        tabInk = new SocialInk(AppPalettes.Neutral(PrismArt.Fore) with
-        {
-            TitleInk = PrismArt.Fore,
-            BodyInk = PrismArt.Fore,
-            MutedInk = PrismArt.Muted,
-            Hairline = PrismArt.Faint,
-            BackdropTop = PrismArt.Back,
-        });
+        tabInk = new SocialInk(ui.Palette);
     }
 
     private float DrawBackHeader(ImDrawListPtr drawList, Rect content, string title, float scale)
