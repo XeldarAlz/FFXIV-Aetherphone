@@ -1,0 +1,255 @@
+#!/usr/bin/env bash
+# The CI guards, runnable anywhere bash runs: CI, a pre-commit hook, and agent edit hooks.
+#
+#   tools/guards/check                every guard over the whole tree
+#   tools/guards/check em-dash linq   the named guards over the whole tree
+#   tools/guards/check --files A B    every guard over just those files
+#   tools/guards/check --staged       every guard over the files staged for commit
+#   tools/guards/check --hook         a Claude Code PostToolUse hook: reads the edited path from stdin
+#
+# Written for bash 3.2 and BSD tools as well as GNU, so macOS runs it unchanged: no grep -P, no jq.
+set -uo pipefail
+export LC_ALL=C
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$root"
+
+all_guards="version-sync ui-scale em-dash async-void linq clock-format layering underscore-fields bom namespace"
+failed=0
+failure_code=1
+files=""
+scoped=0
+
+fail() {
+  printf '%s\n' "$2"
+  if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+    echo "::error::$1"
+  else
+    echo "error: $1"
+  fi
+}
+
+existing() {
+  while IFS= read -r path; do
+    if [ -f "$path" ]; then
+      printf '%s\n' "$path"
+    fi
+  done
+}
+
+pick() {
+  printf '%s\n' "$files" | grep -E "$1" | grep -vE "${2:-^$}" || true
+}
+
+over() {
+  local list
+  list=$(cat)
+  if [ -z "$list" ]; then
+    return 0
+  fi
+  printf '%s\n' "$list" | tr '\n' '\0' | xargs -0 "$@" || true
+}
+
+report() {
+  local offenders
+  offenders=$(cat)
+  if [ -z "$offenders" ]; then
+    return 0
+  fi
+
+  fail "$1" "$offenders"
+  return 1
+}
+
+guard_version_sync() {
+  if [ "$scoped" = 1 ] && [ -z "$(pick '^(Directory\.Build\.props|repo\.json)$')" ]; then
+    return 0
+  fi
+
+  local build assembly testing
+  build=$(sed -n 's:.*<Version>\([0-9.]*\)</Version>.*:\1:p' Directory.Build.props | head -n 1)
+  assembly=$(sed -n 's/.*"AssemblyVersion": *"\([0-9.]*\)".*/\1/p' repo.json | head -n 1)
+  testing=$(sed -n 's/.*"TestingAssemblyVersion": *"\([0-9.]*\)".*/\1/p' repo.json | head -n 1)
+  if [ "$build" = "$assembly" ] && [ "$build" = "$testing" ]; then
+    return 0
+  fi
+
+  fail "Version mismatch: Directory.Build.props ($build), repo.json AssemblyVersion ($assembly), TestingAssemblyVersion ($testing) must all match." \
+    "Directory.Build.props <Version> = $build, repo.json AssemblyVersion = $assembly, TestingAssemblyVersion = $testing"
+  return 1
+}
+
+guard_ui_scale() {
+  pick '^src/.*\.cs$' '^src/Aetherphone/UiScale\.cs$' |
+    over grep -s -H -n 'ImGuiHelpers\.GlobalScale' |
+    report "Draw code must scale through UiScale.Current, not ImGuiHelpers.GlobalScale directly. Only src/Aetherphone/UiScale.cs may read the Dalamud scale."
+}
+
+# The dash is built from its UTF-8 bytes so this file does not trip itself, and announce-commits.yml is
+# exempt because it carries the character to substitute it out of Discord payloads.
+guard_em_dash() {
+  local dash
+  dash=$(printf '\342\200\224')
+  pick '.' '^\.github/workflows/announce-commits\.yml$' |
+    over grep -s -H -I -n -F -- "$dash" |
+    report "No em dashes anywhere: not in code, UI strings, locale JSONs, or docs. Use commas, colons, or parentheses."
+}
+
+guard_async_void() {
+  pick '^src/.*\.cs$' |
+    over grep -s -H -n 'async void' |
+    report "Zero async void. Return async Task, and fire-and-forget from draw code with an explicit discard: _ = Task.Run(...)."
+}
+
+# System.Linq is removed from the implicit usings in Aetherphone.csproj, so LINQ cannot be reached without
+# the using line appearing in a file. That makes this list the whole LINQ surface of the plugin.
+guard_linq() {
+  pick '^src/Aetherphone/.*\.cs$' \
+    '^src/Aetherphone/(Apps/Velvet/VelvetFilterSelection|Apps/Velvet/VelvetNotInterestedArchive|Core/Songs/SongPlayer)\.cs$' |
+    over grep -s -l 'using System\.Linq;' |
+    report "No LINQ in this tree: it allocates iterators and delegates on every call and the whole UI redraws every frame. Write a for loop, or add the file to the allowlist in tools/guards/check if the path is genuinely cold."
+}
+
+guard_clock_format() {
+  pick '^src/.*\.cs$' '^src/Aetherphone/Core/Localization/TimeText\.cs$' |
+    over grep -s -l -F ':mm' |
+    over grep -s -H -n -E '"(HH|hh|H|h):mm' |
+    report "All clock text goes through TimeText.Clock. Only src/Aetherphone/Core/Localization/TimeText.cs may hand-format a time pattern."
+}
+
+# Core holds services and domain, Windows holds the shared toolkit, and Apps are leaf features that consume
+# both. AppRegistry and WidgetCatalog are the two composition roots, so only they may name a leaf.
+guard_layering() {
+  pick '^src/Aetherphone/(Core|Windows)/.*\.cs$' '^src/Aetherphone/(Core/Apps/AppRegistry|Windows/Widgets/WidgetCatalog)\.cs$' |
+    over grep -s -H -n '^using Aetherphone\.Apps' |
+    report "Core and the Windows toolkit must not reach into an app. Invert onto an interface in Core, or move the shared piece down."
+}
+
+# A naming analyzer cannot express this: a private static readonly holding a lookup table is PascalCase while
+# one holding mutable state is camelCase, so the leading underscore is the part that is unambiguous. The
+# bracket opens with "]" because POSIX reads a backslash inside brackets literally.
+guard_underscore_fields() {
+  pick '^src/(Aetherphone|Aetherphone\.Tests)/.*\.cs$' |
+    over grep -s -H -n -E '^[[:space:]]*(private|protected)[][[:alnum:][:space:]<>,?.]*[[:space:]]_[a-zA-Z]' |
+    report "Fields carry no leading underscore. Name the field for what it holds instead."
+}
+
+# A marker on the first line hides the namespace from the namespace guard, so it is caught and named here.
+guard_bom() {
+  local bom
+  bom=$(printf '\357\273\277')
+  pick '^src/(Aetherphone|Aetherphone\.Tests)/.*\.cs$' |
+    over grep -s -l -I "^$bom" |
+    report "Files carry no byte order mark. Save as utf-8 without one, the way .editorconfig asks."
+}
+
+# ManagedDoom is a vendored port and keeps its own layout. Windows/Components groups its files by kind in
+# folders while every file keeps the flat Aetherphone.Windows.Components namespace, so consuming the toolkit
+# stays one import; sub-namespacing it was measured at 792 extra using lines across 424 files.
+guard_namespace() {
+  pick '^src/.*\.cs$' '^src/ManagedDoom/' |
+    over awk '
+      function finish() {
+        if (file == "") {
+          return
+        }
+        expected = file
+        if (expected ~ /^src\/Aetherphone\/Windows\/Components\//) {
+          expected = "Aetherphone.Windows.Components"
+        } else {
+          sub(/^src\//, "", expected)
+          sub(/\/[^\/]*$/, "", expected)
+          gsub(/\//, ".", expected)
+        }
+        if (found == "") {
+          print file ": no file-scoped namespace"
+        } else if (found != expected) {
+          print file ": declares " found ", expected " expected
+        }
+      }
+      FNR == 1 { finish(); file = FILENAME; found = "" }
+      /^namespace [A-Za-z0-9_.]+[ \t]*;/ { found = $2; sub(/[ \t]*;.*/, "", found); nextfile }
+      END { finish() }
+    ' |
+    report "A file-scoped namespace must match the folder path, except under Windows/Components which is one flat namespace. Move the file or fix the namespace."
+}
+
+run_guard() {
+  case "$1" in
+    version-sync) guard_version_sync ;;
+    ui-scale) guard_ui_scale ;;
+    em-dash) guard_em_dash ;;
+    async-void) guard_async_void ;;
+    linq) guard_linq ;;
+    clock-format) guard_clock_format ;;
+    layering) guard_layering ;;
+    underscore-fields) guard_underscore_fields ;;
+    bom) guard_bom ;;
+    namespace) guard_namespace ;;
+    *)
+      echo "Unknown guard '$1'. Known guards: $all_guards" >&2
+      exit 2
+      ;;
+  esac
+}
+
+# Windows hands over C:\ paths, JSON-escaped in hook input, and git answers with C:/ while Git Bash's pwd
+# answers with /c/, so both roots are tried and the match ignores case like the filesystem does.
+relative() {
+  local top path
+  top=$(git rev-parse --show-toplevel)
+  shopt -s nocasematch
+  while IFS= read -r path; do
+    path=$(printf '%s' "$path" | sed 's#\\\\#/#g; s#\\#/#g')
+    case "$path" in
+      "$top"/*) printf '%s\n' "${path:${#top}+1}" ;;
+      "$root"/*) printf '%s\n' "${path:${#root}+1}" ;;
+      /* | [A-Za-z]:/*) ;;
+      *) printf '%s\n' "$path" ;;
+    esac
+  done
+  shopt -u nocasematch
+}
+
+hook_path() {
+  grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n 1 | sed 's/^"file_path"[[:space:]]*:[[:space:]]*"//; s/"$//'
+}
+
+guards="$all_guards"
+case "${1:-}" in
+  --files)
+    shift
+    scoped=1
+    files=$(printf '%s\n' "$@" | relative | existing)
+    ;;
+  --staged)
+    scoped=1
+    files=$(git diff --cached --name-only --diff-filter=ACMR | existing)
+    ;;
+  --hook)
+    scoped=1
+    files=$(hook_path | relative | existing)
+    failure_code=2
+    exec 1>&2
+    ;;
+  *)
+    files=$(git ls-files --cached --others --exclude-standard | sort -u | existing)
+    if [ $# -gt 0 ]; then
+      guards="$*"
+    fi
+    ;;
+esac
+
+if [ "$scoped" = 1 ] && [ -z "$files" ]; then
+  exit 0
+fi
+
+for guard in $guards; do
+  if ! run_guard "$guard"; then
+    failed=1
+  fi
+done
+
+if [ "$failed" = 1 ]; then
+  exit "$failure_code"
+fi

@@ -21,7 +21,8 @@ jobs:
 
   # Cheap gates that don't need the SDK or Dalamud; run them first so a
   # version-sync mistake or a style break fails fast without burning the
-  # full build.
+  # full build. Each guard lives in tools/guards/check, which contributors
+  # and agent hooks run locally, so CI and a local run can never disagree.
   guards:
     name: Guards
     runs-on: ubuntu-latest
@@ -32,161 +33,43 @@ jobs:
 
       - name: Verify version sync (Directory.Build.props ↔ repo.json)
         shell: bash
-        run: |
-          build_ver=$(grep -oP '<Version>\K[\d.]+(?=</Version>)' Directory.Build.props)
-          assembly_ver=$(jq -r '.[0].AssemblyVersion' repo.json)
-          testing_ver=$(jq -r '.[0].TestingAssemblyVersion' repo.json)
-          echo "Directory.Build.props <Version>      = $build_ver"
-          echo "repo.json AssemblyVersion           = $assembly_ver"
-          echo "repo.json TestingAssemblyVersion    = $testing_ver"
-          if [ "$build_ver" != "$assembly_ver" ] || [ "$build_ver" != "$testing_ver" ]; then
-            echo "::error::Version mismatch: Directory.Build.props ($build_ver), repo.json AssemblyVersion ($assembly_ver), TestingAssemblyVersion ($testing_ver) must all match."
-            exit 1
-          fi
+        run: tools/guards/check version-sync
 
       - name: Verify UI scale seam
         shell: bash
-        run: |
-          offenders=$(grep -rn 'ImGuiHelpers\.GlobalScale' src --include=*.cs \
-            | grep -v 'src/Aetherphone/UiScale.cs' || true)
-          if [ -n "$offenders" ]; then
-            echo "$offenders"
-            echo "::error::Draw code must scale through UiScale.Current, not ImGuiHelpers.GlobalScale directly. Only src/Aetherphone/UiScale.cs may read the Dalamud scale."
-            exit 1
-          fi
+        run: tools/guards/check ui-scale
 
-      # The dash is built from its UTF-8 bytes so this step does not trip itself,
-      # and announce-commits.yml is exempt because it carries the character to
-      # substitute it out of Discord payloads.
       - name: Verify no em dashes
         shell: bash
-        run: |
-          dash=$(printf '\xe2\x80\x94')
-          offenders=$(git ls-files -z | xargs -0 grep -I -H -n -F -- "$dash" \
-            | grep -v '^.github/workflows/announce-commits.yml:' || true)
-          if [ -n "$offenders" ]; then
-            echo "$offenders"
-            echo "::error::No em dashes anywhere: not in code, UI strings, locale JSONs, or docs. Use commas, colons, or parentheses."
-            exit 1
-          fi
+        run: tools/guards/check em-dash
 
       - name: Verify no async void
         shell: bash
-        run: |
-          offenders=$(grep -rn 'async void' src --include=*.cs || true)
-          if [ -n "$offenders" ]; then
-            echo "$offenders"
-            echo "::error::Zero async void. Return async Task, and fire-and-forget from draw code with an explicit discard: _ = Task.Run(...)."
-            exit 1
-          fi
+        run: tools/guards/check async-void
 
-      # System.Linq is removed from the implicit usings in Aetherphone.csproj, so
-      # LINQ cannot be reached without the using line below appearing in a file.
-      # That makes this list the whole LINQ surface of the plugin rather than a
-      # sample of operator names, which is what the previous grep checked: it
-      # named three files while four others were using operators it never listed.
       - name: Verify no new LINQ
         shell: bash
-        run: |
-          offenders=$(grep -rln 'using System\.Linq;' src/Aetherphone --include=*.cs \
-            | grep -v '^src/Aetherphone/Apps/Velvet/VelvetFilterSelection.cs$' \
-            | grep -v '^src/Aetherphone/Apps/Velvet/VelvetNotInterestedArchive.cs$' \
-            | grep -v '^src/Aetherphone/Core/Songs/SongPlayer.cs$' || true)
-          if [ -n "$offenders" ]; then
-            echo "$offenders"
-            echo "::error::No LINQ in this tree: it allocates iterators and delegates on every call and the whole UI redraws every frame. Write a for loop, or add the file here if the path is genuinely cold."
-            exit 1
-          fi
+        run: tools/guards/check linq
 
       - name: Verify clock format seam
         shell: bash
-        run: |
-          offenders=$(grep -rnE '"(HH|hh|H|h):mm' src --include=*.cs \
-            | grep -v 'src/Aetherphone/Core/Localization/TimeText.cs' || true)
-          if [ -n "$offenders" ]; then
-            echo "$offenders"
-            echo "::error::All clock text goes through TimeText.Clock. Only src/Aetherphone/Core/Localization/TimeText.cs may hand-format a time pattern."
-            exit 1
-          fi
+        run: tools/guards/check clock-format
 
-      # Core holds services and domain, Windows holds the shared toolkit, and Apps
-      # are leaf features that consume both. AppRegistry and WidgetCatalog are the
-      # two composition roots, so they are the only places allowed to name a leaf.
       - name: Verify layering
         shell: bash
-        run: |
-          offenders=$(grep -rn '^using Aetherphone\.Apps' src/Aetherphone/Core src/Aetherphone/Windows --include=*.cs \
-            | grep -v '^src/Aetherphone/Core/Apps/AppRegistry.cs:' \
-            | grep -v '^src/Aetherphone/Windows/Widgets/WidgetCatalog.cs:' || true)
-          if [ -n "$offenders" ]; then
-            echo "$offenders"
-            echo "::error::Core and the Windows toolkit must not reach into an app. Invert onto an interface in Core, or move the shared piece down."
-            exit 1
-          fi
+        run: tools/guards/check layering
 
-      # A naming analyzer cannot express this: a private static readonly holding a
-      # lookup table is PascalCase while one holding mutable state is camelCase,
-      # so any capitalization rule fires on about a thousand correct names. The
-      # leading underscore is the part that is unambiguous. The bracket opens
-      # with "]" because POSIX reads a backslash inside brackets literally, so
-      # "\]" would close the set early and the check would match nothing real.
       - name: Verify no underscore prefixed fields
         shell: bash
-        run: |
-          offenders=$(grep -rnE '^[[:space:]]*(private|protected)[][[:alnum:][:space:]<>,?.]*[[:space:]]_[a-zA-Z]' \
-            src/Aetherphone src/Aetherphone.Tests --include=*.cs || true)
-          if [ -n "$offenders" ]; then
-            echo "$offenders"
-            echo "::error::Fields carry no leading underscore. Name the field for what it holds instead."
-            exit 1
-          fi
+        run: tools/guards/check underscore-fields
 
-      # A marker on the first line hides the namespace from the check below, so
-      # a correct file gets reported as having no namespace at all and the error
-      # sends you looking in the wrong place. Catch the marker itself and name
-      # it. .editorconfig asks for utf-8, not utf-8-bom.
       - name: Verify no byte order marks
         shell: bash
-        run: |
-          offenders=$(grep -rlI $'^\xef\xbb\xbf' src/Aetherphone src/Aetherphone.Tests --include=*.cs || true)
-          if [ -n "$offenders" ]; then
-            echo "$offenders"
-            echo "::error::Files carry no byte order mark. Save as utf-8 without one, the way .editorconfig asks."
-            exit 1
-          fi
+        run: tools/guards/check bom
 
-      # ManagedDoom is a vendored port and keeps its own layout.
-      #
-      # Windows/Components is the one deliberate exception. Its folders group 182
-      # files by kind so the toolkit is navigable, while every file keeps the flat
-      # Aetherphone.Windows.Components namespace so consuming it stays one import.
-      # Sub-namespacing was measured first: it would have added 792 using lines
-      # across 424 files, and the files that draw the most would have needed five
-      # to nine imports each. The rule for that subtree is therefore the inverse,
-      # every file declares exactly the one namespace, and it is checked as such.
       - name: Verify namespace matches folder
         shell: bash
-        run: |
-          toolkit='^src/Aetherphone/Windows/Components/'
-          offenders=""
-          while IFS= read -r file; do
-            actual=$(grep -m1 -oP '^namespace \K[A-Za-z0-9_.]+(?=\s*;)' "$file" || true)
-            if [[ "$file" =~ $toolkit ]]; then
-              expected="Aetherphone.Windows.Components"
-            else
-              expected=$(dirname "${file#src/}" | tr '/' '.')
-            fi
-            if [ -z "$actual" ]; then
-              offenders+="$file: no file-scoped namespace"$'\n'
-            elif [ "$actual" != "$expected" ]; then
-              offenders+="$file: declares $actual, expected $expected"$'\n'
-            fi
-          done < <(git ls-files -- src | grep '\.cs$' | grep -v '^src/ManagedDoom/')
-          if [ -n "$offenders" ]; then
-            printf '%s' "$offenders"
-            echo "::error::A file-scoped namespace must match the folder path, except under Windows/Components which is one flat namespace. Move the file or fix the namespace."
-            exit 1
-          fi
+        run: tools/guards/check namespace
 
   # Full build. Needs Dalamud present at the standard plugin path so
   # Dalamud.NET.Sdk can resolve $(DalamudLibPath).
@@ -213,6 +96,12 @@ jobs:
           } catch {
             Write-Host "Defender is not managing this runner: $_"
           }
+
+      # The guards already passed on Linux. This run proves the script and its
+      # cmd wrapper still work for contributors on Windows.
+      - name: Verify guards run on Windows
+        shell: cmd
+        run: tools\guards\check.cmd
 
       # The package cache is keyed on the lock files plus the test project,
       # which has no lock file of its own, so a dependency bump anywhere
