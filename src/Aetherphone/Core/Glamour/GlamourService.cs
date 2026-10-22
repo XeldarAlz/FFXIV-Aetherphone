@@ -266,7 +266,9 @@ internal sealed class GlamourService : IDisposable
 
     public string Design(Guid id) => HasGlamourer ? glamourer.Design(id) : string.Empty;
 
-    public bool SaveDesign(string state, string name) => HasGlamourer && glamourer.AddDesign(state, name);
+    public bool HasDesign(Guid id) => HasGlamourer && glamourer.Designs().ContainsKey(id);
+
+    public Guid SaveDesign(string state, string name) => HasGlamourer ? glamourer.AddDesign(state, name) : Guid.Empty;
 
     public void Dispose()
     {

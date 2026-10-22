@@ -279,10 +279,9 @@ internal sealed partial class PrismApp
         cursor = DrawSectionLabel(list, left, cursor, width, 0, Loc.T(L.Prism.GearHeading), scale);
         cursor = DrawGearList(list, left, cursor, width, outfit.Gear, true, scale) + Metrics.Space.Lg * scale;
         if (outfit.State.Length > 0 && glamour.HasGlamourer &&
-            PrismArt.Link(list, new Vector2(left, cursor), Loc.T(L.Prism.SaveToGlamourer), PrismArt.Muted, scale) &&
-            glamour.SaveDesign(outfit.State, outfit.Name))
+            PrismArt.Link(list, new Vector2(left, cursor), Loc.T(L.Prism.SaveToGlamourer), PrismArt.Muted, scale))
         {
-            ShellToast.Show(Loc.T(L.Prism.Saved));
+            SaveToGlamourer(outfit);
         }
 
         cursor += Metrics.Size.TapTarget * scale;
@@ -408,17 +407,35 @@ internal sealed partial class PrismApp
     private void WearOutfit(WardrobeOutfit outfit)
     {
         StartWearing(outfit.Id, outfit.Name);
-        if (outfit.DesignId != Guid.Empty && glamour.ApplyDesign(outfit.DesignId))
-        {
-            return;
-        }
-
         if (outfit.State.Length > 0 && glamour.ApplyState(outfit.State, outfit.Gear))
         {
             return;
         }
 
+        if (outfit.DesignId != Guid.Empty && glamour.ApplyDesign(outfit.DesignId))
+        {
+            return;
+        }
+
         glamour.TryOn(outfit.Gear);
+    }
+
+    private void SaveToGlamourer(WardrobeOutfit outfit)
+    {
+        if (outfit.DesignId != Guid.Empty && glamour.HasDesign(outfit.DesignId))
+        {
+            ShellToast.Show(Loc.T(L.Prism.Saved));
+            return;
+        }
+
+        var designId = glamour.SaveDesign(outfit.State, outfit.Name);
+        if (designId == Guid.Empty)
+        {
+            return;
+        }
+
+        wardrobe.Update(outfit with { DesignId = designId });
+        ShellToast.Show(Loc.T(L.Prism.Saved));
     }
 
     private void SaveWearing()

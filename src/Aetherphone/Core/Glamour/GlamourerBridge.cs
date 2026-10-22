@@ -139,10 +139,10 @@ internal sealed class GlamourerBridge : IDisposable
         Call(() => applyDesignGate.InvokeFunc(id, PenumbraBridge.PlayerIndex, 0, OnceFlag | EquipmentFlag), -1,
             "ApplyDesign") == Success;
 
-    public bool AddDesign(string state, string name)
+    public Guid AddDesign(string state, string name)
     {
-        var (result, _) = Call(() => addDesignGate.InvokeFunc(state, name), (-1, Guid.Empty), "AddDesign");
-        return result == Success;
+        var (result, id) = Call(() => addDesignGate.InvokeFunc(state, name), (-1, Guid.Empty), "AddDesign");
+        return result == Success ? id : Guid.Empty;
     }
 
     public void Dispose()
