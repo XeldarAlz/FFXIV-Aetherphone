@@ -160,9 +160,9 @@ internal sealed partial class PrismApp
         }
 
         glamMenu.Gate();
-        RefreshStats(glam);
-        var full = SceneChrome.ScreenFrom(content, followedTheme!, scale);
         var key = WearKey(glam);
+        RefreshPieces(key, glam.Gear ?? Array.Empty<GlamGearDto>());
+        var full = SceneChrome.ScreenFrom(content, followedTheme!, scale);
         using (BeginBody(new Rect(new Vector2(full.Min.X, PhotoTop(full, content)), new Vector2(full.Max.X, content.Max.Y))))
         {
             DrawGlamBody(ImGui.GetWindowDrawList(), full, content, glam, key, scale);
@@ -213,9 +213,8 @@ internal sealed partial class PrismApp
         ImGui.Dummy(new Vector2(full.Width, cursor - origin.Y + PrismArt.BottomMargin(scale)));
     }
 
-    private void RefreshStats(GlamDto glam)
+    private void RefreshPieces(string key, GlamGearDto[] gear)
     {
-        var key = WearKey(glam);
         var storage = OwnedItems.StorageLoaded;
         if (statsFor == key && statsStorage == storage)
         {
@@ -226,7 +225,6 @@ internal sealed partial class PrismApp
         statsStorage = storage;
         modLines.Clear();
         modBylines.Clear();
-        var gear = glam.Gear ?? Array.Empty<GlamGearDto>();
         ownedPieces = GlamourService.OwnedPieces(gear, out totalPieces, ownedIds);
         missingMods = glamour.MissingMods(gear, out totalMods);
         BuildPieces(gear);
@@ -280,17 +278,7 @@ internal sealed partial class PrismApp
 
         DrawPiecesLayer(drawList, photo, topInset, gear, scale);
         DrawPiecesChip(drawList, photo, scale);
-        if (DrawPhotoButton(drawList, photo, topInset, 0, PhoneIcons.ChevronLeft, Loc.T(L.Prism.Back), scale))
-        {
-            if (piecesOpen)
-            {
-                piecesOpen = false;
-            }
-            else
-            {
-                LeaveScreen();
-            }
-        }
+        DrawPhotoBack(drawList, photo, topInset, scale);
 
         if (glam.Id.Length == 0)
         {
