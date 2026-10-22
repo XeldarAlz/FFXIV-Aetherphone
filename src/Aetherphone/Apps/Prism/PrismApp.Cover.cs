@@ -32,6 +32,7 @@ internal sealed partial class PrismApp
     private CachedText coverByText;
     private CachedText countText;
     private CachedText factText;
+    private CachedText entryFactText;
     private CachedText clockText;
     private string[] trackLabels = Array.Empty<string>();
     private string coverShown = string.Empty;
@@ -101,7 +102,14 @@ internal sealed partial class PrismApp
 
         if (open)
         {
-            DrawFact(drawList, new Vector2(content.Min.X, y), content.Width, FactCaption(week), FactValue(week));
+            var room = content.Width;
+            if (EnteredJudging(week))
+            {
+                room -= FactLink(drawList, new Rect(new Vector2(content.Min.X, y), new Vector2(content.Max.X, y + fact)),
+                    scale);
+            }
+
+            DrawFact(drawList, new Vector2(content.Min.X, y), room, FactCaption(week), FactValue(week));
         }
         else
         {
@@ -315,8 +323,37 @@ internal sealed partial class PrismApp
         }
     }
 
+    private static bool EnteredJudging(PrismWeekDto week) =>
+        PrismPhases.Judgeable(week.Phase) && week.MyEntry is not null;
+
+    private float FactLink(ImDrawListPtr drawList, Rect row, float scale)
+    {
+        var glyph = PrismArt.IconUnits * scale;
+        var hovered = UiInteract.Hover(row.Min, row.Max);
+        if (hovered)
+        {
+            drawList.AddRectFilled(row.Min, row.Max, ImGui.GetColorU32(Surfaces.Fill(controls, FillLevel.Quaternary)),
+                Metrics.Radius.Md * scale);
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        PhoneIcon.Draw(drawList, new Vector2(row.Max.X - glyph * 0.5f, row.Center.Y), PhoneIcons.ChevronRight,
+            PrismArt.Muted, glyph);
+        if (UiInteract.Click(row.Min, row.Max, hovered))
+        {
+            Go(PrismScreen.Entry);
+        }
+
+        return glyph + Metrics.Space.Sm * scale;
+    }
+
     private string FactCaption(PrismWeekDto week)
     {
+        if (EnteredJudging(week))
+        {
+            return FactLine(ref entryFactText, Loc.T(L.Prism.YourLook), Loc.T(StatusName(week.MyEntry!.Status)));
+        }
+
         if (week.Phase == PrismPhases.Entering && week.MyEntry is not null)
         {
             return Loc.T(L.Prism.YourLook);
@@ -325,12 +362,12 @@ internal sealed partial class PrismApp
         if (week.Phase == PrismPhases.Results)
         {
             var next = DeadlineValue(week);
-            return next.Length > 0 ? FactLine(Loc.T(L.Prism.NextTheme), next) : string.Empty;
+            return next.Length > 0 ? FactLine(ref factText, Loc.T(L.Prism.NextTheme), next) : string.Empty;
         }
 
         var label = Loc.T(DeadlineLabel(week.Phase));
         return PrismPhases.Judgeable(week.Phase) && week.BallotsCast > 0
-            ? FactLine(label, JudgedLine(week.BallotsCast))
+            ? FactLine(ref factText, label, JudgedLine(week.BallotsCast))
             : label;
     }
 
@@ -339,15 +376,14 @@ internal sealed partial class PrismApp
         PrismPhases.Entering when week.MyEntry is { } entry => Loc.T(StatusName(entry.Status)),
         PrismPhases.Results => Loc.T(L.Prism.ResultsOut),
         PrismPhases.Tallying => ResultsClock(week.ResultsAtUnix),
+        _ when EnteredJudging(week) => FactLine(ref factText, Loc.T(DeadlineLabel(week.Phase)), DeadlineValue(week)),
         _ => DeadlineValue(week),
     };
 
-    private string FactLine(string label, string detail)
+    private static string FactLine(ref CachedText cache, string label, string detail)
     {
         var key = HashCode.Combine(label, detail);
-        return factText.IsCurrent(key)
-            ? factText.Value
-            : factText.Store(key, Loc.T(L.Prism.WithTrack, label, detail));
+        return cache.IsCurrent(key) ? cache.Value : cache.Store(key, Loc.T(L.Prism.WithTrack, label, detail));
     }
 
     private string ResultsClock(long unix)
