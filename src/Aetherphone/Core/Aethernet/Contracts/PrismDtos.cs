@@ -68,10 +68,10 @@ internal sealed record PrismEntryRequest(string MediaKey, int Width, int Height,
     string? Track = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     GlamGearDto[]? Outfit = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    int Race = 0,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    int Gender = 0);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    int? Race = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    int? Gender = null);
 
 internal sealed record PrismOutfitRequest(GlamGearDto[]? Outfit);
 
