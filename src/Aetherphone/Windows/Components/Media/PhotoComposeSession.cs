@@ -61,6 +61,7 @@ internal sealed class PhotoComposeSession : IDisposable
     private const int CircleSegments = 24;
 
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
+    private static readonly Vector4 Black = new(0f, 0f, 0f, 1f);
     private static readonly Vector4 WhiteRing = new(1f, 1f, 1f, 0.9f);
     private static readonly Vector4 HoverWash = new(1f, 1f, 1f, 0.1f);
     private static readonly PhotoEditTool[] Tools = { PhotoEditTool.Looks, PhotoEditTool.Adjust };
@@ -629,7 +630,8 @@ internal sealed class PhotoComposeSession : IDisposable
         var center = new Vector2(max.X - radius - BadgeInset * scale, min.Y + radius + BadgeInset * scale);
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(accent), CircleSegments);
         drawList.AddCircle(center, radius, ImGui.GetColorU32(WhiteRing), CircleSegments, BadgeRing * scale);
-        Typography.DrawCentered(drawList, center, (order + 1).ToString(Loc.Culture), White,
+        var ink = Palette.Luminance(accent) >= 0.5f ? Black : White;
+        Typography.DrawCentered(drawList, center, (order + 1).ToString(Loc.Culture), ink,
             TextStyles.FootnoteEmphasized);
     }
 
