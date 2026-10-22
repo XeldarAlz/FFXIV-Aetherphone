@@ -18,7 +18,7 @@ internal sealed partial class PrismApp
     private const int TitleMaxLength = 60;
     private const int TagsMaxLength = 80;
     private const int MaxTags = 6;
-    private const float FieldUnits = 34f;
+    private const float FieldUnits = GlassField.HeightUnits;
     private const double RecaptureSeconds = 1.0;
 
     private readonly PhotoComposeSession composeSession;
@@ -60,21 +60,21 @@ internal sealed partial class PrismApp
     private void DrawCompose(ImDrawListPtr drawList, Rect content, float scale)
     {
         composeSession.ConsumePendingImport();
-        var top = DrawHeader(drawList, content, string.Empty, Loc.T(L.Prism.PostGlam), true, scale);
+        var top = DrawBackHeader(drawList, content, Loc.T(L.Prism.PostGlam), scale) + Metrics.Space.Sm * scale;
         if (composeDetails)
         {
             DrawComposeDetails(drawList, content, top, scale);
             return;
         }
 
-        var gutter = PrismArt.Gutter(scale);
-        top += Typography.DrawWrappedLeft(new Vector2(content.Min.X + gutter, top), Loc.T(L.Prism.PhotosHint),
-            PrismArt.Muted, TextStyles.Subheadline, content.Width - gutter * 2f) + Metrics.Space.Md * scale;
+        top += Typography.DrawWrappedLeft(new Vector2(content.Min.X, top), Loc.T(L.Prism.PhotosHint), PrismArt.Muted,
+            PrismType.Body, content.Width) + Metrics.Space.Md * scale;
         var paneHeight = MathF.Min(content.Width, (content.Max.Y - top) * PickPaneFraction);
         var pane = new Rect(new Vector2(content.Min.X, top), new Vector2(content.Max.X, top + paneHeight));
         composeSession.DrawPickPane(pane, scale, PickStyle, GlamStore.PhotoRatio, true, true, Loc.T(L.Prism.PostGlam));
-        var strip = StripRect(content, scale);
-        if (PrismArt.Strip(drawList, strip, Loc.T(L.Common.Next), Arrow, true, composeSession.HasSelection))
+        var next = BottomButton(content, scale);
+        if (DrawButton(drawList, next, Loc.T(L.Common.Next), ButtonStyle.Solid, scale,
+                enabled: composeSession.HasSelection))
         {
             captured = glamour.Capture();
             capturedVanilla = GlamourService.IsVanilla(captured);
@@ -83,7 +83,7 @@ internal sealed partial class PrismApp
         }
 
         var gridRect = new Rect(new Vector2(content.Min.X, pane.Max.Y + Metrics.Space.Md * scale),
-            new Vector2(content.Max.X, strip.Min.Y - Metrics.Space.Lg * scale));
+            new Vector2(content.Max.X, next.Min.Y - Metrics.Space.Lg * scale));
         using (AppSurface.BeginEdgeToEdge(gridRect))
         {
             composeSession.DrawPickGrid(gridRect, scale, PickStyle, true, Loc.T(L.Common.ImportFromPc),
@@ -91,11 +91,17 @@ internal sealed partial class PrismApp
         }
     }
 
+    private Rect BottomButton(Rect content, float scale)
+    {
+        var bottom = content.Max.Y - bottomChrome - PrismArt.BottomMargin(scale);
+        return new Rect(new Vector2(content.Min.X, bottom - Button.LargeHeight * scale),
+            new Vector2(content.Max.X, bottom));
+    }
+
     private void DrawComposeDetails(ImDrawListPtr drawList, Rect content, float top, float scale)
     {
-        var gutter = PrismArt.Gutter(scale);
-        var left = content.Min.X + gutter;
-        var width = content.Width - gutter * 2f;
+        var left = content.Min.X;
+        var width = content.Width;
         if (focusTitle)
         {
             ImGui.SetKeyboardFocusHere();
@@ -112,33 +118,33 @@ internal sealed partial class PrismApp
             capturedVanilla = GlamourService.IsVanilla(captured);
         }
 
-        var strip = StripRect(content, scale);
-        var failure = string.Empty;
+        var post = BottomButton(content, scale);
         var failureHeight = 0f;
         if (glams.PostFailed && !glams.Posting && postingDraft == composeDraft)
         {
             var reason = glams.PostFailureText;
-            failure = reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint);
-            failureHeight = Typography.MeasureWrappedBlock(failure, TextStyles.Subheadline, width).Y;
-            Typography.DrawWrappedLeft(new Vector2(left, strip.Min.Y - Metrics.Space.Lg * scale - failureHeight),
-                failure, PrismArt.Muted, TextStyles.Subheadline, width);
+            var failure = reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint);
+            failureHeight = Typography.MeasureWrappedBlock(failure, PrismType.Body, width).Y;
+            Typography.DrawWrappedLeft(new Vector2(left, post.Min.Y - Metrics.Space.Lg * scale - failureHeight),
+                failure, PrismArt.Muted, PrismType.Body, width);
             failureHeight += Metrics.Space.Lg * scale;
         }
 
         var body = new Rect(new Vector2(content.Min.X, top),
-            new Vector2(content.Max.X, strip.Min.Y - Metrics.Space.Lg * scale - failureHeight));
+            new Vector2(content.Max.X, post.Min.Y - Metrics.Space.Lg * scale - failureHeight));
         using (BeginBody(body))
         {
             var list = ImGui.GetWindowDrawList();
             var origin = ImGui.GetCursorScreenPos();
-            var bodyWidth = ScrollLayout.StableContentWidth() - gutter * 2f;
-            var cursor = DrawCaptured(list, origin.X + gutter, origin.Y, bodyWidth, scale);
+            var bodyWidth = ScrollLayout.StableContentWidth();
+            var cursor = DrawCaptured(list, origin.X, origin.Y, bodyWidth, scale);
             ImGui.Dummy(new Vector2(bodyWidth, cursor - origin.Y));
         }
 
         var label = Loc.T(glams.Posting ? L.Prism.Posting : L.Prism.Post);
         var ready = !string.IsNullOrWhiteSpace(glamTitle) && !glams.Posting;
-        if (PrismArt.Strip(drawList, strip, label, Arrow, true, ready, UiSound.Shutter))
+        if (Button.Draw(drawList, post, label, controls, ButtonStyle.Solid, enabled: ready, id: "prism.post",
+                tapSound: UiSound.Shutter))
         {
             PostGlam();
         }
@@ -152,14 +158,17 @@ internal sealed partial class PrismApp
         }
 
         top += Typography.DrawWrappedLeft(new Vector2(left, top), Loc.T(L.Prism.StillTryingOn), PrismArt.Fore,
-            TextStyles.Subheadline, width) + Metrics.Space.Sm * scale;
-        if (PrismArt.Link(drawList, new Vector2(left, top), Loc.T(L.Prism.TakeOff), PrismArt.Fore, scale))
+            PrismType.Body, width) + Metrics.Space.Xs * scale;
+        var label = Loc.T(L.Prism.TakeOff);
+        var takeOff = new Rect(new Vector2(left, top),
+            new Vector2(left + ButtonWidth([label], width, scale), top + Button.LargeHeight * scale));
+        if (DrawButton(drawList, takeOff, label, ButtonStyle.Plain, scale))
         {
             glamour.Revert();
             recaptureAt = ImGui.GetTime() + RecaptureSeconds;
         }
 
-        return top + Metrics.Size.TapTarget * scale;
+        return takeOff.Max.Y;
     }
 
     private bool RecaptureDue()
@@ -176,64 +185,52 @@ internal sealed partial class PrismApp
     private float DrawField(ImDrawListPtr drawList, float left, float top, float width, string label, string hint,
         string id, ref string text, int maxLength, float scale)
     {
-        var labelPixels = PrismArt.LabelPixels();
-        PrismType.Draw(drawList, new Vector2(left, top), label, PrismArt.Muted, PrismFace.Label, labelPixels);
-        top += PrismType.LineHeight(PrismFace.Label, labelPixels);
-        return DrawInput(drawList, left, top, width, hint, id, ref text, maxLength, scale) + Metrics.Space.Lg * scale;
+        Typography.Draw(drawList, new Vector2(left, top), label, PrismArt.Muted, PrismType.Caption);
+        top += Typography.LineHeight(PrismType.Caption) + Metrics.Space.Xxs * scale;
+        return DrawInput(drawList, left, top, width, hint, id, ref text, maxLength, scale) + Metrics.Space.Md * scale;
     }
 
     private float DrawInput(ImDrawListPtr drawList, float left, float top, float width, string hint, string id,
         ref string text, int maxLength, float scale)
     {
-        var height = FieldUnits * scale;
-        var field = new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
-        GlassField.Text(field, id, hint, ref text, PrismArt.Fore, PrismArt.Muted, 0f, maxLength);
-        PrismArt.Hairline(drawList, left, left + width, top + height, ImGui.IsItemActive() ? PrismArt.Fore : PrismArt.Faint,
-            scale);
-        return top + height;
+        var field = new Rect(new Vector2(left, top), new Vector2(left + width, top + FieldUnits * scale));
+        SearchBar.Surface(drawList, field, controls);
+        GlassField.Text(field, id, hint, ref text, PrismArt.Fore, PrismArt.Muted, Metrics.Space.Md * scale, maxLength);
+        return field.Max.Y;
     }
 
     private float DrawCaptured(ImDrawListPtr drawList, float left, float top, float width, float scale)
     {
-        var labelPixels = PrismArt.LabelPixels();
-        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
-        PrismType.Draw(drawList, new Vector2(left, top), Loc.T(L.Prism.CapturedHeading), PrismArt.Muted, PrismFace.Label,
-            labelPixels);
-        PrismType.DrawRight(drawList, new Vector2(left + width, top),
-            Loc.T(capturedVanilla ? L.Prism.VanillaStamp : L.Prism.ModdedStamp), PrismArt.Fore, PrismFace.Label,
-            labelPixels);
-        top += labelLine;
+        top = DrawSectionTitle(drawList, left, left + width, top, Loc.T(L.Prism.CapturedHeading),
+            Loc.T(capturedVanilla ? L.Prism.VanillaStamp : L.Prism.ModdedStamp), scale) + Metrics.Space.Xxs * scale;
         SyncCapturedMods();
-        PrismType.Draw(drawList, new Vector2(left, top), CapturedLine(), PrismArt.Fore, PrismFace.Label, labelPixels);
-        top += labelLine + Metrics.Space.Sm * scale;
+        Typography.Draw(drawList, new Vector2(left, top), CapturedLine(), PrismArt.Muted, PrismType.Caption);
+        top += Typography.LineHeight(PrismType.Caption) + Metrics.Space.Md * scale;
         var note = PrismType.Sentences(Loc.T(glamour.HasPenumbra ? L.Prism.CapturedNote : L.Prism.PostsAsVanilla),
-            TextStyles.Subheadline, width);
-        top += Typography.DrawWrappedLeft(new Vector2(left, top), note, PrismArt.Muted, TextStyles.Subheadline,
-            PrismType.BalancedWidth(note, TextStyles.Subheadline, width)) + Metrics.Space.Md * scale;
+            PrismType.Body, width);
+        top += Typography.DrawWrappedLeft(new Vector2(left, top), note, PrismArt.Muted, PrismType.Body,
+            PrismType.BalancedWidth(note, PrismType.Body, width)) + Metrics.Space.Md * scale;
         top = DrawModRows(drawList, left, top, width, scale);
         return DrawStillTryingOn(drawList, left, top, width, scale) + PrismArt.BottomMargin(scale);
     }
 
     private float DrawModRows(ImDrawListPtr drawList, float left, float top, float width, float scale)
     {
-        var labelPixels = PrismArt.LabelPixels();
-        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var leaveOut = Loc.T(L.Prism.LeaveOutMod);
         var addBack = Loc.T(L.Prism.AddBackMod);
-        var actionWidth = MathF.Max(PrismType.Measure(leaveOut, PrismFace.Label, labelPixels).X,
-            PrismType.Measure(addBack, PrismFace.Label, labelPixels).X);
+        var actionWidth = ButtonWidth([leaveOut, addBack], width * 0.5f, scale);
         var rowHeight = Metrics.Size.TapTarget * scale;
+        var nameHeight = Typography.LineHeight(PrismType.Headline);
+        var room = MathF.Max(1f, width - actionWidth - Metrics.Space.Md * scale);
         for (var index = 0; index < capturedMods.Length; index++)
         {
             var mod = capturedMods[index];
             var dropped = droppedMods.Contains(mod.Key);
-            var textTop = top + (rowHeight - labelLine) * 0.5f;
-            var room = width - actionWidth - Metrics.Space.Md * scale;
-            PrismType.Draw(drawList, new Vector2(left, textTop), PrismType.FitLabel(mod.Label, labelPixels, room),
-                dropped ? PrismArt.Muted : PrismArt.Fore, PrismFace.Label, labelPixels);
-            var action = dropped ? addBack : leaveOut;
-            var actionLeft = left + width - PrismType.Measure(action, PrismFace.Label, labelPixels).X;
-            if (PrismArt.Link(drawList, new Vector2(actionLeft, textTop), action, PrismArt.Muted, scale, rowHeight))
+            Typography.Draw(drawList, new Vector2(left, top + (rowHeight - nameHeight) * 0.5f),
+                Typography.FitText(mod.Label, room, PrismType.Headline), dropped ? PrismArt.Muted : PrismArt.Fore,
+                PrismType.Headline);
+            var action = new Rect(new Vector2(left + width - actionWidth, top), new Vector2(left + width, top + rowHeight));
+            if (DrawButton(drawList, action, dropped ? addBack : leaveOut, ButtonStyle.Plain, scale, id: mod.Key))
             {
                 if (dropped)
                 {
@@ -245,7 +242,6 @@ internal sealed partial class PrismApp
                 }
             }
 
-            PrismArt.Hairline(drawList, left, left + width, top + rowHeight, PrismArt.Faint, scale);
             top += rowHeight;
         }
 
