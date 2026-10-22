@@ -53,6 +53,7 @@ internal sealed partial class PrismApp
     private PrismTab tab;
     private float bodyScroll;
     private PrismScreen bodyScreen;
+    private PrismScreen drawingScreen;
     private float pendingScroll = KeepScroll;
     private string? introWeek;
     private string wearingKey = string.Empty;
@@ -203,6 +204,11 @@ internal sealed partial class PrismApp
     private AppSurface.SurfaceScope BeginBody(Rect body)
     {
         var surface = AppSurface.BeginEdgeToEdge(body);
+        if (drawingScreen != screen)
+        {
+            return surface;
+        }
+
         if (pendingScroll == 0f)
         {
             surface.JumpToTop();

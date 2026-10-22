@@ -249,6 +249,7 @@ internal sealed partial class PrismApp : IResumableApp
 
     private void DrawScreenBody(ImDrawListPtr drawList, Rect full, Rect content, float scale)
     {
+        drawingScreen = screen;
         switch (screen)
         {
             case PrismScreen.Entry:
