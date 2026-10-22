@@ -203,7 +203,7 @@ internal sealed partial class PrismApp
 
     private AppSurface.SurfaceScope BeginBody(Rect body)
     {
-        var surface = AppSurface.BeginEdgeToEdge(body);
+        var surface = AppSurface.BeginEdgeToEdge(body, smoothWheel: true);
         if (drawingScreen != screen)
         {
             return surface;
