@@ -54,6 +54,8 @@ internal sealed partial class PrismApp
 
     private PrismPrizesDto? Prizes => store.Week?.Prizes ?? store.Results?.Prizes;
 
+    private bool ChineseAccount => gameData.IsChineseGameClient();
+
     private void OpenRewards() => Push(PrismScreen.Rewards);
 
     private void SyncRewardArt()
@@ -250,7 +252,7 @@ internal sealed partial class PrismApp
         cursor += Typography.DrawWrappedLeft(new Vector2(textLeft, cursor), Loc.T(RewardBodies[(int)kind]), PrismArt.Muted,
             TextStyles.Subheadline, textWidth);
         cursor = DrawRewardNote(textLeft, cursor, textWidth, RewardExtra(kind), scale);
-        if (kind == PrismRewardKind.Gil && Prizes is { GilNote.Length: > 0 } prizes)
+        if (kind == PrismRewardKind.Gil && !ChineseAccount && Prizes is { GilNote.Length: > 0 } prizes)
         {
             cursor = DrawRewardNote(textLeft, cursor, textWidth, prizes.GilNote, scale);
         }
@@ -283,7 +285,7 @@ internal sealed partial class PrismApp
             case PrismRewardKind.Coin:
                 return RewardLine(store.Week?.JudgeReward);
             case PrismRewardKind.Gil:
-                return Loc.T(L.Prism.GilSent);
+                return Loc.T(ChineseAccount ? L.Prism.GilChinese : L.Prism.GilSent);
             default:
                 return string.Empty;
         }

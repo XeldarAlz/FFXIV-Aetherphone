@@ -60,7 +60,8 @@ internal sealed record PrismPrizeDto(
     long Gil = 0,
     BadgeDescriptorDto? Badge = null,
     FrameDescriptorDto? Frame = null,
-    int FrameDays = 0);
+    int FrameDays = 0,
+    long ChineseCoins = 0);
 
 internal sealed record PrismEntryRequest(string MediaKey, int Width, int Height,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

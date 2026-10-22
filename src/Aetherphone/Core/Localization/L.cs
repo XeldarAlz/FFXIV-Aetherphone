@@ -10992,7 +10992,9 @@ internal static class L
         public static readonly LocPlural FrameDays =
             new("prism.frameDays", "Yours to wear for {0} day", "Yours to wear for {0} days");
         public static readonly LocString GilSent = new("prism.gilSent",
-            "Gil prizes are sent to you in game by the Aetherphone team.");
+            "Gil prizes are traded to you in game by the Aetherphone team. This can take a few days, since we meet each winner in game.");
+        public static readonly LocString GilChinese = new("prism.gilChinese",
+            "We can't trade on the Chinese servers, so winners there get extra Aether Coin instead of gil.");
         public static readonly LocString WhatWinnersGet = new("prism.whatWinnersGet", "What winners get");
         public static readonly LocString NoPodium = new("prism.noPodium", "Too few glams were entered this week for a podium.");
         public static readonly LocString YourGear = new("prism.yourGear", "Your gear");
@@ -11280,6 +11282,9 @@ internal static class L
         public static readonly LocString RulePrismFinalFirst = new("coin.rulePrismFinalFirst", "Prism final, 1st place");
         public static readonly LocString RulePrismFinalSecond = new("coin.rulePrismFinalSecond", "Prism final, 2nd place");
         public static readonly LocString RulePrismFinalThird = new("coin.rulePrismFinalThird", "Prism final, 3rd place");
+        public static readonly LocString RulePrismChineseGil = new("coin.rulePrismChineseGil", "Prism gil prize, paid in coins");
+        public static readonly LocString RulePrismChineseGilHint = new("coin.rulePrismChineseGilHint",
+            "A Prism gil prize won on a Chinese server, where we can't trade");
         public static readonly LocString RulePrismJudgeHint = new("coin.rulePrismJudgeHint", "Score every glam in a Prism heat or the final");
         public static readonly LocString RulePrismHeatHint = new("coin.rulePrismHeatHint", "Finish in the top three of your Prism heat");
         public static readonly LocString RulePrismFinalHint = new("coin.rulePrismFinalHint", "Finish in the top three of the Prism final");

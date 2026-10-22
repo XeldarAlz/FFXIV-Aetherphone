@@ -109,6 +109,7 @@ public sealed class PrismWireContractTests
     [InlineData("prism.final.first")]
     [InlineData("prism.final.second")]
     [InlineData("prism.final.third")]
+    [InlineData("prism.gil.cn")]
     public void PrismPayoutsHaveTheirOwnCoinLabelAndHint(string ruleId)
     {
         Assert.NotEqual(L.Coin.RuleGeneric.Key, CoinRuleLabels.For(ruleId).Key);

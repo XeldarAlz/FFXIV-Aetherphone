@@ -37,6 +37,7 @@ internal static class CoinRuleLabels
         ["prism.final.first"] = L.Coin.RulePrismFinalFirst,
         ["prism.final.second"] = L.Coin.RulePrismFinalSecond,
         ["prism.final.third"] = L.Coin.RulePrismFinalThird,
+        ["prism.gil.cn"] = L.Coin.RulePrismChineseGil,
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
     private static readonly FrozenDictionary<string, LocString> Hints = new Dictionary<string, LocString>
@@ -58,6 +59,7 @@ internal static class CoinRuleLabels
         ["quest.daily"] = L.Coin.RuleQuestHint,
         [Casino.CasinoLedgerRules.Daily] = L.Coin.RuleCasinoDailyHint,
         ["prism.judge"] = L.Coin.RulePrismJudgeHint,
+        ["prism.gil.cn"] = L.Coin.RulePrismChineseGilHint,
         ["prism.heat.first"] = L.Coin.RulePrismHeatHint,
         ["prism.heat.second"] = L.Coin.RulePrismHeatHint,
         ["prism.heat.third"] = L.Coin.RulePrismHeatHint,
