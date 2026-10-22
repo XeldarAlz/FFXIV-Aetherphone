@@ -169,7 +169,7 @@ stateDiagram-v2
 
 `CallHub` owns the state, and every teardown returns straight to `Idle` (it never rests in `Ended`). An incoming call is declined at once as unavailable when calls are off or ChocoChat (the Message app) is not installed, and as busy during another call. The server's roster is the only truth about who is in a call. After a socket drop the hub keeps the call for a short grace window: if the socket returns in time it sends `call.rejoin` (and repeats `call.accept` if it was still connecting), otherwise the call ends. A call that is still ringing when the socket drops is logged as missed instead.
 
-Audio goes out through `AudioCapture` (microphone, gain, a noise gate that skips silence), `OpusAudio` (the managed Concentus codec), and `MediaFrame` (call id, slot, sequence). Mute stops encoding, so nothing is sent. Coming in, `VoiceMixer` keeps a decoder and jitter buffer per person, applies per-person volume, mixes, and plays.
+Audio goes out through `AudioCapture` (microphone, automatic gain capped at -3 dBFS or the manual volume, and a noise gate that opens at the player's mic threshold, set on the same scale as the input meter in `MicThreshold`), `OpusAudio` (the managed Concentus codec), and `MediaFrame` (call id, slot, sequence). Mute stops encoding, so nothing is sent. Coming in, `VoiceMixer` keeps a decoder and jitter buffer per person, applies per-person volume, mixes, and plays.
 
 `CallLogStore` keeps the call log. Missed calls also arrive later as social notifications, and `CallLogStore` skips one that echoes a miss it logged moments before. ChocoChat owns the call screens, and every surface reads `CallHub.Snapshot()`, an immutable `CallView`, each frame.
 

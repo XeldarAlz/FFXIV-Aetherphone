@@ -136,7 +136,8 @@ internal sealed partial class NotificationsApp : IResumableApp
             services.VelvetLauncher, services.DmLauncher, services.GramDmLauncher, services.SocialLauncher,
             services.MusterLauncher, services.YellowPagesLauncher, services.AnnouncementsLauncher,
             services.SafetyLauncher, services.EncryptionSetup, services.RadioLauncher, services.CasinoLauncher,
-            services.AetherStreamLauncher, services.HuntsLauncher, services.JamLauncher, services.FeedbackLauncher);
+            services.AetherStreamLauncher, services.HuntsLauncher, services.JamLauncher, services.FeedbackLauncher,
+            services.CampaignLauncher);
 
     private void EnsureBuilt()
     {

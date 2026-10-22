@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
@@ -6,18 +7,30 @@ namespace Aetherphone.Core.GameChat;
 
 internal static unsafe class GameLinkActions
 {
-    public static void TryOn(uint itemId)
+    public static void TryOn(uint itemId, byte stain0 = 0, byte stain1 = 0)
     {
+        if (!GameMemory.Attached)
+        {
+            GameMemory.SimulateAction($"try on item {itemId} dyed {stain0}/{stain1}");
+            return;
+        }
+
         if (itemId == 0)
         {
             return;
         }
 
-        AgentTryon.TryOn(0xFF, itemId, 0);
+        AgentTryon.TryOn(0xFF, itemId, stain0, stain1);
     }
 
     public static void CompareItem(uint itemId)
     {
+        if (!GameMemory.Attached)
+        {
+            GameMemory.SimulateAction($"compare item {itemId}");
+            return;
+        }
+
         var agent = AgentItemComp.Instance();
         if (itemId == 0 || agent is null)
         {
@@ -29,6 +42,12 @@ internal static unsafe class GameLinkActions
 
     public static void SearchRecipes(uint itemId)
     {
+        if (!GameMemory.Attached)
+        {
+            GameMemory.SimulateAction($"search recipes using item {itemId}");
+            return;
+        }
+
         var agent = AgentRecipeProductList.Instance();
         if (itemId == 0 || agent is null)
         {
@@ -40,6 +59,12 @@ internal static unsafe class GameLinkActions
 
     public static void FindItem(uint itemId)
     {
+        if (!GameMemory.Attached)
+        {
+            GameMemory.SimulateAction($"find item {itemId}");
+            return;
+        }
+
         var module = ItemFinderModule.Instance();
         if (itemId == 0 || module is null)
         {
@@ -51,6 +76,12 @@ internal static unsafe class GameLinkActions
 
     public static void LinkInChat(uint itemId)
     {
+        if (!GameMemory.Attached)
+        {
+            GameMemory.SimulateAction($"link item {itemId} in chat");
+            return;
+        }
+
         var agent = AgentChatLog.Instance();
         if (itemId == 0 || agent is null)
         {

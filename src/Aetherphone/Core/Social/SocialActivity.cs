@@ -27,19 +27,21 @@ internal static class SocialActivity
     public const int TypeAdInquiry = 19;
     public const int TypeMissedCall = 20;
     public const int TypeRadioLive = 21;
+    public const int TypePlacing = 23;
     public const string ChirperApp = "chirper";
     public const string AethergramApp = "aethergram";
     public const string VelvetApp = "velvet";
     public const string YellowPagesApp = "yellowpages";
     public const string MessageApp = "message";
     public const string MusicApp = "music";
+    public const string PrismApp = "prism";
 
     public static bool IsModerationNotice(int type) =>
         type is TypePostRemoved or TypeWarning or TypeReportUpdate;
 
     public static bool OpensPost(NotificationDto item) =>
         item.Type is TypeLike or TypeComment or TypeCommentLike or TypeMention or TypeCommentMention or TypePhotoTag
-            or TypeRepost or TypeQuote
+            or TypeRepost or TypeQuote or TypePlacing
         && !string.IsNullOrEmpty(item.PostId);
 
     public static string ActorLabel(NotificationDto item)
@@ -57,8 +59,12 @@ internal static class SocialActivity
         var isPhoto = item.App != ChirperApp;
         switch (item.Type)
         {
+            case TypeLike when item.App == PrismApp:
+                return Loc.T(L.Prism.ActivityLiked);
             case TypeLike:
                 return Loc.T(isPhoto ? L.Social.LikedPhoto : L.Social.LikedChirp);
+            case TypePlacing:
+                return Loc.T(L.Prism.ActivityPlaced, item.Rank, item.Preview ?? string.Empty);
             case TypeComment:
                 var action = Loc.T(isPhoto ? L.Social.CommentedPhoto : L.Social.CommentedChirp);
                 return string.IsNullOrEmpty(item.Preview) ? action : $"{action}: “{item.Preview}”";

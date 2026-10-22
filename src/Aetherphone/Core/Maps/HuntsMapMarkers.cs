@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Hunts;
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
@@ -50,6 +51,10 @@ internal sealed class HuntsMapMarkers : IDisposable
         Plugin.Framework.Update -= OnFrameworkUpdate;
         Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, AreaMapAddonName, OnAreaMapOpenedOrChanged);
         Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PostRefresh, AreaMapAddonName, OnAreaMapOpenedOrChanged);
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
 
         var agentMap = AgentMap.Instance();
         if (agentMap != null && hasPlacedMarkers)
@@ -73,6 +78,11 @@ internal sealed class HuntsMapMarkers : IDisposable
 
     private unsafe void OnFrameworkUpdate(IFramework framework)
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         var agentMap = AgentMap.Instance();
         if (agentMap == null)
         {

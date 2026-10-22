@@ -1,3 +1,4 @@
+using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
@@ -69,12 +70,17 @@ internal static class GameHud
         return UiInteract.HoverClickCircle(center, radius);
     }
 
-    public static bool Button(Vector2 center, Vector2 size, string label, Vector4 accent, PhoneTheme theme)
+    public static bool Button(Vector2 center, Vector2 size, string label, Vector4 accent, PhoneTheme theme,
+        Rect? rest = null)
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var hoverHalf = size * 0.5f;
-        var hovered = UiInteract.Hover(center - hoverHalf, center + hoverHalf);
+        var resting = rest ?? new Rect(center - hoverHalf, center + hoverHalf);
+        var hitHalf = new Vector2(resting.Width, MathF.Max(resting.Height, Metrics.Size.TapTarget * scale)) * 0.5f;
+        var hitMin = resting.Center - hitHalf;
+        var hitMax = resting.Center + hitHalf;
+        var hovered = UiInteract.Hover(hitMin, hitMax);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
         var visualScale = pressed ? 0.955f : 1f;
         var half = hoverHalf * visualScale;
@@ -99,6 +105,6 @@ internal static class GameHud
         }
 
         Typography.DrawCentered(center, label, GamePalette.InkOn(accent), TextStyles.Headline);
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(hitMin, hitMax, hovered);
     }
 }

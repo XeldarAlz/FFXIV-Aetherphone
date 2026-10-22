@@ -36,7 +36,7 @@ internal sealed class UiSoundService : IDisposable
 
     private void Play(UiSound sound, float rate, bool pitched)
     {
-        if (configuration.SilentMode || !configuration.UiSounds)
+        if (configuration.SilentMode)
         {
             return;
         }
@@ -53,7 +53,8 @@ internal sealed class UiSoundService : IDisposable
 
         var index = (int)sound;
         ref readonly var entry = ref UiSoundCatalog.Entries[index];
-        if (!ChannelEnabled(entry.Channel))
+        if (!UiSoundGate.Allows(entry.Channel, configuration.SilentMode, configuration.UiSounds,
+                ChannelEnabled(entry.Channel)))
         {
             return;
         }

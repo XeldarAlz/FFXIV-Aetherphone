@@ -1,0 +1,78 @@
+---
+name: phone-preview
+description: Render and drive the Aetherphone UI headless (no game, no Dalamud) to review a change visually. Use when asked to check how a screen looks, verify a UI change, take a screenshot of the phone, or click through a flow.
+---
+
+# Phone preview harness
+
+The harness runs the real plugin against fake Dalamud services and renders every frame on the CPU. It works on macOS, Windows, and Linux without the game installed. Full reference: docs/harness.md.
+
+## One-time setup
+
+```bash
+dotnet run --project tools/harness/Bootstrap -c Release
+dotnet build src/Aetherphone.Harness -c Release
+```
+
+The bootstrap fills `~/.aetherphone-harness` (Dalamud dev build, native ImGui, fonts). Rebuild the harness after every plugin change; it rebuilds the plugin too.
+
+With game data available (found automatically on a Windows machine with the game installed, see docs/harness.md) the harness logs in the `endgame` scenario character: a level 100 White Mage with inventory, wallet, jobs, retainers, friends, timers, and dailies, so the game apps show real screens. `--scenario fresh` starts a near-empty level 15 character, and `--scenario none` starts with no character at all.
+
+## Start the server
+
+Run it in the background and wait for `~/.aetherphone-harness/driver.json` to appear:
+
+```bash
+tools/harness/aep serve
+```
+
+The social apps talk to the aethernet-dev server by default. Only pass `--backend live` when the user asks for production: anything posted there is public. `state` reports the backend in use.
+
+The server steps frames only when a command asks it to. Nothing moves between commands, so screenshots are deterministic.
+
+A person can use the same phone live: `tools/harness/aep window` opens a native 60 fps window (GPU rendered) instead of the headless server, with the same driver inside it, and `tools/harness/aep url` prints a browser viewer that works with either mode. While a person is interacting, time runs in real time, so take driver screenshots when nobody is interacting.
+
+## Commands
+
+Every command is `tools/harness/aep <command>` (`tools\harness\aep.cmd` on Windows). Coordinates are phone-relative pixels matching the cropped screenshot; add `--space screen` for display coordinates.
+
+| Command | What it does |
+| --- | --- |
+| `state` | Frame counter, current app id, phone rect, minimize phase |
+| `step N` | Advance N frames (60 per simulated second) |
+| `tree [--all] [--json]` | Every visible line of text with its rect and size, in reading order, plus the anchors |
+| `shot [path] [--full]` | Save a PNG of the phone (or the whole display); then Read the file |
+| `perf [--frames N] [--warmup N]` | Per-frame allocations (draw and update), draw time, errors, and the allocating types for the current screen |
+| `anchors` | Named UI elements on screen with centers, for taps by name |
+| `tap NAME`, `tap X Y`, `tap --text TEXT` | Tap an anchor, a point, or the first visible text match; `--settle N` frames afterwards (default 12) |
+| `drag X1 Y1 X2 Y2 [--frames N]` | Swipe or drag |
+| `scroll X Y DY` | Mouse wheel at a point |
+| `type TEXT` | Type into the focused field |
+| `key NAME` | Press an ImGui key: Enter, Escape, Backspace, Tab, ... |
+| `open APPID` | Open the phone on an app (ids in Core/Apps/AppRegistry.cs); goes home first, like a launch |
+| `home` | Return to the home screen |
+| `url` | Print the browser viewer address |
+| `settings` | Open the Settings app the way Dalamud's config button would |
+| `log [--since N]` | Plugin warnings, errors, and harness notes since a sequence number |
+| `login` / `logout` | Simulate the character logging in or out |
+| `scenario [NAME]` | List scenarios, or switch to another character (logs out, then in) |
+| `install [APPID]` | Put an app, or every available app, on the home screen |
+| `command "/aep ..."` | Run a chat command through the plugin's handler |
+| `quit` | Stop the server |
+
+## Typical review loop
+
+1. `tools/harness/aep open settings`, then `tools/harness/aep tree` to read what is on screen. It is plain text, costs far fewer tokens than a screenshot, and flags clipped text.
+2. Tap with `tap --text "General"` or by anchor name; fall back to pixels only when neither exists.
+3. After each action, `tree` again and check `log` for warnings. Buttons that drive the game (invites, chat sends, gearset swaps, item links) succeed and log a `game action: ...` line instead of touching a game.
+4. Take a `shot` and Read the PNG when the question is visual: layout, color, spacing, images, or motion. `tree` sees no images.
+
+After changing draw code, open the screen and run `perf`: the draw path should allocate 0 B per frame. The sampled types name the class to look in.
+
+## What the harness cannot show
+
+- Real game memory: every game value comes from the scenario file, so a reader bug (a moved offset, a missed container) never shows here. Reader changes still need an in-game check.
+- Without game data the sheet-bound apps (Skywatcher, Dailies, Wallet, Jobs, Inventory, Market, Hunts, Maps, Housing, Collections) are hidden, world or item names are blank, and no scenario loads.
+- A config created before game data was available has no sheet-bound apps on the home screen; run `install` once.
+- No audio, no video screen, no camera capture, no hooks, and no incoming game chat.
+- A fresh config runs the first-run boot and onboarding tour. `step 1000` gets past the boot; the tour has buttons to tap. Config persists in `~/.aetherphone-harness/config` (one folder per backend), so this happens once per backend.

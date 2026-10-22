@@ -46,6 +46,11 @@ internal sealed class GameUiVisibility : IDisposable
 
     private unsafe void HideNow()
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         if (hidden)
         {
             return;
@@ -65,6 +70,11 @@ internal sealed class GameUiVisibility : IDisposable
 
     private unsafe void RestoreNow()
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         if (!hidden)
         {
             return;

@@ -31,7 +31,7 @@ jobs:
       # pull_request_target runs this file from the base branch with a write
       # token and never checks the fork out, so the PR's code cannot reach it.
       - name: Check the title and apply labels
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const { owner, repo } = context.repo;

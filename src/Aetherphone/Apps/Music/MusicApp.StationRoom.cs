@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Radio;
@@ -47,17 +48,19 @@ internal sealed partial class MusicApp
     private bool chatMenuForJam;
     private int roomVisitFrame = -1;
     private string roomStationId = string.Empty;
+    private string roomStationName = string.Empty;
     private StationPanel stationPanel = StationPanel.Chat;
 
-    private void VisitStationRoom(string stationId)
+    private void VisitStationRoom(CommunityStationDto station)
     {
         roomVisitFrame = ImGui.GetFrameCount();
-        if (!string.Equals(roomStationId, stationId, StringComparison.Ordinal))
+        if (!string.Equals(roomStationId, station.Id, StringComparison.Ordinal))
         {
-            roomStationId = stationId;
+            roomStationId = station.Id;
             ResetStationPanels();
         }
 
+        roomStationName = station.Name;
         if (room.TryTakeRefusal(out var refusal) && refusal.Action != RadioRoomAction.Attach)
         {
             ShellToast.Show(Loc.T(RefusalText(refusal.Kind)));
@@ -68,13 +71,13 @@ internal sealed partial class MusicApp
             return;
         }
 
-        var sameStation = string.Equals(room.StationId, stationId, StringComparison.Ordinal);
-        if (sameStation && room.Status != RadioRoomStatus.Idle)
+        var sameStation = string.Equals(room.StationId, station.Id, StringComparison.Ordinal);
+        if (sameStation && room.Status == RadioRoomStatus.Unavailable)
         {
             return;
         }
 
-        room.Attach(stationId);
+        room.Attach(station.Id, station.Name);
     }
 
     private void RetryStationRoom()
@@ -85,7 +88,7 @@ internal sealed partial class MusicApp
         }
 
         room.Detach();
-        room.Attach(roomStationId);
+        room.Attach(roomStationId, roomStationName);
     }
 
     private void ResetStationPanels()

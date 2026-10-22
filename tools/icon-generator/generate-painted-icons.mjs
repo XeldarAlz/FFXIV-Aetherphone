@@ -547,6 +547,74 @@ const paintGhostMusic = (id) => paintDecorated(id, "music", async () => {
   return { under: "", over: symbolGroup(ghost, WHITE, placement), mask: symbolGroup(ghost, WHITE, placement) };
 }, "music note with a ghost beside it");
 
+const PRISM_STOPS = ["#2C2240", "#0A0812"];
+const PRISM_SPECTRUM = ["Red", "Orange", "Gold", "Green", "Azure", "Violet"];
+const PRISM_SPECTRUM_LIFT = 1.12;
+const CRYSTAL = {
+  top: [512, 150],
+  upperLeft: [338, 404],
+  upperRight: [686, 404],
+  lowerLeft: [370, 690],
+  lowerRight: [654, 690],
+  bottom: [512, 884],
+  heart: [512, 436],
+  keel: [512, 664],
+};
+const CRYSTAL_FACETS = [
+  [["top", "upperLeft", "heart"], WHITE, 0.5],
+  [["top", "heart", "upperRight"], WHITE, 0.22],
+  [["upperLeft", "lowerLeft", "keel", "heart"], WHITE, 0.28],
+  [["heart", "keel", "lowerRight", "upperRight"], WHITE, 0.04],
+  [["lowerLeft", "bottom", "keel"], WHITE, 0.12],
+  [["keel", "bottom", "lowerRight"], "#000000", 0.22],
+];
+const CRYSTAL_OUTLINE = ["top", "upperRight", "lowerRight", "bottom", "lowerLeft", "upperLeft"];
+const CRYSTAL_RIDGES = [["top", "heart"], ["upperLeft", "heart"], ["upperRight", "heart"], ["heart", "keel"], ["lowerLeft", "keel"], ["lowerRight", "keel"], ["keel", "bottom"]];
+const GLINTS = [[716, 236, 92, 1], [300, 774, 52, 0.8], [770, 640, 34, 0.6]];
+
+function polygon(names) {
+  return "M " + names.map((name) => CRYSTAL[name].join(" ")).join(" L ") + " Z";
+}
+
+function glint(x, y, size, opacity) {
+  const waist = size * 0.16;
+  return `<path d="M ${x} ${y - size} Q ${x + waist} ${y - waist} ${x + size} ${y} Q ${x + waist} ${y + waist} ${x} ${y + size} Q ${x - waist} ${y + waist} ${x - size} ${y} Q ${x - waist} ${y - waist} ${x} ${y - size} Z" fill="${WHITE}" fill-opacity="${opacity}"/>`;
+}
+
+function crystal() {
+  const stops = PRISM_SPECTRUM
+    .map((hue, index) => `<stop offset="${((index / (PRISM_SPECTRUM.length - 1)) * 100).toFixed(1)}%" stop-color="${shiftLightness(hues[hue], PRISM_SPECTRUM_LIFT)}"/>`)
+    .join("");
+  const [top, bottom] = [CRYSTAL.top[1], CRYSTAL.bottom[1]];
+  const facets = CRYSTAL_FACETS
+    .map(([names, ink, opacity]) => `<path d="${polygon(names)}" fill="${ink}" fill-opacity="${opacity}"/>`)
+    .join("");
+  const ridges = CRYSTAL_RIDGES
+    .map(([from, to]) => `<line x1="${CRYSTAL[from][0]}" y1="${CRYSTAL[from][1]}" x2="${CRYSTAL[to][0]}" y2="${CRYSTAL[to][1]}"/>`)
+    .join("");
+  return `<defs><linearGradient id="spectrum" gradientUnits="userSpaceOnUse" x1="512" y1="${top}" x2="512" y2="${bottom}">${stops}</linearGradient></defs>`
+    + `<path d="${polygon(CRYSTAL_OUTLINE)}" fill="url(#spectrum)"/>${facets}`
+    + `<g stroke="${WHITE}" stroke-opacity="0.55" stroke-width="7" stroke-linecap="round">${ridges}</g>`
+    + `<path d="${polygon(CRYSTAL_OUTLINE)}" fill="none" stroke="${WHITE}" stroke-opacity="0.9" stroke-width="12" stroke-linejoin="round"/>`
+    + GLINTS.map(([x, y, size, opacity]) => glint(x, y, size, opacity)).join("");
+}
+
+function crystalHalo() {
+  return `<defs><radialGradient id="halo"><stop offset="0%" stop-color="${hues.Violet}" stop-opacity="0.55"/><stop offset="100%" stop-color="${hues.Violet}" stop-opacity="0"/></radialGradient></defs>`
+    + `<circle cx="512" cy="520" r="470" fill="url(#halo)"/>`;
+}
+
+async function paintPrism(id) {
+  const symbol = crystal();
+  await writePair(id, svgDocument(backgroundMarkup(PRISM_STOPS) + crystalHalo() + symbol), true);
+  await writePair(`${id}.fg`, svgDocument(symbol), false);
+  return "faceted spectrum crystal with glints";
+}
+
+const bespoke = {
+  prism: paintPrism,
+};
+
 const seasonal = {
   "chirper.halloween": paintMoonlitFeather,
   "aethergram.halloween": paintBatAperture,
@@ -560,7 +628,7 @@ mkdirSync(ICONS_OUT, { recursive: true });
 mkdirSync(MASTERS_OUT, { recursive: true });
 
 const only = new Set(process.argv.slice(2));
-const unknown = [...only].filter((id) => !(id in map) && !(id in seasonal));
+const unknown = [...only].filter((id) => !(id in map) && !(id in bespoke) && !(id in seasonal));
 if (unknown.length > 0) {
   console.error(`Unknown ids: ${unknown.join(", ")}`);
   process.exit(2);
@@ -578,6 +646,19 @@ for (const [id, entry] of Object.entries(map)) {
     console.log(`  ${id.padEnd(14)} <- ${summary}`);
   } catch (error) {
     failed.push(`${id} (${entry.symbol}): ${error.message}`);
+  }
+}
+
+for (const [id, paintBespoke] of Object.entries(bespoke)) {
+  if (only.size > 0 && !only.has(id)) {
+    continue;
+  }
+  try {
+    const summary = await paintBespoke(id);
+    written++;
+    console.log(`  ${id.padEnd(14)} <- ${summary}`);
+  } catch (error) {
+    failed.push(`${id}: ${error.message}`);
   }
 }
 

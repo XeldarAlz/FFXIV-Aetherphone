@@ -59,6 +59,13 @@ public sealed class StageLayoutTests
     }
 
     [Fact]
+    public void TheLandscapeCoinChipStartsAGapPastTheBackChip()
+    {
+        Assert.Equal(48f + 18f + 8f, StageLayout.LandscapeCoinChipLeft(Full, 1f));
+        Assert.Equal(76f + 36f + 16f, StageLayout.LandscapeCoinChipLeft(Full, 2f));
+    }
+
+    [Fact]
     public void ThePrimaryPillLeavesRoomForBothChips()
     {
         Assert.Equal(360f - 144f, StageLayout.PrimaryMaxWidth(Full, 1f));

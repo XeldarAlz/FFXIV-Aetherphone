@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Platform;
 using Aetherphone.Windows;
 using Dalamud.Bindings.ImGui;
@@ -54,6 +55,11 @@ internal sealed class LinkpearlHotkey
     {
         get
         {
+            if (!GameMemory.Attached)
+            {
+                return false;
+            }
+
             var module = RaptureAtkModule.Instance();
             return module is not null && module->IsTextInputActive();
         }

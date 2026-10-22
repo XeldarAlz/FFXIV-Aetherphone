@@ -55,6 +55,7 @@ internal static class L
         public static readonly LocString NoPhotos = new("common.noPhotos", "No photos in your gallery yet");
         public static readonly LocString AddPhoto = new("common.addPhoto", "Add a photo");
         public static readonly LocString PasteImage = new("common.pasteImage", "Paste image");
+        public static readonly LocString PasteOrDropImage = new("common.pasteOrDropImage", "Or paste or drop an image here");
         public static readonly LocString PasteFailed = new("common.pasteFailed", "That image can't be pasted");
         public static readonly LocString GifTooLarge = new("common.gifTooLarge", "GIF is too large (max 4 MB)");
         public static readonly LocString GifRidesAlone = new("common.gifRidesAlone", "A GIF has to be posted on its own, without other photos.");
@@ -131,6 +132,9 @@ internal static class L
         public static readonly LocString FollowingTitle = new("social.followingTitle", "Following");
         public static readonly LocString LikedByTitle = new("social.likedByTitle", "Liked by");
         public static readonly LocString ListEmpty = new("social.listEmpty", "No one here yet");
+        public static readonly LocString ListSearchHint = new("social.listSearchHint", "Search by name or handle");
+        public static readonly LocString ListSearchNoMatches = new("social.listSearchNoMatches", "No one matches that name");
+        public static readonly LocString ListSearchCapped = new("social.listSearchCapped", "Searched the first {0} people");
         public static readonly LocString MutualsTitle = new("social.mutualsTitle", "Followed by");
         public static readonly LocString FollowsYou = new("social.followsYou", "Follows you");
         public static readonly LocString FollowedByOne = new("social.followedByOne", "Followed by {0}");
@@ -357,6 +361,7 @@ internal static class L
         public static readonly LocString FindPeople = new("app.findpeople", "Find People");
         public static readonly LocString Feedback = new("app.feedback", "Feedback");
         public static readonly LocString Polls = new("app.polls", "Polls");
+        public static readonly LocString Prism = new("app.prism", "Prism");
         public static readonly LocString Announcements = new("app.announcements", "Announcements");
         public static readonly LocString Muster = new("app.muster", "Muster");
         public static readonly LocString YellowPages = new("app.yellowpages", "Yellow Pages");
@@ -369,6 +374,7 @@ internal static class L
         public static readonly LocString AppStore = new("app.appstore", "App Store");
         public static readonly LocString AetherStream = new("app.aetherstream", "MogCast");
         public static readonly LocString Shortcuts = new("app.shortcuts", "Shortcuts");
+        public static readonly LocString LoveIsland = new("app.loveisland", "Love Island Eclipse");
     }
 
     internal static class Shortcuts
@@ -552,6 +558,9 @@ internal static class L
         public static readonly LocString PollsSub = new("storeCopy.pollsSub", "Ask the whole server");
         public static readonly LocString PollsBody = new("storeCopy.pollsBody",
             "Put a question to Eorzea and watch the votes land while you wait.");
+        public static readonly LocString LoveIslandSub = new("storeCopy.loveislandSub", "PNX's Halloween festival");
+        public static readonly LocString LoveIslandBody = new("storeCopy.loveislandBody",
+            "The companion for Love Island Eclipse on Materia: tonight's experiences with Teleport, the live #LoveIslandEclipse gallery, the linkshells to join, and the frame and badge you earn by sharing your night.");
         public static readonly LocString AnnouncementsSub = new("storeCopy.announcementsSub", "Word from the team");
         public static readonly LocString AnnouncementsBody = new("storeCopy.announcementsBody",
             "Release notes, downtime warnings and everything else the Aetherphone team wants you to know, delivered straight to your phone.");
@@ -579,6 +588,9 @@ internal static class L
         public static readonly LocString PhotosSub = new("storeCopy.photosSub", "Your gallery");
         public static readonly LocString PhotosBody = new("storeCopy.photosBody",
             "Browse by year, month or day, make your own albums, find shots by the place they were taken, and touch them up in the built-in editor.");
+        public static readonly LocString PrismSub = new("storeCopy.prismSub", "Weekly glamour contest");
+        public static readonly LocString PrismBody = new("storeCopy.prismBody",
+            "Dress for the week's theme, enter a photo of your glam and judge heats of other players' glams. The best glams win Aether Coin.");
         public static readonly LocString MusicSub = new("storeCopy.musicSub", "Songs, radio and Jams");
         public static readonly LocString MusicBody = new("storeCopy.musicBody",
             "Daily mixes, stations from around the world, your own playlists with synced lyrics, and Jams to listen in sync with friends.");
@@ -753,6 +765,9 @@ internal static class L
         public static readonly LocString DeleteConversationMessage = new("message.deleteConversationMessage",
             "This deletes the conversation for you. This can't be undone.");
         public static readonly LocString DeletedBody = new("message.deletedBody", "This message was deleted");
+        public static readonly LocString BlockedBody = new("message.blockedBody", "Message from someone you blocked");
+        public static readonly LocString BlockedSender = new("message.blockedSender", "Someone you blocked");
+        public static readonly LocString BlockedShow = new("message.blockedShow", "Show");
         public static readonly LocString MuteAction = new("message.muteAction", "Mute");
         public static readonly LocString UnmuteAction = new("message.unmuteAction", "Unmute");
         public static readonly LocString RecordVoiceHint = new("message.recordVoiceHint", "Record a voice message");
@@ -1898,7 +1913,13 @@ internal static class L
         public static readonly LocString CallVolume = new("phone.callVolume", "Call volume");
         public static readonly LocString MicVolume = new("phone.micVolume", "Microphone volume");
         public static readonly LocString AutoGain = new("phone.autoGain", "Automatic gain");
-        public static readonly LocString AutoGainHint = new("phone.autoGainHint", "Evens out your voice in calls and voice messages so quiet and loud speech reach others at a similar level. The volume slider applies to calls only.");
+        public static readonly LocString AutoGainHint = new("phone.autoGainHint", "Evens out your voice in calls and voice messages so quiet and loud speech reach others at a similar level.");
+        public static readonly LocString MicVolumeHint = new("phone.micVolumeHint", "The slider sets your microphone volume for calls.");
+        public static readonly LocString MicThreshold = new("phone.micThreshold", "Microphone threshold");
+        public static readonly LocString MicThresholdHint = new("phone.micThresholdHint", "0 picks up every sound. Higher numbers need louder speech before others hear you in calls. Set it just under your softest speech on the meter.");
+        public static readonly LocString TestMicrophone = new("phone.testMicrophone", "Test microphone");
+        public static readonly LocString MicClipping = new("phone.micClipping", "Your microphone is clipping, which distorts loud speech. Lower its input level in Windows sound settings.");
+        public static readonly LocString AutoGainVolumeHint = new("phone.autoGainVolumeHint", "Automatic gain sets how loud you sound, so the volume slider is hidden while it is on.");
         public static readonly LocString MuteForMe = new("phone.muteForMe", "Mute for me");
         public static readonly LocString AudioDevicesHint = new("phone.audioDevicesHint", "Use headphones to avoid echo. Device and volume changes apply right away, even during a call.");
         public static readonly LocString IncomingCallBody = new("phone.incomingCallBody", "Incoming call");
@@ -2019,6 +2040,8 @@ internal static class L
         public static readonly LocString MarketContextMenuHint = new("settings.marketContextMenuHint", "Shows \"Search the Market\" option in the in-game context menu when right-clicking on an item.");
         public static readonly LocString LinkpearlContextMenu = new("settings.linkpearlContextMenu", "Linkpearl chat in menus");
         public static readonly LocString LinkpearlContextMenuHint = new("settings.linkpearlContextMenuHint", "Shows \"Open a Linkpearl chat\" option in the in-game context menu when right-clicking on a player.");
+        public static readonly LocString NetworkStatusInChat = new("settings.networkStatusInChat", "Network status in chat");
+        public static readonly LocString NetworkStatusInChatHint = new("settings.networkStatusInChatHint", "Writes a line in game chat when Aethernet restarts or the connection drops, and again when it is back.");
         public static readonly LocString ArrowKeysStepPosts = new("settings.arrowKeysStepPosts", "Arrow keys scroll posts");
         public static readonly LocString ArrowKeysStepPostsHint = new("settings.arrowKeysStepPostsHint", "While the phone is focused, Up and Down glide to the previous or next post in Aethergram and Chirper.");
         public static readonly LocString AutoAdvancePosts = new("settings.autoAdvancePosts", "Auto-advance posts");
@@ -2280,131 +2303,339 @@ internal static class L
         public static readonly LocString SectionSounds = new("changelog.sectionSounds", "Sounds");
         public static readonly LocString SectionHalloween = new("changelog.sectionHalloween", "Halloween");
 
-        public static readonly LocString[] Release1311MogCast =
+        public static readonly LocString[] Release1400Prism =
         {
-            new("changelog.r1311.38",
+            new("changelog.r1400.0",
+                "Added Prism, a weekly glamour contest with a new theme every Monday at the daily reset, contributed by t3sco"),
+            new("changelog.r1400.1",
+                "Added entering Prism with one photo of your glam for the week's theme, picked from Photos or imported from your PC, and withdrawing it while entries are open"),
+            new("changelog.r1400.2",
+                "Added judging in Prism: rate anonymous glams in heats from Off theme to Nails it, with Aether Coin for every heat you judge"),
+            new("changelog.r1400.3",
+                "Added the Prism reveal: heat winners go through to a final, and results arrive as a podium with your placing, the Aether Coin you won and a reveal you can replay"),
+            new("changelog.r1400.4",
+                "Added reporting a Prism glam, so moderators can take it out of the contest"),
+            new("changelog.r1400.29",
+                "Added the Prism glam library: browse new, popular and followed glams, filter to Modded, Vanilla or ones that fit your character, and search by item or #tag, contributed by t3sco"),
+            new("changelog.r1400.30",
+                "Added trying on any Prism glam in one tap through Glamourer and Penumbra with the mods you have, or through the game's Try On window without them"),
+            new("changelog.r1400.31",
+                "Added posting your own Prism glam with up to four photos, with your gear, dyes and mods read from the game and each mod linked to its page"),
+            new("changelog.r1400.32",
+                "Added a Prism wardrobe that keeps what you're wearing, your Glamourer designs and any glam you add, and puts an outfit back on in one tap"),
+            new("changelog.r1400.33",
+                "Added Modded and Vanilla contests to Prism side by side, with a Vanilla entry listing its gear and dyes by hand"),
+            new("changelog.r1400.34",
+                "Added the Prism rewards page, showing the badges, frames, Aether Coin and gil each week's winners take home"),
+            new("changelog.r1400.35",
+                "Added Prism profiles with follows and placings, and an activity inbox with a home screen badge for new likes, follows and contest results"),
+        };
+
+        public static readonly LocString[] Release1400Messaging =
+        {
+            new("changelog.r1400.5",
+                "Added hiding messages from people you blocked in ChocoChat group chats: each shows as a short row you can tap to read, and they no longer notify you"),
+            new("changelog.r1400.6",
+                "Fixed voice messages recorded with Automatic gain distorting when you raise your voice and staying quiet afterwards"),
+        };
+
+        public static readonly LocString[] Release1400Calls =
+        {
+            new("changelog.r1400.7",
+                "Added a Microphone threshold slider with a live level meter and Test microphone: at 0 every sound gets through, and higher numbers need louder speech before others hear you"),
+            new("changelog.r1400.8",
+                "Added a warning on the level meter when your microphone is clipping before the sound reaches the phone"),
+            new("changelog.r1400.9",
+                "Changed Microphone volume to hide while Automatic gain is on, since automatic gain sets your loudness"),
+            new("changelog.r1400.10",
+                "Fixed calls with Automatic gain turning your voice down after you shouted and leaving it quiet"),
+            new("changelog.r1400.11",
+                "Fixed the Speaker list showing only System default on some PCs"),
+        };
+
+        public static readonly LocString[] Release1400Music =
+        {
+            new("changelog.r1400.12",
+                "Added a Stop button on the mini player and the Dynamic Island while a radio station is connecting or has lost its connection"),
+            new("changelog.r1400.13",
+                "Changed a radio station that stays disconnected for 15 minutes to stop by itself"),
+            new("changelog.r1400.14",
+                "Fixed the reaction buttons in a radio station's chat being cut off on the left"),
+        };
+
+        public static readonly LocString[] Release1400Announcements =
+        {
+            new("changelog.r1400.22",
+                "Added photos and link buttons to announcements: the newest one leads with its first photo, and tapping a photo opens it full screen"),
+        };
+
+        public static readonly LocString[] Release1400AethergramVelvet =
+        {
+            new("changelog.r1400.23",
+                "Changed profile post grids to taller 3:4 tiles so portrait photos are cropped less, contributed by t3sco"),
+        };
+
+        public static readonly LocString[] Release1400Phone =
+        {
+            new("changelog.r1400.15",
+                "Added a line in game chat when Aethernet restarts for an update or loses its connection, and another when it is back, which you can turn off with Network status in chat in Settings"),
+            new("changelog.r1400.20",
+                "Changed apps that are switched on or off for everyone to appear or disappear within seconds instead of a few minutes"),
+            new("changelog.r1400.16",
+                "Fixed the status bar clock not lining up with screen titles"),
+            new("changelog.r1400.26",
+                "Changed app names on the home screen to always show in full: a long name shrinks a little or wraps onto a second line instead of ending in an ellipsis"),
+            new("changelog.r1400.28",
+                "Changed new apps to arrive on your home screen by themselves, in the first free spot starting from the first page; an app you remove stays removed"),
+        };
+
+        public static readonly LocString[] Release1400Gamba =
+        {
+            new("changelog.r1400.17",
+                "Changed blackjack so other players' hands turn face up as soon as they finish their turn"),
+            new("changelog.r1400.21",
+                "Fixed the win or loss amount at a blackjack seat covering that seat's cards and total"),
+        };
+
+        public static readonly LocString[] Release1400Games =
+        {
+            new("changelog.r1400.18",
+                "Fixed the Played too short to pay note never showing when you leave a game before it pays"),
+        };
+
+        public static readonly LocString[] Release1400Skywatcher =
+        {
+            new("changelog.r1400.27",
+                "Fixed Skywatcher and its widget showing another district's name and forecast, or a blank name, inside a house, apartment or workshop, contributed by YozoraCho"),
+        };
+
+        public static readonly LocString[] Release1400Sounds =
+        {
+            new("changelog.r1400.19",
+                "Fixed game sounds going silent when Interface Sounds was turned off"),
+        };
+
+        public static readonly LocString[] Release1400LoveIsland =
+        {
+            new("changelog.r1400.24",
+                "Added Love Island Eclipse, the companion app for PNX's Halloween festival on Materia: a countdown to the doors and the experience on now, every experience with Teleport and a reminder, the #LoveIslandEclipse gallery, the linkshells to ask for, and the frame, badge and Aether Coin you earn by posting during the night"),
+            new("changelog.r1400.25",
+                "Added Keep it night to Love Island Eclipse, which holds Eorzea at night while the app is open during the event"),
+        };
+
+        public static readonly LocString[] Release1330Chirper =
+        {
+            new("changelog.r1330.0",
+                "Added a Chirper widget with For You, Latest and Activity tabs, contributed by t3sco"),
+        };
+
+        public static readonly LocString[] Release1330Phone =
+        {
+            new("changelog.r1330.12",
+                "Added swiping paused music off the Dynamic Island: Music stops, and media playing on your PC stays hidden until it plays again, contributed by hellovvn"),
+            new("changelog.r1330.1",
+                "Added a confirmation before removing a Market price alert or withdrawing a Velvet intro, contributed by t3sco"),
+            new("changelog.r1330.2",
+                "Changed Home Screen edit mode to show its add and done buttons beside the Dynamic Island, so the icons no longer shift down, contributed by t3sco"),
+            new("changelog.r1330.3",
+                "Changed widgets to end level with the app names in their last row, contributed by t3sco"),
+            new("changelog.r1330.4",
+                "Changed the status bar clock to line up with screen titles, contributed by t3sco"),
+            new("changelog.r1330.5",
+                "Changed the status bar clock to leave out AM and PM, contributed by t3sco"),
+            new("changelog.r1330.6",
+                "Changed sheet, call, Dynamic Island and game buttons to act when you let go, so sliding off a press cancels it, contributed by t3sco"),
+            new("changelog.r1330.7",
+                "Changed small icon buttons to take taps over a larger area, contributed by t3sco"),
+            new("changelog.r1330.8",
+                "Changed photos you post or send in chats to upload at a higher quality, contributed by t3sco"),
+            new("changelog.r1330.9",
+                "Fixed the status bar clock moving when Do Not Disturb or Lock Position was turned on, contributed by t3sco"),
+            new("changelog.r1330.10",
+                "Fixed sheet, call and Dynamic Island buttons taking taps while they were still opening, contributed by t3sco"),
+            new("changelog.r1330.11",
+                "Fixed dock app names showing on top of the widget gallery and other sheets, contributed by t3sco"),
+        };
+
+        public static readonly LocString[] Release1330Collections =
+        {
+            new("changelog.r1330.13",
+                "Fixed the Owned filter in Facewear listing the wrong styles, contributed by jambalong"),
+        };
+
+        public static readonly LocString[] Release1330Messaging =
+        {
+            new("changelog.r1330.16",
+                "Fixed voice messages recorded with Automatic gain on reaching the other person too quietly, mostly from quiet microphones"),
+        };
+
+        public static readonly LocString[] Release1330Music =
+        {
+            new("changelog.r1330.17",
+                "Fixed long host names getting cut off on a radio station's page"),
+            new("changelog.r1330.18",
+                "Fixed a radio station's chat opening at the oldest message instead of the newest when you come back to it"),
+        };
+
+        public static readonly LocString[] Release1330Skywatcher =
+        {
+            new("changelog.r1330.19",
+                "Fixed Reset in Control jumping the sky to the wrong time of day a second after it returned to the real sky"),
+        };
+
+        public static readonly LocString[] Release1330Settings =
+        {
+            new("changelog.r1330.20",
+                "Fixed the Radio on air status in Nameplate Title leaving out your station's name"),
+        };
+
+        public static readonly LocString[] Release1330Sounds =
+        {
+            new("changelog.r1330.14",
+                "Fixed notification sounds staying silent on most audio devices, contributed by t3sco"),
+        };
+
+        public static readonly LocString[] Release1330Social =
+        {
+            new("changelog.r1330.15",
+                "Added search to the Followers, Following and Followed by lists, matching names and handles, contributed by hellovvn"),
+        };
+
+        public static readonly LocString[] Release1320MogCast =
+        {
+            new("changelog.r1320.38",
                 "Added MogCast to the expanded Dynamic Island: the video's thumbnail, a bar you can drag, the time played and left, and play, pause and next, on your own or in a watch party"),
-            new("changelog.r1311.12",
+            new("changelog.r1320.12",
                 "Fixed videos freezing on the first frame when the audio device stops taking sound: the video keeps playing without sound, says so, and sound returns on the next video, contributed by t3sco"),
-            new("changelog.r1311.13",
+            new("changelog.r1320.13",
                 "Fixed a stutter when pressing play: the player now starts and restarts in the background, contributed by t3sco"),
         };
 
-        public static readonly LocString[] Release1311Velvet =
+        public static readonly LocString[] Release1320Velvet =
         {
-            new("changelog.r1311.16",
+            new("changelog.r1320.16",
                 "Fixed posts, the feed, chats and intro requests sitting on loading or reading as empty after a failed fetch: they now say loading and offer a retry, contributed by t3sco"),
-            new("changelog.r1311.17",
+            new("changelog.r1320.17",
                 "Fixed onboarding marking you as set up before your profile had saved: it now waits for the save and shows an error if it fails, contributed by t3sco"),
         };
 
-        public static readonly LocString[] Release1311Games =
+        public static readonly LocString[] Release1320Games =
         {
-            new("changelog.r1311.33",
+            new("changelog.r1320.33",
                 "Changed online games to pick who goes first at random, then pass the first turn around the table each round"),
-            new("changelog.r1311.18",
+            new("changelog.r1320.18",
                 "Fixed your ranks disappearing from the profile when they failed to load: a retry card shows instead, contributed by t3sco"),
+            new("changelog.r1320.42",
+                "Fixed games played sideways hiding the coin timer: it now sits next to the back button"),
+            new("changelog.r1320.43",
+                "Fixed leaving a game too early to earn coins saying nothing: a note now tells you the session was too short"),
+            new("changelog.r1320.44",
+                "Fixed game icons in the Library, the shelves, Profile and the leaderboards taking on the Home Screen icon style: every game keeps its own colours"),
         };
 
-        public static readonly LocString[] Release1311Photos =
+        public static readonly LocString[] Release1320Photos =
         {
-            new("changelog.r1311.19",
+            new("changelog.r1320.19",
                 "Fixed the first open of a large screenshot folder stalling the phone while every thumbnail decoded at once: thumbnails now load three at a time in the background, contributed by t3sco"),
         };
 
-        public static readonly LocString[] Release1311Gamba =
+        public static readonly LocString[] Release1320Gamba =
         {
-            new("changelog.r1311.0",
+            new("changelog.r1320.0",
                 "Fixed long names on a full seven-seat blackjack rail being cut short: a seat's plate now widens into the empty seats beside it"),
-            new("changelog.r1311.1",
+            new("changelog.r1320.1",
                 "Fixed the gil ledger missing trades once you had been away from your table page for 30 minutes or had reloaded the plugin: trades now record for 12 hours after you were last at your open gil table, across restarts, until you close the table"),
-            new("changelog.r1311.32",
+            new("changelog.r1320.32",
                 "Fixed tapping a Gamba notification after a restart opening an empty blackjack table: it now opens your table, and a trade notification opens that table's gil ledger"),
-            new("changelog.r1311.14",
+            new("changelog.r1320.14",
                 "Fixed the lobby balance, cashier, floor feed and fairness panel reading as zero or empty while they were still loading, contributed by t3sco"),
-            new("changelog.r1311.15",
+            new("changelog.r1320.15",
                 "Fixed the Limits page sitting on a spinner when the casino state fails to load: it now offers a retry, contributed by t3sco"),
         };
 
-        public static readonly LocString[] Release1311Phone =
+        public static readonly LocString[] Release1320Phone =
         {
-            new("changelog.r1311.20",
+            new("changelog.r1320.20",
                 "Added song progress to the expanded Dynamic Island: a bar you can drag, the time played and left, previous and next buttons, and shuffle and repeat, for Music and for media playing on your PC"),
-            new("changelog.r1311.39",
-                "Added automatic gain for your microphone in calls and voice messages, on by default: it evens out quiet and loud speech, and a toggle in Settings and in the call's audio options turns it off"),
-            new("changelog.r1311.24",
+            new("changelog.r1320.39",
+                "Added automatic gain for your microphone in calls and voice messages, on by default: it evens out quiet and loud speech, the microphone slider then sets how loud you need to speak before others hear you, and a toggle in Settings and in the call's audio options turns it off"),
+            new("changelog.r1320.24",
                 "Changed the app switcher to keep every app you used in the last 10 minutes and reopen it where you left it; Games, Gamba and Camera keep a card too and open fresh on their first screen"),
-            new("changelog.r1311.4",
+            new("changelog.r1320.4",
                 "Changed the scroll indicator while the phone position is locked: it dims when idle, brightens under the pointer, and a click on it no longer reaches what is underneath"),
-            new("changelog.r1311.8",
+            new("changelog.r1320.8",
                 "Changed the MogCast and Music setup button to say checking while it only checks, and installing once a download starts, contributed by t3sco"),
-            new("changelog.r1311.25",
+            new("changelog.r1320.25",
                 "Fixed the scroll bar and the mouse wheel not working beside the + button in Chirper, Aethergram, Velvet and MogCast"),
-            new("changelog.r1311.9",
+            new("changelog.r1320.41",
+                "Fixed the call speaker list showing only System default on some PCs when one audio device could not be read"),
+            new("changelog.r1320.9",
                 "Fixed rows cutting off the word that told them apart, from tomestone names and forecast weather to district tiles and leaderboard ranks, contributed by t3sco"),
-            new("changelog.r1311.10",
+            new("changelog.r1320.10",
                 "Fixed a short hitch when an app opened with a sound after the phone had been quiet for a while, contributed by t3sco"),
-            new("changelog.r1311.11",
+            new("changelog.r1320.11",
                 "Fixed Gamba history, the Skywatcher sun arc, chess clocks, the inventory list and the call history doing more work every frame than they needed to, contributed by t3sco"),
         };
 
-        public static readonly LocString[] Release1311Fishing =
+        public static readonly LocString[] Release1320Fishing =
         {
-            new("changelog.r1311.2",
+            new("changelog.r1320.2",
                 "Added a lead time for fish alerts: a stepper under the alerts list sets how many minutes before a window the alert rings, 1 to 60, 5 by default"),
-            new("changelog.r1311.26",
+            new("changelog.r1320.26",
                 "Added a Teleport button to a fish's location that takes you to the aetheryte nearest its fishing hole"),
-            new("changelog.r1311.27",
+            new("changelog.r1320.27",
                 "Added an Equip Fisher button to a fish's location when you are on another class and have a Fisher gear set"),
-            new("changelog.r1311.28",
+            new("changelog.r1320.28",
                 "Added a tap on a fish's fishing hole that searches the Timed Fish tab for that hole"),
-            new("changelog.r1311.3",
+            new("changelog.r1320.3",
                 "Changed the Timed Fish tab filters: the big fish and caught filters sit on their own row above the expansion chips"),
-            new("changelog.r1311.29",
+            new("changelog.r1320.29",
                 "Fixed the bell in the alerts list turning an alert off when you clicked near it rather than on it"),
         };
 
-        public static readonly LocString[] Release1311Messaging =
+        public static readonly LocString[] Release1320Messaging =
         {
-            new("changelog.r1311.6",
+            new("changelog.r1320.6",
                 "Added the double tick to the chats list in ChocoChat, Aethergram and Velvet: a message you sent shows two ticks once it has been read"),
-            new("changelog.r1311.5",
+            new("changelog.r1320.40",
+                "Changed sending a photo in a chat: a photo you pick, import or share now waits above the message box so you can add a caption before you send it"),
+            new("changelog.r1320.5",
                 "Fixed a tall or narrow photo making its bubble narrow and cutting the caption short: the bubble keeps its full width and a tall photo is cropped to fit it"),
-            new("changelog.r1311.30",
+            new("changelog.r1320.30",
                 "Fixed unread counts and app badges coming back in ChocoChat, Aethergram and Velvet after a chat had been read"),
         };
 
-        public static readonly LocString[] Release1311Chirper =
+        public static readonly LocString[] Release1320Chirper =
         {
-            new("changelog.r1311.22",
+            new("changelog.r1320.22",
                 "Changed the Chirper timeline to keep your place when you come back to the Home tab: new chirps wait behind a button at the top instead of moving the list"),
-            new("changelog.r1311.23",
+            new("changelog.r1320.23",
                 "Fixed a rechirped quote chirp showing the chirp it quoted as unavailable"),
         };
 
-        public static readonly LocString[] Release1311Sounds =
+        public static readonly LocString[] Release1320Sounds =
         {
-            new("changelog.r1311.34",
+            new("changelog.r1320.34",
                 "Added a way to remove a ringtone or notification sound you imported: anything that used it goes back to the default sound"),
-            new("changelog.r1311.35",
+            new("changelog.r1320.35",
                 "Fixed short notification sounds losing their start on Bluetooth, USB and HDMI audio devices"),
         };
 
-        public static readonly LocString[] Release1311Halloween =
+        public static readonly LocString[] Release1320Halloween =
         {
-            new("changelog.r1311.36",
+            new("changelog.r1320.36",
                 "Fixed the treats card saying a treat was hiding on an empty screen: treats now hide only where the card can name, and no longer in Velvet, contributed by t3sco"),
-            new("changelog.r1311.37",
+            new("changelog.r1320.37",
                 "Fixed Halloween treat progress staying on one PC: the treats you found now follow your character to another PC once you sign in"),
         };
 
-        public static readonly LocString[] Release1311Skywatcher =
+        public static readonly LocString[] Release1320Skywatcher =
         {
-            new("changelog.r1311.7",
+            new("changelog.r1320.7",
                 "Fixed the sky staying at the overridden time after resetting it in Skywatcher: the clock is handed back to the game over a second so the lighting follows"),
-            new("changelog.r1311.21",
+            new("changelog.r1320.21",
                 "Fixed the Skywatcher header shrinking in steps as you scroll: the title now resizes smoothly, its lines fade together and the cards fade under it"),
-            new("changelog.r1311.31",
+            new("changelog.r1320.31",
                 "Fixed the hourly forecast cutting times short at large text sizes: the times shrink together, and fewer hours show when they still do not fit"),
         };
 
@@ -6009,7 +6240,7 @@ internal static class L
         public static readonly LocString ListeningCount = new("music.listeningCount", "{0} listening");
         public static readonly LocString WatchOnTwitch = new("music.watchOnTwitch", "Watch on Twitch");
         public static readonly LocString OffAir = new("music.offAir", "Off air");
-        public static readonly LocString HostedBy = new("music.hostedBy", "Hosted by {0}");
+        public static readonly LocString HostCaption = new("music.hostCaption", "Host");
         public static readonly LocString ReportStation = new("music.reportStation", "Report station");
         public static readonly LocString ReportStationTitle = new("music.reportStationTitle",
             "Report this station");
@@ -7198,6 +7429,8 @@ internal static class L
         public static readonly LocString ThreadEmpty = new("velvet.threadEmpty", "Say hello");
         public static readonly LocString Connect = new("velvet.connect", "Connect");
         public static readonly LocString Requested = new("velvet.requested", "Requested");
+        public static readonly LocString WithdrawIntro = new("velvet.withdrawIntro", "Withdraw");
+        public static readonly LocString WithdrawIntroConfirm = new("velvet.withdrawIntroConfirm", "Withdraw your intro to {0}?");
         public static readonly LocString Message = new("velvet.message", "Message");
         public static readonly LocString MessageHint = new("velvet.messageHint", "Write a message…");
         public static readonly LocString Send = new("velvet.send", "Send");
@@ -8876,6 +9109,7 @@ internal static class L
         public static readonly LocString AlertHitTitle = new("market.alertHitTitle", "Triggered Alerts");
         public static readonly LocString AlertHitNow = new("market.alertHitNow", "{0} · now {1}");
         public static readonly LocString RemoveAlert = new("market.removeAlert", "Remove alert");
+        public static readonly LocString RemoveAlertConfirm = new("market.removeAlertConfirm", "Remove the alert for {0}?");
         public static readonly LocString NewAlert = new("market.newAlert", "New Price Alert");
         public static readonly LocString GilPrice = new("market.gilPrice", "Price in gil");
         public static readonly LocString Lower = new("market.lower", "Lower");
@@ -10401,6 +10635,9 @@ internal static class L
         public static readonly LocString StateLine = new("plugin.stateLine", "{0}: {1}");
         public static readonly LocString MusicUsage = new("plugin.musicUsage", "Type {0} music followed by play, pause, next, or prev.");
         public static readonly LocString NothingPlaying = new("plugin.nothingPlaying", "Nothing is playing.");
+        public static readonly LocString NetworkRestarting = new("plugin.networkRestarting", "Aethernet is restarting for an update. You may be disconnected for a moment.");
+        public static readonly LocString NetworkLost = new("plugin.networkLost", "Lost connection to Aethernet, reconnecting...");
+        public static readonly LocString NetworkBack = new("plugin.networkBack", "Aethernet is back online.");
         public static readonly LocString TellUsage = new("plugin.tellUsage", "Target a player, or type {0} tell followed by their name and world.");
         public static readonly LocString WorldNotFound = new("plugin.worldNotFound", "No world named {0}.");
         public static readonly LocString CallUsage = new("plugin.callUsage", "Type {0} call followed by a contact name.");
@@ -10556,6 +10793,277 @@ internal static class L
             "Couldn't refresh. Pull down to try again.");
     }
 
+    internal static class Prism
+    {
+        public static readonly LocString ShareLabel = new("prism.shareLabel", "Post to Prism");
+        public static readonly LocString SignInTitle = new("prism.signInTitle", "Sign in to take part");
+        public static readonly LocString SignInRequired = new("prism.signInRequired",
+            "Sign in to Aethernet in Settings to enter and judge glams");
+        public static readonly LocString OpenSettings = new("prism.openSettings", "Open Settings");
+        public static readonly LocString NoWeekTitle = new("prism.noWeekTitle", "No theme right now");
+        public static readonly LocString NoWeekHint = new("prism.noWeekHint", "A new theme drops soon. Check back later.");
+        public static readonly LocString ThemeLabel = new("prism.themeLabel", "This week's theme");
+        public static readonly LocString EntriesClose = new("prism.entriesClose", "Entries close");
+        public static readonly LocString JudgingCloses = new("prism.judgingCloses", "Judging closes");
+        public static readonly LocString FinalCloses = new("prism.finalCloses", "The final closes");
+        public static readonly LocString ResultsAt = new("prism.resultsAt", "Results arrive");
+        public static readonly LocString EnterLook = new("prism.enterLook", "Enter your glam");
+        public static readonly LocString EnterThisLook = new("prism.enterThisLook", "Enter this glam");
+        public static readonly LocString Uploading = new("prism.uploading", "Uploading your glam…");
+        public static readonly LocString Withdraw = new("prism.withdraw", "Withdraw");
+        public static readonly LocString WithdrawTitle = new("prism.withdrawTitle", "Withdraw your glam?");
+        public static readonly LocString WithdrawBody = new("prism.withdrawBody",
+            "Your photo leaves this week's contest. You can enter again until entries close.");
+        public static readonly LocString StatusLive = new("prism.statusLive", "In the running");
+        public static readonly LocString StatusRejected = new("prism.statusRejected", "Not accepted");
+        public static readonly LocString JudgeHeat = new("prism.judgeHeat", "Judge a heat");
+        public static readonly LocString JudgeFinal = new("prism.judgeFinal", "Judge the final");
+        public static readonly LocPlural HeatsJudged = new("prism.heatsJudged", "{0} heat judged", "{0} heats judged");
+        public static readonly LocString LookCount = new("prism.lookCount", "Glam {0}/{1}");
+        public static readonly LocString RateHint = new("prism.rateHint", "How well does it wear the theme?");
+        public static readonly LocString HeatDoneTitle = new("prism.heatDoneTitle", "Heat judged");
+        public static readonly LocString HeatDoneHint = new("prism.heatDoneHint",
+            "Your scores are in. Names stay hidden until the results.");
+        public static readonly LocString JudgeAnother = new("prism.judgeAnother", "Judge another");
+        public static readonly LocString NothingLeftTitle = new("prism.nothingLeftTitle", "All caught up");
+        public static readonly LocString NothingLeftHint = new("prism.nothingLeftHint",
+            "You've judged every heat you can for now.");
+        public static readonly LocString ReportTitle = new("prism.reportTitle", "Report this glam");
+        public static readonly LocString LastResults = new("prism.lastResults", "Results");
+        public static readonly LocString FinalRank = new("prism.finalRank", "Rank {0} in the final");
+        public static readonly LocString TopPercent = new("prism.topPercent", "Top {0}%");
+        public static readonly LocString CoinsWon = new("prism.coinsWon", "+{0} Aether Coin");
+        public static readonly LocString YourHeat = new("prism.yourHeat", "Your heat");
+        public static readonly LocString FinalTitle = new("prism.finalTitle", "The final");
+        public static readonly LocString Back = new("prism.back", "Back");
+        public static readonly LocString Issue = new("prism.issue", "N°{0}");
+        public static readonly LocString CoverCredit = new("prism.coverCredit", "Cover: {0}");
+        public static readonly LocPlural LooksThisIssue =
+            new("prism.looksThisIssue", "{0} glam this issue", "{0} glams this issue");
+        public static readonly LocString YourLook = new("prism.yourLook", "Your glam");
+        public static readonly LocString ResultsIn = new("prism.resultsIn", "New results");
+        public static readonly LocString ReplayReveal = new("prism.replayReveal", "Replay the reveal");
+        public static readonly LocString Submitting = new("prism.submitting", "Sending your scores…");
+        public static readonly LocString HeatName = new("prism.heatName", "Heat {0}");
+        public static readonly LocString YourPlacing = new("prism.yourPlacing", "Your placing");
+        public static readonly LocString TapHint = new("prism.tapHint", "Tap for the next glam");
+        public static readonly LocString InspectHint = new("prism.inspectHint", "Hold to look closer");
+        public static readonly LocString StatusLiveTitle = new("prism.statusLiveTitle", "Your glam is in the running");
+        public static readonly LocString StatusRejectedTitle =
+            new("prism.statusRejectedTitle", "Your glam wasn't accepted");
+        public static readonly LocString PlaceLabel = new("prism.placeLabel", "Place");
+        public static readonly LocString LooksIn = new("prism.looksIn", "Glams in");
+        public static readonly LocString Done = new("prism.done", "Done");
+        public static readonly LocString Submit = new("prism.submit", "Submit");
+        public static readonly LocString PrintHeading = new("prism.printHeading", "{0} N°{1}");
+        public static readonly LocString ScoreLow = new("prism.scoreLow", "Off theme");
+        public static readonly LocString ScoreHigh = new("prism.scoreHigh", "Nails it");
+        public static readonly LocString JudgingCoinLabel = new("prism.judgingCoinLabel", "Aether Coin for judging");
+        public static readonly LocString HowItWorks = new("prism.howItWorks", "How it works");
+        public static readonly LocString GuideEnterTitle = new("prism.guideEnterTitle", "Enter one glam");
+        public static readonly LocString GuideEnterBody = new("prism.guideEnterBody",
+            "A new theme drops every week. Pick the one photo that wears it best, mods and all.");
+        public static readonly LocString GuideJudgeBody = new("prism.guideJudgeBody",
+            "Score glams from 1 to 5 in heats of about twelve. Entries are anonymous, and every judge's scores are evened out so nobody can sink a glam alone.");
+        public static readonly LocString GuideFinalBody = new("prism.guideFinalBody",
+            "The top glams from each heat meet in the final, and everyone judges it.");
+        public static readonly LocString GuideRevealTitle = new("prism.guideRevealTitle", "The reveal");
+        public static readonly LocString GuideRevealBody = new("prism.guideRevealBody",
+            "Results play out as a countdown to first place. The podium and active judges earn Aether Coin.");
+        public static readonly LocString TabDiscover = new("prism.tabDiscover", "Discover");
+        public static readonly LocString TabWeek = new("prism.tabWeek", "This week");
+        public static readonly LocString TabWardrobe = new("prism.tabWardrobe", "Wardrobe");
+        public static readonly LocString TabMe = new("prism.tabMe", "Me");
+        public static readonly LocString ScopeNew = new("prism.scopeNew", "New");
+        public static readonly LocString ScopePopular = new("prism.scopePopular", "Popular");
+        public static readonly LocString SearchHint = new("prism.searchHint", "Search items or #tags");
+        public static readonly LocString GlamsTagged = new("prism.glamsTagged", "Glams tagged {0}");
+        public static readonly LocString NoMatches = new("prism.noMatches", "No matches found");
+        public static readonly LocString ScopeFollowing = new("prism.scopeFollowing", "Following");
+        public static readonly LocString FilterAll = new("prism.filterAll", "All");
+        public static readonly LocString FilterModded = new("prism.filterModded", "Modded");
+        public static readonly LocString FilterVanilla = new("prism.filterVanilla", "Vanilla");
+        public static readonly LocString PostGlam = new("prism.postGlam", "Post a glam");
+        public static readonly LocString DiscoverEmptyHint = new("prism.discoverEmptyHint", "No glams here yet. Post the one you're wearing and be the first.");
+        public static readonly LocString FollowingEmptyHint = new("prism.followingEmptyHint", "Follow players from their profile and their glams show up here.");
+        public static readonly LocString DeleteGlamTitle = new("prism.deleteGlamTitle", "Delete this glam?");
+        public static readonly LocString DeleteGlamBody = new("prism.deleteGlamBody", "It leaves your profile and everyone's saved glams.");
+        public static readonly LocString ReportGlam = new("prism.reportGlam", "Report this glam");
+        public static readonly LocString VanillaStamp = new("prism.vanillaStamp", "Vanilla");
+        public static readonly LocString ModdedStamp = new("prism.moddedStamp", "Modded");
+        public static readonly LocPlural TriedOnCount = new("prism.triedOnCount", "Tried on {0} time", "Tried on {0} times");
+        public static readonly LocString TakeOff = new("prism.takeOff", "Take it off");
+        public static readonly LocString Wearing = new("prism.wearing", "Wearing");
+        public static readonly LocString ModsNeedPenumbra = new("prism.modsNeedPenumbra", "Mods need Penumbra");
+        public static readonly LocString TryOnWithoutGlamourer = new("prism.tryOnWithoutGlamourer",
+            "Without Glamourer, Prism uses the game's Try On window, without mods.");
+        public static readonly LocString OpenStorage = new("prism.openStorage",
+            "Prism counts your dresser and armoire after you open them once.");
+        public static readonly LocString PostsAsVanilla = new("prism.postsAsVanilla",
+            "Mods are read through Penumbra. Without it, this glam posts as vanilla.");
+        public static readonly LocString DesignsAdded = new("prism.designsAdded", "Designs added: {0}");
+        public static readonly LocString YouOwnThis = new("prism.youOwnThis", "You have this one");
+        public static readonly LocString VendorPrice = new("prism.vendorPrice", "Sold by vendors for {0} gil");
+        public static readonly LocString Owned = new("prism.owned", "Owned");
+        public static readonly LocString Installed = new("prism.installed", "Installed");
+        public static readonly LocString AddToWardrobe = new("prism.addToWardrobe", "Add to wardrobe");
+        public static readonly LocString InWardrobe = new("prism.inWardrobe", "In your wardrobe");
+        public static readonly LocString BodyFemale = new("prism.bodyFemale", "{0}, female");
+        public static readonly LocString BodyMale = new("prism.bodyMale", "{0}, male");
+        public static readonly LocString MoreFrom = new("prism.moreFrom", "More from {0}");
+        public static readonly LocString InspiredBy = new("prism.inspiredBy", "Inspired by another glam");
+        public static readonly LocString FitsMe = new("prism.fitsMe", "Fits me");
+        public static readonly LocString StillTryingOn = new("prism.stillTryingOn",
+            "You're still trying something on, so it would go out as your gear. Take it off unless the photo shows it.");
+        public static readonly LocString CheckMarket = new("prism.checkMarket", "Check market");
+        public static readonly LocString GlamOfTheDay = new("prism.glamOfTheDay", "Glam of the day");
+        public static readonly LocPlural SeasonStanding = new("prism.seasonStanding", "{1}: rank {2}, {0:N0} point",
+            "{1}: rank {2}, {0:N0} points");
+        public static readonly LocString Rename = new("prism.rename", "Rename");
+        public static readonly LocString AddPhoto = new("prism.addPhoto", "Add a photo");
+        public static readonly LocString ChangePhoto = new("prism.changePhoto", "Change photo");
+        public static readonly LocString UsePhoto = new("prism.usePhoto", "Use this photo");
+        public static readonly LocString Rewards = new("prism.rewards", "Rewards");
+        public static readonly LocString RewardsHeadline = new("prism.rewardsHeadline", "Win the week");
+        public static readonly LocString RewardsIntro = new("prism.rewardsIntro",
+            "Every week Prism crowns its best glams. This is what they take home.");
+        public static readonly LocString RewardBadgeTitle = new("prism.rewardBadgeTitle", "Podium badges");
+        public static readonly LocString RewardBadgeBody = new("prism.rewardBadgeBody",
+            "Finish on a podium and a badge joins your profile, worn next to your name across Aetherphone.");
+        public static readonly LocString RewardFrameTitle = new("prism.rewardFrameTitle", "Winner's frame");
+        public static readonly LocString RewardFrameBody = new("prism.rewardFrameBody",
+            "Winners wear a Prism frame around their avatar for a while, so everyone can see who took the week.");
+        public static readonly LocString RewardCoinTitle = new("prism.rewardCoinTitle", "Aether Coin");
+        public static readonly LocString RewardCoinBody = new("prism.rewardCoinBody",
+            "Heat podiums and the final pay out Aether Coin, and judging heats earns a little too.");
+        public static readonly LocString RewardGilTitle = new("prism.rewardGilTitle", "Gil");
+        public static readonly LocString RewardGilBody = new("prism.rewardGilBody",
+            "The very best glams can win gil as well.");
+        public static readonly LocString TryOnGlam = new("prism.tryOnGlam", "Try on");
+        public static readonly LocString Save = new("prism.save", "Save");
+        public static readonly LocString Saved = new("prism.saved", "Saved");
+        public static readonly LocString Like = new("prism.like", "Like");
+        public static readonly LocPlural OwnPieces = new("prism.ownPieces", "You own {1} of {0} piece",
+            "You own {1} of {0} pieces");
+        public static readonly LocString ModsInstalled = new("prism.modsInstalled", "{0} of {1} mods installed");
+        public static readonly LocString GearHeading = new("prism.gearHeading", "Gear");
+        public static readonly LocString CharacterHeading = new("prism.characterHeading", "Character");
+        public static readonly LocString GetMod = new("prism.getMod", "Get it");
+        public static readonly LocString ModBy = new("prism.modBy", "{0} by {1}");
+        public static readonly LocString LeaveOutMod = new("prism.leaveOutMod", "Leave out");
+        public static readonly LocString AddBackMod = new("prism.addBackMod", "Add back");
+        public static readonly LocString PhotosHint = new("prism.photosHint", "Pick up to 4 photos. The first one is the cover.");
+        public static readonly LocString TitleLabel = new("prism.titleLabel", "Title");
+        public static readonly LocString TitleHint = new("prism.titleHint", "Name your glam");
+        public static readonly LocString TagsLabel = new("prism.tagsLabel", "Tags");
+        public static readonly LocString TagsHint = new("prism.tagsHint", "cute, purple, casual");
+        public static readonly LocString CapturedHeading = new("prism.capturedHeading", "From your character");
+        public static readonly LocString CapturedCounts = new("prism.capturedCounts", "Pieces {0}, mods {1}");
+        public static readonly LocString CapturedNote = new("prism.capturedNote", "Gear, dyes and mods are read from your character when you post, so wear the glam while you post it.");
+        public static readonly LocString Post = new("prism.post", "Post");
+        public static readonly LocString Posting = new("prism.posting", "Posting\u2026");
+        public static readonly LocString SavedEmptyHint = new("prism.savedEmptyHint", "Glams you save show up here.");
+        public static readonly LocString ProfileEmptyHint = new("prism.profileEmptyHint", "No glams posted yet.");
+        public static readonly LocString StatGlams = new("prism.statGlams", "Glams");
+        public static readonly LocString StatTriedOn = new("prism.statTriedOn", "Tried on");
+        public static readonly LocString StatLikes = new("prism.statLikes", "Likes");
+        public static readonly LocString PlacingsHeading = new("prism.placingsHeading", "Placings");
+        public static readonly LocPlural WornInGlams = new("prism.wornInGlams", "Worn in {0} glam", "Worn in {0} glams");
+        public static readonly LocString Follow = new("prism.follow", "Follow");
+        public static readonly LocString Following = new("prism.followingState", "Following");
+        public static readonly LocString WardrobeEmptyHint = new("prism.wardrobeEmptyHint", "Save what you're wearing, or bring in your Glamourer designs, and your outfits live here.");
+        public static readonly LocString PutOn = new("prism.putOn", "Put it on");
+        public static readonly LocString Favourite = new("prism.favourite", "Favourite");
+        public static readonly LocString Unfavourite = new("prism.unfavourite", "Unfavourite");
+        public static readonly LocString Favourites = new("prism.favourites", "Favourites");
+        public static readonly LocString SaveToGlamourer = new("prism.saveToGlamourer", "Save to Glamourer");
+        public static readonly LocString DeleteOutfit = new("prism.deleteOutfit", "Delete this outfit");
+        public static readonly LocString DeleteOutfitTitle = new("prism.deleteOutfitTitle", "Delete this outfit?");
+        public static readonly LocString OutfitNumber = new("prism.outfitNumber", "Outfit {0}");
+        public static readonly LocString SaveWearing = new("prism.saveWearing", "Save what I'm wearing");
+        public static readonly LocString ImportDesigns = new("prism.importDesigns", "Import Glamourer designs");
+        public static readonly LocString SurpriseMe = new("prism.surpriseMe", "Surprise me");
+        public static readonly LocString GuideIntroTitle = new("prism.guideIntroTitle", "Welcome to Prism");
+        public static readonly LocString GuideIntroBody = new("prism.guideIntroBody",
+            "Share glams, try on anyone's and keep a wardrobe of your own. There's a contest every week too.");
+        public static readonly LocString GuideTryTitle = new("prism.guideTryTitle", "Try on any glam");
+        public static readonly LocString GuideTryBody = new("prism.guideTryBody",
+            "Every glam lists its gear, dyes and mods. Try on puts it on your character with Glamourer, with the mods you have.");
+        public static readonly LocString GuidePostTitle = new("prism.guidePostTitle", "Post your own");
+        public static readonly LocString GuidePostBody = new("prism.guidePostBody",
+            "Pick up to four photos. Prism reads your gear, dyes and mods and links each mod to its page. It never hosts mod files.");
+        public static readonly LocString GuideWardrobeTitle = new("prism.guideWardrobeTitle", "Keep a wardrobe");
+        public static readonly LocString GuideWardrobeBody = new("prism.guideWardrobeBody",
+            "Save what you're wearing, bring in Glamourer designs or add any glam, then put it back on in one tap. Only you can see it.");
+        public static readonly LocString GetStarted = new("prism.getStarted", "Get started");
+        public static readonly LocString Skip = new("prism.skip", "Skip");
+        public static readonly LocString ResultsOut = new("prism.resultsOut", "Results are in");
+        public static readonly LocString JudgingClosed = new("prism.judgingClosed", "Judging closed");
+        public static readonly LocString WonBy = new("prism.wonBy", "Won by {0}");
+        public static readonly LocString NextTheme = new("prism.nextTheme", "Next theme");
+        public static readonly LocString JudgeRewardEach = new("prism.judgeRewardEach", "+{0} Aether Coin for every heat you judge");
+        public static readonly LocString JudgeRewardLeft = new("prism.judgeRewardLeft", "+{0} Aether Coin a heat, {1} left this week");
+        public static readonly LocString JudgeRewardSpent = new("prism.judgeRewardSpent", "No judging Aether Coin left this week");
+        public static readonly LocPlural FrameDays =
+            new("prism.frameDays", "Yours to wear for {0} day", "Yours to wear for {0} days");
+        public static readonly LocString GilSent = new("prism.gilSent",
+            "Gil prizes are traded to you in game by the Aetherphone team. This can take a few days, since we meet each winner in game.");
+        public static readonly LocString GilChinese = new("prism.gilChinese",
+            "We can't trade on the Chinese servers, so winners there get extra Aether Coin instead of gil.");
+        public static readonly LocString WhatWinnersGet = new("prism.whatWinnersGet", "What winners get");
+        public static readonly LocString NoPodium = new("prism.noPodium", "Too few glams were entered this week for a podium.");
+        public static readonly LocString YourGear = new("prism.yourGear", "Your gear");
+        public static readonly LocString GearNote = new("prism.gearNote",
+            "Add each piece in your photo and pick its dyes. Everyone who sees your entry sees this list.");
+        public static readonly LocString YourMods = new("prism.yourMods", "Your mods");
+        public static readonly LocString ModsNote = new("prism.modsNote",
+            "Read from Penumbra. Leave out any you'd rather not credit.");
+        public static readonly LocString NoModsFound = new("prism.noModsFound", "No mods found on your character.");
+        public static readonly LocString AddPiece = new("prism.addPiece", "Add a piece");
+        public static readonly LocString RemovePiece = new("prism.removePiece", "Remove");
+        public static readonly LocString AddDye = new("prism.addDye", "Add dye");
+        public static readonly LocString NoDye = new("prism.noDye", "No dye");
+        public static readonly LocString DyeChannel = new("prism.dyeChannel", "Dye {0}");
+        public static readonly LocString SlotRing = new("prism.slotRing", "Ring");
+        public static readonly LocString AddYourGear = new("prism.addYourGear", "Add your gear");
+        public static readonly LocPlural GearSummary = new("prism.gearSummary", "Your gear, {0} piece",
+            "Your gear, {0} pieces");
+        public static readonly LocPlural ModsSummary = new("prism.modsSummary", "{0} mod credited", "{0} mods credited");
+        public static readonly LocString EditGear = new("prism.editGear", "Edit gear");
+        public static readonly LocString EditMods = new("prism.editMods", "Edit mods");
+        public static readonly LocString SaveOutfit = new("prism.saveOutfit", "Save");
+        public static readonly LocString WinnersOutfit = new("prism.winnersOutfit", "The winner's outfit");
+        public static readonly LocString OutfitCaveat = new("prism.outfitCaveat",
+            "Saved when they entered, so it may not match the photo.");
+        public static readonly LocString TrackVanilla = new("prism.trackVanilla", "Vanilla");
+        public static readonly LocString TrackModded = new("prism.trackModded", "Modded");
+        public static readonly LocString ChooseTrack = new("prism.chooseTrack", "Which contest?");
+        public static readonly LocString TrackVanillaRule = new("prism.trackVanillaRule",
+            "In-game gear, dyes and poses only. No Penumbra, Glamourer or other mods.");
+        public static readonly LocString TrackModdedRule = new("prism.trackModdedRule",
+            "Mods welcome, as long as it's your character.");
+        public static readonly LocString TrackMovedNote = new("prism.trackMovedNote",
+            "A reported Vanilla glam that uses mods gets moved to Modded.");
+        public static readonly LocString WithTrack = new("prism.withTrack", "{0} · {1}");
+        public static readonly LocString StatusMoved = new("prism.statusMoved", "Moved");
+        public static readonly LocString StatusMovedTitle = new("prism.statusMovedTitle",
+            "Your glam moved to the other contest");
+        public static readonly LocString ActivityLiked = new("prism.activityLiked", "liked your glam");
+        public static readonly LocString ActivityPlaced = new("prism.activityPlaced", "Your glam placed #{0} in {1}");
+        public static readonly LocString ActivityResults = new("prism.activityResults", "Results are in");
+        public static readonly LocString ActivityEmpty = new("prism.activityEmpty",
+            "Likes, follows and contest results show up here.");
+        public static readonly LocString Activity = new("prism.activity", "Activity");
+        public static readonly LocString ActivityToday = new("prism.activityToday", "Today");
+        public static readonly LocString ActivityThisWeek = new("prism.activityThisWeek", "This week");
+        public static readonly LocString ActivityThisMonth = new("prism.activityThisMonth", "This month");
+        public static readonly LocString ActivityEarlier = new("prism.activityEarlier", "Earlier");
+        public static readonly LocString PreviousGlam = new("prism.previousGlam", "Previous glam");
+        public static readonly LocString Published = new("prism.published", "Published");
+        public static readonly LocString NothingToSave = new("prism.nothingToSave", "Nothing equipped to save right now");
+        public static readonly LocString FavouritesEmptyHint = new("prism.favouritesEmptyHint", "Tap Favourite on an outfit and it shows up here.");
+    }
+
     internal static class Announcements
     {
         public static readonly LocString SignInRequired = new("announcements.signInRequired", "Sign in to Aethernet in Settings to read announcements");
@@ -10574,6 +11082,134 @@ internal static class L
         public static readonly LocString CopyText = new("announcements.copyText", "Copy text");
         public static readonly LocString OpenSettings = new("announcements.openSettings", "Open Settings");
         public static readonly LocString RefreshFailed = new("announcements.refreshFailed", "Couldn't refresh. Showing what you already have.");
+    }
+
+    internal static class LoveIsland
+    {
+        public static readonly LocString TabTonight = new("loveisland.tabTonight", "Tonight");
+        public static readonly LocString TabExperiences = new("loveisland.tabExperiences", "Experiences");
+        public static readonly LocString TabGallery = new("loveisland.tabGallery", "Gallery");
+        public static readonly LocString TabPerks = new("loveisland.tabPerks", "Perks");
+        public static readonly LocString DoorsOpenIn = new("loveisland.doorsOpenIn", "Doors open in");
+        public static readonly LocString LiveNow = new("loveisland.liveNow", "Live now");
+        public static readonly LocString BetweenSets = new("loveisland.betweenSets", "Between sets");
+        public static readonly LocString EndedTitle = new("loveisland.endedTitle", "Thank you for coming");
+        public static readonly LocString EndedBody = new("loveisland.endedBody",
+            "This app goes away in a few days. Your frame and badge stay in your inventory, and the gallery stays on Aethergram.");
+        public static readonly LocString KeepNight = new("loveisland.keepNight", "Keep it night");
+        public static readonly LocString KeepNightHintLive = new("loveisland.keepNightHintLive",
+            "Eorzean time stays at night while the app is open. Lifts in combat.");
+        public static readonly LocString KeepNightHintBefore = new("loveisland.keepNightHintBefore",
+            "Available during the event window.");
+        public static readonly LocString LiveDj = new("loveisland.liveDj", "Live DJ");
+        public static readonly LocString NoStream = new("loveisland.noStream", "No stream scheduled");
+        public static readonly LocString StreamHint = new("loveisland.streamHint",
+            "The experiences list marks which ones stream.");
+        public static readonly LocString WatchTwitch = new("loveisland.watchTwitch", "Watch on Twitch");
+        public static readonly LocString ShareTitle = new("loveisland.shareTitle", "Share your night");
+        public static readonly LocString ShareBody = new("loveisland.shareBody",
+            "Post your gposes with the tag and they join the live gallery. One post during the event earns the Eclipse frame and badge.");
+        public static readonly LocString WebsiteNote = new("loveisland.websiteNote",
+            "Photos you post with the tag can also appear on the event website.");
+        public static readonly LocString PostCta = new("loveisland.postCta", "Post on Aethergram");
+        public static readonly LocString GalleryCta = new("loveisland.galleryCta", "Gallery");
+        public static readonly LocString Pinned = new("loveisland.pinned", "Pinned");
+        public static readonly LocString Announcements = new("loveisland.announcements", "Announcements");
+        public static readonly LocString AnnouncementsFrom = new("loveisland.announcementsFrom", "{0} from PNX");
+        public static readonly LocString AnnouncementsBody = new("loveisland.announcementsBody",
+            "Doors, stage changes, surprises. New ones arrive as a banner.");
+        public static readonly LocString LinkshellsTitle = new("loveisland.linkshellsTitle", "Linkshells");
+        public static readonly LocString LinkshellsBody = new("loveisland.linkshellsBody",
+            "The crew's linkshells for the night. Ask the contact for an invite.");
+        public static readonly LocString AskContact = new("loveisland.askContact", "Ask {0}");
+        public static readonly LocString About = new("loveisland.about", "About");
+        public static readonly LocString More = new("loveisland.more", "More");
+        public static readonly LocString AboutFooter = new("loveisland.aboutFooter",
+            "An event by PNX with Aetherphone and The Emporium. This app leaves your phone a few days after the event; your frame and badge stay.");
+        public static readonly LocString ExperiencesSub = new("loveisland.experiencesSub", "times in your timezone");
+        public static readonly LocString NothingScheduled = new("loveisland.nothingScheduled", "Nothing scheduled yet.");
+        public static readonly LocString WhoIsOn = new("loveisland.whoIsOn", "Who is on");
+        public static readonly LocString RemindMe = new("loveisland.remindMe", "Remind me {0} min before");
+        public static readonly LocString DcTravelNote = new("loveisland.dcTravelNote",
+            "On another data center? Travel to Materia from character select first.");
+        public static readonly LocString GallerySub = new("loveisland.gallerySub",
+            "{0} posts on Aethergram · newest first");
+        public static readonly LocString GalleryCta2 = new("loveisland.galleryCta2", "Post yours with #{0}");
+        public static readonly LocString PerksSub = new("loveisland.perksSub",
+            "Exclusive to people who were there. Never sold.");
+        public static readonly LocString FrameName = new("loveisland.frameName", "Eclipse frame");
+        public static readonly LocString FrameBody = new("loveisland.frameBody",
+            "Wraps your avatar on Chirper, Aethergram and in chats.");
+        public static readonly LocString BadgeName = new("loveisland.badgeName", "Eclipse badge");
+        public static readonly LocString BadgeBody = new("loveisland.badgeBody",
+            "Sits next to your name everywhere, in one of your two badge slots.");
+        public static readonly LocString CoinsName = new("loveisland.coinsName", "Aether Coins");
+        public static readonly LocString CoinsBody = new("loveisland.coinsBody",
+            "{0} coins land in your wallet with the frame and badge.");
+        public static readonly LocString HowToEarn = new("loveisland.howToEarn", "How to earn both");
+        public static readonly LocString EarnTitle = new("loveisland.earnTitle", "Post once with #{0}");
+        public static readonly LocString EarnBody = new("loveisland.earnBody",
+            "On Aethergram or Chirper, any time between {0} and {1} (your time). They arrive in your inventory within a few minutes.");
+        public static readonly LocString EquipCta = new("loveisland.equipCta", "Equip in the Coin app");
+        public static readonly LocString Earned = new("loveisland.earned", "Earned");
+        public static readonly LocString NotYet = new("loveisland.notYet", "Not yet");
+        public static readonly LocString WindowLine = new("loveisland.windowLine", "{0} to {1} · {2}");
+        public static readonly LocString StartsLine = new("loveisland.startsLine", "{0} · {1} your time");
+        public static readonly LocString FirstUp = new("loveisland.firstUp", "First up: {0}");
+        public static readonly LocString NextUp = new("loveisland.nextUp", "Next: {0}");
+        public static readonly LocString NextUpAt = new("loveisland.nextUpAt", "Next: {0} at {1}");
+        public static readonly LocString UntilClock = new("loveisland.untilClock", "until {0}");
+        public static readonly LocString OnAir = new("loveisland.onAir", "On air");
+        public static readonly LocString OffAir = new("loveisland.offAir", "Off air");
+        public static readonly LocString LiveSet = new("loveisland.liveSet", "Live set");
+        public static readonly LocString NowPill = new("loveisland.nowPill", "Now");
+        public static readonly LocString OnNow = new("loveisland.onNow", "On now");
+        public static readonly LocString Finished = new("loveisland.finished", "Finished");
+        public static readonly LocString InCountdown = new("loveisland.inCountdown", "in {0}");
+        public static readonly LocString Streamed = new("loveisland.streamed", "streamed");
+        public static readonly LocString Where = new("loveisland.where", "Where · {0}");
+        public static readonly LocString WardPlot = new("loveisland.wardPlot", "Ward {0}, Plot {1}");
+        public static readonly LocString TimeRange = new("loveisland.timeRange", "{0} · {1} to {2} · your time");
+        public static readonly LocString CopyCommand = new("loveisland.copyCommand", "Copy /li");
+        public static readonly LocString NothingYet = new("loveisland.nothingYet", "Nothing yet.");
+        public static readonly LocString NothingListed = new("loveisland.nothingListed", "Nothing listed yet.");
+        public static readonly LocString PostGone = new("loveisland.postGone", "This announcement is gone.");
+        public static readonly LocString ExperienceGone = new("loveisland.experienceGone", "This experience is gone.");
+        public static readonly LocString NoLinks = new("loveisland.noLinks", "No links yet.");
+        public static readonly LocString NewBadge = new("loveisland.newBadge", "NEW");
+        public static readonly LocString SignInBody = new("loveisland.signInBody",
+            "Sign in to Aethernet in Settings to see the event.");
+        public static readonly LocString Unavailable = new("loveisland.unavailable", "The event is not available right now.");
+        public static readonly LocString UnavailableHint = new("loveisland.unavailableHint", "Check back once the doors open.");
+        public static readonly LocString CountdownDays = new("loveisland.countdownDays", "{0}d {1}h {2:00}m");
+        public static readonly LocString CountdownHours = new("loveisland.countdownHours", "{0}h {1:00}m {2:00}s");
+        public static readonly LocString CountdownMinutes = new("loveisland.countdownMinutes", "{0}:{1:00}");
+        public static readonly LocString UnitDays = new("loveisland.unitDays", "Days");
+        public static readonly LocString UnitHours = new("loveisland.unitHours", "Hours");
+        public static readonly LocString UnitMinutes = new("loveisland.unitMinutes", "Min");
+        public static readonly LocString UnitSeconds = new("loveisland.unitSeconds", "Sec");
+        public static readonly LocString HashtagCopied = new("loveisland.hashtagCopied", "Copied #{0}. Paste it in your post.");
+        public static readonly LocString ReminderOn = new("loveisland.reminderOn", "Reminder set for {0} minutes before");
+        public static readonly LocString ReminderOff = new("loveisland.reminderOff", "Reminder off");
+        public static readonly LocString NightOn = new("loveisland.nightOn", "Eorzean time locked to night");
+        public static readonly LocString NightOff = new("loveisland.nightOff", "Back to real Eorzean time");
+        public static readonly LocString LinkTwitch = new("loveisland.linkTwitch", "Twitch");
+        public static readonly LocString LinkYouTube = new("loveisland.linkYouTube", "YouTube");
+        public static readonly LocString LinkBluesky = new("loveisland.linkBluesky", "Bluesky");
+        public static readonly LocString LinkX = new("loveisland.linkX", "X");
+        public static readonly LocString LinkKofi = new("loveisland.linkKofi", "Ko-fi");
+        public static readonly LocString LinkPatreon = new("loveisland.linkPatreon", "Patreon");
+        public static readonly LocString LinkPartner = new("loveisland.linkPartner", "Partner site");
+        public static readonly LocString Linkshell = new("loveisland.linkshell", "Linkshell");
+        public static readonly LocString CrossWorldLinkshell = new("loveisland.crossWorldLinkshell", "Cross-world linkshell");
+        public static readonly LocString AboutTitle = new("loveisland.aboutTitle", "About {0}");
+        public static readonly LocString AwardNotification = new("loveisland.awardNotification",
+            "You earned the frame and badge. Open Perks to see them.");
+        public static readonly LocString ReminderNotification = new("loveisland.reminderNotification",
+            "{0} starts in {1} minutes");
+        public static readonly LocString NewExperienceNotification = new("loveisland.newExperienceNotification",
+            "New experience: {0}");
+        public static readonly LocString LiveChannel = new("loveisland.liveChannel", "twitch.tv/{0}");
     }
 
     internal static class Loadout
@@ -10658,6 +11294,19 @@ internal static class L
         public static readonly LocString RuleGramHint = new("coin.ruleGramHint", "A gram that stays up for an hour, once a week");
         public static readonly LocString RuleStoryHint = new("coin.ruleStoryHint", "A story that runs its full day without being taken down, once a week");
         public static readonly LocString RuleCommentHint = new("coin.ruleCommentHint", "A comment on someone else's post that stays up for an hour, once a week");
+        public static readonly LocString RulePrismJudge = new("coin.rulePrismJudge", "Prism judging");
+        public static readonly LocString RulePrismHeatFirst = new("coin.rulePrismHeatFirst", "Prism heat, 1st place");
+        public static readonly LocString RulePrismHeatSecond = new("coin.rulePrismHeatSecond", "Prism heat, 2nd place");
+        public static readonly LocString RulePrismHeatThird = new("coin.rulePrismHeatThird", "Prism heat, 3rd place");
+        public static readonly LocString RulePrismFinalFirst = new("coin.rulePrismFinalFirst", "Prism final, 1st place");
+        public static readonly LocString RulePrismFinalSecond = new("coin.rulePrismFinalSecond", "Prism final, 2nd place");
+        public static readonly LocString RulePrismFinalThird = new("coin.rulePrismFinalThird", "Prism final, 3rd place");
+        public static readonly LocString RulePrismChineseGil = new("coin.rulePrismChineseGil", "Prism gil prize, paid in coins");
+        public static readonly LocString RulePrismChineseGilHint = new("coin.rulePrismChineseGilHint",
+            "A Prism gil prize won on a Chinese server, where we can't trade");
+        public static readonly LocString RulePrismJudgeHint = new("coin.rulePrismJudgeHint", "Score every glam in a Prism heat or the final");
+        public static readonly LocString RulePrismHeatHint = new("coin.rulePrismHeatHint", "Finish in the top three of your Prism heat");
+        public static readonly LocString RulePrismFinalHint = new("coin.rulePrismFinalHint", "Finish in the top three of the Prism final");
         public static readonly LocString EarnHeader = new("coin.earnHeader", "How to earn");
         public static readonly LocString SessionTooShort = new("coin.sessionTooShort", "Played too short to pay");
         public static readonly LocString HistoryEmptyTitle = new("coin.historyEmptyTitle", "Nothing earned yet");
@@ -14238,6 +14887,7 @@ internal static class L
         public static readonly LocString NotificationsDescription = new("widgetsPeople.notificationsDescription", "Your latest notifications at a glance.");
         public static readonly LocString NoNotifications = new("widgetsPeople.noNotifications", "No Notifications");
         public static readonly LocString CaughtUp = new("widgetsPeople.caughtUp", "You're all caught up.");
+        public static readonly LocString ChirperDescription = new("widgetsPeople.chirperDescription", "Your For You feed, the latest chirps and your Chirper activity, with tabs to switch.");
         public static readonly LocString SignInHint = new("widgetsPeople.signInHint", "Sign in to Aethernet to see this.");
         public static readonly LocString SampleMessage = new("widgetsPeople.sampleMessage", "See you at the Gold Saucer tonight?");
         public static readonly LocString SampleMessageRaid = new("widgetsPeople.sampleMessageRaid", "Raid starts at nine, bring food.");

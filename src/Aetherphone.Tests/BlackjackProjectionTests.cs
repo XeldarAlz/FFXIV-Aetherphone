@@ -130,6 +130,17 @@ public sealed class BlackjackProjectionTests
     }
 
     [Fact]
+    public void AnotherSeatsTurnedOverHandShowsItsFacesToEveryone()
+    {
+        var projection = new BlackjackProjection();
+        projection.Apply(State(1, 5, Board(7, new[] { 12, 13 })));
+
+        Assert.Equal(12, projection.CardAt(0, 0, 0, 12));
+        Assert.Equal(13, projection.CardAt(0, 0, 1, 13));
+        Assert.Equal(PlayingCards.FaceDown, projection.CardAt(0, 0, 2, PlayingCards.FaceDown));
+    }
+
+    [Fact]
     public void APrivateFrameFromAnotherRoundOpensNothing()
     {
         var projection = new BlackjackProjection();

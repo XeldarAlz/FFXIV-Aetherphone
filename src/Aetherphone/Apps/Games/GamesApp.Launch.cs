@@ -123,7 +123,7 @@ internal sealed partial class GamesApp
         var center = card.Center;
         var firstVertex = drawList.VtxBuffer.Size;
         GameIconArt.Draw(drawList, launchGame.Id, launchGame.Accent, new Vector2(center.X - half, center.Y - half),
-            new Vector2(center.X + half, center.Y + half), null, false);
+            new Vector2(center.X + half, center.Y + half), false);
         LayerCompositor.Fade(drawList, firstVertex, alpha);
     }
 }

@@ -109,7 +109,8 @@ internal sealed partial class PhotosApp
 
         library.AddPendingNames(placeNames);
 
-        if (PhotoPlaces.Prune(configuration.PhotoPlaces, placeNames))
+        var pruned = PhotoPlaces.Prune(configuration.PhotoPlaces, placeNames);
+        if (pruned)
         {
             configuration.Save();
         }

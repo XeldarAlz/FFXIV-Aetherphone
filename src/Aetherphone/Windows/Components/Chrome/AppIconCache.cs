@@ -10,8 +10,8 @@ namespace Aetherphone.Windows.Components;
 
 internal static class AppIconCache
 {
-    public const string ForegroundSuffix = ".fg.png";
-    public const string FinishedSuffix = ".png";
+    public const string ForegroundSuffix = IconPairSource.ForegroundSuffix;
+    public const string FinishedSuffix = IconPairSource.FinishedSuffix;
     private const string HalloweenSuffix = ".halloween";
     public const long IdleDropMilliseconds = 120_000;
     public const long SweepIntervalMilliseconds = 5_000;
@@ -59,8 +59,8 @@ internal static class AppIconCache
         }
     }
 
-    private static readonly string IconDirectory =
-        Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Icons");
+    private static readonly IconPairSource Source =
+        new(Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Icons"));
 
     private static readonly Dictionary<string, IconEntry> Entries = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, string?> HalloweenKeys = new(StringComparer.Ordinal);
@@ -81,17 +81,39 @@ internal static class AppIconCache
             return false;
         }
 
-        appId = KeyFor(appId);
-        if (Entries.TryGetValue(appId, out var entry))
+        var key = KeyFor(appId);
+        if (Entries.TryGetValue(key, out var entry))
         {
             return entry.Painted;
         }
 
-        var finished = Path.Combine(IconDirectory, appId + FinishedSuffix);
-        var foreground = Path.Combine(IconDirectory, appId + ForegroundSuffix);
+        var directory = Source.DirectoryFor(appId);
+        var finished = IconPairSource.FinishedPath(directory, key);
+        var foreground = IconPairSource.ForegroundPath(directory, key);
         var painted = File.Exists(foreground) && File.Exists(finished);
-        Entries[appId] = new IconEntry(finished, foreground, painted);
+        Entries[key] = new IconEntry(finished, foreground, painted);
         return painted;
+    }
+
+    public static bool TryUseOverride(string appId, string directory)
+    {
+        if (disposed || !Source.TryUseOverride(appId, directory))
+        {
+            return false;
+        }
+
+        Forget(appId);
+        return true;
+    }
+
+    public static void ClearOverride(string appId)
+    {
+        if (!Source.ClearOverride(appId))
+        {
+            return;
+        }
+
+        Forget(appId);
     }
 
     public static void Prepare()
@@ -199,7 +221,7 @@ internal static class AppIconCache
 
     private static string KeyFor(string appId)
     {
-        if (!SeasonalTheme.Halloween)
+        if (!SeasonalTheme.Halloween || Source.HasOverride(appId))
         {
             return appId;
         }
@@ -207,14 +229,31 @@ internal static class AppIconCache
         if (!HalloweenKeys.TryGetValue(appId, out var key))
         {
             var candidate = appId + HalloweenSuffix;
-            key = File.Exists(Path.Combine(IconDirectory, candidate + FinishedSuffix))
-                && File.Exists(Path.Combine(IconDirectory, candidate + ForegroundSuffix))
-                    ? candidate
-                    : null;
+            key = IconPairSource.PairExists(Source.BundledDirectory, candidate) ? candidate : null;
             HalloweenKeys[appId] = key;
         }
 
         return key ?? appId;
+    }
+
+    private static void Forget(string appId)
+    {
+        HalloweenKeys.Remove(appId);
+        Release(appId);
+        Release(appId + HalloweenSuffix);
+    }
+
+    private static void Release(string key)
+    {
+        if (!Entries.Remove(key, out var entry))
+        {
+            return;
+        }
+
+        for (var slot = 0; slot < SlotCount; slot++)
+        {
+            Drop(entry, slot, true);
+        }
     }
 
     private static void StartBuild(IconEntry entry, string appId, int slot, IconAppearance appearance, int level,

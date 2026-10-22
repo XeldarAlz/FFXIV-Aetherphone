@@ -20,13 +20,18 @@ namespace Aetherphone.Apps.Message;
 internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, ConversationDto>
 {
     private const int SystemMessageKind = 2;
+    private static readonly TimeSpan BlockListMaxAge = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan BlockListRetry = TimeSpan.FromMinutes(1);
 
     private readonly ChatClient client;
     private readonly PeerKeyDirectory peers;
     private readonly ContactBook contacts;
+    private readonly BlockedUnreadLedger blockedUnread = new();
 
     private volatile ConversationDto? conversation;
     private volatile ConversationMemberDto[] members = Array.Empty<ConversationMemberDto>();
+    private volatile bool loadingBlocks;
+    private long blocksAttemptTicks;
 
     public DirectMessagesStore(AethernetSession session, ChatClient client, SafetyClient safety, MediaClient media,
         NotificationService notifications, KeyVault vault, ConversationKeyStore keys, PeerKeyDirectory peers,
@@ -43,6 +48,7 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
 
     private void OnChatPinged(ChatSignal signal)
     {
+        NoteBlockedArrival(signal.Message);
         InboxCadence.RequestImmediate();
         if (signal.Message is { } pushed && ConversationId == pushed.ConversationId)
         {
@@ -79,6 +85,55 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
         RequestReadConfirmation(message.ConversationId);
     }
 
+    private void NoteBlockedArrival(ChatMessageDto? message)
+    {
+        if (message is null || message.Kind == SystemMessageKind || IsBeingViewed(message.ConversationId)
+            || FindConversation(message.ConversationId) is { IsGroup: false }
+            || !BlockedSenders.Hides(safety.Blocks, true, message.SenderId, MyUserId))
+        {
+            return;
+        }
+
+        blockedUnread.NoteArrival(message.ConversationId, message.Id);
+    }
+
+    public BlockList Blocks => safety.Blocks;
+
+    public bool HidesLastMessage(ConversationDto item) =>
+        BlockedSenders.Hides(safety.Blocks, item.IsGroup, item.LastMessageSenderId, MyUserId);
+
+    public void EnsureBlockList()
+    {
+        var now = DateTime.UtcNow;
+        if (loadingBlocks || !session.IsSignedIn || !safety.Blocks.IsStale(now, BlockListMaxAge)
+            || now.Ticks - Interlocked.Read(ref blocksAttemptTicks) < BlockListRetry.Ticks)
+        {
+            return;
+        }
+
+        loadingBlocks = true;
+        Interlocked.Exchange(ref blocksAttemptTicks, now.Ticks);
+        work.Run("blocked users", async token =>
+        {
+            await safety.BlockedUsersAsync(token).ConfigureAwait(false);
+        }, () => loadingBlocks = false);
+    }
+
+    private bool HasBlockedMember()
+    {
+        var snapshot = members;
+        var blocks = safety.Blocks;
+        for (var index = 0; index < snapshot.Length; index++)
+        {
+            if (snapshot[index].IsActive && blocks.Contains(snapshot[index].UserId))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public ConversationDto[] Conversations => ThreadListItems;
     public bool LoadingConversations => LoadingThreadList;
     public bool ConversationsLoaded => ThreadListLoaded;
@@ -109,7 +164,16 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
     {
         conversation = null;
         members = Array.Empty<ConversationMemberDto>();
+        safety.Blocks.Clear();
+        blockedUnread.Clear();
+        Interlocked.Exchange(ref blocksAttemptTicks, 0L);
     }
+
+    protected override void OnThreadViewed(string threadKey) => blockedUnread.Reset(threadKey);
+
+    protected override bool SuppressesInboxNotification(ConversationDto thread) => HidesLastMessage(thread);
+
+    protected override bool TrustsTypingPush => conversation is not { IsGroup: true } || !HasBlockedMember();
 
     public void OpenConversation(string id) => OpenThread(id);
 
@@ -171,7 +235,7 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
     protected override async Task<bool?> FetchOtherTypingAsync(string threadId, CancellationToken token)
     {
         var result = await client.TypingAsync(threadId, token).ConfigureAwait(false);
-        return result is null ? null : result.TypingUserIds.Length > 0;
+        return result is null ? null : BlockedSenders.AnyVisible(safety.Blocks, result.TypingUserIds);
     }
 
     protected override async Task<ReadMarkOutcome> MarkThreadReadRequestAsync(string threadKey, CancellationToken token)
@@ -301,6 +365,7 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
     protected override void OnThreadOpening(string threadId)
     {
         conversation = FindConversation(threadId);
+        EnsureBlockList();
     }
 
     protected override async Task PrefetchThreadAsync(string threadId, CancellationToken token)
@@ -654,10 +719,20 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
 
     protected override ConversationDto[] DecorateThreadList(ConversationDto[] items)
     {
+        EnsureBlockList();
         ConversationDto[]? decorated = null;
         for (var index = 0; index < items.Length; index++)
         {
             var item = items[index];
+            var hidden = HidesLastMessage(item);
+            var unread = blockedUnread.Effective(item.Id, item.UnreadCount, hidden ? item.LastMessageId : null);
+            if (unread != item.UnreadCount)
+            {
+                decorated ??= (ConversationDto[])items.Clone();
+                item = item with { UnreadCount = unread };
+                decorated[index] = item;
+            }
+
             if (item.LastMessageEncVersion != EnvelopeCodec.VersionEnvelope)
             {
                 continue;

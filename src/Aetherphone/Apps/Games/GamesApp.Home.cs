@@ -358,8 +358,7 @@ internal sealed partial class GamesApp
         DrawHeroCapsules(drawList, card, done, scale);
         var pad = HeroPad * scale;
         var iconMin = new Vector2(card.Min.X + pad, blockTop + (blockHeight - iconSide) * 0.5f);
-        GameIconArt.Draw(drawList, game.Id, game.Accent, iconMin, iconMin + new Vector2(iconSide),
-            IconAppearance.Default, true);
+        GameIconArt.Draw(drawList, game.Id, game.Accent, iconMin, iconMin + new Vector2(iconSide), true);
         var textLeft = iconMin.X + iconSide + Metrics.Space.Md * scale;
         var textWidth = MathF.Max(1f, card.Max.X - pad - textLeft);
         var textTop = blockTop + (blockHeight - titleHeight - hookHeight) * 0.5f;
@@ -479,7 +478,7 @@ internal sealed partial class GamesApp
         {
             var min = new Vector2(startX + index * pitch, top);
             GameIconArt.Draw(drawList, OnlineGameArt.AccentId(kinds[index]), OnlineGameArt.Accent(kinds[index]), min,
-                min + new Vector2(side), IconAppearance.Default, true);
+                min + new Vector2(side), true);
         }
     }
 
@@ -496,7 +495,7 @@ internal sealed partial class GamesApp
         var center = new Vector2(card.Center.X, card.Min.Y + area * 0.5f);
         var half = new Vector2(side * 0.5f);
         ProgressRing.Glow(center, side * 0.5f, Palette.Lighten(accent, HeroGlowLift), HeroGlow);
-        GameIconArt.Draw(drawList, iconId, accent, center - half, center + half, IconAppearance.Default, true);
+        GameIconArt.Draw(drawList, iconId, accent, center - half, center + half, true);
     }
 
     private static Rect HeroButtonRect(Rect card, string label, float scale)

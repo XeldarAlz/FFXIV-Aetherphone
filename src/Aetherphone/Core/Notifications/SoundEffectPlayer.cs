@@ -157,16 +157,13 @@ internal sealed class SoundEffectPlayer : IDisposable
     {
         WaveStream? reader = null;
         IWavePlayer? output = null;
+        Exception? failure = null;
         try
         {
             reader = OpenReader(path);
-            ISampleProvider source = new VolumeSampleProvider(reader.ToSampleProvider()) { Volume = volume };
-            if (leadIn > TimeSpan.Zero)
-            {
-                source = new OffsetSampleProvider(source) { DelayBy = leadIn };
-            }
-
+            var source = WithLeadIn(new VolumeSampleProvider(reader.ToSampleProvider()) { Volume = volume }, leadIn);
             output = AudioOutputFactory.Create();
+            output.PlaybackStopped += (_, stopped) => failure = stopped.Exception;
             output.Init(source, true);
             lock (gate)
             {
@@ -179,9 +176,14 @@ internal sealed class SoundEffectPlayer : IDisposable
             }
 
             output.Play();
-            while (output.PlaybackState == NAudio.Wave.PlaybackState.Playing)
+            while (output.PlaybackState == NAudio.Wave.PlaybackState.Playing && failure is null)
             {
                 Thread.Sleep(50);
+            }
+
+            if (failure is not null)
+            {
+                AepLog.Warning(failure, $"[Sound] playback of {Path.GetFileName(path)} failed");
             }
         }
         catch (Exception exception)
@@ -203,6 +205,11 @@ internal sealed class SoundEffectPlayer : IDisposable
             reader?.Dispose();
         }
     }
+
+    internal static ISampleProvider WithLeadIn(ISampleProvider source, TimeSpan leadIn) =>
+        leadIn > TimeSpan.Zero
+            ? new SilenceProvider(source.WaveFormat).ToSampleProvider().Take(leadIn).FollowedBy(source)
+            : source;
 
     private void RemoveOneShot(IWavePlayer output)
     {

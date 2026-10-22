@@ -24,6 +24,22 @@ internal sealed class CoinFloat
 
     private readonly Floater[] slots = new Floater[4];
 
+    public bool IsIdle
+    {
+        get
+        {
+            for (var index = 0; index < slots.Length; index++)
+            {
+                if (slots[index].Active)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    }
+
     public void Spawn(string text, Vector2 origin, bool muted = false)
     {
         var oldest = 0;

@@ -35,6 +35,7 @@ internal sealed class RadioPlayer : IDisposable
     private float volume = 0.6f;
     private RadioStation[] queue = Array.Empty<RadioStation>();
     private int queueIndex = -1;
+    private RadioOutage outage;
 
     public RadioPlayer()
     {
@@ -113,7 +114,7 @@ internal sealed class RadioPlayer : IDisposable
             currentStation = station.Name;
             currentStationInfo = station;
             nowPlaying = string.Empty;
-            state = RadioPlaybackState.Buffering;
+            SetStateLocked(RadioPlaybackState.Buffering);
             cancellation = new CancellationTokenSource();
             var token = cancellation.Token;
             var workerSession = session;
@@ -128,11 +129,11 @@ internal sealed class RadioPlayer : IDisposable
     public void Stop()
     {
         Suspend();
-        state = RadioPlaybackState.Stopped;
         currentStation = string.Empty;
         nowPlaying = string.Empty;
         lock (gate)
         {
+            SetStateLocked(RadioPlaybackState.Stopped);
             currentStationInfo = default;
         }
     }
@@ -147,13 +148,17 @@ internal sealed class RadioPlayer : IDisposable
 
         var station = currentStation;
         Suspend();
-        state = RadioPlaybackState.Paused;
+        lock (gate)
+        {
+            SetStateLocked(RadioPlaybackState.Paused);
+        }
+
         currentStation = station;
     }
 
     public void Resume()
     {
-        if (state != RadioPlaybackState.Paused)
+        if (state is not (RadioPlaybackState.Paused or RadioPlaybackState.Failed))
         {
             return;
         }
@@ -197,8 +202,27 @@ internal sealed class RadioPlayer : IDisposable
         {
             if (workerSession == session)
             {
-                state = value;
+                SetStateLocked(value);
             }
+        }
+    }
+
+    private void SetStateLocked(RadioPlaybackState value)
+    {
+        state = value;
+        outage.Observe(value, Environment.TickCount64);
+    }
+
+    public bool OutageExpired(long nowTick)
+    {
+        if (!RadioOutage.IsLost(state))
+        {
+            return false;
+        }
+
+        lock (gate)
+        {
+            return outage.Expired(nowTick);
         }
     }
 

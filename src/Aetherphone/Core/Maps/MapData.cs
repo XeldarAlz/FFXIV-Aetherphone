@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Dalamud.Plugin.Services;
 using Lumina.Excel.Sheets;
 
@@ -67,6 +68,11 @@ internal sealed partial class MapData
     public bool TryMapMetrics(uint mapRowId, out ushort sizeFactor)
     {
         sizeFactor = 100;
+        if (!GameSheets.Available)
+        {
+            return false;
+        }
+
         if (mapRowId == 0 || !data.GetExcelSheet<Map>().TryGetRow(mapRowId, out var map))
         {
             return false;
@@ -89,6 +95,11 @@ internal sealed partial class MapData
 
     private void Build()
     {
+        if (!GameSheets.Available)
+        {
+            return;
+        }
+
         var sourcesByTerritory = CollectAetherytes();
         var spots = CollectMarkerSpots();
         var territories = data.GetExcelSheet<TerritoryType>();
@@ -228,6 +239,11 @@ internal sealed partial class MapData
 
     private Dictionary<uint, List<AetheryteSource>> CollectAetherytes()
     {
+        if (!GameSheets.Available)
+        {
+            return new Dictionary<uint, List<AetheryteSource>>();
+        }
+
         var result = new Dictionary<uint, List<AetheryteSource>>();
         var seenNames = new Dictionary<uint, HashSet<string>>();
         foreach (var aetheryte in data.GetExcelSheet<Aetheryte>())
@@ -310,6 +326,11 @@ internal sealed partial class MapData
 
     private string PlaceName(uint placeNameRowId)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         if (placeNameRowId != 0 && data.GetExcelSheet<PlaceName>().TryGetRow(placeNameRowId, out var placeName))
         {
             return placeName.Name.ExtractText();
@@ -320,6 +341,11 @@ internal sealed partial class MapData
 
     private string ExpansionName(uint exVersionRowId)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         if (data.GetExcelSheet<ExVersion>().TryGetRow(exVersionRowId, out var exVersion))
         {
             var name = exVersion.Name.ExtractText();

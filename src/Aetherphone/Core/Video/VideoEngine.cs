@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
@@ -47,10 +48,10 @@ internal sealed class VideoEngine : IDisposable
     private static readonly Regex YouTubeHost =
         new(@"^\w+://[^/]*youtube\.\w+/|^\w+://youtu\.be/", RegexOptions.Compiled);
 
-    private readonly ScreenPainter screenPainter;
+    private readonly ScreenPainter? screenPainter;
     private readonly List<ScreenPositionPreset> screenPresets = [];
     private readonly SemaphoreSlim playGate = new(1, 1);
-    private readonly Texture2D screenTexture;
+    private readonly Texture2D? screenTexture;
     private readonly Action clearScreenTexture;
 
     private static readonly Texture2DDescription ScreenTextureDescription = new()
@@ -105,11 +106,13 @@ internal sealed class VideoEngine : IDisposable
     internal VideoEngine()
     {
         Dependencies = new MediaDependencies();
-        DxHandler.Initialise(Plugin.PluginInterface);
-
-        screenTexture = new Texture2D(DxHandler.Device, ScreenTextureDescription);
         clearScreenTexture = ClearScreenTexture;
-        screenPainter = new ScreenPainter();
+        if (GameMemory.Attached)
+        {
+            DxHandler.Initialise(Plugin.PluginInterface);
+            screenTexture = new Texture2D(DxHandler.Device, ScreenTextureDescription);
+            screenPainter = new ScreenPainter();
+        }
 
         screenPresets.AddRange(Plugin.Cfg.ScreenPresets);
     }
@@ -218,7 +221,7 @@ internal sealed class VideoEngine : IDisposable
                 audioPositionSeen = false;
                 lastObservedFrameVersion = player.FrameVersion;
                 active = true;
-                screenPainter.SetTransform(ScreenPosition, ScreenYaw, ScreenPitch, ScreenRoll, ScreenScale);
+                screenPainter?.SetTransform(ScreenPosition, ScreenYaw, ScreenPitch, ScreenRoll, ScreenScale);
                 return PlayStart.Started;
             }
             finally
@@ -283,6 +286,10 @@ internal sealed class VideoEngine : IDisposable
         }
 
         DetachRenderer();
+        if (screenTexture is null)
+        {
+            return null;
+        }
 
         var created = new MpvRenderer();
         try
@@ -703,7 +710,7 @@ internal sealed class VideoEngine : IDisposable
 
         standby = false;
         active = false;
-        screenPainter.SetTarget(null);
+        screenPainter?.SetTarget(null);
     }
 
     internal void Shutdown()
@@ -712,7 +719,7 @@ internal sealed class VideoEngine : IDisposable
         standby = false;
         active = false;
         DetachRenderer();
-        screenPainter.SetTarget(null);
+        screenPainter?.SetTarget(null);
     }
 
     internal void Pause(bool paused) => renderer?.Pause(paused);
@@ -743,7 +750,7 @@ internal sealed class VideoEngine : IDisposable
     {
         get
         {
-            if (screenView is null && DxHandler.Device is { } device)
+            if (screenView is null && screenTexture is not null && DxHandler.Device is { } device)
             {
                 screenView = new ShaderResourceView(device, screenTexture);
             }
@@ -839,7 +846,7 @@ internal sealed class VideoEngine : IDisposable
 
         if (active)
         {
-            screenPainter.SetTransform(ScreenPosition, ScreenYaw, ScreenPitch, ScreenRoll, ScreenScale);
+            screenPainter?.SetTransform(ScreenPosition, ScreenYaw, ScreenPitch, ScreenRoll, ScreenScale);
         }
     }
 
@@ -851,11 +858,17 @@ internal sealed class VideoEngine : IDisposable
 
     internal float ScreenCurve
     {
-        get => screenPainter.Curve;
-        set => screenPainter.Curve = Math.Clamp(value, 0f, MaxScreenCurve);
+        get => screenPainter?.Curve ?? 0f;
+        set
+        {
+            if (screenPainter is not null)
+            {
+                screenPainter.Curve = Math.Clamp(value, 0f, MaxScreenCurve);
+            }
+        }
     }
 
-    internal float ScreenCurveDepth => ScreenPainter.CurvedDepth * screenPainter.Curve;
+    internal float ScreenCurveDepth => ScreenPainter.CurvedDepth * ScreenCurve;
 
     internal List<ScreenPositionPreset> GetScreenPresets() => [.. screenPresets];
 
@@ -909,7 +922,7 @@ internal sealed class VideoEngine : IDisposable
         var isNewSession = !active;
         standby = false;
         DxHandler.CancelRenderThreadWork(StandbyRenderKey);
-        screenPainter.SetTarget(screenTexture);
+        screenPainter?.SetTarget(screenTexture);
         if (!isNewSession)
         {
             return;
@@ -1019,7 +1032,7 @@ internal sealed class VideoEngine : IDisposable
         {
             standby = false;
             active = false;
-            screenPainter.SetTarget(null);
+            screenPainter?.SetTarget(null);
             return;
         }
 
@@ -1044,7 +1057,7 @@ internal sealed class VideoEngine : IDisposable
 
     private void ApplyVolume()
     {
-        if (!SpatialAudio || !active || !screenPainter.Visible)
+        if (!SpatialAudio || !active || !ScreenVisible)
         {
             spatialGain = 1f;
         }
@@ -1074,7 +1087,7 @@ internal sealed class VideoEngine : IDisposable
 
     private void ClearScreenTexture()
     {
-        if (DxHandler.Device is not { } device)
+        if (screenTexture is null || DxHandler.Device is not { } device)
         {
             return;
         }
@@ -1093,15 +1106,21 @@ internal sealed class VideoEngine : IDisposable
             {
                 standby = false;
                 active = false;
-                screenPainter.SetTarget(null);
+                screenPainter?.SetTarget(null);
             }
         }
     }
 
     internal bool ScreenVisible
     {
-        get => screenPainter.Visible;
-        set => screenPainter.Visible = value;
+        get => screenPainter?.Visible ?? false;
+        set
+        {
+            if (screenPainter is not null)
+            {
+                screenPainter.Visible = value;
+            }
+        }
     }
 
     public void Dispose()
@@ -1109,9 +1128,9 @@ internal sealed class VideoEngine : IDisposable
         lifetime.Cancel();
         DetachRenderer();
         DxHandler.CancelRenderThreadWork(StandbyRenderKey);
-        screenPainter.Dispose();
+        screenPainter?.Dispose();
         screenView?.Dispose();
-        screenTexture.Dispose();
+        screenTexture?.Dispose();
         Dependencies.Dispose();
         playGate.Dispose();
         lifetime.Dispose();

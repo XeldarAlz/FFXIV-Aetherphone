@@ -33,6 +33,11 @@ internal static unsafe class PartyInvite
             return false;
         }
 
+        if (!GameMemory.Attached)
+        {
+            return GameMemory.SimulateAction($"invite {characterName} on world {worldId} to the party");
+        }
+
         var proxy = InfoProxyPartyInvite.Instance();
         if (proxy == null)
         {

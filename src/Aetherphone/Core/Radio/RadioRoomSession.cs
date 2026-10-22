@@ -47,6 +47,8 @@ internal sealed class RadioRoomSession : ILiveChatFeed
 
     public string StationId { get; private set; } = string.Empty;
 
+    public string StationName { get; private set; } = string.Empty;
+
     public RadioRoomStatus Status { get; private set; }
 
     public bool IsAttached => Status == RadioRoomStatus.Attached;
@@ -127,7 +129,7 @@ internal sealed class RadioRoomSession : ILiveChatFeed
         return until;
     }
 
-    public void Attach(string stationId)
+    public void Attach(string stationId, string stationName)
     {
         if (stationId.Length == 0)
         {
@@ -137,11 +139,13 @@ internal sealed class RadioRoomSession : ILiveChatFeed
         if (string.Equals(StationId, stationId, StringComparison.Ordinal)
             && Status is RadioRoomStatus.Attaching or RadioRoomStatus.Attached)
         {
+            StationName = stationName;
             return;
         }
 
         ClearRoom();
         StationId = stationId;
+        StationName = stationName;
         Status = RadioRoomStatus.Attaching;
         Bump();
         RequestAttach();
@@ -157,6 +161,7 @@ internal sealed class RadioRoomSession : ILiveChatFeed
         var leaving = StationId;
         ClearRoom();
         StationId = string.Empty;
+        StationName = string.Empty;
         Status = RadioRoomStatus.Idle;
         Bump();
         send(new CallControl { Type = SignalType.RadioDetach, StationId = leaving });

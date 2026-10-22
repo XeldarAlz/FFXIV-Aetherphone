@@ -211,4 +211,64 @@ public sealed class RadioChatFollowTests
         Assert.Equal(0, follow.Unseen);
         Assert.True(follow.Update(0f, 0f, Tolerance, 300f, 3, 0));
     }
+
+    [Fact]
+    public void StaleScrollOnAReopenedScreenOnlyJumpsWhenAsked()
+    {
+        var follow = new RadioChatFollow();
+        follow.Update(0f, 0f, Tolerance, 300f, 10, 0);
+        follow.Update(500f, 500f, Tolerance, 300f, 10, 0);
+
+        Assert.False(follow.Update(500f, 500f, Tolerance, 300f, 10, 0));
+
+        follow.RequestJump();
+
+        Assert.True(follow.Update(500f, 500f, Tolerance, 300f, 10, 0));
+    }
+
+    [Fact]
+    public void RoomRefilledWithTheSameTailLandsOnTheNewestMessage()
+    {
+        var follow = new RadioChatFollow();
+        follow.Update(0f, 0f, Tolerance, 300f, 10, 0);
+        follow.Update(500f, 500f, Tolerance, 300f, 10, 0);
+
+        follow.Reset();
+
+        Assert.True(follow.Update(200f, 700f, Tolerance, 300f, 10, 0));
+        Assert.True(follow.Pinned);
+        Assert.Equal(10, follow.SeenTailId);
+    }
+}
+
+public sealed class RadioStageLayoutTests
+{
+    private const float ArtBottom = 88f;
+    private const float FollowHeight = 30f;
+    private const float Gap = 4f;
+
+    [Fact]
+    public void ShortHostKeepsTheFollowButtonOnTheArtBaseline()
+    {
+        var followTop = RadioStageLayout.FollowTop(ArtBottom, FollowHeight, 53f, Gap);
+
+        Assert.Equal(ArtBottom - FollowHeight, followTop);
+        Assert.Equal(ArtBottom, RadioStageLayout.ColumnBottom(ArtBottom, 53f, followTop + FollowHeight));
+    }
+
+    [Fact]
+    public void TallHostPushesTheFollowButtonDownInsteadOfOverlappingIt()
+    {
+        var followTop = RadioStageLayout.FollowTop(ArtBottom, FollowHeight, 66f, Gap);
+
+        Assert.Equal(70f, followTop);
+        Assert.Equal(100f, RadioStageLayout.ColumnBottom(ArtBottom, 66f, followTop + FollowHeight));
+    }
+
+    [Fact]
+    public void OwnStationWithoutAFollowButtonStillClearsATallHost()
+    {
+        Assert.Equal(ArtBottom, RadioStageLayout.ColumnBottom(ArtBottom, 60f, 0f));
+        Assert.Equal(95f, RadioStageLayout.ColumnBottom(ArtBottom, 95f, 0f));
+    }
 }

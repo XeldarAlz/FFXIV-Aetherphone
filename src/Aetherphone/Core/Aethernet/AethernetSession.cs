@@ -37,6 +37,7 @@ internal sealed class AethernetSession
     public SuspensionDto? Suspension => suspension;
     public bool IsSourceBlocked => sourceBlocked;
     public UserDto? CurrentUser { get; private set; }
+    public BlockList Blocks { get; } = new();
 
     public ulong ActiveContentId => activeContentId;
     public ulong PlayingContentId => playingContentId;

@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using FFXIVClientStructs.FFXIV.Client.UI.Info;
 
 namespace Aetherphone.Core.GameChat;
@@ -32,6 +33,14 @@ internal static unsafe class LinkshellNames
 
     private static void Refresh()
     {
+        if (!GameMemory.Attached)
+        {
+            var simulated = GameMemory.Simulated;
+            CopySimulated(Local, simulated?.Linkshells);
+            CopySimulated(CrossWorld, simulated?.CrossWorldLinkshells);
+            return;
+        }
+
         var now = Environment.TickCount64;
         if (now - lastReadMilliseconds < RefreshIntervalMilliseconds)
         {
@@ -84,6 +93,14 @@ internal static unsafe class LinkshellNames
             }
 
             Store(CrossWorld, slot, name->ToString());
+        }
+    }
+
+    private static void CopySimulated(string[] slots, string[]? names)
+    {
+        for (var slot = 0; slot < slots.Length; slot++)
+        {
+            Store(slots, slot, names is not null && slot < names.Length ? names[slot] : null);
         }
     }
 

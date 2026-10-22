@@ -11,6 +11,7 @@ using Aetherphone.Core.Fishing;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.GameChat;
 using Aetherphone.Core.Games;
+using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Health;
 using Aetherphone.Core.Honorific;
 using Aetherphone.Core.Housing;
@@ -77,6 +78,7 @@ internal sealed class PhoneServices : IDisposable
     public required ModerationNoticeService ModerationNotices { get; init; }
 
     public required AccountStateService AccountState { get; init; }
+    public required NetworkStatusNotices NetworkStatus { get; init; }
     public required ModerationNoticePresenter ModerationPresenter { get; init; }
     public required ModerationNoticeArchive ModerationArchive { get; init; }
     public required SafetyLauncher SafetyLauncher { get; init; }
@@ -202,6 +204,7 @@ internal sealed class PhoneServices : IDisposable
     public required AdInquiryStore AdInquiries { get; init; }
     public required YellowPagesLauncher YellowPagesLauncher { get; init; }
     public required AnnouncementsLauncher AnnouncementsLauncher { get; init; }
+    public required Campaigns.CampaignLauncher CampaignLauncher { get; init; }
     public required CollectionsCatalogService Collections { get; init; }
     public required CollectionsJournal CollectionsJournal { get; init; }
     public required InventoryCaptureService InventoryCapture { get; init; }
@@ -237,6 +240,7 @@ internal sealed class PhoneServices : IDisposable
     public required Shell.MinimizedLayoutService MinimizedLayout { get; init; }
     public required Shell.MinimizedPreview MinimizedPreview { get; init; }
     public required NameplateTitleService NameplateTitles { get; init; }
+    public required GlamourService Glamour { get; init; }
 
     public static PhoneServices Build(Configuration configuration, IChatGui chatGui, IDataManager dataManager,
         IObjectTable objectTable, IClientState clientState, IFramework framework, IDutyState dutyState,
@@ -333,6 +337,7 @@ internal sealed class PhoneServices : IDisposable
         var casinoHistory = new Casino.CasinoHistoryStore(aethernetSession, casinoApi.Casino);
         var casinoSpin = new Casino.CasinoSpinStore(aethernetSession, casinoApi.Casino, coins);
         var realtimeSignals = new RealtimeSignalBus();
+        availability.Follow(realtimeSignals);
         var peerKeys = new PeerKeyDirectory(configuration, aethernet.Keys);
         var conversationKeys = new ConversationKeyStore(aethernet.Keys, keyVault, realtimeSignals);
         var translation = new TranslationService(aethernetSession, aethernet.Translation, configuration);
@@ -418,6 +423,8 @@ internal sealed class PhoneServices : IDisposable
             visibility, realtimeSignals);
         var accountState = new AccountStateService(aethernetSession, aethernet.Account, framework, visibility,
             realtimeSignals);
+        var networkStatus = new NetworkStatusNotices(aethernetSession, realtimeSignals, framework, clientState,
+            chatGui, configuration);
         var moderationPresenter = new ModerationNoticePresenter(moderationNotices, confirm, notifications,
             accountState, coins, framework);
         var moderationArchive = new ModerationNoticeArchive(aethernetSession, aethernet.Account);
@@ -505,6 +512,7 @@ internal sealed class PhoneServices : IDisposable
             SocialNotifications = socialNotifications,
             ModerationNotices = moderationNotices,
             AccountState = accountState,
+            NetworkStatus = networkStatus,
             ModerationPresenter = moderationPresenter,
             ModerationArchive = moderationArchive,
             SafetyLauncher = safetyLauncher,
@@ -616,6 +624,7 @@ internal sealed class PhoneServices : IDisposable
             AdInquiries = adInquiries,
             YellowPagesLauncher = new YellowPagesLauncher(),
             AnnouncementsLauncher = new AnnouncementsLauncher(),
+            CampaignLauncher = new Campaigns.CampaignLauncher(),
             Collections = collections,
             CollectionsJournal = collectionsJournal,
             InventoryCapture = inventoryCapture,
@@ -649,11 +658,13 @@ internal sealed class PhoneServices : IDisposable
             FeedbackLauncher = new Feedback.FeedbackLauncher(),
             HuntsMapMarkers = huntsMapMarkers,
             NameplateTitles = nameplateTitles,
+            Glamour = new GlamourService(Plugin.PluginInterface),
         };
     }
 
     public void Dispose()
     {
+        Glamour.Dispose();
         NameplateTitles.Dispose();
         CharacterSwitcher.Dispose();
         Looks.Dispose();
@@ -663,6 +674,7 @@ internal sealed class PhoneServices : IDisposable
         SocialNotifications.Dispose();
         ModerationPresenter.Dispose();
         ModerationNotices.Dispose();
+        NetworkStatus.Dispose();
         AccountState.Dispose();
         ChatHistory.Dispose();
         DeviceLinks.Dispose();

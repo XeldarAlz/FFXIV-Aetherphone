@@ -422,12 +422,15 @@ internal sealed partial class MessageApp
                 previewLeft += PreviewGlyph * scale + PreviewGlyphGap * scale;
             }
 
-            var kindGlyph = item.LastMessageKind switch
-            {
-                1 => PhoneIcons.Camera,
-                3 => PhoneIcons.Microphone,
-                _ => string.Empty,
-            };
+            var hidden = store.HidesLastMessage(item);
+            var kindGlyph = hidden
+                ? string.Empty
+                : item.LastMessageKind switch
+                {
+                    1 => PhoneIcons.Camera,
+                    3 => PhoneIcons.Microphone,
+                    _ => string.Empty,
+                };
             if (kindGlyph.Length > 0)
             {
                 PhoneIcon.Draw(drawList, new Vector2(previewLeft + PreviewGlyph * 0.5f * scale, subCenterY), kindGlyph,
@@ -435,14 +438,16 @@ internal sealed partial class MessageApp
                 previewLeft += PreviewGlyph * scale + PreviewGlyphGap * scale;
             }
 
-            var preview = item.LastMessagePreview.Length > 0
-                ? ChatText.ListPreview(item.LastMessagePreview)
-                : item.LastMessageKind switch
-                {
-                    1 => Loc.T(L.DirectMessages.PhotoPreview),
-                    3 => Loc.T(L.DirectMessages.VoicePreview),
-                    _ => string.Empty,
-                };
+            var preview = hidden
+                ? Loc.T(L.Message.BlockedBody)
+                : item.LastMessagePreview.Length > 0
+                    ? ChatText.ListPreview(item.LastMessagePreview)
+                    : item.LastMessageKind switch
+                    {
+                        1 => Loc.T(L.DirectMessages.PhotoPreview),
+                        3 => Loc.T(L.DirectMessages.VoicePreview),
+                        _ => string.Empty,
+                    };
             Typography.Draw(drawList, new Vector2(previewLeft, subTop),
                 Typography.FitText(preview, MathF.Max(1f, previewRight - previewLeft), RowSubStyle), previewInk,
                 RowSubStyle);

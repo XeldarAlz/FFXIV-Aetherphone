@@ -21,6 +21,8 @@ internal sealed partial class AnnouncementsApp
     private const float FeatureGlyphScale = 0.72f;
     private const int FeatureTitleLines = 3;
     private const int FeaturePreviewLines = 4;
+    private const float FeatureBannerMinAspect = 4f / 3f;
+    private const float FeatureBannerMaxAspect = 2.4f;
     private const float SectionTopGap = 22f;
     private const float SectionHeaderGap = 8f;
     private const float SectionHeaderInset = 4f;
@@ -277,16 +279,27 @@ internal sealed partial class AnnouncementsApp
         var previewBlock = previewLines.Length > 0
             ? FeaturePreviewGap * scale + previewLines.Length * previewLineHeight
             : 0f;
-        var height = pad + eyebrowHeight + FeatureEyebrowGap * scale + titleLines.Length * titleLineHeight
-            + previewBlock + pad;
+        var bannerHeight = entry.HasCover
+            ? width / Math.Clamp(entry.CoverAspect, FeatureBannerMinAspect, FeatureBannerMaxAspect)
+            : 0f;
+        var height = bannerHeight + pad + eyebrowHeight + FeatureEyebrowGap * scale
+            + titleLines.Length * titleLineHeight + previewBlock + pad;
         var rest = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
         var hovered = UiInteract.Hover(rest.Min, rest.Max);
-        Lift(drawList, rest, FeaturedId, hovered, FeatureRadius * scale, scale);
+        var card = Lift(drawList, rest, FeaturedId, hovered, FeatureRadius * scale, scale);
+        if (entry.HasCover)
+        {
+            var grow = card.Width / rest.Width;
+            var banner = new Rect(card.Min, new Vector2(card.Max.X, card.Min.Y + bannerHeight * grow));
+            DrawImage(drawList, entry.CoverUrl, banner, FeatureRadius * scale * grow, true, ImageFit.CenterFocus);
+        }
+
         UiAnchors.Report(CardAnchor, rest);
 
         var left = rest.Min.X + pad;
         var right = rest.Max.X - pad;
-        var eyebrowCenterY = rest.Min.Y + pad + eyebrowHeight * 0.5f;
+        var top = rest.Min.Y + bannerHeight;
+        var eyebrowCenterY = top + pad + eyebrowHeight * 0.5f;
         DrawFeatureLane(drawList, entry, new Vector2(left + FeatureLane * 0.5f * scale - DotRadius * scale,
             eyebrowCenterY), scale);
 
@@ -304,7 +317,7 @@ internal sealed partial class AnnouncementsApp
                 ui.MutedInk, TextStyles.Footnote);
         }
 
-        var cursorY = rest.Min.Y + pad + eyebrowHeight + FeatureEyebrowGap * scale;
+        var cursorY = top + pad + eyebrowHeight + FeatureEyebrowGap * scale;
         for (var lineIndex = 0; lineIndex < titleLines.Length; lineIndex++)
         {
             Typography.Draw(drawList, new Vector2(left, cursorY), titleLines[lineIndex], ui.TitleInk,
@@ -517,9 +530,7 @@ internal sealed partial class AnnouncementsApp
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth();
-        var pulse = 0.5f + 0.5f * MathF.Sin((float)ImGui.GetTime() * SkeletonPulseSpeed);
-        var ink = ui.TitleInk with { W = SkeletonAlphaLow + (SkeletonAlphaHigh - SkeletonAlphaLow) * pulse };
-        var packed = ImGui.GetColorU32(ink);
+        var packed = ImGui.GetColorU32(SkeletonInk());
         var pad = FeaturePad * scale;
 
         var featureMax = new Vector2(origin.X + width, origin.Y + SkeletonFeatureHeight * scale);
@@ -560,6 +571,12 @@ internal sealed partial class AnnouncementsApp
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, groupMax.Y - origin.Y));
+    }
+
+    private Vector4 SkeletonInk()
+    {
+        var pulse = 0.5f + 0.5f * MathF.Sin((float)ImGui.GetTime() * SkeletonPulseSpeed);
+        return ui.TitleInk with { W = SkeletonAlphaLow + (SkeletonAlphaHigh - SkeletonAlphaLow) * pulse };
     }
 
     private static void SkeletonBar(ImDrawListPtr drawList, float left, float top, float width, float height,

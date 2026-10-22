@@ -70,6 +70,8 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
     private readonly Action<string, string, string> sendImage;
     private readonly Func<VoiceInput> resolveVoiceInput;
     private string? pendingPrefill;
+    private string? pendingAttachThreadId;
+    private string? pendingAttachPath;
     private readonly Func<string, bool> canRevealBody;
 
     private volatile string? pendingVoicePlay;
@@ -250,6 +252,12 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
 
     public void PrefillDraft(string body) => pendingPrefill = body;
 
+    public void StageImage(string threadId, string path)
+    {
+        pendingAttachThreadId = threadId;
+        pendingAttachPath = path;
+    }
+
     public void InvalidateTranscript() => transcriptStale = true;
 
     public void RequestScrollTo(string messageId) => transcript.RequestScrollTo(messageId);
@@ -267,6 +275,8 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         voicePlayer.Stop();
         searchController.Close();
         composer.Clear();
+        pendingAttachThreadId = null;
+        pendingAttachPath = null;
     }
 
     public void Draw(Rect area, string threadId, bool activeLayer)
@@ -288,6 +298,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
             }
         }
 
+        ApplyPendingAttach(threadId);
         RestoreFailedSend(threadId);
 
         if (activeLayer)
@@ -547,6 +558,12 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
 
     void IChatTranscriptInteractions.OnReactionClick(string messageId, string token) => OpenReactions(messageId);
 
+    void IChatTranscriptInteractions.OnBlockedReveal(string messageId) => RevealBlocked(messageId);
+
+    protected virtual void RevealBlocked(string messageId)
+    {
+    }
+
     VoiceNoteState IChatTranscriptVoice.StateFor(string messageId)
     {
         var state = voicePlayer.StateFor(messageId);
@@ -662,7 +679,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         {
             ref readonly var message = ref messages[index];
             if (message.Kind != 0 || message.SenderId == myId || message.Body.Length == 0
-                || (message.Flags & (TranscriptFlags.Deleted | TranscriptFlags.Placeholder)) != 0
+                || (message.Flags & (TranscriptFlags.Deleted | TranscriptFlags.Placeholder | TranscriptFlags.Blocked)) != 0
                 || ChatText.EffectiveKind(message.Body, 0) != 0 || translation.IsSameAsTarget(message.Body))
             {
                 continue;
@@ -828,6 +845,24 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         failedSendFailure = store.LastSendFailure;
         failedSendImage = imagePath;
         failedSendText = text;
+    }
+
+    private void ApplyPendingAttach(string threadId)
+    {
+        if (pendingAttachPath is not { } path || pendingAttachThreadId != threadId
+            || store.CurrentThreadId != threadId)
+        {
+            return;
+        }
+
+        pendingAttachThreadId = null;
+        pendingAttachPath = null;
+        if (composer.IsEditing)
+        {
+            composer.ClearEdit();
+        }
+
+        composer.AttachImage(path);
     }
 
     private void RestoreFailedSend(string threadId)
@@ -1132,7 +1167,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         var picked = Interlocked.Exchange(ref pendingPickedPath, null);
         if (!string.IsNullOrEmpty(picked))
         {
-            SendChatImage(threadId, picked);
+            StageChatImage(picked);
             return;
         }
 
@@ -1198,7 +1233,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
                 DrawPickerThumbnail(pickerPaths[index], min, max, scale, hovered);
                 if (UiInteract.Click(min, max, hovered))
                 {
-                    SendChatImage(threadId, pickerPaths[index]);
+                    StageChatImage(pickerPaths[index]);
                 }
             }
 
@@ -1209,7 +1244,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         }
     }
 
-    private void SendChatImage(string threadId, string path)
+    private void StageChatImage(string path)
     {
         if (GifMedia.IsGif(path) && !GifMedia.FitsSizeCap(path))
         {
@@ -1218,8 +1253,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         }
 
         pickerNotice = string.Empty;
-        store.SendImageMessage(threadId, path, string.Empty, _ => { });
-        transcript.RequestSnapToBottom();
+        composer.AttachImage(path);
         pickerThreadId = null;
         PopScreen();
     }

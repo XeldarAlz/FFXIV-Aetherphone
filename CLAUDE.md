@@ -11,6 +11,8 @@ dotnet build Aetherphone.sln -c Release
 
 Requires the .NET 10 SDK and the Dalamud assemblies on disk (CI downloads the latest Dalamud distribution; see CONTRIBUTING.md). CI treats every warning, .editorconfig code-style rules included, as an error: a clean build has zero warnings. PRs target `dev`; `master` is release-only.
 
+`tools/guards/check` runs the CI guards locally (`--files <paths>` for just some files). The project hook in .claude/settings.json already runs them on every file you edit; fix what it reports before moving on.
+
 ## Hard rules
 
 - **No em dashes anywhere**: not in code, UI strings, locale JSONs, docs, changelogs, or commits. Use commas, colons, or parentheses.

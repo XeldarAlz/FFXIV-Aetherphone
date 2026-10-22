@@ -5,6 +5,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Telephony;
+using Aetherphone.Core.Telephony.Audio;
 using Aetherphone.Core.Telephony.Contracts;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -479,7 +480,7 @@ internal sealed partial class MessageApp
         {
             var micSilent = !view.Muted
                 && view.Seconds >= MicSilentWarningSeconds
-                && view.PeakMicLevel < Core.Telephony.Audio.AudioCapture.GateOpenRms;
+                && view.PeakMicLevel < MathF.Max(MicThreshold.ToRms(calls.InputThreshold), AutoGain.NoiseFloorRms);
             if (micSilent)
             {
                 var warning = Typography.FitText(Loc.T(L.Phone.MicNotReaching),
@@ -656,7 +657,7 @@ internal sealed partial class MessageApp
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(min, max, hovered);
     }
 
     private void DrawSpeakingHalo(ImDrawListPtr drawList, Vector2 center, float radius, float level, float scale)

@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using Lumina.Excel;
@@ -12,6 +13,11 @@ internal static unsafe class GameTimerCapture
 
     public static int ReadRetainers(CapturedRetainer[] into, ExcelSheet<RetainerTask>? tasks)
     {
+        if (!GameMemory.Attached)
+        {
+            return GameMemory.Simulated is { } simulated ? ReadSimulatedRetainers(simulated, into) : 0;
+        }
+
         var manager = RetainerManager.Instance();
         if (manager is null || !manager->IsReady)
         {
@@ -40,6 +46,11 @@ internal static unsafe class GameTimerCapture
 
     public static int ReadVessels(CapturedVessel[] into)
     {
+        if (!GameMemory.Attached)
+        {
+            return GameMemory.Simulated is { Vessels.Length: > 0 } simulated ? ReadSimulatedVessels(simulated, into) : -1;
+        }
+
         var housing = HousingManager.Instance();
         if (housing is null || housing->WorkshopTerritory is null)
         {
@@ -79,6 +90,11 @@ internal static unsafe class GameTimerCapture
 
     public static long ReadMapAllowance()
     {
+        if (!GameMemory.Attached)
+        {
+            return GameMemory.Simulated?.MapAllowanceUnix ?? 0;
+        }
+
         var state = UIState.Instance();
         if (state is null)
         {
@@ -87,6 +103,31 @@ internal static unsafe class GameTimerCapture
 
         var timestamp = (long)state->GetNextMapAllowanceTimestamp();
         return timestamp >= EarliestPlausibleUnix ? timestamp : 0;
+    }
+
+    private static int ReadSimulatedRetainers(SimulatedGame simulated, CapturedRetainer[] into)
+    {
+        var count = Math.Min(simulated.Retainers.Length, into.Length);
+        for (var index = 0; index < count; index++)
+        {
+            var retainer = simulated.Retainers[index];
+            into[index] = new CapturedRetainer(retainer.RetainerId, retainer.Name, retainer.VentureCompleteUnix,
+                retainer.VentureSeconds);
+        }
+
+        return count;
+    }
+
+    private static int ReadSimulatedVessels(SimulatedGame simulated, CapturedVessel[] into)
+    {
+        var count = Math.Min(simulated.Vessels.Length, into.Length);
+        for (var index = 0; index < count; index++)
+        {
+            var vessel = simulated.Vessels[index];
+            into[index] = new CapturedVessel(vessel.Name, vessel.Airship, vessel.RegisterUnix, vessel.ReturnUnix);
+        }
+
+        return count;
     }
 
     private static int DurationOf(ExcelSheet<RetainerTask>? tasks, uint ventureId)

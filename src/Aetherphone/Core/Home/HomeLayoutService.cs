@@ -35,6 +35,8 @@ internal sealed class HomeLayoutService
         "appstore", "settings", "announcements", "messages", "camera", "photos", "notifications",
     };
 
+    internal static readonly string[] ArrivingApps = { "loveisland", "prism" };
+
     private readonly IReadOnlyList<IPhoneApp> apps;
     private readonly WidgetRegistry widgets;
     private readonly IShortcutSource shortcuts;
@@ -71,6 +73,11 @@ internal sealed class HomeLayoutService
         }
 
         Load();
+        InstallRevealed();
+        if (configuration.Home is { KnownBaseline: false })
+        {
+            Save();
+        }
     }
 
     public int PageCount => pages.Count;
@@ -92,6 +99,7 @@ internal sealed class HomeLayoutService
     {
         rows = ClampRows(configuration.HomeGridRows);
         Load();
+        InstallRevealed();
         Save();
     }
 
@@ -100,6 +108,7 @@ internal sealed class HomeLayoutService
         if (configuration.Home is null)
         {
             Load();
+            InstallRevealed();
             Save();
             return;
         }
@@ -351,14 +360,24 @@ internal sealed class HomeLayoutService
         return true;
     }
 
-    public bool Install(string appId)
+    public bool Install(string appId) => Install(appId, false);
+
+    private bool Install(string appId, bool revealed)
     {
         if (!byId.TryGetValue(appId, out var app) || !app.IsAvailable || !installed.Add(appId))
         {
             return false;
         }
 
-        Append(HomeTile.ForApp(app));
+        if (revealed)
+        {
+            AppendToFirstPage(HomeTile.ForApp(app));
+        }
+        else
+        {
+            Append(HomeTile.ForApp(app));
+        }
+
         Commit();
         InstalledChanged?.Invoke(appId);
         return true;
@@ -896,7 +915,7 @@ internal sealed class HomeLayoutService
         for (var index = 0; index < revealed.Count; index++)
         {
             known.Add(revealed[index]);
-            Install(revealed[index]);
+            Install(revealed[index], true);
         }
 
         revealed.Clear();
@@ -912,17 +931,40 @@ internal sealed class HomeLayoutService
             {
                 known.Add(stored[index]);
             }
+        }
 
-            return;
+        if (saved is not { KnownBaseline: true, Known.Count: > 0 })
+        {
+            for (var index = 0; index < apps.Count; index++)
+            {
+                if (apps[index].IsAvailable && !IsArriving(apps[index].Id))
+                {
+                    known.Add(apps[index].Id);
+                }
+            }
         }
 
         for (var index = 0; index < apps.Count; index++)
         {
-            if (apps[index].IsAvailable)
+            var app = apps[index];
+            if (app.IsAvailable && !known.Contains(app.Id) && !revealed.Contains(app.Id))
             {
-                known.Add(apps[index].Id);
+                revealed.Add(app.Id);
             }
         }
+    }
+
+    private static bool IsArriving(string appId)
+    {
+        for (var index = 0; index < ArrivingApps.Length; index++)
+        {
+            if (string.Equals(appId, ArrivingApps[index], StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void LoadInstalled(HomeLayout? saved, HashSet<string> placed)
@@ -972,7 +1014,7 @@ internal sealed class HomeLayoutService
         {
             for (var index = 0; index < apps.Count; index++)
             {
-                if (apps[index].IsAvailable)
+                if (apps[index].IsAvailable && known.Contains(apps[index].Id))
                 {
                     installed.Add(apps[index].Id);
                 }
@@ -1247,6 +1289,16 @@ internal sealed class HomeLayoutService
         pages[^1].Add(tile);
     }
 
+    private void AppendToFirstPage(HomeTile tile)
+    {
+        if (pages.Count == 0)
+        {
+            pages.Add(new List<HomeTile>());
+        }
+
+        pages[0].Add(tile);
+    }
+
     private void Arrange()
     {
         FoldDegenerateFolders();
@@ -1391,6 +1443,7 @@ internal sealed class HomeLayoutService
         SerializePages(layout.Pages);
         layout.Installed = new List<string>(installed);
         layout.Known = new List<string>(known);
+        layout.KnownBaseline = true;
 
         configuration.Home = layout;
         configuration.Save();

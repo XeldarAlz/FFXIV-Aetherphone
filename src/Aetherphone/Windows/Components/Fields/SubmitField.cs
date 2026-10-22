@@ -20,7 +20,7 @@ internal static class SubmitField
         var radius = (pillMax.Y - pillMin.Y) * 0.5f;
         Squircle.Fill(drawList, pillMin, pillMax, radius, ImGui.GetColorU32(Surfaces.Fill(theme.TextStrong, FillLevel.Tertiary)));
         var glyphCenter = new Vector2(pillMin.X + 16f * scale, bar.Center.Y);
-        using (ImRaii.PushFont(UiBuilder.IconFont))
+        using (Plugin.Fonts.PushDalamudIcon())
         {
             var glyph = IconGlyph.Of(icon);
             var size = ImGui.CalcTextSize(glyph);
@@ -70,7 +70,8 @@ internal static class SubmitField
         }
 
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (UiInteract.Click(clearCenter - new Vector2(clearRadius, clearRadius),
+                clearCenter + new Vector2(clearRadius, clearRadius), true))
         {
             text = string.Empty;
         }
@@ -91,7 +92,7 @@ internal static class SubmitField
         Squircle.Fill(drawList, pillMin, pillMax, MathF.Min(pillMax.Y - pillMin.Y, rowHeight) * 0.5f,
             ImGui.GetColorU32(Surfaces.Fill(theme.TextStrong, FillLevel.Tertiary)));
         var glyphCenter = new Vector2(pillMin.X + 16f * scale, rowCenterY);
-        using (ImRaii.PushFont(UiBuilder.IconFont))
+        using (Plugin.Fonts.PushDalamudIcon())
         {
             var glyph = IconGlyph.Of(icon);
             var size = ImGui.CalcTextSize(glyph);
@@ -145,7 +146,8 @@ internal static class SubmitField
         }
 
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (UiInteract.Click(clearCenter - new Vector2(clearRadius, clearRadius),
+                clearCenter + new Vector2(clearRadius, clearRadius), true))
         {
             editor.Adopt(string.Empty);
         }

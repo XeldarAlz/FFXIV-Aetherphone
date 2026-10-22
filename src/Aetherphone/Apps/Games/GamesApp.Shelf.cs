@@ -142,7 +142,7 @@ internal sealed partial class GamesApp
             new Vector2(row.Min.X + side, center.Y + side * 0.5f));
         var half = side * 0.5f * press;
         GameIconArt.Draw(drawList, library.IconIds[entryIndex], library.Accent(entryIndex),
-            new Vector2(center.X - half, center.Y - half), new Vector2(center.X + half, center.Y + half), null, true);
+            new Vector2(center.X - half, center.Y - half), new Vector2(center.X + half, center.Y + half), true);
         var textLeft = row.Min.X + side + CategoryTextGap * scale;
         var textWidth = MathF.Max(1f, play.Min.X - CategoryTextGap * scale - textLeft);
         ref readonly var hook = ref CategoryHook(entryIndex, textWidth);

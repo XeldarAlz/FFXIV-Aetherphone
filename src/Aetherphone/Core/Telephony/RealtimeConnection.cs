@@ -28,6 +28,7 @@ internal sealed class RealtimeConnection : IDisposable
     public event Action<CallControl>? ControlReceived;
     public event Action<byte[]>? MediaReceived;
     public event Action<bool>? ConnectedChanged;
+    public event Action? ClosedForRestart;
 
     public void Start()
     {
@@ -153,6 +154,11 @@ internal sealed class RealtimeConnection : IDisposable
                 chunk = await ws.ReceiveAsync(buffer.AsMemory(), token).ConfigureAwait(false);
                 if (chunk.MessageType == WebSocketMessageType.Close)
                 {
+                    if (ws.CloseStatus == WebSocketCloseStatus.EndpointUnavailable)
+                    {
+                        ClosedForRestart?.Invoke();
+                    }
+
                     return;
                 }
 

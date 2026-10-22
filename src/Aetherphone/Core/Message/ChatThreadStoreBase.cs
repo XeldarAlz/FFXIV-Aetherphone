@@ -264,6 +264,10 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
 
     protected virtual bool IsThreadMuted(TThread thread) => false;
 
+    protected virtual bool SuppressesInboxNotification(TThread thread) => false;
+
+    protected virtual bool TrustsTypingPush => true;
+
     protected virtual bool ShouldRevealForReport(TMessage message) => true;
 
     protected virtual void OnCipherCleared()
@@ -279,6 +283,10 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     }
 
     protected virtual void OnThreadOpening(string threadId)
+    {
+    }
+
+    protected virtual void OnThreadViewed(string threadKey)
     {
     }
 
@@ -468,6 +476,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     {
         viewing.Note(threadKey);
         ClearLocalUnread(threadKey);
+        OnThreadViewed(threadKey);
         notifications.RemoveGroup(NotificationAppId, threadKey);
     }
 
@@ -823,6 +832,11 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             if (IsBeingViewed(key))
             {
                 NoteSkippedWhileViewed();
+                continue;
+            }
+
+            if (SuppressesInboxNotification(item))
+            {
                 continue;
             }
 
@@ -1209,8 +1223,41 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             return;
         }
 
+        if (!TrustsTypingPush)
+        {
+            ConfirmPushedTyping(signal.ThreadId);
+            return;
+        }
+
         Volatile.Write(ref otherTypingUntilTicks, (DateTime.UtcNow + PushedTypingWindow).Ticks);
         otherTyping = true;
+    }
+
+    private void ConfirmPushedTyping(string id)
+    {
+        if (refreshingTyping)
+        {
+            return;
+        }
+
+        refreshingTyping = true;
+        work.Run("typing confirm", async token =>
+        {
+            var result = await FetchOtherTypingAsync(id, token).ConfigureAwait(false);
+            if (currentThreadId != id || result is null)
+            {
+                return;
+            }
+
+            if (!result.Value)
+            {
+                ClearOtherTyping();
+                return;
+            }
+
+            Volatile.Write(ref otherTypingUntilTicks, (DateTime.UtcNow + PushedTypingWindow).Ticks);
+            otherTyping = true;
+        }, () => refreshingTyping = false);
     }
 
     private void ExpirePushedTyping(DateTime now)
@@ -1319,7 +1366,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             }
             else
             {
-                var baked = ImageProcessor.BakeJpeg(sourcePath, DmImageMaxDimension);
+                var baked = ImageProcessor.BakeJpeg(sourcePath, DmImageMaxDimension, ImageProcessor.UploadJpegQuality);
                 plainBytes = baked.Bytes;
                 width = baked.Width;
                 height = baked.Height;

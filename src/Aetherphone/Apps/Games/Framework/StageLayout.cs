@@ -40,6 +40,9 @@ internal static class StageLayout
     public static Vector2 PauseChipCenter(Rect full, float scale) =>
         new(full.Max.X - ChipInsetX * scale, full.Min.Y + ChipCenterY * scale);
 
+    public static float LandscapeCoinChipLeft(Rect full, float scale) =>
+        BackChipCenter(full, scale).X + (ChipRadius + CoinChipGap) * scale;
+
     public static Vector2 PrimaryCenter(Rect full, float scale) => new(full.Center.X, full.Min.Y + ChipCenterY * scale);
 
     public static float PrimaryMaxWidth(Rect full, float scale) =>

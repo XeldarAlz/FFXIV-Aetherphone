@@ -14,6 +14,8 @@ You need the .NET 10 SDK, and compiling also needs the Dalamud assemblies on dis
 
 Load the built plugin via `/xlsettings` -> **Experimental** -> **Dev Plugin Locations**, pointing at `src/Aetherphone/bin/Release/Aetherphone.dll`. Already playing with Aetherphone from the custom repo? Disable that copy first, or build `Debug` instead: it loads beside your normal copy as `AetherphoneDev` and opens with `/phonedev`. [Getting started](docs/getting-started.md) explains the Release, Debug, and Beta builds.
 
+No game on this machine? [docs/harness.md](docs/harness.md) describes the headless preview harness: one bootstrap downloads Dalamud into a local cache, and `tools/harness/aep serve` renders and drives the phone on macOS, Windows, or Linux.
+
 ## Project layout
 
 - `src/Aetherphone/Core/`: the device platform: app framework and navigation, theming, messaging, notifications, character/contacts, game data readers, and the shared services (networking, crypto, media, localization) the apps build on.
@@ -32,7 +34,7 @@ The full developer documentation lives in [`docs/`](docs/README.md): the archite
 
 ## Before you open a PR
 
-1. `dotnet build -c Release` with zero warnings. CI treats every warning, code-style rules included, as an error.
+1. `dotnet build -c Release` with zero warnings, and `tools/guards/check` passing. CI treats every warning, code-style rules included, as an error, and runs the same guards. `git config core.hooksPath tools/guards/hooks` runs the guards on every commit.
 2. Test in-game: open the phone with `/phone` (or `/phonedev` on a Debug build), exercise the app or screen you touched, and watch a real notification/tell flow through if you changed messaging.
 3. Keep the diff focused. One concern per PR.
 4. Match the existing style; the rules are written down in [docs/conventions.md](docs/conventions.md). Code is self-documenting; comments explain *why* (or a hard-coded constant), never *what*. No heavy abstractions "for later."

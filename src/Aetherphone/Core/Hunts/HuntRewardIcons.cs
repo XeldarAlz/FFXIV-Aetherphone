@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Lumina.Excel.Sheets;
 
 namespace Aetherphone.Core.Hunts;
@@ -32,6 +33,11 @@ internal static class HuntRewardIcons
 
     private static Dictionary<string, uint> BuildIconIdByItemName()
     {
+        if (!GameSheets.Available)
+        {
+            return new Dictionary<string, uint>();
+        }
+
         var lookup = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase);
         foreach (var item in Plugin.DataManager.GetExcelSheet<Item>())
         {

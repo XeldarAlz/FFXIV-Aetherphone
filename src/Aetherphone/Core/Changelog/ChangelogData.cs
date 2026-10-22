@@ -6,20 +6,47 @@ internal static class ChangelogData
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new[]
     {
-        new ChangelogEntry("1.3.1.1", "2026-10-16", new ChangelogSection[]
+        new ChangelogEntry("1.4.0.0", "2026-10-19", new ChangelogSection[]
         {
-            new(L.Changelog.SectionPhone, L.Changelog.Release1311Phone),
-            new(L.Apps.Fishing, L.Changelog.Release1311Fishing),
-            new(L.Changelog.SectionSounds, L.Changelog.Release1311Sounds),
-            new(L.Changelog.SectionMessaging, L.Changelog.Release1311Messaging),
-            new(L.Apps.Chirper, L.Changelog.Release1311Chirper),
-            new(L.Apps.Skywatcher, L.Changelog.Release1311Skywatcher),
-            new(L.Apps.Casino, L.Changelog.Release1311Gamba),
-            new(L.Apps.AetherStream, L.Changelog.Release1311MogCast),
-            new(L.Apps.Velvet, L.Changelog.Release1311Velvet),
-            new(L.Apps.Games, L.Changelog.Release1311Games),
-            new(L.Apps.Photos, L.Changelog.Release1311Photos),
-            new(L.Changelog.SectionHalloween, L.Changelog.Release1311Halloween),
+            new(L.Apps.Prism, L.Changelog.Release1400Prism),
+            new(L.Changelog.SectionMessaging, L.Changelog.Release1400Messaging),
+            new(L.Phone.EnableTitle, L.Changelog.Release1400Calls),
+            new(L.Apps.Music, L.Changelog.Release1400Music),
+            new(L.Apps.Announcements, L.Changelog.Release1400Announcements),
+            new(L.Changelog.SectionAethergramVelvet, L.Changelog.Release1400AethergramVelvet),
+            new(L.Changelog.SectionPhone, L.Changelog.Release1400Phone),
+            new(L.Apps.Casino, L.Changelog.Release1400Gamba),
+            new(L.Apps.Games, L.Changelog.Release1400Games),
+            new(L.Apps.Skywatcher, L.Changelog.Release1400Skywatcher),
+            new(L.Changelog.SectionSounds, L.Changelog.Release1400Sounds),
+            new(L.Apps.LoveIsland, L.Changelog.Release1400LoveIsland),
+        }),
+        new ChangelogEntry("1.3.3.0", "2026-10-19", new ChangelogSection[]
+        {
+            new(L.Apps.Chirper, L.Changelog.Release1330Chirper),
+            new(L.Changelog.SectionSocial, L.Changelog.Release1330Social),
+            new(L.Changelog.SectionPhone, L.Changelog.Release1330Phone),
+            new(L.Changelog.SectionSounds, L.Changelog.Release1330Sounds),
+            new(L.Apps.Collections, L.Changelog.Release1330Collections),
+            new(L.Changelog.SectionMessaging, L.Changelog.Release1330Messaging),
+            new(L.Apps.Music, L.Changelog.Release1330Music),
+            new(L.Apps.Skywatcher, L.Changelog.Release1330Skywatcher),
+            new(L.Apps.Settings, L.Changelog.Release1330Settings),
+        }),
+        new ChangelogEntry("1.3.2.0", "2026-10-18", new ChangelogSection[]
+        {
+            new(L.Changelog.SectionPhone, L.Changelog.Release1320Phone),
+            new(L.Apps.Fishing, L.Changelog.Release1320Fishing),
+            new(L.Changelog.SectionSounds, L.Changelog.Release1320Sounds),
+            new(L.Changelog.SectionMessaging, L.Changelog.Release1320Messaging),
+            new(L.Apps.Chirper, L.Changelog.Release1320Chirper),
+            new(L.Apps.Skywatcher, L.Changelog.Release1320Skywatcher),
+            new(L.Apps.Casino, L.Changelog.Release1320Gamba),
+            new(L.Apps.AetherStream, L.Changelog.Release1320MogCast),
+            new(L.Apps.Velvet, L.Changelog.Release1320Velvet),
+            new(L.Apps.Games, L.Changelog.Release1320Games),
+            new(L.Apps.Photos, L.Changelog.Release1320Photos),
+            new(L.Changelog.SectionHalloween, L.Changelog.Release1320Halloween),
         }),
         new ChangelogEntry("1.3.1.0", "2026-10-16", new ChangelogSection[]
         {

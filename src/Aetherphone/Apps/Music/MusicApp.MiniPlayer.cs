@@ -76,7 +76,7 @@ internal sealed partial class MusicApp
             playback.TogglePlayPause();
         }
 
-        if (playback.IsPaused)
+        if (playback.OffersStop)
         {
             DrawMiniStop(drawList, nextCenter, buttonRadius, playHit, scale);
             return;

@@ -1,8 +1,9 @@
+using Aetherphone.Core.Game;
+using Dalamud.Plugin.Services;
+using Lumina.Excel.Sheets;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
-using Dalamud.Plugin.Services;
-using Lumina.Excel.Sheets;
 
 namespace Aetherphone.Core.Device;
 
@@ -65,6 +66,11 @@ internal sealed class DeviceStatus : IDisposable
 
     public void SyncTarget()
     {
+        if (!GameSheets.Available)
+        {
+            return;
+        }
+
         var worldId = clientState.IsLoggedIn ? objectTable.LocalPlayer?.CurrentWorld.RowId ?? 0u : 0u;
         if (worldId == resolvedWorldId)
         {
@@ -112,6 +118,14 @@ internal sealed class DeviceStatus : IDisposable
 
     private void SampleBattery()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            batteryPresent = false;
+            batteryPercent = 100;
+            charging = false;
+            return;
+        }
+
         try
         {
             if (GetSystemPowerStatus(out var status))

@@ -7,10 +7,9 @@ namespace Aetherphone.Core.Telephony.Audio;
 internal sealed class AudioCapture : IDisposable
 {
     private const int Bitrate = 28000;
-    public const float GateOpenRms = 0.018f;
-    public const float GateCloseRms = 0.010f;
     public const float MaximumGain = 2f;
     private const int HangoverFrames = 12;
+    private const long ClipHoldMilliseconds = 600;
     private readonly object gate = new();
     private readonly object deviceGate = new();
     private readonly IOpusEncoder encoder;
@@ -25,8 +24,10 @@ internal sealed class AudioCapture : IDisposable
     private volatile bool muted;
     private volatile float gain = 1f;
     private volatile bool autoGainEnabled = true;
+    private volatile float threshold = MicThreshold.DefaultPosition;
     private bool closed;
     private volatile float level;
+    private long clipUntilTicks;
 
     public AudioCapture()
     {
@@ -42,6 +43,14 @@ internal sealed class AudioCapture : IDisposable
     }
 
     public float Level => level;
+
+    public bool Clipping => Environment.TickCount64 < Volatile.Read(ref clipUntilTicks);
+
+    public float Threshold
+    {
+        get => threshold;
+        set => threshold = Math.Clamp(value, 0f, 1f);
+    }
 
     public float Gain
     {
@@ -173,9 +182,16 @@ internal sealed class AudioCapture : IDisposable
     private void EncodeFrame()
     {
         var pcm = MemoryMarshal.Cast<byte, short>(accumulator.AsSpan(0, OpusAudio.FrameBytes));
-        var gateLevel = Condition(pcm, autoGain, gain, autoGainEnabled);
-        level = gateLevel;
-        UpdateGate(gateLevel);
+        var rawRms = AutoGain.Rms(pcm);
+        if (AutoGain.Peak(pcm) >= MicThreshold.ClipLevel)
+        {
+            Volatile.Write(ref clipUntilTicks, Environment.TickCount64 + ClipHoldMilliseconds);
+        }
+
+        var openRms = MicThreshold.ToRms(threshold);
+        level = rawRms;
+        autoGain.Process(pcm, rawRms, OpusAudio.SampleRate, openRms, gain, autoGainEnabled);
+        gateOpen = NextGateState(gateOpen, ref hangover, rawRms, openRms);
         if (muted || !gateOpen)
         {
             return;
@@ -192,30 +208,21 @@ internal sealed class AudioCapture : IDisposable
         pending.Add(frame);
     }
 
-    public static float Condition(Span<short> pcm, AutoGain autoGain, float trim, bool autoGainEnabled)
+    public static bool NextGateState(bool open, ref int hangover, float rms, float openRms)
     {
-        var rawRms = AutoGain.Rms(pcm);
-        autoGain.Process(pcm, rawRms, OpusAudio.SampleRate, trim, autoGainEnabled);
-        return rawRms * trim;
-    }
-
-    private void UpdateGate(float rms)
-    {
-        if (rms >= GateOpenRms)
+        if (openRms <= 0f || rms >= openRms)
         {
-            gateOpen = true;
             hangover = HangoverFrames;
-            return;
+            return true;
         }
 
-        if (gateOpen && rms < GateCloseRms)
+        if (!open || rms >= openRms * MicThreshold.CloseRatio)
         {
-            hangover--;
-            if (hangover <= 0)
-            {
-                gateOpen = false;
-            }
+            return open;
         }
+
+        hangover--;
+        return hangover > 0;
     }
 
     public void Dispose()

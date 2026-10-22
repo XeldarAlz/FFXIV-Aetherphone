@@ -1,3 +1,5 @@
+using Aetherphone.Core.Game;
+using Aetherphone.Core.Housing;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Venues;
 using Lumina.Excel;
@@ -34,9 +36,6 @@ internal readonly record struct HousingHome(
 
 internal static class TravelPlanner
 {
-    private const byte HousingWardUse = 13;
-    private const byte HousingInteriorUse = 14;
-
     private static Dictionary<uint, TravelDestination>? destinationByTerritory;
     private static Dictionary<uint, HousingHome>? housingByTerritory;
 
@@ -171,6 +170,11 @@ internal static class TravelPlanner
 
     private static Dictionary<uint, List<AetheryteCandidate>> BuildAetheryteCandidates()
     {
+        if (!GameSheets.Available)
+        {
+            return new Dictionary<uint, List<AetheryteCandidate>>();
+        }
+
         var maps = Plugin.DataManager.GetExcelSheet<Map>();
         var markers = Plugin.DataManager.GetSubrowExcelSheet<MapMarker>();
         var aetherytes = Plugin.DataManager.GetExcelSheet<Aetheryte>();
@@ -272,12 +276,17 @@ internal static class TravelPlanner
 
     private static Dictionary<uint, HousingHome> BuildHousingLookup()
     {
+        if (!GameSheets.Available)
+        {
+            return new Dictionary<uint, HousingHome>();
+        }
+
         var territories = Plugin.DataManager.GetExcelSheet<TerritoryType>();
         var districtByCity = new Dictionary<uint, (uint DistrictId, string DistrictName)>();
         foreach (var territory in territories)
         {
             var cityRowId = territory.Aetheryte.RowId;
-            if (territory.TerritoryIntendedUse.RowId != HousingWardUse || cityRowId == 0
+            if (territory.TerritoryIntendedUse.RowId != HousingDistricts.WardIntendedUse || cityRowId == 0
                 || districtByCity.ContainsKey(cityRowId))
             {
                 continue;
@@ -290,7 +299,7 @@ internal static class TravelPlanner
         foreach (var territory in territories)
         {
             var use = territory.TerritoryIntendedUse.RowId;
-            if (use != HousingWardUse && use != HousingInteriorUse)
+            if (use != HousingDistricts.WardIntendedUse && use != HousingDistricts.InteriorIntendedUse)
             {
                 continue;
             }
@@ -309,6 +318,11 @@ internal static class TravelPlanner
 
     private static string CityName(uint cityAetheryteRowId)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         if (!Plugin.DataManager.GetExcelSheet<Aetheryte>().TryGetRow(cityAetheryteRowId, out var aetheryte))
         {
             return string.Empty;
@@ -321,6 +335,11 @@ internal static class TravelPlanner
 
     private static Dictionary<uint, TravelDestination> BuildDestinationLookup()
     {
+        if (!GameSheets.Available)
+        {
+            return new Dictionary<uint, TravelDestination>();
+        }
+
         var aetherytes = Plugin.DataManager.GetExcelSheet<Aetheryte>();
         var placeNames = Plugin.DataManager.GetExcelSheet<PlaceName>();
         var mastersByAethernetGroup = BuildMasterLookup(aetherytes, placeNames);

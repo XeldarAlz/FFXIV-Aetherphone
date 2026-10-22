@@ -473,6 +473,7 @@ internal sealed partial class CoachmarkOverlay
             return false;
         }
 
+        UiAnchors.Report("tour.advance", rect);
         var hovered = live && (passthrough ? UiInteract.HoverWindowOnly(rect.Min, rect.Max)
             : UiInteract.Hover(rect.Min, rect.Max));
         MotionButton.Brand(drawList, rect, label, label, alpha, hovered, true, DisabledFill, InkQuiet);

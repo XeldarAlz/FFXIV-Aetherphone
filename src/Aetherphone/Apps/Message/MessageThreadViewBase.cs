@@ -29,6 +29,8 @@ internal abstract class MessageThreadViewBase : ChatThreadView<ChatMessageDto, C
 
     protected readonly DirectMessagesStore messages;
     private readonly WallpaperImageCache wallpapers;
+    private readonly HashSet<string> revealedBlocked = new(StringComparer.Ordinal);
+    private int revealedBlockedVersion;
     private ConversationMemberDto[] memberLineSource = Array.Empty<ConversationMemberDto>();
     private int memberLineContactsVersion = -1;
     private string memberLine = string.Empty;
@@ -77,7 +79,16 @@ internal abstract class MessageThreadViewBase : ChatThreadView<ChatMessageDto, C
 
     protected override IChatTranscriptSenders? Senders => this;
 
-    protected override int TranscriptVersion => messages.Contacts.Version;
+    protected override int TranscriptVersion =>
+        HashCode.Combine(messages.Contacts.Version, messages.Blocks.Version, revealedBlockedVersion);
+
+    protected override void RevealBlocked(string messageId)
+    {
+        if (revealedBlocked.Add(messageId))
+        {
+            revealedBlockedVersion++;
+        }
+    }
 
     public void DrawAvatar(ImDrawListPtr drawList, in TranscriptMessage message, Vector2 center, float radius)
     {
@@ -271,6 +282,8 @@ internal abstract class MessageThreadViewBase : ChatThreadView<ChatMessageDto, C
     protected override TranscriptMessage[] MapTranscript(ChatMessageDto[] source)
     {
         var isGroup = IsGroupThread;
+        var blocks = messages.Blocks;
+        var myId = MyUserId;
         var mapped = new TranscriptMessage[source.Length];
         for (var index = 0; index < source.Length; index++)
         {
@@ -279,6 +292,13 @@ internal abstract class MessageThreadViewBase : ChatThreadView<ChatMessageDto, C
             {
                 mapped[index] = new TranscriptMessage(message.Id, message.SenderId, SystemText(message), 2,
                     message.CreatedAtUnix, 0, 0, null, string.Empty, default);
+                continue;
+            }
+
+            if (BlockedSenders.Collapses(blocks, isGroup, message.SenderId, myId, revealedBlocked.Contains(message.Id)))
+            {
+                mapped[index] = new TranscriptMessage(message.Id, message.SenderId, Loc.T(L.Message.BlockedBody), 0,
+                    message.CreatedAtUnix, 0, 0, null, string.Empty, default, TranscriptFlags.Blocked);
                 continue;
             }
 
@@ -296,7 +316,14 @@ internal abstract class MessageThreadViewBase : ChatThreadView<ChatMessageDto, C
             var replySender = string.Empty;
             var replyBody = string.Empty;
             var replyKind = message.ReplyKind;
-            if (message.ReplyToId is not null)
+            if (message.ReplyToId is not null && BlockedSenders.Collapses(blocks, isGroup,
+                    message.ReplySenderId ?? string.Empty, myId, revealedBlocked.Contains(message.ReplyToId)))
+            {
+                replySender = Loc.T(L.Message.BlockedSender);
+                replyBody = Loc.T(L.Message.BlockedBody);
+                replyKind = 0;
+            }
+            else if (message.ReplyToId is not null)
             {
                 replySender = message.ReplySenderId == MyUserId
                     ? Loc.T(L.Message.You)

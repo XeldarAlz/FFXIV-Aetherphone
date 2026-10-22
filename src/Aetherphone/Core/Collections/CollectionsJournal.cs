@@ -1,18 +1,18 @@
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Home;
+using Aetherphone.Core.Inventory;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Runtime;
 using Dalamud.Plugin.Services;
-using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using Lumina.Excel;
 using Lumina.Excel.Sheets;
 using EmoteSheet = Lumina.Excel.Sheets.Emote;
 
 namespace Aetherphone.Core.Collections;
 
-internal sealed unsafe class CollectionsJournal : IDisposable
+internal sealed class CollectionsJournal : IDisposable
 {
     public const string AppId = "collections";
     private const long TickIntervalMilliseconds = 2000;
@@ -157,8 +157,7 @@ internal sealed unsafe class CollectionsJournal : IDisposable
 
     private void Tick()
     {
-        var playerState = PlayerState.Instance();
-        var current = playerState is null ? 0UL : playerState->ContentId;
+        var current = InventoryReader.ReadLocalContentId();
         if (current == 0)
         {
             Forget();

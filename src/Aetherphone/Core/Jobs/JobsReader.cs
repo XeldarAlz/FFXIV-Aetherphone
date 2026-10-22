@@ -12,25 +12,51 @@ internal static unsafe class JobsReader
 
     public static JobsSnapshot Build(GameData gameData, IReadOnlyList<JobsCategory> categories)
     {
+        if (!GameMemory.Attached)
+        {
+            return GameMemory.Simulated is { } simulated
+                ? BuildSimulated(gameData, categories, simulated)
+                : JobsSnapshot.Empty;
+        }
+
         var playerState = PlayerState.Instance();
         if (playerState is null || !playerState->IsLoaded)
         {
             return JobsSnapshot.Empty;
         }
 
+        var gearsets = ReadGearsets(gameData, out var activeGearsetId);
+        return Compose(gameData, categories, playerState->ClassJobLevels, playerState->ClassJobExperience,
+            playerState->MaxLevel, (uint)playerState->CurrentClassJobId,
+            Math.Max(0L, (long)playerState->BaseRestedExperience), gearsets, activeGearsetId);
+    }
+
+    private static JobsSnapshot BuildSimulated(GameData gameData, IReadOnlyList<JobsCategory> categories,
+        SimulatedGame simulated)
+    {
+        var gearsets = new List<RawGearset>(simulated.Gearsets.Length);
+        for (var index = 0; index < simulated.Gearsets.Length; index++)
+        {
+            var gearset = simulated.Gearsets[index];
+            var name = gearset.Name.Length > 0 ? gearset.Name : gameData.JobName(gearset.ClassJobId);
+            gearsets.Add(new RawGearset(gearset.Id, gearset.ClassJobId, name, gearset.ItemLevel, false));
+        }
+
+        return Compose(gameData, categories, simulated.ClassJobLevels, simulated.ClassJobExperience,
+            simulated.MaxLevel, simulated.CurrentClassJobId, simulated.RestedExperience, gearsets,
+            simulated.ActiveGearsetId);
+    }
+
+    private static JobsSnapshot Compose(GameData gameData, IReadOnlyList<JobsCategory> categories,
+        ReadOnlySpan<short> levels, ReadOnlySpan<int> experience, int maxLevel, uint currentJobId, long rested,
+        List<RawGearset> gearsets, int activeGearsetId)
+    {
         var facts = JobsCatalog.Facts();
         if (facts.Length == 0)
         {
             return JobsSnapshot.Empty;
         }
 
-        var levels = playerState->ClassJobLevels;
-        var experience = playerState->ClassJobExperience;
-        var maxLevel = (int)playerState->MaxLevel;
-        var currentJobId = (uint)playerState->CurrentClassJobId;
-        var rested = Math.Max(0L, (long)playerState->BaseRestedExperience);
-
-        var gearsets = ReadGearsets(gameData, out var activeGearsetId);
         Span<bool> unlocked = stackalloc bool[facts.Length];
         for (var index = 0; index < facts.Length; index++)
         {
@@ -133,10 +159,10 @@ internal static unsafe class JobsReader
         (Math.Floor(Math.Clamp(current / (double)needed, 0d, 1d) * 100d) / 100d).ToString("P0", Loc.Culture);
 
 
-    private static int LevelAt(Span<short> values, sbyte index) =>
+    private static int LevelAt(ReadOnlySpan<short> values, sbyte index) =>
         index >= 0 && index < values.Length ? values[index] : 0;
 
-    private static int LevelAt(Span<int> values, sbyte index) =>
+    private static int LevelAt(ReadOnlySpan<int> values, sbyte index) =>
         index >= 0 && index < values.Length ? values[index] : 0;
 
     private static bool IsSameDiscipline(ClassJobFacts[] facts, in ClassJobFacts row, uint classJobId)

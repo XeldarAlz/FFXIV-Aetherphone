@@ -198,6 +198,11 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public float TextZoom { get; set; } = TextZoomCatalog.DefaultZoom;
     public string FontGlyphCache { get; set; } = string.Empty;
     public string IconGlyphCache { get; set; } = string.Empty;
+    public string PrismRevealedWeek { get; set; } = string.Empty;
+    public long PrismRevealedRevision { get; set; }
+    public int PrismGuideVersion { get; set; }
+    public long PrismShowcaseEndsAtUnix { get; set; }
+    public bool PrismShowcaseOpened { get; set; }
     public float ScreenBrightness { get; set; } = 1f;
     public float PhoneScale { get; set; } = PhoneSizeCatalog.DefaultWidth / PhoneSizeCatalog.DesignWidth;
     public float PhoneWidth { get; set; }
@@ -357,6 +362,8 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public float CallOutputVolume { get; set; } = 1f;
     public float CallInputGain { get; set; } = 1f;
     public bool CallAutoGain { get; set; } = true;
+    public float CallInputThreshold { get; set; } = Core.Telephony.Audio.MicThreshold.DefaultPosition;
+    public bool CallInputThresholdMigrated { get; set; }
     public Dictionary<string, float> CallPeerVolumes { get; set; } = new();
     public HashSet<string> CallPeerMuted { get; set; } = new();
     public List<CallLogEntry> CallLog { get; set; } = new();
@@ -559,6 +566,17 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public long AnnouncementsSeenUnix { get; set; }
     public long AnnouncementsNotifiedUnix { get; set; }
     public bool AnnouncementsInitialized { get; set; }
+    public long LoveIslandSeenAtUnix { get; set; }
+    public long LoveIslandPostsSeenUnix { get; set; }
+    public long LoveIslandPostsNotifiedUnix { get; set; }
+    public bool LoveIslandPostsInitialized { get; set; }
+    public bool LoveIslandMarksInitialized { get; set; }
+    public bool LoveIslandEarned { get; set; }
+    public bool? LoveIslandKeepNight { get; set; }
+    public List<string> LoveIslandKnownExperiences { get; set; } = new();
+    public List<string> LoveIslandReminders { get; set; } = new();
+    public string LoveIslandIconUrl { get; set; } = string.Empty;
+    public string LoveIslandIconForegroundUrl { get; set; } = string.Empty;
     public bool? Use24HourClock { get; set; }
     public bool TimeZoneManual { get; set; }
     public int ManualUtcOffsetMinutes { get; set; }
@@ -590,6 +608,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
 
     public bool MarketContextMenu { get; set; } = true;
     public bool LinkpearlContextMenu { get; set; }
+    public bool NetworkStatusInChat { get; set; } = true;
 
     public bool HasUnseenChangelog => LastSeenChangelogVersion != ChangelogData.LatestVersion;
 
@@ -673,6 +692,26 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
 
         ControlPanel = null;
         ControlPanelRepacked = true;
+        Save();
+    }
+
+    public void MigrateCallInputThreshold()
+    {
+        if (CallInputThresholdMigrated)
+        {
+            return;
+        }
+
+        CallInputThresholdMigrated = true;
+        if (MathF.Abs(CallInputGain - 1f) > 0.001f)
+        {
+            CallInputThreshold = Core.Telephony.Audio.MicThreshold.FromLegacyGain(CallInputGain);
+            if (CallAutoGain)
+            {
+                CallInputGain = 1f;
+            }
+        }
+
         Save();
     }
 

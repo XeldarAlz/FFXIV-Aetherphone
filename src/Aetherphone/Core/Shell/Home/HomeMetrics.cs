@@ -6,7 +6,6 @@ internal readonly struct HomeMetrics
 {
     public const float DockHeightUnits = 82f;
     public const float LabelBandUnits = 20f;
-    public const float EditToolbarBandUnits = 40f;
     private const float DockScreenInsetUnits = 10f;
     private const float DotsBandUnits = 24f;
     private const float DotsLiftUnits = 7f;
@@ -39,7 +38,7 @@ internal readonly struct HomeMetrics
     }
 
     public static HomeMetrics Compute(Rect content, int columns, int rows, float baseScale, in HomeMotion motion,
-        float sidePaddingUnits, float editReserveUnits = 0f)
+        float sidePaddingUnits)
     {
         var warped = motion.Warp(content);
         var scale = baseScale * motion.Zoom;
@@ -49,7 +48,7 @@ internal readonly struct HomeMetrics
         var dockBar = new Rect(new Vector2(warped.Min.X - dockOverhang, dockBottom - dockHeight),
             new Vector2(warped.Max.X + dockOverhang, dockBottom));
         var dotsCenterY = dockBar.Min.Y - DotsBandUnits * scale * 0.5f - DotsLiftUnits * scale;
-        var gridTop = warped.Min.Y + (GridTopPadUnits + editReserveUnits) * scale;
+        var gridTop = warped.Min.Y + GridTopPadUnits * scale;
         var gridBottom = dockBar.Min.Y - DotsBandUnits * scale;
         var grid = new Rect(new Vector2(warped.Min.X, gridTop), new Vector2(warped.Max.X, gridBottom));
         var cellWidth = grid.Width / columns;
@@ -76,10 +75,11 @@ internal readonly struct HomeMetrics
         var origin = CellOrigin(page, scrollValue, cell);
         var inset = (CellWidth - IconSize) * 0.5f;
         var min = new Vector2(origin.X + inset, origin.Y + 3f * Scale);
-        var max = new Vector2(origin.X + columnSpan * CellWidth - inset,
-            origin.Y + rowSpan * CellHeight - LabelBandUnits * Scale + 6f * Scale);
+        var max = new Vector2(origin.X + columnSpan * CellWidth - inset, min.Y + WidgetHeight(rowSpan));
         return new Rect(min, max);
     }
+
+    public float WidgetHeight(int rowSpan) => (rowSpan - 1) * CellHeight + IconSize + LabelBandUnits * Scale;
 
     public Rect TileRect(int page, float scrollValue, GridCell cell, HomeTile tile)
     {

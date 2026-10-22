@@ -15,14 +15,28 @@ internal readonly record struct EorzeaTime(int Hour, int Minute)
 
     public static unsafe long CurrentSeconds()
     {
-        var framework = Framework.Instance();
+        var framework = GameMemory.Attached ? Framework.Instance() : null;
         if (framework == null)
         {
-            return DateTimeOffset.UtcNow.ToUnixTimeSeconds() * 144 / 7;
+            var natural = DateTimeOffset.UtcNow.ToUnixTimeSeconds() * 144 / 7;
+            var minute = GameMemory.Simulated?.EorzeaMinuteOverride ?? -1;
+            return minute < 0 ? natural : natural - natural % SecondsPerDay + minute * 60L;
         }
 
         var clock = framework->ClientTime;
-        return clock.IsEorzeaTimeOverridden ? clock.EorzeaTimeOverride : clock.EorzeaTime;
+        return RenderedSeconds(clock.EorzeaTime, clock.EorzeaTimeOverride, clock.IsEorzeaTimeOverridden);
+    }
+
+    public static long RenderedSeconds(long naturalSeconds, long overrideSeconds, bool overridden) =>
+        overridden ? overrideSeconds : naturalSeconds + overrideSeconds;
+
+    public static bool HasStrayOverrideOffset(long overrideSeconds, bool overridden) =>
+        !overridden && overrideSeconds != 0;
+
+    public static void ReleaseOverride(ref long overrideSeconds, ref bool overridden)
+    {
+        overrideSeconds = 0;
+        overridden = false;
     }
 
     public static int CurrentMinuteOfDay() => (int)(CurrentSeconds() % SecondsPerDay / 60);

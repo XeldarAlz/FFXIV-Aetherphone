@@ -152,7 +152,7 @@ internal sealed class HomeInteractionController
         !gallery.Active && !widgetMenu.Active && !spotlight.Active && !pager.Dragging &&
         MathF.Abs(pager.Value - pager.Page) < 0.001f;
 
-    public void HandleInput(Rect content, in HomeMetrics metrics, INavigator navigation, PhoneTheme theme,
+    public void HandleInput(Rect screen, Rect content, in HomeMetrics metrics, INavigator navigation, PhoneTheme theme,
         float delta)
     {
         if (folder.ConsumeEditRequest())
@@ -199,6 +199,11 @@ internal sealed class HomeInteractionController
             return;
         }
 
+        if (editing && ImGui.IsMouseClicked(ImGuiMouseButton.Left) && HandleEditChromeClick(screen, ImGui.GetMousePos()))
+        {
+            return;
+        }
+
         HandlePress(content, metrics, navigation, theme, delta);
     }
 
@@ -208,11 +213,6 @@ internal sealed class HomeInteractionController
         var mouse = ImGui.GetMousePos();
         if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && UiInteract.Hover(content.Min, content.Max))
         {
-            if (editing && HandleEditChromeClick(content, metrics, mouse))
-            {
-                return;
-            }
-
             if (editing && TryBeginResize(metrics, mouse))
             {
                 return;
@@ -300,16 +300,16 @@ internal sealed class HomeInteractionController
     public bool RemoveBadgesLive(in HomeMotion motion) =>
         editing && motion.Interactive && !gallery.Active && !widgetMenu.Active && !folder.Active;
 
-    private bool HandleEditChromeClick(Rect content, in HomeMetrics metrics, Vector2 mouse)
+    private bool HandleEditChromeClick(Rect screen, Vector2 mouse)
     {
-        if (HomeChrome.DoneRect(content, metrics).Contains(mouse))
+        if (HomeChrome.DoneRect(screen).Contains(mouse))
         {
             editing = false;
             pressActive = false;
             return true;
         }
 
-        if (HomeChrome.AddRect(content, metrics).Contains(mouse))
+        if (HomeChrome.AddRect(screen).Contains(mouse))
         {
             gallery.Open(pager.Page);
             pressActive = false;
