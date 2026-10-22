@@ -514,7 +514,6 @@ internal sealed partial class PrismApp
                 OpenGlam(glam);
             }
 
-            HoverWash(drawList, new Rect(photo.Min, new Vector2(photo.Max.X, y + pitch - gap)));
             var countWidth = count.Length > 0
                 ? Typography.Measure(count, PrismType.Caption).X + (GridGlyphUnits + Metrics.Space.Sm) * scale
                 : 0f;
