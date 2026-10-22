@@ -314,6 +314,18 @@ internal sealed partial class PrismApp
                 continue;
             }
 
+            var row = new Rect(new Vector2(left, top), new Vector2(left + width, rowBottom));
+            var hovered = UiInteract.Hover(row.Min, row.Max);
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+
+            if (UiInteract.Click(row.Min, row.Max, hovered))
+            {
+                OpenGearSearch(index);
+            }
+
             if (pick.IconId != 0)
             {
                 GameIconTile.Draw(drawList, textures, pick.IconId, new Vector2(left, rowTop),
@@ -329,13 +341,9 @@ internal sealed partial class PrismApp
                 PrismFace.Label, labelPixels);
             var name = itemId == 0 ? Loc.T(L.Prism.AddPiece) : pick.Name ?? string.Empty;
             var room = left + width - textLeft - (itemId != 0 ? removeWidth + pad : 0f);
-            if (PrismArt.Link(drawList, new Vector2(textLeft, textTop + labelLine),
-                    PrismType.FitLabel(name, labelPixels, room), itemId == 0 ? PrismArt.Muted : PrismArt.Fore, scale,
-                    labelLine))
-            {
-                OpenGearSearch(index);
-            }
-
+            PrismType.Draw(drawList, new Vector2(textLeft, textTop + labelLine),
+                PrismType.FitLabel(name, labelPixels, room), hovered || itemId != 0 ? PrismArt.Fore : PrismArt.Muted,
+                PrismFace.Label, labelPixels);
             if (itemId != 0 && PrismArt.Link(drawList, new Vector2(left + width - removeWidth, textTop + labelLine),
                     remove, PrismArt.Muted, scale, labelLine))
             {
