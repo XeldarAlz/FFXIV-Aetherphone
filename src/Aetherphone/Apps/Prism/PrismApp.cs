@@ -58,6 +58,7 @@ internal sealed partial class PrismApp : IResumableApp
     private const int NoticeLines = 3;
     private const int LoadedAtLimit = 512;
     private const int GuideVersion = 2;
+    private const float CoverFocus = 0.25f;
 
     private readonly PrismStore store;
     private readonly GlamStore glams;
@@ -410,30 +411,18 @@ internal sealed partial class PrismApp : IResumableApp
     }
 
     private Rect DrawLook(ImDrawListPtr drawList, Rect rect, string url, bool contain, float alpha = 1f,
-        float zoom = 1f, Vector2? pivot = null)
+        float zoom = 1f, Vector2? pivot = null, bool native = false, float focusY = ImageFit.CenterFocus)
     {
         if (url.Length == 0)
         {
             return rect;
         }
 
-        var texture = images.Sized(url, MathF.Max(rect.Width, rect.Height));
+        var drawnPixels = MathF.Max(rect.Width, rect.Height);
+        var texture = native ? images.Get(url) ?? images.Nearest(url, drawnPixels) : images.Sized(url, drawnPixels);
         if (texture is null)
         {
-            var failed = images.Failed(url);
-            if (!failed && !contain)
-            {
-                return rect;
-            }
-
-            var placeholder = Loc.T(failed ? L.Common.ImageFailed : L.Common.Loading);
-            var size = PrismType.Measure(placeholder, PrismFace.Label, PrismArt.LabelPixels());
-            if (size.X <= rect.Width)
-            {
-                PrismType.Draw(drawList, rect.Center - size * 0.5f, placeholder, PrismArt.Faint, PrismFace.Label,
-                    PrismArt.LabelPixels());
-            }
-
+            PrismArt.Placeholder(drawList, rect, images.Failed(url), UiScale.Current, alpha);
             return rect;
         }
 
@@ -449,11 +438,17 @@ internal sealed partial class PrismApp : IResumableApp
             loadedAt[url] = seen;
         }
 
-        alpha *= PrismMotion.At((float)(now - seen), 0f, Motion.Appear);
         var frame = contain ? ImageFit.CenteredRect(rect, texture.Size.X / MathF.Max(1f, texture.Size.Y)) : rect;
+        var fade = PrismMotion.At((float)(now - seen), 0f, Motion.Appear);
+        if (fade < PrismMotion.Settled)
+        {
+            PrismArt.Placeholder(drawList, frame, false, UiScale.Current, alpha);
+        }
+
+        alpha *= fade;
         var (uv0, uv1) = contain
             ? (Vector2.Zero, Vector2.One)
-            : ImageFit.Cover(texture.Size.X, texture.Size.Y, rect.Width, rect.Height);
+            : ImageFit.Cover(texture.Size.X, texture.Size.Y, rect.Width, rect.Height, focusY);
         var anchor = pivot ?? frame.Center;
         var drawn = zoom == 1f ? frame : new Rect(anchor + (frame.Min - anchor) * zoom, anchor + (frame.Max - anchor) * zoom);
         if (zoom != 1f)
