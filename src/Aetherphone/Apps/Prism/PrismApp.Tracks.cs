@@ -117,11 +117,15 @@ internal sealed partial class PrismApp
             return;
         }
 
+        var header = DrawHeader(drawList, content, string.Empty, IssueLine(store.Week?.Issue ?? 0), true, scale);
+        var body = new Rect(new Vector2(content.Min.X, header), content.Max);
+        using var surface = BeginBody(body);
+        var list = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetCursorScreenPos();
         var gutter = PrismArt.Gutter(scale);
-        var left = content.Min.X + gutter;
-        var width = content.Width - gutter * 2f;
-        var top = DrawHeader(drawList, content, string.Empty, IssueLine(store.Week?.Issue ?? 0), true, scale);
-        top = DrawSectionTitle(drawList, left, top, width, Loc.T(L.Prism.ChooseTrack), scale);
+        var width = ScrollLayout.StableContentWidth() - gutter * 2f;
+        var left = origin.X + gutter;
+        var top = DrawSectionTitle(list, left, origin.Y, width, Loc.T(L.Prism.ChooseTrack), scale);
         var labelPixels = PrismArt.LabelPixels();
         var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var namePixels = TrackNameUnits * scale;
@@ -140,12 +144,12 @@ internal sealed partial class PrismApp
             var block = new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
             var hovered = UiInteract.Hover(block.Min, block.Max);
             var mine = track.MyEntry is not null;
-            drawList.AddRect(block.Min, block.Max, ImGui.GetColorU32(hovered ? PrismArt.Fore : PrismArt.Faint), 0f,
-                ImDrawFlags.None, 1f);
+            list.AddRect(block.Min, block.Max, ImGui.GetColorU32(hovered ? PrismArt.Fore : PrismArt.Faint), 0f,
+                ImDrawFlags.None, PrismArt.HairlineWidth(scale));
             var cursor = new Vector2(block.Min.X + pad, block.Min.Y + pad);
-            PrismType.Draw(drawList, cursor, Padded[index + 1], PrismArt.Muted, PrismFace.Label, labelPixels);
+            PrismType.Draw(list, cursor, Padded[index + 1], PrismArt.Muted, PrismFace.Label, labelPixels);
             cursor.Y += labelLine;
-            PrismType.Draw(drawList, cursor, PrismTracks.Name(track.Id), PrismArt.Fore, PrismFace.Headline, namePixels);
+            PrismType.Draw(list, cursor, PrismTracks.Name(track.Id), PrismArt.Fore, PrismFace.Headline, namePixels);
             cursor.Y += PrismType.LineHeight(PrismFace.Headline, namePixels);
             if (rule.Length > 0)
             {
@@ -153,7 +157,7 @@ internal sealed partial class PrismApp
                             Metrics.Space.Sm * scale;
             }
 
-            PrismType.Draw(drawList, cursor, mine ? Loc.T(L.Prism.YourLook) : TrackCount(index, track.EntryCount),
+            PrismType.Draw(list, cursor, mine ? Loc.T(L.Prism.YourLook) : TrackCount(index, track.EntryCount),
                 mine ? PrismArt.Fore : PrismArt.Muted, PrismFace.Label, labelPixels);
             if (hovered)
             {
@@ -169,8 +173,9 @@ internal sealed partial class PrismApp
             top = block.Max.Y + Metrics.Space.Md * scale;
         }
 
-        Typography.DrawWrappedLeft(new Vector2(left, top + Metrics.Space.Sm * scale), Loc.T(L.Prism.TrackMovedNote),
-            PrismArt.Muted, TextStyles.Footnote, width);
+        top += Metrics.Space.Sm * scale + Typography.DrawWrappedLeft(new Vector2(left, top + Metrics.Space.Sm * scale),
+            Loc.T(L.Prism.TrackMovedNote), PrismArt.Muted, TextStyles.Footnote, width);
+        ImGui.Dummy(new Vector2(width, top - origin.Y + PrismArt.BottomMargin(scale)));
     }
 
     private static string TrackRule(string id) => id switch
