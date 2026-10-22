@@ -319,13 +319,14 @@ internal sealed partial class PrismApp
             var name = itemId == 0 ? Loc.T(L.Prism.AddPiece) : pick.Name ?? string.Empty;
             var room = left + width - textLeft - (itemId != 0 ? removeWidth + pad : 0f);
             if (PrismArt.Link(drawList, new Vector2(textLeft, textTop + labelLine),
-                    PrismType.FitLabel(name, labelPixels, room), itemId == 0 ? PrismArt.Muted : PrismArt.Fore, scale))
+                    PrismType.FitLabel(name, labelPixels, room), itemId == 0 ? PrismArt.Muted : PrismArt.Fore, scale,
+                    labelLine))
             {
                 OpenGearSearch(index);
             }
 
             if (itemId != 0 && PrismArt.Link(drawList, new Vector2(left + width - removeWidth, textTop + labelLine),
-                    remove, PrismArt.Muted, scale))
+                    remove, PrismArt.Muted, scale, labelLine))
             {
                 draftItems[index] = 0;
                 draftStain0[index] = 0;
@@ -333,9 +334,10 @@ internal sealed partial class PrismApp
             }
 
             var x = textLeft;
+            var dyeRoom = (left + width - textLeft) / MathF.Max(dyes, 1) - Metrics.Space.Lg * scale;
             for (var channel = 0; channel < dyes; channel++)
             {
-                x = DrawDyeLink(drawList, x, textTop + labelLine * 2f, index, channel, labelPixels, scale);
+                x = DrawDyeLink(drawList, x, textTop + labelLine * 2f, dyeRoom, index, channel, labelPixels, scale);
             }
 
             PrismArt.Hairline(drawList, left, left + width, rowBottom, PrismArt.Faint, scale);
@@ -345,22 +347,23 @@ internal sealed partial class PrismApp
         return top;
     }
 
-    private float DrawDyeLink(ImDrawListPtr drawList, float left, float top, int slot, int channel, float labelPixels,
-        float scale)
+    private float DrawDyeLink(ImDrawListPtr drawList, float left, float top, float room, int slot, int channel,
+        float labelPixels, float scale)
     {
         var stain = channel == 0 ? draftStain0[slot] : draftStain1[slot];
-        var label = stain == 0 ? Loc.T(L.Prism.AddDye) : gearCatalog.DyeName(stain);
+        var line = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var swatch = 0f;
         if (stain != 0 && DyeColor(stain) is { } color)
         {
             var radius = DyeSwatchUnits * scale;
-            var line = PrismType.LineHeight(PrismFace.Label, labelPixels);
             drawList.AddCircleFilled(new Vector2(left + radius, top + line * 0.5f), radius, color, DyeSegments);
             swatch = radius * 2f + Metrics.Space.Xs * scale;
         }
 
+        var label = PrismType.FitLabel(stain == 0 ? Loc.T(L.Prism.AddDye) : gearCatalog.DyeName(stain), labelPixels,
+            room - swatch);
         if (PrismArt.Link(drawList, new Vector2(left + swatch, top), label, stain == 0 ? PrismArt.Muted : PrismArt.Fore,
-                scale))
+                scale, line))
         {
             OpenDyePick(slot, channel);
         }
