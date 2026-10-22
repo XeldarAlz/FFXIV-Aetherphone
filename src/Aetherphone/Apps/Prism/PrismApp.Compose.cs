@@ -20,7 +20,6 @@ internal sealed partial class PrismApp
     private const int MaxTags = 6;
     private const float FieldUnits = 34f;
     private const double RecaptureSeconds = 1.0;
-    private const int Utf8BytesPerUnit = 3;
 
     private readonly PhotoComposeSession composeSession;
     private readonly HashSet<string> droppedMods = new(StringComparer.Ordinal);
@@ -188,13 +187,7 @@ internal sealed partial class PrismApp
     {
         var height = FieldUnits * scale;
         var field = new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
-        GlassField.Text(field, id, hint, ref text, PrismArt.Fore, PrismArt.Muted, 0f,
-            maxLength * Utf8BytesPerUnit + 1, ImGuiInputTextFlags.None);
-        if (text.Length > maxLength)
-        {
-            text = text[..(char.IsHighSurrogate(text[maxLength - 1]) ? maxLength - 1 : maxLength)];
-        }
-
+        GlassField.Text(field, id, hint, ref text, PrismArt.Fore, PrismArt.Muted, 0f, maxLength);
         PrismArt.Hairline(drawList, left, left + width, top + height, ImGui.IsItemActive() ? PrismArt.Fore : PrismArt.Faint,
             scale);
         return top + height;

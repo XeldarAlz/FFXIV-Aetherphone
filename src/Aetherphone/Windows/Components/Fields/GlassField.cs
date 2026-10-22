@@ -20,7 +20,10 @@ internal static class GlassField
     private const float ClearStrokeUnits = 1.6f;
     private const float ClearFillAlpha = 0.18f;
     private const float ClearFillHoverAlpha = 0.30f;
+    private const int Utf8BytesPerCharacter = 3;
     private static readonly Vector4 Transparent = new(0f, 0f, 0f, 0f);
+    private static readonly ImGui.ImGuiInputTextCallbackPtrDelegate CapCharacters = OnCapEdit;
+    private static int characterCap;
 
     public static float Radius(Rect field) => field.Height * 0.5f;
 
@@ -34,8 +37,12 @@ internal static class GlassField
             TextInsetUnits * scale, maxLength, focus, flags);
 
     public static bool Text(Rect field, string imguiId, string hint, ref string text, Vector4 ink, Vector4 mutedInk,
-        float inset, int maxLength, ImGuiInputTextFlags flags) =>
-        Input(field, imguiId, hint, ref text, ink, mutedInk, inset, inset, maxLength, false, flags);
+        float inset, int maxCharacters)
+    {
+        characterCap = maxCharacters;
+        return Input(field, imguiId, hint, ref text, ink, mutedInk, inset, inset,
+            maxCharacters * Utf8BytesPerCharacter + 1, false, ImGuiInputTextFlags.CallbackEdit, CapCharacters);
+    }
 
     public static bool Title(Rect field, string imguiId, string hint, ref string text, PhoneTheme theme, float scale,
         int maxLength, ImGuiInputTextFlags flags)
@@ -106,7 +113,8 @@ internal static class GlassField
     }
 
     private static bool Input(Rect field, string imguiId, string hint, ref string text, Vector4 textColor,
-        Vector4 hintColor, float leftInset, float rightInset, int maxLength, bool focus, ImGuiInputTextFlags flags)
+        Vector4 hintColor, float leftInset, float rightInset, int maxLength, bool focus, ImGuiInputTextFlags flags,
+        ImGui.ImGuiInputTextCallbackPtrDelegate? callback = null)
     {
         var left = field.Min.X + leftInset;
         var width = MathF.Max(field.Max.X - rightInset - left, 1f);
@@ -125,7 +133,31 @@ internal static class GlassField
         using (ImRaii.PushColor(ImGuiCol.Text, textColor))
         using (ImRaii.PushColor(ImGuiCol.TextDisabled, hintColor))
         {
-            return ImGui.InputTextWithHint(imguiId, hint, ref text, maxLength, flags);
+            return callback is null
+                ? ImGui.InputTextWithHint(imguiId, hint, ref text, maxLength, flags)
+                : ImGui.InputTextWithHint(imguiId, hint, ref text, maxLength, flags, callback);
         }
+    }
+
+    private static int OnCapEdit(ImGuiInputTextCallbackDataPtr data)
+    {
+        var bytes = data.BufSpan[..data.BufTextLen];
+        var characters = 0;
+        var offset = 0;
+        while (offset < bytes.Length)
+        {
+            var lead = bytes[offset];
+            var length = lead < 0x80 ? 1 : lead < 0xE0 ? 2 : lead < 0xF0 ? 3 : 4;
+            characters += length == 4 ? 2 : 1;
+            if (characters > characterCap)
+            {
+                data.DeleteChars(offset, bytes.Length - offset);
+                return 0;
+            }
+
+            offset += length;
+        }
+
+        return 0;
     }
 }
