@@ -64,7 +64,7 @@ internal sealed partial class PrismApp
         var label = Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.EnterThisLook);
         var blocked = VanillaBlock(pickSession.HasSelection ? pickSession.FirstSelected : string.Empty);
         var ready = pickSession.HasSelection && !store.Busy && blocked is null;
-        if (PrismArt.Strip(drawList, strip, label, "→", true, ready, UiSound.Shutter))
+        if (PrismArt.Strip(drawList, strip, label, Arrow, true, ready, UiSound.Shutter))
         {
             var (race, gender) = WornBody();
             store.Enter(pickSession.FirstSelected, pickSession.CropsArray()[0],

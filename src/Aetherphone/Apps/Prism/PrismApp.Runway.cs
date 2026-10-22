@@ -88,7 +88,7 @@ internal sealed partial class PrismApp
         {
             DrawHeader(drawList, content, string.Empty, string.Empty, true, scale);
             DrawNotice(drawList, content, Loc.T(L.Prism.NothingLeftTitle), Loc.T(L.Prism.NothingLeftHint), scale);
-            if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Prism.Back), "→", false))
+            if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Prism.Back), Arrow, false))
             {
                 Go(PrismScreen.Cover);
             }
@@ -311,7 +311,7 @@ internal sealed partial class PrismApp
         var reason = store.ActionFailureText;
         DrawNotice(drawList, content, Loc.T(L.Common.LoadFailed),
             reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint), scale);
-        if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Common.Retry), "→", true))
+        if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Common.Retry), Arrow, true))
         {
             store.RequestBallot();
         }
@@ -355,7 +355,7 @@ internal sealed partial class PrismApp
 
         var strip = PrismMotion.Mark(drawList);
         if (canJudge && PrismArt.Strip(drawList, StripRect(content, scale, 1), Loc.T(L.Prism.JudgeAnother),
-                "→", true))
+                Arrow, true))
         {
             heatDone = false;
             ratingBallot = null;

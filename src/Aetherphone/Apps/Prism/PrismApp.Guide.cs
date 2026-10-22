@@ -117,7 +117,7 @@ internal sealed partial class PrismApp
         }
 
         var strip = StripRect(content, scale);
-        if (PrismArt.Strip(drawList, strip, Loc.T(last ? L.Prism.GetStarted : L.Common.Next), "→", true))
+        if (PrismArt.Strip(drawList, strip, Loc.T(last ? L.Prism.GetStarted : L.Common.Next), Arrow, true))
         {
             TurnGuidePage(1);
             return;

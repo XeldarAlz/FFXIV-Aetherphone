@@ -83,7 +83,7 @@ internal sealed partial class PrismApp
             return;
         }
 
-        if (PrismArt.Strip(drawList, retry ? done : change, Loc.T(L.Common.ChangePhoto), "→", retry, !store.Busy))
+        if (PrismArt.Strip(drawList, retry ? done : change, Loc.T(L.Common.ChangePhoto), Arrow, retry, !store.Busy))
         {
             StartPick();
         }

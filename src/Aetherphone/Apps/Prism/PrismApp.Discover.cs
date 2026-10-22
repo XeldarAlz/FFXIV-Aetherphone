@@ -514,7 +514,7 @@ internal sealed partial class PrismApp
     {
         DrawMasthead(drawList, content, string.Empty, scale);
         DrawNotice(drawList, content, Loc.T(L.Prism.SignInTitle), Loc.T(L.Prism.SignInRequired), scale);
-        if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Prism.OpenSettings), "→", true))
+        if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Prism.OpenSettings), Arrow, true))
         {
             navigation.Open("settings");
         }

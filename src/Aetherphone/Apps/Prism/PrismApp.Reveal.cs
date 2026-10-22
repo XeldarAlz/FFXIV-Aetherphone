@@ -185,7 +185,7 @@ internal sealed partial class PrismApp
         }
 
         var strips = PrismMotion.Mark(drawList);
-        if (PrismArt.Strip(drawList, StripRect(content, scale, 1), Loc.T(L.Prism.FinalTitle), "→",
+        if (PrismArt.Strip(drawList, StripRect(content, scale, 1), Loc.T(L.Prism.FinalTitle), Arrow,
                 true))
         {
             FinishReveal(results);

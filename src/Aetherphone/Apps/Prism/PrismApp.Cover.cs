@@ -42,14 +42,7 @@ internal sealed partial class PrismApp
     {
         if (!store.IsSignedIn)
         {
-            DrawMasthead(drawList, content, string.Empty, scale);
-            DrawNotice(drawList, content, Loc.T(L.Prism.SignInTitle), Loc.T(L.Prism.SignInRequired), scale);
-            if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Prism.OpenSettings), "→",
-                    true))
-            {
-                navigation.Open("settings");
-            }
-
+            DrawSignedOut(drawList, content, scale);
             return;
         }
 
@@ -65,7 +58,7 @@ internal sealed partial class PrismApp
             DrawMasthead(drawList, content, string.Empty, scale);
             DrawNotice(drawList, content, Loc.T(L.Prism.NoWeekTitle), Loc.T(L.Prism.NoWeekHint), scale);
             if (store.Results is { } last &&
-                PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(ResultsLabel(last)), "→", true))
+                PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(ResultsLabel(last)), Arrow, true))
             {
                 OpenResults();
             }
@@ -306,7 +299,7 @@ internal sealed partial class PrismApp
         if (store.Results is { } results)
         {
             var slot = HasPrimary(week) ? new Rect(new Vector2(row.Max.X - half, row.Min.Y), row.Max) : row;
-            if (PrismArt.Strip(drawList, slot, Loc.T(ResultsLabel(results)), "→", !HasPrimary(week)))
+            if (PrismArt.Strip(drawList, slot, Loc.T(ResultsLabel(results)), Arrow, !HasPrimary(week)))
             {
                 OpenResults();
             }
@@ -316,7 +309,7 @@ internal sealed partial class PrismApp
         {
             if (week.MyEntry is not null)
             {
-                if (PrismArt.Strip(drawList, strip, Loc.T(L.Prism.YourLook), "→", true))
+                if (PrismArt.Strip(drawList, strip, Loc.T(L.Prism.YourLook), Arrow, true))
                 {
                     Go(PrismScreen.Entry);
                 }
@@ -324,7 +317,7 @@ internal sealed partial class PrismApp
                 return;
             }
 
-            if (PrismArt.Strip(drawList, strip, EnterLabel(), "→", true, !store.Busy))
+            if (PrismArt.Strip(drawList, strip, EnterLabel(), Arrow, true, !store.Busy))
             {
                 StartEntry();
             }
@@ -338,7 +331,7 @@ internal sealed partial class PrismApp
         }
 
         var label = week.Phase == PrismPhases.Final ? L.Prism.JudgeFinal : L.Prism.JudgeHeat;
-        var right = store.Results is not null ? "→"
+        var right = store.Results is not null ? Arrow
             : HeatInProgress ? LookCounter(lookIndex + 1, stars.Length) : JudgedLine(week.BallotsCast);
         if (PrismArt.Strip(drawList, strip, Loc.T(label), right, true, !store.Busy))
         {
@@ -367,7 +360,7 @@ internal sealed partial class PrismApp
         var reason = store.WeekFailureText;
         DrawNotice(drawList, content, Loc.T(L.Common.LoadFailed), reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint),
             scale);
-        if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Common.Retry), "→", true))
+        if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Common.Retry), Arrow, true))
         {
             UiFeedback.Play(UiSound.Refresh);
             store.Refresh();
