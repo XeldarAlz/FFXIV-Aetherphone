@@ -111,7 +111,7 @@ internal sealed partial class PrismApp
             var inset = Metrics.Space.Lg * scale;
             var resume = ImGui.GetCursorScreenPos();
             EmptyState.Draw(new Rect(new Vector2(content.Min.X + inset, top), new Vector2(content.Max.X - inset,
-                    content.Max.Y - bottomChrome)), InkSkin(), favouritesOnly ? FontAwesomeIcon.Star : FontAwesomeIcon.Tshirt,
+                    content.Max.Y - bottomChrome)), ui, favouritesOnly ? FontAwesomeIcon.Star : FontAwesomeIcon.Tshirt,
                 Loc.T(favouritesOnly ? L.Prism.FavouritesEmptyTitle : L.Prism.WardrobeEmptyTitle),
                 Loc.T(favouritesOnly ? L.Prism.FavouritesEmptyHint : L.Prism.WardrobeEmptyHint));
             ImGui.SetCursorScreenPos(resume);
@@ -182,7 +182,7 @@ internal sealed partial class PrismApp
         wardrobeChipActive[1] = favouritesOnly;
         var row = new Rect(new Vector2(content.Min.X, top + Metrics.Space.Xs * scale),
             new Vector2(content.Max.X, top + Metrics.Space.Xs * scale + Metrics.Size.TapTarget * scale));
-        var picked = wardrobeRail.Draw(row, InkSkin(), wardrobeChips, wardrobeChipActive);
+        var picked = wardrobeRail.Draw(row, ui, wardrobeChips, wardrobeChipActive);
         if (picked >= 0)
         {
             favouritesOnly = picked == 1;
@@ -795,7 +795,7 @@ internal sealed partial class PrismApp
             sheetItems[index] = new ActionSheet.Item(Loc.T(SheetLabel(action)), Danger: action == WardrobeAction.Delete);
         }
 
-        var picked = wardrobeSheet.Draw(full, ActionSheetStyle.From(InkSkin()),
+        var picked = wardrobeSheet.Draw(full, ActionSheetStyle.From(ui),
             new ReadOnlySpan<ActionSheet.Item>(sheetItems, 0, sheetCount), Loc.T(L.Common.Cancel), false);
         if (picked >= 0)
         {

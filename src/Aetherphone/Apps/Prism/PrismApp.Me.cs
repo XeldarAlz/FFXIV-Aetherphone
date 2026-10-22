@@ -54,11 +54,9 @@ internal sealed partial class PrismApp
     private readonly ChipRail profileTabRail = new();
     private readonly PullToRefresh profilePull = new();
     private Action? refreshProfileNow;
-    private readonly AppSkin inkSkin = new(AppPalettes.Neutral(PrismArt.Fore));
     private readonly Dictionary<long, string> countLabels = new();
     private readonly Dictionary<string, string> placingLabels = new(StringComparer.Ordinal);
     private string? countLanguage;
-    private PhoneTheme? inkSkinTheme;
     private Spring profileTabSlide;
     private double nextUserRequest;
     private bool showSaved;
@@ -178,28 +176,6 @@ internal sealed partial class PrismApp
         SceneChrome.ScreenFrom(content, followedTheme ?? PhoneTheme.Default, scale);
 
     private static float BodyTop() => ImGui.GetWindowPos().Y - ImGui.GetScrollY();
-
-    private AppSkin InkSkin()
-    {
-        if (ReferenceEquals(inkSkinTheme, followedTheme))
-        {
-            return inkSkin;
-        }
-
-        inkSkinTheme = followedTheme;
-        inkSkin.Theme = followedTheme ?? PhoneTheme.Default;
-        inkSkin.Palette = AppPalettes.Neutral(PrismArt.Fore) with
-        {
-            TitleInk = PrismArt.Fore,
-            BodyInk = PrismArt.Fore,
-            MutedInk = PrismArt.Muted,
-            Hairline = PrismArt.Faint,
-            BackdropTop = PrismArt.Back,
-            BackdropBottom = PrismArt.Back,
-            FieldSurface = Surfaces.Fill(PrismArt.Fore, FillLevel.Tertiary),
-        };
-        return inkSkin;
-    }
 
     private void DrawProfile(ImDrawListPtr drawList, Rect content, float scale)
     {
@@ -570,7 +546,7 @@ internal sealed partial class PrismApp
         var labels = new ReadOnlySpan<string>(profileTabs, 0, count);
         var picked = TabsFit(labels, row.Width, scale)
             ? DrawTabs(row, labels, active, ref profileTabSlide)
-            : profileTabRail.Draw(row, InkSkin(), labels, new ReadOnlySpan<bool>(profileTabActive, 0, count));
+            : profileTabRail.Draw(row, ui, labels, new ReadOnlySpan<bool>(profileTabActive, 0, count));
         if (picked >= 0 && picked != active)
         {
             SelectProfileTab(profileTabKinds[picked]);
@@ -833,7 +809,7 @@ internal sealed partial class PrismApp
             : Typography.MeasureWrappedBlock(hint, TextStyles.Subheadline, right - left - Metrics.Space.Xxl * scale * 2f).Y;
         var block = new Rect(new Vector2(left, top), new Vector2(right, top + EmptyStateUnits * scale + hintHeight * 2f));
         var resume = ImGui.GetCursorScreenPos();
-        EmptyState.Draw(block, InkSkin(), glyph, title, hint);
+        EmptyState.Draw(block, ui, glyph, title, hint);
         ImGui.SetCursorScreenPos(resume);
         return block.Max.Y;
     }
