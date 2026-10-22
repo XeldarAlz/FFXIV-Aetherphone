@@ -24,7 +24,9 @@ internal sealed partial class PrismApp
     private const float PlacingMedalShare = 0.75f;
     private const long CompactFrom = 10000;
     private const string MarketAppId = "market";
+    private const double UserRetrySeconds = 5d;
 
+    private double nextUserRequest;
     private bool showSaved;
     private GlamListKind listKind;
     private uint listItemId;
@@ -48,11 +50,23 @@ internal sealed partial class PrismApp
 
         if (store.CurrentUser is not { } me)
         {
-            account.EnsureCurrentUser();
+            RequestUser();
             return;
         }
 
         glams.OpenProfile(new GlamAuthorDto(me.Id, me.DisplayName, me.Handle, me.AvatarUrl ?? string.Empty), showSaved);
+    }
+
+    private void RequestUser()
+    {
+        var now = ImGui.GetTime();
+        if (now < nextUserRequest)
+        {
+            return;
+        }
+
+        nextUserRequest = now + UserRetrySeconds;
+        account.EnsureCurrentUser();
     }
 
     private bool ShowsOwnProfile() => glams.MyId.Length > 0 && glams.Profile?.User?.Id == glams.MyId;
@@ -132,6 +146,7 @@ internal sealed partial class PrismApp
         {
             if (glams.MyId.Length == 0)
             {
+                RequestUser();
                 DrawMasthead(drawList, content, Loc.T(L.Prism.TabMe), string.Empty, string.Empty, scale, out _);
                 DrawCenteredLabel(drawList, content, Loc.T(L.Common.Loading));
                 return;
