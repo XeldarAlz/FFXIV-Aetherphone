@@ -61,6 +61,7 @@ internal sealed partial class PrismApp : IResumableApp
     private const float CoverFocus = 0.25f;
     private const float BackChevronUnits = 15f;
     private const float PhotoGlyphUnits = 18f;
+    private const int LabelWidthLimit = 64;
 
     private readonly PrismStore store;
     private readonly GlamStore glams;
@@ -91,6 +92,10 @@ internal sealed partial class PrismApp : IResumableApp
     private PrismScreen screen = PrismScreen.Cover;
     private PrismScreen pickReturn = PrismScreen.Cover;
     private readonly Dictionary<string, double> loadedAt = new(StringComparer.Ordinal);
+    private readonly Dictionary<(string Label, int Fonts, float TextScale), float> labelWidths = new();
+    private PhoneTheme? followedTheme;
+    private ControlInk controls;
+    private ControlInk photoControls;
     private string loadedWeek = string.Empty;
     private bool onPhoto;
     private float screenAge;
@@ -211,6 +216,7 @@ internal sealed partial class PrismApp : IResumableApp
         var content = context.Content;
         var full = SceneChrome.ScreenFrom(content, context.Theme, scale);
         PrismArt.Follow(context.Theme);
+        FollowTheme(context.Theme);
         ImGui.GetWindowDrawList().AddRectFilled(full.Min, full.Max, ImGui.GetColorU32(PrismArt.Back));
         if (glams.IsSignedIn && screen != PrismScreen.Guide && launcher.TryConsume(Id, out var link))
         {
@@ -412,6 +418,18 @@ internal sealed partial class PrismApp : IResumableApp
         }
     }
 
+    private void FollowTheme(PhoneTheme theme)
+    {
+        if (ReferenceEquals(theme, followedTheme))
+        {
+            return;
+        }
+
+        followedTheme = theme;
+        controls = new ControlInk(PrismArt.Fore, PrismArt.Fore, PrismArt.Muted, theme.Danger);
+        photoControls = new ControlInk(PrismArt.PhotoFore, PrismArt.PhotoFore, PrismArt.PhotoMuted, theme.Danger);
+    }
+
     private float DrawBackHeader(ImDrawListPtr drawList, Rect content, string title, float scale)
     {
         var tap = Metrics.Size.TapTarget * scale;
@@ -459,6 +477,50 @@ internal sealed partial class PrismApp : IResumableApp
         {
             LeaveScreen();
         }
+    }
+
+    private float ButtonWidth(ReadOnlySpan<string> stateLabels, float cap, float scale)
+    {
+        var style = Button.LabelStyle(Button.LargeHeight * scale);
+        var textScale = Plugin.Fonts.BaseSize * Plugin.Fonts.Zoom * scale;
+        var widest = 0f;
+        for (var index = 0; index < stateLabels.Length; index++)
+        {
+            var key = (stateLabels[index], Plugin.Fonts.Generation, textScale);
+            if (!labelWidths.TryGetValue(key, out var width))
+            {
+                if (labelWidths.Count >= LabelWidthLimit)
+                {
+                    labelWidths.Clear();
+                }
+
+                width = Typography.Measure(stateLabels[index], style).X;
+                labelWidths[key] = width;
+            }
+
+            widest = MathF.Max(widest, width);
+        }
+
+        return MathF.Min(widest + Metrics.Space.Xl * scale, cap);
+    }
+
+    private bool DrawButton(ImDrawListPtr drawList, Rect rect, string label, ButtonStyle style, float scale,
+        ButtonRole role = ButtonRole.Normal, bool enabled = true, bool overlay = false, ControlInk? ink = null,
+        string? id = null)
+    {
+        var hovered = enabled && (overlay
+            ? UiInteract.HoverWindowOnly(rect.Min, rect.Max)
+            : UiInteract.Hover(rect.Min, rect.Max));
+        var face = Button.Surface(drawList, rect, ink ?? controls, style, role, enabled, hovered,
+            ImGui.GetID(id ?? label));
+        var room = MathF.Max(1f, rect.Width - Metrics.Space.Xl * scale);
+        var largest = Button.LabelStyle(rect.Height);
+        var labelStyle = new TextStyle(
+            Typography.FitScale(label, room, largest.Scale, PrismType.Caption.Scale, largest.Weight), largest.Weight);
+        var fitted = Typography.FitText(label, room, labelStyle);
+        Typography.Draw(drawList, face.Face.Center - Typography.Measure(fitted, labelStyle) * 0.5f, fitted,
+            face.LabelInk, labelStyle);
+        return enabled && UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
     private Rect DrawLook(ImDrawListPtr drawList, Rect rect, string url, bool contain, float alpha = 1f,
