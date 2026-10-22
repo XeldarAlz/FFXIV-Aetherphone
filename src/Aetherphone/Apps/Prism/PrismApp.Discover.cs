@@ -22,8 +22,6 @@ internal sealed partial class PrismApp
     private const float ContestThumbUnits = 48f;
     private const float EmptyGlyphUnits = 28f;
     private const float EmptyTextUnits = 300f;
-    private const string SearchTipId = "prism.search";
-    private const string ActivityTipId = "prism.activity";
 
     private static readonly LocString[] ScopeNames = { L.Prism.ScopeNew, L.Prism.ScopePopular, L.Prism.ScopeFollowing };
     private static readonly GlamScope[] ShownScopes = { GlamScope.New, GlamScope.Popular, GlamScope.Following };
@@ -94,12 +92,12 @@ internal sealed partial class PrismApp
         var left = content.Min.X + Metrics.Space.Lg * scale;
         DrawScopeTabs(drawList, new Rect(new Vector2(left, top),
             new Vector2(search.X - radius - Metrics.Space.Xs * scale, top + tap)), scale);
-        if (DrawHeaderIcon(drawList, search, radius, PhoneIcons.Search, SearchTipId, Loc.T(L.Common.Search)))
+        if (DrawHeaderIcon(drawList, search, radius, PhoneIcons.Search, Loc.T(L.Common.Search)))
         {
             OpenSearch();
         }
 
-        if (DrawHeaderIcon(drawList, heart, radius, PhoneIcons.Heart, ActivityTipId, Loc.T(L.Prism.Activity)))
+        if (DrawHeaderIcon(drawList, heart, radius, PhoneIcons.Heart, Loc.T(L.Prism.Activity)))
         {
             OpenActivity();
         }
@@ -137,14 +135,8 @@ internal sealed partial class PrismApp
         return chips.Max.Y + Metrics.Space.Sm * scale;
     }
 
-    private bool DrawHeaderIcon(ImDrawListPtr drawList, Vector2 center, float radius, string glyph, string tipId,
-        string tip)
-    {
-        var tapped = RoundButton.Icon(drawList, center, radius, glyph, controls, ButtonStyle.Plain);
-        var extent = new Vector2(radius, radius);
-        HoverTooltip.Show(tipId, new Rect(center - extent, center + extent), tip);
-        return tapped;
-    }
+    private bool DrawHeaderIcon(ImDrawListPtr drawList, Vector2 center, float radius, string glyph, string tip) =>
+        RoundButton.Icon(drawList, center, radius, glyph, controls, ButtonStyle.Plain, tip, HoverLabelSide.Below);
 
     private void DrawScopeTabs(ImDrawListPtr drawList, Rect row, float scale)
     {

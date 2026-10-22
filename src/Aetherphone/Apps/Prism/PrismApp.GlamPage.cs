@@ -280,7 +280,7 @@ internal sealed partial class PrismApp
 
         DrawPiecesLayer(drawList, photo, topInset, gear, scale);
         DrawPiecesChip(drawList, photo, scale);
-        if (DrawPhotoButton(drawList, photo, topInset, 0, PhoneIcons.ChevronLeft, string.Empty, scale))
+        if (DrawPhotoButton(drawList, photo, topInset, 0, PhoneIcons.ChevronLeft, Loc.T(L.Prism.Back), scale))
         {
             if (piecesOpen)
             {
@@ -292,18 +292,12 @@ internal sealed partial class PrismApp
             }
         }
 
-        var glass = Metrics.Size.GlassButton * 0.5f * scale;
-        var inset = Metrics.Space.Md * scale + glass;
-        var buttonY = photo.Min.Y + topInset + Metrics.Space.Xs * scale + glass;
-        var reach = Metrics.Size.TapTarget * 0.5f * scale;
-        Tooltip(new Vector2(photo.Min.X + inset, buttonY), reach, Loc.T(L.Prism.Back), true);
         if (glam.Id.Length == 0)
         {
             return;
         }
 
-        Tooltip(new Vector2(photo.Max.X - inset, buttonY), reach, Loc.T(L.Prism.More), true);
-        if (DrawPhotoButton(drawList, photo, topInset, 1, PhoneIcons.Dots, string.Empty, scale))
+        if (DrawPhotoButton(drawList, photo, topInset, 1, PhoneIcons.Dots, Loc.T(L.Prism.More), scale))
         {
             OpenGlamMenu(glam, key);
         }
@@ -502,12 +496,12 @@ internal sealed partial class PrismApp
             UiInteract.HoverOverlay(bar);
             drawList.AddRectFilled(bar.Min, bar.Max, ImGui.GetColorU32(PrismArt.Back));
             if (RoundButton.Icon(drawList, new Vector2(left + radius * 0.5f, top + radius), radius,
-                    PhoneIcons.ChevronLeft, controls, ButtonStyle.Plain, overlay: true) && !UiInteract.InputBlocked)
+                    PhoneIcons.ChevronLeft, controls, ButtonStyle.Plain, Loc.T(L.Prism.Back), HoverLabelSide.Below,
+                    overlay: true) && !UiInteract.InputBlocked)
             {
                 LeaveScreen();
             }
 
-            Tooltip(new Vector2(left + radius * 0.5f, top + radius), radius, Loc.T(L.Prism.Back), true);
             left += tap;
         }
 
@@ -518,13 +512,12 @@ internal sealed partial class PrismApp
             DrawLikeButton(drawList, new Vector2(left + radius * 0.5f, top + radius), radius, slot, glam, pinned, scale);
             var save = new Vector2(left + saveOffset, top + radius);
             if (RoundButton.Icon(drawList, save, radius, glam.Saved ? PhoneIcons.BookmarkFilled : PhoneIcons.Bookmark,
-                    controls, ButtonStyle.Plain, overlay: pinned) &&
+                    controls, ButtonStyle.Plain, Loc.T(glam.Saved ? L.Prism.Saved : L.Prism.Save), HoverLabelSide.Below,
+                    overlay: pinned) &&
                 !(pinned && UiInteract.InputBlocked))
             {
                 glams.ToggleSave(glam);
             }
-
-            Tooltip(save, radius, Loc.T(glam.Saved ? L.Prism.Saved : L.Prism.Save), pinned);
         }
 
         pillLabels[0] = Loc.T(L.Prism.TryOnGlam);
@@ -543,7 +536,7 @@ internal sealed partial class PrismApp
         var liked = glam.Liked;
         var mark = PrismMotion.Mark(drawList);
         if (RoundButton.Icon(drawList, center, radius, liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart, controls,
-                ButtonStyle.Plain, overlay: overlay) &&
+                ButtonStyle.Plain, Loc.T(L.Prism.Like), HoverLabelSide.Below, overlay: overlay) &&
             !(overlay && UiInteract.InputBlocked))
         {
             glams.ToggleLike(glam);
@@ -552,7 +545,6 @@ internal sealed partial class PrismApp
             likeBloomOnPhoto = false;
         }
 
-        Tooltip(center, radius, Loc.T(L.Prism.Like), overlay);
         var age = (float)(ImGui.GetTime() - likeBloomAt);
         if (glam.Id == likeBloomId && !likeBloomOnPhoto && age < LikeBloomSeconds)
         {
@@ -1029,13 +1021,12 @@ internal sealed partial class PrismApp
             OwnedState(piece.ItemId), PrismArt.Fore, PrismArt.Back, scale);
         ImGui.PushID(index);
         if (RoundButton.Icon(drawList, wand, tap * 0.5f, PhoneIcons.Wand, controls, ButtonStyle.Plain,
-                glyphInk: PrismArt.Muted))
+                Loc.T(L.Prism.TryOnPiece), HoverLabelSide.Below, glyphInk: PrismArt.Muted))
         {
             TryOnPiece(piece);
         }
 
         ImGui.PopID();
-        Tooltip(wand, tap * 0.5f, Loc.T(L.Prism.TryOnPiece), false);
         var textLeft = iconMin.X + icon + Metrics.Space.Md * scale;
         DrawRowText(drawList, textLeft, hit.Max.X - Metrics.Space.Sm * scale, row.Center.Y, name, piece, null, scale);
         if (index < pieceOrder.Length - 1)
@@ -1063,18 +1054,6 @@ internal sealed partial class PrismApp
             ImGui.GetColorU32(Surfaces.Fill(controls, FillLevel.Quaternary)), Metrics.Radius.Md * scale);
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         return true;
-    }
-
-    private static void Tooltip(Vector2 center, float radius, string label, bool overlay)
-    {
-        var rect = new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
-        var hovered = overlay
-            ? !UiInteract.InputBlocked && UiInteract.HoverWindowOnly(rect.Min, rect.Max)
-            : UiInteract.Hover(rect.Min, rect.Max);
-        if (hovered)
-        {
-            HoverTooltip.Enqueue(rect, label, 1f, HoverLabelSide.Below);
-        }
     }
 
     private void DrawRowText(ImDrawListPtr drawList, float left, float right, float middle, string name,
