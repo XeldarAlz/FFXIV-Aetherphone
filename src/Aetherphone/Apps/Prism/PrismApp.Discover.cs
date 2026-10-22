@@ -98,6 +98,7 @@ internal sealed partial class PrismApp
             if (DrawToggleLink(drawList, x, top, label, width, active, labelLine, scale) && !active)
             {
                 discoverScope = ShownScopes[index];
+                pendingScroll = 0f;
                 RefreshDiscover(false);
             }
 
@@ -122,6 +123,7 @@ internal sealed partial class PrismApp
         {
             var (race, gender) = glams.FitsBody ? (0, 0) : WornBody();
             glams.SetBody(race, gender);
+            pendingScroll = 0f;
             RefreshDiscover(true);
         }
 
@@ -162,6 +164,7 @@ internal sealed partial class PrismApp
             2 => true,
             _ => null,
         });
+        pendingScroll = 0f;
         RefreshDiscover(true);
     }
 
