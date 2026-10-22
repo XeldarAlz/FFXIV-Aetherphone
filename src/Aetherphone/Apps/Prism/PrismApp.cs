@@ -135,6 +135,7 @@ internal sealed partial class PrismApp : IResumableApp
     public string Glyph => "Pr";
     public int BadgeCount => social.UnseenCount(Id);
     public bool WantsSystemTheme => !onPhoto;
+    public HomeTileEffect TileEffect => ShowcaseEffect(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
 
     public ShareKindSet AcceptedShares => store.IsSignedIn ? ShareKindSet.Photo : ShareKindSet.None;
 
@@ -150,6 +151,12 @@ internal sealed partial class PrismApp : IResumableApp
 
     public void OnOpened()
     {
+        if (!configuration.PrismShowcaseOpened)
+        {
+            configuration.PrismShowcaseOpened = true;
+            configuration.Save();
+        }
+
         if (configuration.PrismGuideVersion < GuideVersion)
         {
             configuration.PrismGuideVersion = GuideVersion;
@@ -164,6 +171,17 @@ internal sealed partial class PrismApp : IResumableApp
         sinceRefresh = 0f;
         store.ClearBallot();
         store.Refresh();
+    }
+
+    private HomeTileEffect ShowcaseEffect(long nowUnix)
+    {
+        if (configuration.PrismShowcaseEndsAtUnix == 0)
+        {
+            configuration.PrismShowcaseEndsAtUnix = nowUnix + PrismShowcase.Seconds;
+            configuration.Save();
+        }
+
+        return PrismShowcase.Effect(configuration.PrismShowcaseEndsAtUnix, configuration.PrismShowcaseOpened, nowUnix);
     }
 
     public void OnResumed()
