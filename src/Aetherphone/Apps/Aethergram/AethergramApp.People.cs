@@ -9,7 +9,6 @@ namespace Aetherphone.Apps.Aethergram;
 internal sealed partial class AethergramApp
 {
     private const float PeopleListEmptyTop = 60f;
-    private const float PeopleSearchHeight = 52f;
 
     private readonly UserListSearch userListSearch = new();
 
@@ -24,7 +23,7 @@ internal sealed partial class AethergramApp
         if (searchable)
         {
             var searchRect = new Rect(new Vector2(area.Min.X + CellPadX * scale, top),
-                new Vector2(area.Max.X - CellPadX * scale, top + PeopleSearchHeight * scale));
+                new Vector2(area.Max.X - CellPadX * scale, top + InboxSearchHeight * scale));
             SearchField.Draw(searchRect, "##aethergramUserListSearch", Loc.T(L.Social.ListSearchHint),
                 ref userListSearch.Draft, AethergramInk.CurrentPalette, UserListSearch.MaxLength);
             userListSearch.Update(store, sourceId, kind, ImGui.GetTime());
@@ -43,9 +42,13 @@ internal sealed partial class AethergramApp
         {
             if (snapshot.Length == 0)
             {
-                var message = store.UserListLoading ? Loc.T(L.Common.Loading)
-                    : store.UserListFailed ? Loc.T(L.Aethergram.ProfileError)
-                    : Loc.T(L.Social.ListEmpty);
+                if (store.UserListFailed)
+                {
+                    UserListSearch.DrawFailure(listRect, store, ui);
+                    return;
+                }
+
+                var message = store.UserListLoading ? Loc.T(L.Common.Loading) : Loc.T(L.Social.ListEmpty);
                 Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + PeopleListEmptyTop * scale),
                     message, Ink.MutedInk);
                 return;
@@ -54,6 +57,11 @@ internal sealed partial class AethergramApp
             ImGui.Dummy(new Vector2(0f, 4f * scale));
             for (var index = 0; index < snapshot.Length; index++)
             {
+                if (SocialUserRow.SkipHidden(UserRowStyle))
+                {
+                    continue;
+                }
+
                 DrawUserRowWithFollow(snapshot[index]);
             }
 
@@ -78,6 +86,12 @@ internal sealed partial class AethergramApp
         {
             if (matches.Count == 0)
             {
+                if (UserListSearch.Failed(store))
+                {
+                    UserListSearch.DrawFailure(listRect, store, ui);
+                    return;
+                }
+
                 Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + PeopleListEmptyTop * scale),
                     UserListSearch.EmptyMessage(store), Ink.MutedInk);
                 return;
@@ -86,6 +100,11 @@ internal sealed partial class AethergramApp
             ImGui.Dummy(new Vector2(0f, 4f * scale));
             for (var index = 0; index < matches.Count; index++)
             {
+                if (SocialUserRow.SkipHidden(UserRowStyle))
+                {
+                    continue;
+                }
+
                 DrawUserRowWithFollow(matches[index]);
             }
 
@@ -94,6 +113,7 @@ internal sealed partial class AethergramApp
                 InfiniteScroll.DrawLoadingRow(listRect.Center.X, Ink.MutedInk);
             }
 
+            UserListSearch.DrawStalledFooter(store, ui, Ink.MutedInk);
             var cappedNote = userListSearch.CappedNote(store);
             if (cappedNote.Length > 0)
             {

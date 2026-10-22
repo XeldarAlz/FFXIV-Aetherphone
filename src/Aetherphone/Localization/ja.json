@@ -243,6 +243,7 @@
   "social.listSearchHint": "名前またはハンドルで検索",
   "social.listSearchNoMatches": "その名前に一致する人はいません",
   "social.listSearchCapped": "最初の{0}人から検索しました",
+  "social.listSearchStalled": "リストの一部を読み込めなかったため、表示されていない人がいる可能性があります。",
   "social.mutualsTitle": "共通のフォロワー",
   "social.followsYou": "フォローされています",
   "social.followedByOne": "{0}がフォローしています",

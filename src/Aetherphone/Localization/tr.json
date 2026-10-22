@@ -243,6 +243,7 @@
   "social.listSearchHint": "Ad veya kullanıcı adıyla ara",
   "social.listSearchNoMatches": "Bu adla eşleşen kimse yok",
   "social.listSearchCapped": "İlk {0} kişi arandı",
+  "social.listSearchStalled": "Bu listenin bir kısmı yüklenemedi, bu yüzden bazı kişiler eksik olabilir.",
   "social.mutualsTitle": "Tanıdığın takipçiler",
   "social.followsYou": "Seni takip ediyor",
   "social.followedByOne": "{0} takip ediyor",

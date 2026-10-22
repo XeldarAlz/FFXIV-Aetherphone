@@ -243,6 +243,7 @@
   "social.listSearchHint": "Rechercher par nom ou pseudo",
   "social.listSearchNoMatches": "Personne ne correspond à ce nom",
   "social.listSearchCapped": "Recherche limitée aux {0} premières personnes",
+  "social.listSearchStalled": "Une partie de cette liste n'a pas pu être chargée, certaines personnes peuvent donc manquer.",
   "social.mutualsTitle": "Suivi(e) par",
   "social.followsYou": "Vous suit",
   "social.followedByOne": "Suivi(e) par {0}",

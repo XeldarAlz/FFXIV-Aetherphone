@@ -243,6 +243,7 @@
   "social.listSearchHint": "按名称或用户名搜索",
   "social.listSearchNoMatches": "没有人匹配该名称",
   "social.listSearchCapped": "已搜索前 {0} 人",
+  "social.listSearchStalled": "此列表的部分内容未能加载，因此可能缺少一些人。",
   "social.mutualsTitle": "你认识的粉丝",
   "social.followsYou": "关注了你",
   "social.followedByOne": "{0} 也关注了 TA",

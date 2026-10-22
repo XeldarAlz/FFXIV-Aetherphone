@@ -243,6 +243,7 @@
   "social.listSearchHint": "Поиск по имени или нику",
   "social.listSearchNoMatches": "Никто не подходит под это имя",
   "social.listSearchCapped": "Поиск по первым {0} людям",
+  "social.listSearchStalled": "Часть списка не загрузилась, поэтому некоторые люди могут отсутствовать.",
   "social.mutualsTitle": "Знакомые подписчики",
   "social.followsYou": "Подписан(а) на вас",
   "social.followedByOne": "Среди подписчиков {0}",

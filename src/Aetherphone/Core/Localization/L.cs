@@ -135,6 +135,8 @@ internal static class L
         public static readonly LocString ListSearchHint = new("social.listSearchHint", "Search by name or handle");
         public static readonly LocString ListSearchNoMatches = new("social.listSearchNoMatches", "No one matches that name");
         public static readonly LocString ListSearchCapped = new("social.listSearchCapped", "Searched the first {0} people");
+        public static readonly LocString ListSearchStalled =
+            new("social.listSearchStalled", "Part of this list did not load, so some people may be missing.");
         public static readonly LocString MutualsTitle = new("social.mutualsTitle", "Followed by");
         public static readonly LocString FollowsYou = new("social.followsYou", "Follows you");
         public static readonly LocString FollowedByOne = new("social.followedByOne", "Followed by {0}");

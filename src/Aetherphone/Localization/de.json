@@ -243,6 +243,7 @@
   "social.listSearchHint": "Nach Name oder Handle suchen",
   "social.listSearchNoMatches": "Niemand passt zu diesem Namen",
   "social.listSearchCapped": "Die ersten {0} Personen durchsucht",
+  "social.listSearchStalled": "Ein Teil dieser Liste wurde nicht geladen, daher fehlen eventuell einige Personen.",
   "social.mutualsTitle": "Gefolgt von",
   "social.followsYou": "Folgt dir",
   "social.followedByOne": "Gefolgt von {0}",
