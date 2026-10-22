@@ -34,7 +34,6 @@ internal sealed partial class PrismApp
     private readonly PullToRefresh discoverPull = new();
     private readonly ChipRail scopeRail = new();
     private readonly ChipRail filterRail = new();
-    private readonly AppSkin chipSkin = new(AppPalettes.Neutral(PrismArt.Fore));
     private readonly string[] scopeLabels = new string[ScopeNames.Length];
     private readonly bool[] scopeActive = new bool[ScopeNames.Length];
     private readonly string[] filterLabels = new string[FilterNames.Length];
@@ -122,7 +121,7 @@ internal sealed partial class PrismApp
             filterActive[index] = index == 0 ? glams.FitsBody : discoverFilter == index;
         }
 
-        var tapped = filterRail.Draw(chips, ChipSkin(), filterLabels, filterActive);
+        var tapped = filterRail.Draw(chips, ui, filterLabels, filterActive);
         if (tapped == 0)
         {
             var (race, gender) = glams.FitsBody ? (0, 0) : WornBody();
@@ -136,19 +135,6 @@ internal sealed partial class PrismApp
         }
 
         return chips.Max.Y + Metrics.Space.Sm * scale;
-    }
-
-    private AppSkin ChipSkin()
-    {
-        chipSkin.Palette = chipSkin.Palette with
-        {
-            Accent = PrismArt.Fore,
-            TitleInk = PrismArt.Fore,
-            BodyInk = PrismArt.Fore,
-            MutedInk = PrismArt.Muted,
-            BackdropTop = PrismArt.Back,
-        };
-        return chipSkin;
     }
 
     private bool DrawHeaderIcon(ImDrawListPtr drawList, Vector2 center, float radius, string glyph, string tipId,
@@ -176,7 +162,7 @@ internal sealed partial class PrismApp
         {
             var half = ChipRail.RowHeight * scale * 0.5f;
             picked = scopeRail.Draw(new Rect(new Vector2(row.Min.X, row.Center.Y - half),
-                new Vector2(row.Max.X, row.Center.Y + half)), ChipSkin(), scopeLabels, scopeActive);
+                new Vector2(row.Max.X, row.Center.Y + half)), ui, scopeLabels, scopeActive);
         }
         else
         {
