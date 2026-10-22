@@ -532,7 +532,7 @@ internal sealed partial class PrismApp : IResumableApp
 
     private bool DrawButton(ImDrawListPtr drawList, Rect rect, string label, ButtonStyle style, float scale,
         ButtonRole role = ButtonRole.Normal, bool enabled = true, bool overlay = false, ControlInk? ink = null,
-        string? id = null)
+        string? id = null, UiSound tapSound = UiSound.Tap)
     {
         var hovered = enabled && (overlay
             ? UiInteract.HoverWindowOnly(rect.Min, rect.Max)
@@ -546,7 +546,7 @@ internal sealed partial class PrismApp : IResumableApp
         var fitted = Typography.FitText(label, room, labelStyle);
         Typography.Draw(drawList, face.Face.Center - Typography.Measure(fitted, labelStyle) * 0.5f, fitted,
             face.LabelInk, labelStyle);
-        return enabled && UiInteract.Click(rect.Min, rect.Max, hovered);
+        return enabled && UiInteract.Click(rect.Min, rect.Max, hovered, tapSound);
     }
 
     private int DrawTabs(Rect row, ReadOnlySpan<string> labels, int active, ref Spring slide) =>
