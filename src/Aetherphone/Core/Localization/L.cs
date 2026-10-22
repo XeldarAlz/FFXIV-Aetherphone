@@ -11088,6 +11088,17 @@ internal static class L
         public static readonly LocString Published = new("prism.published", "Published");
         public static readonly LocString NothingToSave = new("prism.nothingToSave", "Nothing equipped to save right now");
         public static readonly LocString FavouritesEmptyHint = new("prism.favouritesEmptyHint", "Tap Favourite on an outfit and it shows up here.");
+        public static readonly LocString SignInBrowse = new("prism.signInBrowse",
+            "Sign in to Aethernet to browse glams from other players, try them on and enter the weekly contest. Your wardrobe works without signing in.");
+        public static readonly LocString ContestCloses = new("prism.contestCloses", "This week · closes {0}");
+        public static readonly LocString ContestJudgingCloses = new("prism.contestJudgingCloses", "Judging closes {0}");
+        public static readonly LocString Enter = new("prism.enter", "Enter");
+        public static readonly LocString SeeTagGlams = new("prism.seeTagGlams", "See glams with this tag");
+        public static readonly LocString EmptyFeedTitle = new("prism.emptyFeedTitle", "No glams yet");
+        public static readonly LocString EmptyFeedHint = new("prism.emptyFeedHint",
+            "Post the one you're wearing and be the first.");
+        public static readonly LocString FollowingEmptyTitle = new("prism.followingEmptyTitle",
+            "Nothing from people you follow");
     }
 
     internal static class Announcements

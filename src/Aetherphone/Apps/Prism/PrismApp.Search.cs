@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Market;
@@ -12,35 +13,80 @@ internal sealed partial class PrismApp
     private const int SearchLimit = 12;
     private const int SearchScan = 400;
     private const int QueryMaxLength = 60;
+    private const int TagTiles = 3;
+    private const int SearchScrollId = 1;
+    private const float SearchRowUnits = 56f;
+    private const float SearchIconUnits = 40f;
+    private const float SearchGlyphUnits = 16f;
+    private const float CancelShare = 0.4f;
+    private const double TagFetchSeconds = 0.35;
 
     private readonly List<MarketItemRef> searchHits = new();
     private readonly List<MarketItemRef> searchFound = new();
+    private readonly List<string> searchCaptions = new();
     private string discoverQuery = string.Empty;
     private string searchedFor = string.Empty;
     private string searchTag = string.Empty;
+    private string searchTagKey = string.Empty;
     private string searchTagLabel = string.Empty;
+    private string searchTagTitle = string.Empty;
     private string searchLanguage = string.Empty;
+    private string tagGlamsFor = string.Empty;
+    private GlamDto[] tagGlams = Array.Empty<GlamDto>();
+    private double searchChangedAt;
     private bool searchItems;
     private bool searchIndexed;
-    private bool searching;
+    private bool searchOpen;
+    private bool searchFocus;
 
-    private float DrawSearchRow(ImDrawListPtr drawList, float left, float right, float top, float scale)
+    private void OpenSearch()
     {
-        var labelPixels = PrismArt.LabelPixels();
+        searchOpen = true;
+        searchFocus = true;
+    }
+
+    private void DrawSearch(ImDrawListPtr drawList, Rect content, float scale)
+    {
+        var tap = Metrics.Size.TapTarget * scale;
+        var top = content.Min.Y + Metrics.Space.Xs * scale;
         var cancel = Loc.T(L.Common.Cancel);
-        var cancelWidth = PrismType.Measure(cancel, PrismFace.Label, labelPixels).X;
-        var room = right - left - (searching ? cancelWidth + Metrics.Space.Md * scale : 0f);
-        var bottom = DrawInput(drawList, left, top, room, Loc.T(L.Prism.SearchHint), "##glamSearch", ref discoverQuery,
-            QueryMaxLength, scale);
-        if (searching && PrismArt.Link(drawList, new Vector2(right - cancelWidth,
-                top + (FieldUnits * scale - PrismType.LineHeight(PrismFace.Label, labelPixels)) * 0.5f), cancel,
-                PrismArt.Muted, scale))
+        var right = content.Max.X - Metrics.Space.Sm * scale;
+        var cancelRect = new Rect(new Vector2(right - ButtonWidth([cancel], content.Width * CancelShare, scale), top),
+            new Vector2(right, top + tap));
+        if (DrawButton(drawList, cancelRect, cancel, ButtonStyle.Plain, scale))
         {
             discoverQuery = string.Empty;
+            searchOpen = false;
+            return;
         }
 
+        var field = new Rect(new Vector2(content.Min.X + Metrics.Space.Lg * scale, top),
+            new Vector2(cancelRect.Min.X, top + tap));
+        SearchBar.Surface(drawList, field, controls);
+        var inset = Metrics.Space.Md * scale;
+        var glyph = SearchGlyphUnits * scale;
+        PhoneIcon.Draw(drawList, new Vector2(field.Min.X + inset + glyph * 0.5f, field.Center.Y), PhoneIcons.Search,
+            PrismArt.Muted, glyph);
+        if (searchFocus)
+        {
+            ImGui.SetKeyboardFocusHere();
+            searchFocus = false;
+        }
+
+        GlassField.Text(field, "##glamSearch", Loc.T(L.Prism.SearchHint), ref discoverQuery, PrismArt.Fore,
+            PrismArt.Muted, inset + glyph + Metrics.Space.Sm * scale, QueryMaxLength);
         UpdateSearch();
-        return bottom + Metrics.Space.Md * scale;
+        UpdateTagGlams();
+        ImGui.PushID(SearchScrollId);
+        try
+        {
+            DrawSearchBody(new Rect(new Vector2(content.Min.X, field.Max.Y + Metrics.Space.Xs * scale), content.Max),
+                scale);
+        }
+        finally
+        {
+            ImGui.PopID();
+        }
     }
 
     private void UpdateSearch()
@@ -51,18 +97,23 @@ internal sealed partial class PrismApp
             return;
         }
 
+        if (discoverQuery != searchedFor)
+        {
+            searchChangedAt = ImGui.GetTime();
+        }
+
         searchedFor = discoverQuery;
         searchIndexed = marketIndex.Ready;
         searchLanguage = Loc.Current.Code;
         searchFound.Clear();
+        searchCaptions.Clear();
         var query = discoverQuery.Trim();
-        searching = query.Length > 0;
-        searchItems = searching && query[0] != '#';
+        searchItems = query.Length > 0 && query[0] != '#';
         var word = query.TrimStart('#').Trim().ToLowerInvariant();
         searchTag = word.Length > 0 && (query[0] == '#' || word.IndexOf(' ') < 0) ? word : string.Empty;
-        searchTagLabel = searchTag.Length > 0
-            ? Loc.T(L.Prism.GlamsTagged, string.Concat("#", searchTag))
-            : string.Empty;
+        searchTagKey = searchTag.Length > 0 ? "tag:" + searchTag : string.Empty;
+        searchTagLabel = searchTag.Length > 0 ? "#" + searchTag : string.Empty;
+        searchTagTitle = searchTag.Length > 0 ? Loc.T(L.Prism.GlamsTagged, searchTagLabel) : string.Empty;
         if (!searchItems)
         {
             return;
@@ -70,59 +121,154 @@ internal sealed partial class PrismApp
 
         marketIndex.EnsureBuilt();
         marketIndex.Search(query, searchHits, SearchScan);
+        var tradeable = Loc.T(L.Collections.Tradeable);
         for (var index = 0; index < searchHits.Count && searchFound.Count < SearchLimit; index++)
         {
-            if (gameData.EquipSlot(searchHits[index].Id) != GearSlots.None)
+            var hit = searchHits[index];
+            if (gameData.EquipSlot(hit.Id) == GearSlots.None)
             {
-                searchFound.Add(searchHits[index]);
+                continue;
             }
+
+            searchFound.Add(hit);
+            searchCaptions.Add(hit.Category.Length > 0 ? Loc.T(L.Prism.WithTrack, hit.Category, tradeable) : tradeable);
         }
     }
 
-    private float DrawSearchResults(ImDrawListPtr drawList, float left, float top, float width, float scale)
+    private void UpdateTagGlams()
     {
-        var labelPixels = PrismArt.LabelPixels();
-        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
-        var icon = GearIconUnits * scale;
-        var row = icon + Metrics.Space.Md * scale;
+        if (searchTag.Length == 0 || tagGlamsFor == searchTag)
+        {
+            return;
+        }
+
+        if (glams.ListKey == searchTagKey)
+        {
+            if (!glams.List.Loading)
+            {
+                tagGlams = glams.List.Items;
+                tagGlamsFor = searchTag;
+            }
+
+            return;
+        }
+
+        if (ImGui.GetTime() - searchChangedAt >= TagFetchSeconds)
+        {
+            glams.OpenTag(searchTag);
+        }
+    }
+
+    private void DrawSearchBody(Rect body, float scale)
+    {
+        using var surface = BeginBody(body);
+        var list = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ScrollLayout.StableContentWidth();
+        var inset = Metrics.Space.Lg * scale;
+        var icon = SearchIconUnits * scale;
+        var textLeft = origin.X + inset + icon + Metrics.Space.Md * scale;
+        var top = origin.Y;
         if (searchTag.Length > 0)
         {
-            var tagTop = top + (row - labelLine) * 0.5f;
-            if (PrismArt.Link(drawList, new Vector2(left, tagTop),
-                    PrismType.FitLabel(searchTagLabel, labelPixels, width), PrismArt.Fore, scale, row))
+            var row = SearchRow(origin.X, top, width, scale);
+            if (DrawSearchRow(list, row, textLeft, searchTagLabel, Loc.T(L.Prism.SeeTagGlams), scale))
             {
                 OpenTagGlams(searchTag);
             }
 
-            top += row;
-            PrismArt.Hairline(drawList, left, left + width, top, PrismArt.Faint, scale);
+            var tile = new Rect(new Vector2(origin.X + inset, row.Center.Y - icon * 0.5f),
+                new Vector2(origin.X + inset + icon, row.Center.Y + icon * 0.5f));
+            Squircle.Fill(list, tile.Min, tile.Max, Metrics.Radius.Sm * scale,
+                ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Tertiary)));
+            PhoneIcon.Draw(list, tile.Center, PhoneIcons.Hash, PrismArt.Fore, SearchGlyphUnits * scale);
+            top = row.Max.Y;
+        }
+
+        if (searchFound.Count > 0)
+        {
+            top = DrawSearchCaption(list, origin.X + inset, top + Metrics.Space.Md * scale, Loc.T(L.Prism.GearHeading));
         }
 
         for (var index = 0; index < searchFound.Count; index++)
         {
             var item = searchFound[index];
-            var iconTop = top + (row - icon) * 0.5f;
-            GameIconTile.Draw(drawList, textures, item.IconId, new Vector2(left, iconTop),
-                new Vector2(left + icon, iconTop + icon), 0f, scale);
-            var textLeft = left + icon + Metrics.Space.Md * scale;
-            if (PrismArt.Link(drawList, new Vector2(textLeft, top + (row - labelLine) * 0.5f),
-                    PrismType.FitLabel(item.Name, labelPixels, left + width - textLeft), PrismArt.Fore, scale, row))
+            var row = SearchRow(origin.X, top, width, scale);
+            top = row.Max.Y;
+            if (!ImGui.IsRectVisible(row.Min, row.Max))
+            {
+                continue;
+            }
+
+            if (DrawSearchRow(list, row, textLeft, item.Name, searchCaptions[index], scale))
             {
                 OpenItemGlams(item.Id);
             }
 
-            top += row;
-            PrismArt.Hairline(drawList, left, left + width, top, PrismArt.Faint, scale);
+            var iconTop = row.Center.Y - icon * 0.5f;
+            GameIconTile.Draw(list, textures, item.IconId, new Vector2(origin.X + inset, iconTop),
+                new Vector2(origin.X + inset + icon, iconTop + icon), 0f, scale);
         }
 
-        if (searchItems && searchFound.Count == 0)
+        if (searchItems && searchFound.Count == 0 && (searchTag.Length == 0 || !marketIndex.Ready))
         {
-            PrismType.Draw(drawList, new Vector2(left, top + Metrics.Space.Md * scale),
-                Loc.T(marketIndex.Ready ? L.Prism.NoMatches : L.Common.Loading), PrismArt.Muted, PrismFace.Label,
-                labelPixels);
-            top += labelLine + Metrics.Space.Md * scale;
+            top = DrawSearchCaption(list, origin.X + inset, top + Metrics.Space.Md * scale,
+                Loc.T(marketIndex.Ready ? L.Prism.NoMatches : L.Common.Loading));
         }
 
-        return top + PrismArt.BottomMargin(scale);
+        top = DrawTagStrip(list, origin.X, top, width, scale);
+        ImGui.Dummy(new Vector2(width, top - origin.Y + PrismArt.BottomMargin(scale)));
+    }
+
+    private static Rect SearchRow(float left, float top, float width, float scale) =>
+        new(new Vector2(left, top), new Vector2(left + width, top + SearchRowUnits * scale));
+
+    private static float DrawSearchCaption(ImDrawListPtr drawList, float left, float top, string text)
+    {
+        Typography.Draw(drawList, new Vector2(left, top), text, PrismArt.Muted, PrismType.Caption);
+        return top + Typography.LineHeight(PrismType.Caption);
+    }
+
+    private static bool DrawSearchRow(ImDrawListPtr drawList, Rect row, float textLeft, string title, string caption,
+        float scale)
+    {
+        var hovered = HoverWash(drawList, row);
+
+        var room = MathF.Max(1f, row.Max.X - Metrics.Space.Lg * scale - textLeft);
+        var titleLine = Typography.LineHeight(PrismType.Headline);
+        var y = row.Center.Y - (titleLine + Typography.LineHeight(PrismType.Caption)) * 0.5f;
+        Typography.Draw(drawList, new Vector2(textLeft, y), Typography.FitText(title, room, PrismType.Headline),
+            PrismArt.Fore, PrismType.Headline);
+        Typography.Draw(drawList, new Vector2(textLeft, y + titleLine),
+            Typography.FitText(caption, room, PrismType.Caption),
+            PrismArt.Muted, PrismType.Caption);
+        FeedCell.Hairline(drawList, textLeft, row.Max.X, row.Max.Y, PrismArt.Faint);
+        return UiInteract.Click(row.Min, row.Max, hovered);
+    }
+
+    private float DrawTagStrip(ImDrawListPtr drawList, float left, float top, float width, float scale)
+    {
+        if (searchTag.Length == 0 || tagGlamsFor != searchTag || tagGlams.Length == 0)
+        {
+            return top;
+        }
+
+        top = DrawSearchCaption(drawList, left + Metrics.Space.Lg * scale, top + Metrics.Space.Lg * scale,
+            searchTagTitle) + Metrics.Space.Xs * scale;
+        var gap = Metrics.Space.Xxs * scale;
+        var tile = (width - gap * (TagTiles + 1)) / TagTiles;
+        var height = tile / GlamStore.PhotoRatio;
+        for (var index = 0; index < TagTiles && index < tagGlams.Length; index++)
+        {
+            var x = left + gap + index * (tile + gap);
+            var photo = new Rect(new Vector2(x, top), new Vector2(x + tile, top + height));
+            DrawLook(drawList, photo, Cover(tagGlams[index]), false);
+            if (UiInteract.Click(photo.Min, photo.Max, HoverWash(drawList, photo)))
+            {
+                OpenGlam(tagGlams[index]);
+            }
+        }
+
+        return top + height;
     }
 }
