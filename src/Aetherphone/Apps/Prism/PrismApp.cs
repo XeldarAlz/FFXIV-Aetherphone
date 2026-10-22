@@ -362,27 +362,9 @@ internal sealed partial class PrismApp : IResumableApp
         float height;
         if (back)
         {
-            var backClicked = PrismArt.Link(drawList, row.Min, Loc.T(L.Prism.Back), PrismArt.Muted, scale);
-            if (backClicked && screen == PrismScreen.Compose && composeDetails)
+            if (PrismArt.Link(drawList, row.Min, Loc.T(L.Prism.Back), PrismArt.Muted, scale))
             {
-                composeDetails = false;
-            }
-            else if (backClicked && IsLibraryScreen(screen))
-            {
-                GoBack();
-            }
-            else if (backClicked && screen is PrismScreen.GearSearch or PrismScreen.DyePick)
-            {
-                BackToOutfit();
-            }
-            else if (backClicked)
-            {
-                Go(screen switch
-                {
-                    PrismScreen.Pick => pickReturn,
-                    PrismScreen.Outfit => outfitReturn,
-                    _ => PrismScreen.Cover,
-                }, -1);
+                LeaveScreen();
             }
 
             height = PrismType.LineHeight(PrismFace.Label, PrismArt.LabelPixels());
@@ -400,6 +382,31 @@ internal sealed partial class PrismApp : IResumableApp
         var rule = top + height + HeaderGapUnits * 0.5f * scale;
         PrismArt.Hairline(drawList, row.Min.X, row.Max.X, rule, PrismArt.Fore, scale);
         return rule + HeaderGapUnits * scale;
+    }
+
+    private void LeaveScreen()
+    {
+        if (screen == PrismScreen.Compose && composeDetails)
+        {
+            composeDetails = false;
+        }
+        else if (IsLibraryScreen(screen))
+        {
+            GoBack();
+        }
+        else if (screen is PrismScreen.GearSearch or PrismScreen.DyePick)
+        {
+            BackToOutfit();
+        }
+        else
+        {
+            Go(screen switch
+            {
+                PrismScreen.Pick => pickReturn,
+                PrismScreen.Outfit => outfitReturn,
+                _ => PrismScreen.Cover,
+            }, -1);
+        }
     }
 
     private Rect DrawLook(ImDrawListPtr drawList, Rect rect, string url, bool contain, float alpha = 1f,
