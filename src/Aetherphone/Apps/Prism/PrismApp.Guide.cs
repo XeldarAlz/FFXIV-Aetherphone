@@ -220,7 +220,8 @@ internal sealed partial class PrismApp
         var fill = PrismMotion.At(screenAge, GuideFillDelay, Motion.Sheet);
         PrismArt.Swatch(drawList, frame, 1);
         drawList.AddRectFilled(frame.Min, frame.Max, ImGui.GetColorU32(Palette.WithAlpha(PrismArt.Back, 1f - fill)));
-        drawList.AddRect(frame.Min, frame.Max, ImGui.GetColorU32(PrismArt.Faint), 0f, ImDrawFlags.None, 1f);
+        drawList.AddRect(frame.Min, frame.Max, ImGui.GetColorU32(PrismArt.Faint), 0f,
+            ImDrawFlags.None, PrismArt.HairlineWidth(scale));
         var plus = frame.Width * PlateNumeralShare;
         var size = PrismType.Measure("+", PrismFace.Headline, plus);
         PrismType.Draw(drawList, frame.Center - size * 0.5f, "+",
@@ -249,7 +250,7 @@ internal sealed partial class PrismApp
         var icon = height * PlateIconShare;
         var iconTop = top + (height - icon) * 0.5f;
         drawList.AddRect(new Vector2(left, iconTop), new Vector2(left + icon, iconTop + icon),
-            ImGui.GetColorU32(PrismArt.Faint), 0f, ImDrawFlags.None, 1f);
+            ImGui.GetColorU32(PrismArt.Faint), 0f, ImDrawFlags.None, PrismArt.HairlineWidth(UiScale.Current));
         var barLeft = left + icon + height * PlateIconShare * 0.4f;
         var barHeight = height * PlateBarShare * 2f;
         var barTop = top + height * 0.5f - barHeight;
@@ -272,7 +273,8 @@ internal sealed partial class PrismApp
         var worn = PrismMotion.At(screenAge, GuideFillDelay, Motion.Sheet);
         PrismArt.Swatch(drawList, frame, 4);
         drawList.AddRectFilled(frame.Min, frame.Max, ImGui.GetColorU32(Palette.WithAlpha(PrismArt.Back, 1f - worn)));
-        drawList.AddRect(frame.Min, frame.Max, ImGui.GetColorU32(PrismArt.Faint), 0f, ImDrawFlags.None, 1f);
+        drawList.AddRect(frame.Min, frame.Max, ImGui.GetColorU32(PrismArt.Faint), 0f,
+            ImDrawFlags.None, PrismArt.HairlineWidth(scale));
         var rowsLeft = frame.Max.X + gap;
         var rowHeight = frame.Height / (PlateRows + 1);
         for (var index = 0; index < PlateRows; index++)
@@ -302,7 +304,8 @@ internal sealed partial class PrismApp
             PrismArt.Swatch(drawList, frame, index + 5);
             var hidden = 1f - Math.Clamp(shown - index, 0f, 1f);
             drawList.AddRectFilled(frame.Min, frame.Max, ImGui.GetColorU32(Palette.WithAlpha(PrismArt.Back, hidden)));
-            drawList.AddRect(frame.Min, frame.Max, ImGui.GetColorU32(PrismArt.Faint), 0f, ImDrawFlags.None, 1f);
+            drawList.AddRect(frame.Min, frame.Max, ImGui.GetColorU32(PrismArt.Faint), 0f,
+                ImDrawFlags.None, PrismArt.HairlineWidth(scale));
         }
 
         var labelPixels = PrismArt.LabelPixels();
@@ -336,7 +339,8 @@ internal sealed partial class PrismApp
                 var iconMin = new Vector2(min.X + pad + piece % 2 * (icon + pad * 0.5f),
                     min.Y + pad + piece / 2 * (icon + pad * 0.5f));
                 drawList.AddRect(iconMin, iconMin + new Vector2(icon, icon),
-                    ImGui.GetColorU32(Palette.WithAlpha(PrismArt.PhotoFore, PlateBarFaint)), 0f, ImDrawFlags.None, 1f);
+                    ImGui.GetColorU32(Palette.WithAlpha(PrismArt.PhotoFore, PlateBarFaint)), 0f,
+                        ImDrawFlags.None, PrismArt.HairlineWidth(scale));
             }
 
             var barHeight = tileHeight * PlateBarShare * 0.6f;
@@ -367,7 +371,7 @@ internal sealed partial class PrismApp
             var max = new Vector2(min.X + cellWidth, row.Max.Y);
             var share = index + 1 == GuideChosenScore ? fill : 0f;
             drawList.AddRect(min, max, ImGui.GetColorU32(share > 0f ? PrismArt.Fore : PrismArt.Faint), 0f,
-                ImDrawFlags.None, 1f);
+                ImDrawFlags.None, PrismArt.HairlineWidth(scale));
             if (share > 0f)
             {
                 drawList.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(PrismArt.Fore, share)));
@@ -408,7 +412,7 @@ internal sealed partial class PrismApp
             PrismType.Draw(drawList, new Vector2(heat.Center.X - size.X * 0.5f, heat.Max.Y), letter, PrismArt.Muted,
                 PrismFace.Label, labelPixels);
             drawList.AddLine(new Vector2(heat.Center.X, heat.Max.Y + labelLine),
-                new Vector2(final.Center.X, final.Min.Y), link, 1f);
+                new Vector2(final.Center.X, final.Min.Y), link, PrismArt.HairlineWidth(scale));
         }
 
         PrismArt.Swatch(drawList, final, 0);

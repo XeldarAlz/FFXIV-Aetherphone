@@ -272,7 +272,7 @@ internal sealed partial class PrismApp
             var max = new Vector2(min.X + thumb, min.Y + thumb / GlamStore.PhotoRatio);
             DrawLook(drawList, new Rect(min, max), photos[index].Url, false);
             drawList.AddRect(min, max, ImGui.GetColorU32(index == photoIndex ? PrismArt.Fore : PrismArt.Faint), 0f,
-                ImDrawFlags.None, 1f);
+                ImDrawFlags.None, PrismArt.HairlineWidth(scale));
             var hovered = UiInteract.Hover(min, max);
             if (UiInteract.Click(min, max, hovered))
             {

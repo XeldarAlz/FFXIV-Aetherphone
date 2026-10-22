@@ -451,7 +451,8 @@ internal sealed partial class PrismApp
             false, scale);
         var card = new Rect(new Vector2(left, top),
             new Vector2(left + width, MathF.Max(thumb.Max.Y, factsTop + factsHeight) + pad));
-        drawList.AddRect(card.Min, card.Max, ImGui.GetColorU32(PrismArt.Faint), 0f, ImDrawFlags.None, 1f);
+        drawList.AddRect(card.Min, card.Max, ImGui.GetColorU32(PrismArt.Faint), 0f,
+            ImDrawFlags.None, PrismArt.HairlineWidth(scale));
         DrawLook(drawList, thumb, results.MyImageUrl, false);
         var textTop = top + pad;
         PrismType.Draw(drawList, new Vector2(textLeft, textTop), Loc.T(L.Prism.YourPlacing), PrismArt.Muted,

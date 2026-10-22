@@ -127,9 +127,10 @@ internal static class PrismArt
             ImGui.GetColorU32(ShadeMid), ImGui.GetColorU32(ShadeDeep), ImGui.GetColorU32(ShadeDeep));
     }
 
+    public static float HairlineWidth(float scale) => MathF.Max(1f, Metrics.Stroke.Hairline * scale);
+
     public static void Hairline(ImDrawListPtr drawList, float left, float right, float y, Vector4 color, float scale) =>
-        drawList.AddLine(new Vector2(left, y), new Vector2(right, y), ImGui.GetColorU32(color),
-            MathF.Max(1f, Metrics.Stroke.Hairline * scale));
+        drawList.AddLine(new Vector2(left, y), new Vector2(right, y), ImGui.GetColorU32(color), HairlineWidth(scale));
 
     public static float Programme(ImDrawListPtr drawList, Rect row, string left, string right, Vector4 color)
     {
@@ -157,7 +158,8 @@ internal static class PrismArt
         }
         else
         {
-            drawList.AddRect(rect.Min, rect.Max, ImGui.GetColorU32(fill), 0f, ImDrawFlags.None, 1f);
+            drawList.AddRect(rect.Min, rect.Max, ImGui.GetColorU32(fill), 0f, ImDrawFlags.None,
+                HairlineWidth(UiScale.Current));
         }
 
         var pixels = LabelPixels();
@@ -247,7 +249,8 @@ internal static class PrismArt
         var hitMin = new Vector2(topLeft.X, topLeft.Y - reach);
         var hitMax = new Vector2(max.X, max.Y + reach);
         var hovered = UiInteract.Hover(hitMin, hitMax);
-        drawList.AddRect(topLeft, max, ImGui.GetColorU32(hovered ? Fore : Faint), 0f, ImDrawFlags.None, 1f);
+        drawList.AddRect(topLeft, max, ImGui.GetColorU32(hovered ? Fore : Faint), 0f, ImDrawFlags.None,
+            HairlineWidth(scale));
         PrismType.Draw(drawList, new Vector2(topLeft.X + pad, topLeft.Y + (height - pixels) * 0.5f), label,
             hovered ? Fore : Muted, PrismFace.Label, pixels);
         if (hovered)
@@ -316,8 +319,7 @@ internal static class PrismArt
             return;
         }
 
-        drawList.AddCircle(center, radius, ImGui.GetColorU32(Faint), MedalSegments,
-            MathF.Max(1f, Metrics.Stroke.Hairline * scale));
+        drawList.AddCircle(center, radius, ImGui.GetColorU32(Faint), MedalSegments, HairlineWidth(scale));
     }
 
     public static void SpectrumRing(ImDrawListPtr drawList, Vector2 center, float radius, float turn, float thickness)
