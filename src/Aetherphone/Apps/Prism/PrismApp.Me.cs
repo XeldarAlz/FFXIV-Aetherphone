@@ -608,14 +608,13 @@ internal sealed partial class PrismApp
         }
 
         var bottom = DrawEmpty(left + inset, left + width - inset, top, PhoneIcons.Photo,
-            Loc.T(L.Prism.FirstGlamTitle), Loc.T(L.Prism.FirstGlamHint), scale);
-        if (DrawCenteredPrimary(drawList, left + width * 0.5f, bottom, width - inset * 2f, Loc.T(L.Prism.PostGlam),
-                scale))
+            Loc.T(L.Prism.FirstGlamTitle), Loc.T(L.Prism.FirstGlamHint), Loc.T(L.Prism.PostGlam), scale, out var post);
+        if (post)
         {
             StartCompose();
         }
 
-        return bottom + Button.LargeHeight * scale;
+        return bottom;
     }
 
     private float DrawPlacings(ImDrawListPtr drawList, float left, float width, float top, GlamDto[] items,
@@ -802,34 +801,31 @@ internal sealed partial class PrismApp
         return retry.Max.Y;
     }
 
-    private float DrawEmpty(float left, float right, float top, string glyph, string title, string hint, float scale)
+    private float DrawEmpty(float left, float right, float top, string glyph, string title, string hint, float scale) =>
+        DrawEmpty(left, right, top, glyph, title, hint, string.Empty, scale, out _);
+
+    private float DrawEmpty(float left, float right, float top, string glyph, string title, string hint, string action,
+        float scale, out bool tapped)
     {
         var hintHeight = hint.Length == 0
             ? 0f
             : Typography.MeasureWrappedBlock(hint, TextStyles.Subheadline, right - left - Metrics.Space.Xxl * scale * 2f).Y;
-        var block = new Rect(new Vector2(left, top), new Vector2(right, top + EmptyStateUnits * scale + hintHeight * 2f));
+        var actionHeight = action.Length > 0 ? Button.LargeHeight * scale * 2f : 0f;
+        var block = new Rect(new Vector2(left, top),
+            new Vector2(right, top + EmptyStateUnits * scale + hintHeight * 2f + actionHeight));
         var resume = ImGui.GetCursorScreenPos();
-        EmptyState.Draw(block, ui, glyph, title, hint);
+        tapped = EmptyState.Draw(block, ui, glyph, title, hint, action, ButtonStyle.Solid);
         ImGui.SetCursorScreenPos(resume);
         return block.Max.Y;
-    }
-
-    private bool DrawCenteredPrimary(ImDrawListPtr drawList, float centerX, float top, float cap, string label,
-        float scale)
-    {
-        var half = ButtonWidth([label], cap, scale) * 0.5f;
-        return DrawButton(drawList, new Rect(new Vector2(centerX - half, top),
-            new Vector2(centerX + half, top + Button.LargeHeight * scale)), label, ButtonStyle.Solid, scale);
     }
 
     private void DrawProfileSignedOut(ImDrawListPtr drawList, Rect content, float scale)
     {
         var inset = Metrics.Space.Lg * scale;
         var top = content.Min.Y + content.Height * 0.2f;
-        var bottom = DrawEmpty(content.Min.X + inset, content.Max.X - inset, top, PhoneIcons.User,
-            Loc.T(L.Prism.MeSignInTitle), Loc.T(L.Prism.MeSignInHint), scale);
-        if (DrawCenteredPrimary(drawList, content.Center.X, bottom, content.Width - inset * 2f,
-                Loc.T(L.Prism.OpenSettings), scale))
+        DrawEmpty(content.Min.X + inset, content.Max.X - inset, top, PhoneIcons.User, Loc.T(L.Prism.MeSignInTitle),
+            Loc.T(L.Prism.MeSignInHint), Loc.T(L.Prism.OpenSettings), scale, out var open);
+        if (open)
         {
             navigation.Open(SettingsAppId);
         }
