@@ -23,7 +23,7 @@ internal sealed record WardrobeCover(string Path, float Zoom, float CenterX, flo
 internal sealed class WardrobeStore
 {
     private const string FolderName = "PrismWardrobe";
-    private const int ImportBatch = 12;
+    private const int DesignsPerFrame = 2;
 
     private readonly DirectoryInfo root;
     private readonly object sync = new();
@@ -189,7 +189,7 @@ internal sealed class WardrobeStore
             return -1;
         }
 
-        for (var step = 0; step < ImportBatch && importQueue.TryDequeue(out var design); step++)
+        for (var step = 0; step < DesignsPerFrame && importQueue.TryDequeue(out var design); step++)
         {
             imported.Add(new WardrobeOutfit(Guid.NewGuid().ToString("N"), design.Name, string.Empty, design.Id,
                 GlamourerDesign.Read(glamour.Design(design.Id), out _, out _), false,
