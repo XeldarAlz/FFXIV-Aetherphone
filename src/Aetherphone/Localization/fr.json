@@ -5795,6 +5795,7 @@
   "prism.frameDays.other": "À porter pendant {0} jours",
   "prism.gilSent": "L'équipe Aetherphone vous envoie les gils en jeu.",
   "prism.whatWinnersGet": "Ce que gagnent les vainqueurs",
+  "prism.noPodium": "Trop peu de mirages ont été proposés cette semaine pour un podium.",
   "prism.outfitTitle": "Votre tenue",
   "prism.outfitBody": "Les objets, teintures et mods que vous portez en ce moment. Toute personne qui voit les résultats peut les voir et les essayer, et votre photo peut montrer autre chose.",
   "prism.shareOutfit": "Partager ma tenue",

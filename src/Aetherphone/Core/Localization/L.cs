@@ -10990,6 +10990,7 @@ internal static class L
         public static readonly LocString GilSent = new("prism.gilSent",
             "Gil prizes are sent to you in game by the Aetherphone team.");
         public static readonly LocString WhatWinnersGet = new("prism.whatWinnersGet", "What winners get");
+        public static readonly LocString NoPodium = new("prism.noPodium", "Too few glams were entered this week for a podium.");
         public static readonly LocString OutfitTitle = new("prism.outfitTitle", "Your outfit");
         public static readonly LocString OutfitBody = new("prism.outfitBody",
             "The items, dyes and mods you have on right now. Anyone who sees the results can see them and try them on, and your photo may show something else.");

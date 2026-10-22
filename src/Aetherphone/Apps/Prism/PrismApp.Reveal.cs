@@ -312,6 +312,14 @@ internal sealed partial class PrismApp
         var left = origin.X + gutter;
         var cursor = origin.Y;
         cursor = DrawSectionTitle(list, left, cursor, width, results.Title, scale);
+        if (finalOrder.Count == 0 && heatOrder.Count == 0 && results.MyHeatRank <= 0)
+        {
+            var empty = Loc.T(L.Prism.NoPodium);
+            cursor += Typography.DrawWrappedLeft(new Vector2(left, cursor), empty, PrismArt.Muted,
+                TextStyles.Subheadline, PrismType.BalancedWidth(empty, TextStyles.Subheadline, width)) +
+                      Metrics.Space.Xl * scale;
+        }
+
         if (finalOrder.Count > 0)
         {
             cursor = DrawPodium(list, left, cursor, width, scale);
