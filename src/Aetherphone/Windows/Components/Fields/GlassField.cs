@@ -33,6 +33,10 @@ internal static class GlassField
         Input(field, imguiId, hint, ref text, theme.TextStrong, theme.TextMuted, TextInsetUnits * scale,
             TextInsetUnits * scale, maxLength, focus, flags);
 
+    public static bool Text(Rect field, string imguiId, string hint, ref string text, Vector4 ink, Vector4 mutedInk,
+        float inset, int maxLength, ImGuiInputTextFlags flags) =>
+        Input(field, imguiId, hint, ref text, ink, mutedInk, inset, inset, maxLength, false, flags);
+
     public static bool Title(Rect field, string imguiId, string hint, ref string text, PhoneTheme theme, float scale,
         int maxLength, ImGuiInputTextFlags flags)
     {

@@ -20,6 +20,7 @@ internal sealed partial class PrismApp
     private const int MaxTags = 6;
     private const float FieldUnits = 34f;
     private const double RecaptureSeconds = 1.0;
+    private const int Utf8BytesPerUnit = 3;
 
     private readonly PhotoComposeSession composeSession;
     private readonly HashSet<string> droppedMods = new(StringComparer.Ordinal);
@@ -189,15 +190,14 @@ internal sealed partial class PrismApp
         ref string text, int maxLength, float scale)
     {
         var height = FieldUnits * scale;
-        ImGui.SetCursorScreenPos(new Vector2(left, top + (height - ImGui.GetFrameHeight()) * 0.5f));
-        ImGui.SetNextItemWidth(width);
-        Plugin.Fonts.NoticeText(hint);
-        Plugin.Fonts.NoticeText(text);
-        ImGui.PushStyleColor(ImGuiCol.FrameBg, Vector4.Zero);
-        ImGui.PushStyleColor(ImGuiCol.Text, PrismArt.Fore);
-        ImGui.PushStyleColor(ImGuiCol.TextDisabled, PrismArt.Muted);
-        ImGui.InputTextWithHint(id, hint, ref text, maxLength);
-        ImGui.PopStyleColor(3);
+        var field = new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
+        GlassField.Text(field, id, hint, ref text, PrismArt.Fore, PrismArt.Muted, 0f,
+            maxLength * Utf8BytesPerUnit + 1, ImGuiInputTextFlags.None);
+        if (text.Length > maxLength)
+        {
+            text = text[..(char.IsHighSurrogate(text[maxLength - 1]) ? maxLength - 1 : maxLength)];
+        }
+
         PrismArt.Hairline(drawList, left, left + width, top + height, ImGui.IsItemActive() ? PrismArt.Fore : PrismArt.Faint,
             scale);
         return top + height;
