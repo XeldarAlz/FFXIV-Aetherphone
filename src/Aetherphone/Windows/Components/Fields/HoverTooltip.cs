@@ -28,14 +28,17 @@ internal static class HoverTooltip
         }
     }
 
-    public static void Show(Rect target, string label, HoverLabelSide side = HoverLabelSide.Below)
+    public static void Show(Rect target, string label, HoverLabelSide side = HoverLabelSide.Below) =>
+        Show(target, label, UiInteract.Hover(target.Min, target.Max), side);
+
+    public static void Show(Rect target, string label, bool hovered, HoverLabelSide side)
     {
         if (string.IsNullOrEmpty(label))
         {
             return;
         }
 
-        Track(Step(positionSprings, Key(target), UiInteract.Hover(target.Min, target.Max)), target, label, side);
+        Track(Step(positionSprings, Key(target), hovered), target, label, side);
     }
 
     public static void Show(string id, Rect target, string label, HoverLabelSide side = HoverLabelSide.Below)

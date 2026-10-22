@@ -39,7 +39,7 @@ internal static class GlassCircle
 
         if (tooltip.Length > 0)
         {
-            HoverTooltip.Show(new Rect(center - extent, center + extent), tooltip, side);
+            HoverTooltip.Show(new Rect(center - extent, center + extent), tooltip, over, side);
         }
 
         if (hovered)

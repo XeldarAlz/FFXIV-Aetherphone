@@ -30,7 +30,7 @@ internal static class RoundButton
         if (enabled && tooltip.Length > 0)
         {
             HoverTooltip.Show(new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius)),
-                tooltip, side);
+                tooltip, face.Hovered, side);
         }
 
         return clicked;
@@ -55,7 +55,7 @@ internal static class RoundButton
         if (enabled && tooltip.Length > 0)
         {
             HoverTooltip.Show(new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius)),
-                tooltip, side);
+                tooltip, face.Hovered, side);
         }
 
         return clicked;
