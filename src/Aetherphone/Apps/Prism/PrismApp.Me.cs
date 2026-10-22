@@ -260,8 +260,8 @@ internal sealed partial class PrismApp
         var key = HashCode.Combine(season.Name, standing.Rank, standing.Points, Loc.Current.Code);
         var line = seasonText.IsCurrent(key)
             ? seasonText.Value
-            : seasonText.Store(key, Loc.T(L.Prism.SeasonStanding, season.Name, standing.Rank,
-                standing.Points.ToString("N0", Loc.Culture)));
+            : seasonText.Store(key, Loc.Plural(L.Prism.SeasonStanding, (int)Math.Min(standing.Points, int.MaxValue),
+                season.Name, standing.Rank));
         var labelPixels = PrismArt.LabelPixels();
         return top + PrismType.DrawLines(drawList, new Vector2(left, top),
             PrismType.Wrap(line, PrismFace.Label, labelPixels, width), PrismArt.Fore, PrismFace.Label, labelPixels) +

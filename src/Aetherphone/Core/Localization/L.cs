@@ -10902,7 +10902,8 @@ internal static class L
             "You're still trying something on, so it would go out as your gear. Take it off unless the photo shows it.");
         public static readonly LocString CheckMarket = new("prism.checkMarket", "Check market");
         public static readonly LocString GlamOfTheDay = new("prism.glamOfTheDay", "Glam of the day");
-        public static readonly LocString SeasonStanding = new("prism.seasonStanding", "{0}: rank {1}, {2} points");
+        public static readonly LocPlural SeasonStanding = new("prism.seasonStanding", "{1}: rank {2}, {0:N0} point",
+            "{1}: rank {2}, {0:N0} points");
         public static readonly LocString Rename = new("prism.rename", "Rename");
         public static readonly LocString AddPhoto = new("prism.addPhoto", "Add a photo");
         public static readonly LocString ChangePhoto = new("prism.changePhoto", "Change photo");
@@ -10927,7 +10928,8 @@ internal static class L
         public static readonly LocString Save = new("prism.save", "Save");
         public static readonly LocString Saved = new("prism.saved", "Saved");
         public static readonly LocString Like = new("prism.like", "Like");
-        public static readonly LocString OwnPieces = new("prism.ownPieces", "You own {0} of {1} pieces");
+        public static readonly LocPlural OwnPieces = new("prism.ownPieces", "You own {1} of {0} piece",
+            "You own {1} of {0} pieces");
         public static readonly LocString ModsInstalled = new("prism.modsInstalled", "{0} of {1} mods installed");
         public static readonly LocString GearHeading = new("prism.gearHeading", "Gear");
         public static readonly LocString CharacterHeading = new("prism.characterHeading", "Character");
@@ -11039,7 +11041,7 @@ internal static class L
         public static readonly LocString ActivityThisWeek = new("prism.activityThisWeek", "This week");
         public static readonly LocString ActivityThisMonth = new("prism.activityThisMonth", "This month");
         public static readonly LocString ActivityEarlier = new("prism.activityEarlier", "Earlier");
-        public static readonly LocString PreviousLook = new("prism.previousLook", "Previous look");
+        public static readonly LocString PreviousGlam = new("prism.previousGlam", "Previous glam");
         public static readonly LocString Published = new("prism.published", "Published");
         public static readonly LocString NothingToSave = new("prism.nothingToSave", "Nothing equipped to save right now");
         public static readonly LocString FavouritesEmptyHint = new("prism.favouritesEmptyHint", "Tap Favourite on an outfit and it shows up here.");

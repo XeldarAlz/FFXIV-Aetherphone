@@ -61,13 +61,18 @@ internal static class Loc
 
     public static string T(LocString entry, params object[] args) => string.Format(culture, T(entry), args);
 
-    public static string Plural(LocPlural entry, int count)
-    {
-        var template = IsOne(count)
-            ? Resolve(string.Concat(entry.KeyBase, ".one"), entry.OneSource)
-            : Resolve(string.Concat(entry.KeyBase, ".other"), entry.OtherSource);
-        return string.Format(culture, FormatFor(template), count);
-    }
+    public static string Plural(LocPlural entry, int count) =>
+        string.Format(culture, FormatFor(PluralTemplate(entry, count)), count);
+
+    public static string Plural<T1>(LocPlural entry, int count, T1 arg1) =>
+        string.Format(culture, FormatFor(PluralTemplate(entry, count)), count, arg1);
+
+    public static string Plural<T1, T2>(LocPlural entry, int count, T1 arg1, T2 arg2) =>
+        string.Format(culture, FormatFor(PluralTemplate(entry, count)), count, arg1, arg2);
+
+    private static string PluralTemplate(LocPlural entry, int count) => IsOne(count)
+        ? Resolve(string.Concat(entry.KeyBase, ".one"), entry.OneSource)
+        : Resolve(string.Concat(entry.KeyBase, ".other"), entry.OtherSource);
 
     private static CompositeFormat FormatFor(string template)
     {

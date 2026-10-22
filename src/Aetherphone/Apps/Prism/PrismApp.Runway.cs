@@ -151,7 +151,7 @@ internal sealed partial class PrismApp
         PrismType.Draw(drawList, new Vector2(left, countTop), counter, PrismArt.Muted, PrismFace.Label, labelPixels);
         if (lookIndex > 0 && chosen == 0 && !store.Busy)
         {
-            var previous = Loc.T(L.Prism.PreviousLook);
+            var previous = Loc.T(L.Prism.PreviousGlam);
             var previousWidth = PrismType.Measure(previous, PrismFace.Label, labelPixels).X;
             if (PrismArt.Link(drawList, new Vector2(left + width - previousWidth, countTop), previous, PrismArt.Muted,
                     scale))

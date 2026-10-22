@@ -676,7 +676,7 @@ internal sealed partial class PrismApp
         var key = HashCode.Combine(ownedPieces, totalPieces, Loc.Current.Code);
         return ownedText.IsCurrent(key)
             ? ownedText.Value
-            : ownedText.Store(key, Loc.T(L.Prism.OwnPieces, ownedPieces, totalPieces));
+            : ownedText.Store(key, Loc.Plural(L.Prism.OwnPieces, totalPieces, ownedPieces));
     }
 
     private string ModsLine()
