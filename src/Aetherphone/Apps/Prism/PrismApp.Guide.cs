@@ -458,8 +458,12 @@ internal sealed partial class PrismApp
             var prize = PrizeLine(prizes, place - 1);
             if (prize.Length > 0)
             {
-                PrismType.Draw(drawList, new Vector2(frame.Min.X, bottom + gap), prize, PrismArt.Fore,
-                    PrismFace.Label, labelPixels);
+                var line = PrismType.LineHeight(PrismFace.Label, labelPixels);
+                var glyph = line * CurrencyGlyph.GlyphFraction;
+                CurrencyGlyph.Draw(drawList, CurrencyKind.Coins,
+                    new Vector2(frame.Min.X + glyph * 0.5f, bottom + gap + line * 0.5f), glyph);
+                PrismType.Draw(drawList, new Vector2(frame.Min.X + CurrencyGlyph.Reserve(line), bottom + gap), prize,
+                    PrismArt.Fore, PrismFace.Label, labelPixels);
             }
 
             x += width + gap;
