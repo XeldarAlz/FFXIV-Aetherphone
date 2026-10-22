@@ -59,6 +59,8 @@ internal sealed partial class PrismApp : IResumableApp
     private const int LoadedAtLimit = 512;
     private const int GuideVersion = 2;
     private const float CoverFocus = 0.25f;
+    private const float BackChevronUnits = 15f;
+    private const float PhotoGlyphUnits = 18f;
 
     private readonly PrismStore store;
     private readonly GlamStore glams;
@@ -407,6 +409,55 @@ internal sealed partial class PrismApp : IResumableApp
                 PrismScreen.Outfit => outfitReturn,
                 _ => PrismScreen.Cover,
             }, -1);
+        }
+    }
+
+    private float DrawBackHeader(ImDrawListPtr drawList, Rect content, string title, float scale)
+    {
+        var tap = Metrics.Size.TapTarget * scale;
+        var hit = new Rect(content.Min, content.Min + new Vector2(tap, tap));
+        if (BackButton.Draw("prism.back", hit.Center, BackChevronUnits * scale, PrismArt.Fore,
+                UiInteract.Hover(hit.Min, hit.Max), scale))
+        {
+            LeaveScreen();
+        }
+
+        var fitted = Typography.FitText(title, MathF.Max(1f, content.Width - tap * 2f), PrismType.Headline);
+        var size = Typography.Measure(fitted, PrismType.Headline);
+        Typography.Draw(drawList, new Vector2(content.Center.X - size.X * 0.5f, hit.Center.Y - size.Y * 0.5f), fitted,
+            PrismArt.Fore, PrismType.Headline);
+        return hit.Max.Y;
+    }
+
+    private static float PhotoTop(Rect full, Rect content) => PrismArt.Light ? content.Min.Y : full.Min.Y;
+
+    private static float PhotoInset(Rect full, Rect content) => content.Min.Y - PhotoTop(full, content);
+
+    private static bool DrawPhotoButton(ImDrawListPtr drawList, Rect photo, float topInset, int slot, string glyph,
+        string tooltip, float scale)
+    {
+        var radius = Metrics.Size.GlassButton * 0.5f * scale;
+        var reach = Metrics.Size.TapTarget * 0.5f * scale;
+        var inset = Metrics.Space.Md * scale + radius;
+        var step = (Metrics.Size.GlassButton + Metrics.Space.Sm) * scale;
+        var center = new Vector2(slot == 0 ? photo.Min.X + inset : photo.Max.X - inset - (slot - 1) * step,
+            photo.Min.Y + topInset + Metrics.Space.Xs * scale + radius);
+        var extent = new Vector2(reach, reach);
+        if (center.Y + reach > photo.Max.Y || !ImGui.IsRectVisible(center - extent, center + extent))
+        {
+            return false;
+        }
+
+        return GlassCircle.Icon(drawList, ImGui.GetID(glyph), center, radius, PhotoGlyphUnits * scale, glyph,
+            PrismArt.Light ? PrismArt.Fore : PrismArt.PhotoFore, scale, GlassTone.Dark, tooltip, HoverLabelSide.Below,
+            hitRadius: reach, reserve: true);
+    }
+
+    private void DrawPhotoBack(ImDrawListPtr drawList, Rect photo, float topInset, float scale)
+    {
+        if (DrawPhotoButton(drawList, photo, topInset, 0, PhoneIcons.ChevronLeft, Loc.T(L.Prism.Back), scale))
+        {
+            LeaveScreen();
         }
     }
 
