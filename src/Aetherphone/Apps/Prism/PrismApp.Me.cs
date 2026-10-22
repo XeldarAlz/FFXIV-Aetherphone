@@ -216,7 +216,7 @@ internal sealed partial class PrismApp
             cursor = DrawSectionLabel(list, origin.X + gutter, cursor, width, 1, Loc.T(L.Prism.StatGlams), scale);
         }
 
-        cursor = DrawLaneGrid(list, body, origin.X + gutter, cursor, width, glams.List,
+        cursor = DrawLaneGrid(list, origin.X + gutter, cursor, width, glams.List,
             showSaved ? L.Prism.SavedEmptyHint : L.Prism.ProfileEmptyHint, scale);
         ImGui.Dummy(new Vector2(width, cursor - origin.Y));
         if (InfiniteScroll.ReachedBottom())
@@ -422,7 +422,7 @@ internal sealed partial class PrismApp
         var list = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var scrollWidth = ScrollLayout.StableContentWidth() - gutter * 2f;
-        var cursor = DrawLaneGrid(list, body, origin.X + gutter, origin.Y, scrollWidth, glams.List,
+        var cursor = DrawLaneGrid(list, origin.X + gutter, origin.Y, scrollWidth, glams.List,
             L.Prism.DiscoverEmptyHint, scale);
         ImGui.Dummy(new Vector2(scrollWidth, cursor - origin.Y));
         if (InfiniteScroll.ReachedBottom())

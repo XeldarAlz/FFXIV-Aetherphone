@@ -138,17 +138,15 @@ internal sealed partial class PrismApp
         }
 
         var label = Loc.T(glams.Posting ? L.Prism.Posting : L.Prism.Post);
-        var ready = glamTitle.Trim().Length > 0 && !glams.Posting;
+        var ready = !string.IsNullOrWhiteSpace(glamTitle) && !glams.Posting;
         if (PrismArt.Strip(drawList, strip, label, Arrow, true, ready, UiSound.Shutter))
         {
             PostGlam();
         }
     }
 
-    private float DrawStillTryingOn(ImDrawListPtr drawList, float left, float top, float width, float scale,
-        out bool tookOff)
+    private float DrawStillTryingOn(ImDrawListPtr drawList, float left, float top, float width, float scale)
     {
-        tookOff = false;
         if (!glamour.TryingOn)
         {
             return top;
@@ -160,7 +158,6 @@ internal sealed partial class PrismApp
         {
             glamour.Revert();
             recaptureAt = ImGui.GetTime() + RecaptureSeconds;
-            tookOff = true;
         }
 
         return top + Metrics.Size.TapTarget * scale;

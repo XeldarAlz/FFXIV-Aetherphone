@@ -76,7 +76,7 @@ internal sealed partial class PrismApp
 
         var cursor = DrawThemeRow(list, origin.X + gutter, origin.Y, width, scale);
         cursor = DrawDayHero(list, origin.X + gutter, cursor, width, scale);
-        cursor = DrawLaneGrid(list, body, origin.X + gutter, cursor, width, lane,
+        cursor = DrawLaneGrid(list, origin.X + gutter, cursor, width, lane,
             discoverScope == GlamScope.Following ? L.Prism.FollowingEmptyHint : L.Prism.DiscoverEmptyHint, scale);
         ImGui.Dummy(new Vector2(width, cursor - origin.Y));
         if (InfiniteScroll.ReachedBottom())
@@ -215,8 +215,8 @@ internal sealed partial class PrismApp
         return row.Max.Y + Metrics.Space.Lg * scale;
     }
 
-    private float DrawLaneGrid(ImDrawListPtr drawList, Rect body, float left, float top, float width,
-        FeedLane<GlamDto> lane, LocString emptyHint, float scale)
+    private float DrawLaneGrid(ImDrawListPtr drawList, float left, float top, float width, FeedLane<GlamDto> lane,
+        LocString emptyHint, float scale)
     {
         var items = lane.Items;
         if (items.Length == 0 && lane.Loading)
