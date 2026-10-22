@@ -400,7 +400,11 @@ internal sealed class GlamStore : IDisposable
             return;
         }
 
-        Replace(glam with { TryOns = glam.TryOns + 1 });
+        if (glam.Author?.Id != MyId)
+        {
+            Replace(glam with { TryOns = glam.TryOns + 1 });
+        }
+
         var glamId = glam.Id;
         work.Run("tried on", token => client.TriedOnAsync(glamId, token));
     }
