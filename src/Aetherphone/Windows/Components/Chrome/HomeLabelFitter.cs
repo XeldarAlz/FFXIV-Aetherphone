@@ -26,11 +26,13 @@ internal static class HomeLabelFitter
             Cache.Clear();
         }
 
-        var measured = style;
-        var layout = Compute(label, maxWidth, text => Typography.Measure(text, measured).X);
+        var layout = Fit(label, maxWidth, style);
         Cache[key] = layout;
         return layout;
     }
+
+    private static HomeLabelLayout Fit(string label, float maxWidth, TextStyle style) =>
+        Compute(label, maxWidth, text => Typography.Measure(text, style).X);
 
     public static HomeLabelLayout Compute(string label, float maxWidth, Func<string, float> measure)
     {

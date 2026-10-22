@@ -285,6 +285,11 @@ internal sealed class SocialNotificationService : IDisposable
             return;
         }
 
+        StartAckFlush(key, app, watermark, nowUtc);
+    }
+
+    private void StartAckFlush(string key, string? app, long watermark, DateTime nowUtc)
+    {
         var scope = app ?? NotificationAckQueue.GlobalScope;
         flushingAcks = true;
         nextAckFlushUtc = nowUtc + AckRetryInterval;

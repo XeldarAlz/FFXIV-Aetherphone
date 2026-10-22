@@ -556,6 +556,11 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             return;
         }
 
+        ConfirmRead(key, generation, account);
+    }
+
+    private void ConfirmRead(string key, int generation, int account)
+    {
         var outcome = ReadMarkOutcome.Failed;
         work.Run("mark read", async token =>
         {
@@ -622,7 +627,11 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
 
         vaultRefreshRequested = true;
         vaultRefreshInFlight = true;
-        var wasUnlocked = vault.State == KeyVaultState.Unlocked;
+        StartVaultRefresh(vault.State == KeyVaultState.Unlocked);
+    }
+
+    private void StartVaultRefresh(bool wasUnlocked)
+    {
         work.Run("vault refresh", async token =>
         {
             await vault.RefreshAsync(token).ConfigureAwait(false);
@@ -652,6 +661,11 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         keyStatusRefreshing = true;
         keyStatusRefreshForced = false;
         lastKeyStatusUtc = now;
+        StartKeyStatusRefresh(id);
+    }
+
+    private void StartKeyStatusRefresh(string id)
+    {
         work.Run("key status refresh", async token =>
         {
             var status = await EnsureThreadKeysAsync(id, token).ConfigureAwait(false);

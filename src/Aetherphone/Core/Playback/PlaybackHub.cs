@@ -607,6 +607,11 @@ internal sealed class PlaybackHub : IDisposable
         autoplayFetching = true;
         var seed = queue.Current.Song.VideoId;
         autoplaySeedId = seed;
+        StartAutoplayFetch(seed);
+    }
+
+    private void StartAutoplayFetch(string seed)
+    {
         _ = Task.Run(() =>
         {
             try

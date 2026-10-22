@@ -233,6 +233,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         { SocialFeedScope.Latest, new() },
         { SocialFeedScope.Following, new() }
     };
+    private readonly Dictionary<SocialFeedScope, Action> feedRefreshers;
     private readonly InfoSheet feedExplainer = new();
     private readonly string[] feedExplainerParagraphs = new string[4];
     private readonly ViewRouter<ChirperRoute> router;
@@ -328,6 +329,12 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         router = new ViewRouter<ChirperRoute>(ChirperRoute.Home);
         drawView = DrawView;
         back = () => router.Pop();
+        feedRefreshers = new()
+        {
+            { SocialFeedScope.ForYou, () => RefreshFeed(SocialFeedScope.ForYou) },
+            { SocialFeedScope.Latest, () => RefreshFeed(SocialFeedScope.Latest) },
+            { SocialFeedScope.Following, () => RefreshFeed(SocialFeedScope.Following) }
+        };
         closeComposePicker = () => composePicking = false;
         profile = new SocialProfilePages(store, new SocialProfileStyle
         {
@@ -1156,7 +1163,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             }
 
             pullToRefresh[scope].Draw(listRect, surface.Pull, surface.Dragging,
-                store.IsLoading(scope), ChirperInk.MutedInk, () => RefreshFeed(scope));
+                store.IsLoading(scope), ChirperInk.MutedInk, feedRefreshers[scope]);
 
             if (snapshot.Length == 0)
             {
