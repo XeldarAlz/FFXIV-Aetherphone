@@ -435,7 +435,7 @@ internal sealed class CampaignLedger
             Texts = campaign.Texts ?? Array.Empty<CampaignTextDto>(),
             Experiences = sorted,
             Members = campaign.Members ?? Array.Empty<CampaignMemberDto>(),
-            Linkshells = campaign.Linkshells ?? Array.Empty<CampaignLinkshellDto>(),
+            Syncshells = campaign.Syncshells ?? Array.Empty<CampaignSyncshellDto>(),
             Reward = campaign.Reward ?? new CampaignRewardDto(null, null, null, null, 0),
         };
     }

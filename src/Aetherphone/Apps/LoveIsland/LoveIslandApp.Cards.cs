@@ -15,9 +15,12 @@ internal enum CardPill : byte
 
 internal readonly record struct CardButton(string Label, bool Prominent, string Id);
 
+internal readonly record struct CardField(string Label, string Value);
+
 internal readonly record struct CardContent(string Id, string Eyebrow, CardPill Pill, string PillLabel, string Title,
     string Body, int TitleLines, int BodyLines, bool Tappable, bool LargeTitle = false, bool Featured = false,
-    bool ChromeTitle = false, bool MediumTitle = false, float Progress = -1f, bool PhotoStrip = false);
+    bool ChromeTitle = false, bool MediumTitle = false, float Progress = -1f, bool PhotoStrip = false,
+    int FieldCount = 0);
 
 internal sealed partial class LoveIslandApp
 {
@@ -32,11 +35,22 @@ internal sealed partial class LoveIslandApp
     private const float SubBeaconIndent = 16f;
     private const double ChromePeriod = 4200.0;
     private const float ChromeCrestLift = 0.62f;
+    private const float FieldsGap = 12f;
+    private const float FieldPad = 12f;
+    private const float FieldGap = 10f;
+    private const int FieldLabelLines = 2;
+    private const int FieldValueLines = 3;
+    private const int FieldSlots = 2;
+
+    private static readonly TextStyle FieldLabelStyle = TextStyles.Footnote;
+    private static readonly TextStyle FieldValueStyle = TextStyles.BodyEmphasized;
 
     private readonly Dictionary<string, ClampedLines> titleClamps = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ClampedLines> bodyClamps = new(StringComparer.Ordinal);
     private readonly CardButton[] cardButtons = new CardButton[2];
     private readonly Rect[] cardButtonRects = new Rect[2];
+    private readonly CardField[] cardFields = new CardField[FieldSlots];
+    private readonly Dictionary<string, ClampedLines[]> fieldClamps = new(StringComparer.Ordinal);
     private readonly ClampedLines pageTitleClamp = new();
 
     private ClampedLines ClampFor(Dictionary<string, ClampedLines> cache, string id)
@@ -95,6 +109,12 @@ internal sealed partial class LoveIslandApp
         if (stripCount > 0)
         {
             height += StripGap * scale + PhotoStripHeight(inner, scale);
+        }
+
+        var fieldsHeight = content.FieldCount > 0 ? FieldsHeight(content.Id, content.FieldCount, inner, scale) : 0f;
+        if (fieldsHeight > 0f)
+        {
+            height += FieldsGap * scale + fieldsHeight;
         }
 
         if (buttonCount > 0)
@@ -165,6 +185,12 @@ internal sealed partial class LoveIslandApp
             DrawPhotoStrip(drawList, textLeft, cursorY + StripGap * scale, inner, stripCount, scale);
         }
 
+        if (fieldsHeight > 0f)
+        {
+            DrawFields(drawList, textLeft, cursorY + FieldsGap * scale, inner, fieldsHeight, content.Id,
+                content.FieldCount, scale);
+        }
+
         for (var index = 0; index < buttonCount; index++)
         {
             var button = cardButtons[index];
@@ -177,6 +203,80 @@ internal sealed partial class LoveIslandApp
 
         entrance.Settle(drawList, firstVertex, scale);
         return rest.Max.Y;
+    }
+
+    private ClampedLines[] FieldClampsFor(string id)
+    {
+        if (!fieldClamps.TryGetValue(id, out var clamps))
+        {
+            clamps = new ClampedLines[FieldSlots * 2];
+            for (var index = 0; index < clamps.Length; index++)
+            {
+                clamps[index] = new ClampedLines();
+            }
+
+            fieldClamps[id] = clamps;
+        }
+
+        return clamps;
+    }
+
+    private float FieldsHeight(string id, int fieldCount, float width, float scale)
+    {
+        var clamps = FieldClampsFor(id);
+        var textWidth = MathF.Max(1f, width - FieldPad * 2f * scale);
+        var labelLineHeight = Typography.LineHeight(FieldLabelStyle);
+        var valueLineHeight = Typography.LineHeight(FieldValueStyle);
+        var height = FieldPad * 2f * scale + FieldGap * scale * (fieldCount - 1);
+        for (var index = 0; index < fieldCount; index++)
+        {
+            var field = cardFields[index];
+            height += clamps[index * 2].Get(field.Label, FieldLabelStyle, textWidth, FieldLabelLines, fontKey).Length
+                      * labelLineHeight;
+            height += clamps[index * 2 + 1].Get(field.Value, FieldValueStyle, textWidth, FieldValueLines, fontKey).Length
+                      * valueLineHeight;
+        }
+
+        return height;
+    }
+
+    private void DrawFields(ImDrawListPtr drawList, float left, float top, float width, float height, string id,
+        int fieldCount, float scale)
+    {
+        Squircle.Fill(drawList, new Vector2(left, top), new Vector2(left + width, top + height),
+            Metrics.Radius.Md * scale, ImGui.GetColorU32(Surfaces.Fill(ui.TitleInk, FillLevel.Secondary)));
+        var clamps = FieldClampsFor(id);
+        var pad = FieldPad * scale;
+        var textLeft = left + pad;
+        var textWidth = MathF.Max(1f, width - pad * 2f);
+        var labelLineHeight = Typography.LineHeight(FieldLabelStyle);
+        var valueLineHeight = Typography.LineHeight(FieldValueStyle);
+        var cursorY = top + pad;
+        for (var index = 0; index < fieldCount; index++)
+        {
+            if (index > 0)
+            {
+                cursorY += FieldGap * scale;
+            }
+
+            var field = cardFields[index];
+            var labelLines = clamps[index * 2].Get(field.Label, FieldLabelStyle, textWidth, FieldLabelLines, fontKey);
+            for (var lineIndex = 0; lineIndex < labelLines.Length; lineIndex++)
+            {
+                Typography.Draw(drawList, new Vector2(textLeft, cursorY), labelLines[lineIndex], ui.MutedInk,
+                    FieldLabelStyle);
+                cursorY += labelLineHeight;
+            }
+
+            var valueLines = clamps[index * 2 + 1].Get(field.Value, FieldValueStyle, textWidth, FieldValueLines,
+                fontKey);
+            for (var lineIndex = 0; lineIndex < valueLines.Length; lineIndex++)
+            {
+                Typography.Draw(drawList, new Vector2(textLeft, cursorY), valueLines[lineIndex], ui.TitleInk,
+                    FieldValueStyle);
+                cursorY += valueLineHeight;
+            }
+        }
     }
 
     private TextEffect ChromeEffect() =>

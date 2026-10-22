@@ -30,11 +30,13 @@ internal sealed class ExperienceLabels
 internal sealed class LoveIslandLabels
 {
     private const string CommandPrefix = "/li ";
+    private const string CopyIdPrefix = "loveisland.syncshell.copyId.";
+    private const string CopyPasswordPrefix = "loveisland.syncshell.copyPassword.";
 
     public string WindowLine = string.Empty;
     public string StartsLine = string.Empty;
     public string HashtagTitle = string.Empty;
-    public string LinkshellNames = string.Empty;
+    public string SyncshellNames = string.Empty;
     public string LiveChannelLine = string.Empty;
     public string AboutTitle = string.Empty;
     public string ExperiencesSub = string.Empty;
@@ -47,8 +49,9 @@ internal sealed class LoveIslandLabels
     public string WhereLine = string.Empty;
     public ExperienceLabels[] Experiences = Array.Empty<ExperienceLabels>();
     public string[] LinkLabels = Array.Empty<string>();
-    public string[] LinkshellKinds = Array.Empty<string>();
-    public string[] LinkshellAsks = Array.Empty<string>();
+    public string[] SyncshellServices = Array.Empty<string>();
+    public string[] SyncshellCopyIdButtons = Array.Empty<string>();
+    public string[] SyncshellCopyPasswordButtons = Array.Empty<string>();
 
     private readonly Dictionary<string, ExperienceLabels> experienceCache = new(StringComparer.Ordinal);
     private CampaignDto? source;
@@ -84,7 +87,7 @@ internal sealed class LoveIslandLabels
         {
             WindowLine = string.Empty;
             StartsLine = string.Empty;
-            LinkshellNames = string.Empty;
+            SyncshellNames = string.Empty;
             LiveChannelLine = string.Empty;
             AboutTitle = Loc.T(L.LoveIsland.AboutTitle, Loc.T(CampaignDefinition.LoveIsland.FallbackName));
             ExperiencesSub = texts.T(CampaignTextKeys.ExperiencesSub);
@@ -95,8 +98,9 @@ internal sealed class LoveIslandLabels
             WhereLine = string.Empty;
             Experiences = Array.Empty<ExperienceLabels>();
             LinkLabels = Array.Empty<string>();
-            LinkshellKinds = Array.Empty<string>();
-            LinkshellAsks = Array.Empty<string>();
+            SyncshellServices = Array.Empty<string>();
+            SyncshellCopyIdButtons = Array.Empty<string>();
+            SyncshellCopyPasswordButtons = Array.Empty<string>();
             return;
         }
 
@@ -120,7 +124,7 @@ internal sealed class LoveIslandLabels
         WhereLine = Loc.T(L.LoveIsland.Where, campaign.DataCenter);
         RebuildExperiences(campaign);
         RebuildLinks(campaign);
-        RebuildLinkshells(campaign, texts);
+        RebuildSyncshells(campaign);
     }
 
     private void RebuildExperiences(CampaignDto campaign)
@@ -222,29 +226,28 @@ internal sealed class LoveIslandLabels
         LinkLabels = labels;
     }
 
-    private void RebuildLinkshells(CampaignDto campaign, CampaignTexts texts)
+    private void RebuildSyncshells(CampaignDto campaign)
     {
-        var linkshells = campaign.Linkshells;
-        var kinds = LinkshellKinds.Length == linkshells.Length ? LinkshellKinds : new string[linkshells.Length];
-        var asks = LinkshellAsks.Length == linkshells.Length ? LinkshellAsks : new string[linkshells.Length];
-        var names = new string[linkshells.Length];
-        for (var index = 0; index < linkshells.Length; index++)
+        var syncshells = campaign.Syncshells;
+        var count = syncshells.Length;
+        var services = SyncshellServices.Length == count ? SyncshellServices : new string[count];
+        var copyIds = SyncshellCopyIdButtons.Length == count ? SyncshellCopyIdButtons : new string[count];
+        var copyPasswords = SyncshellCopyPasswordButtons.Length == count ? SyncshellCopyPasswordButtons : new string[count];
+        var names = new string[count];
+        var fallback = Loc.T(L.LoveIsland.Syncshell);
+        for (var index = 0; index < count; index++)
         {
-            var linkshell = linkshells[index];
-            names[index] = linkshell.Name;
-            var kind = Loc.T(string.Equals(linkshell.Kind, "cwls", StringComparison.OrdinalIgnoreCase)
-                ? L.LoveIsland.CrossWorldLinkshell
-                : L.LoveIsland.Linkshell);
-            kinds[index] = linkshell.Home.Length > 0 ? string.Concat(kind, LoveIslandKit.Separator, linkshell.Home) : kind;
-            var contact = MemberName(campaign, linkshell.ContactMemberId ?? string.Empty);
-            asks[index] = string.IsNullOrEmpty(linkshell.ContactMemberId)
-                ? string.Empty
-                : texts.T(CampaignTextKeys.AskContact, new CampaignTextArgs(Name: contact));
+            var syncshell = syncshells[index];
+            names[index] = syncshell.Name;
+            services[index] = string.IsNullOrWhiteSpace(syncshell.Service) ? fallback : syncshell.Service;
+            copyIds[index] = CopyIdPrefix + syncshell.Id;
+            copyPasswords[index] = CopyPasswordPrefix + syncshell.Id;
         }
 
-        LinkshellKinds = kinds;
-        LinkshellAsks = asks;
-        LinkshellNames = string.Join(", ", names);
+        SyncshellServices = services;
+        SyncshellCopyIdButtons = copyIds;
+        SyncshellCopyPasswordButtons = copyPasswords;
+        SyncshellNames = string.Join(", ", names);
     }
 }
 

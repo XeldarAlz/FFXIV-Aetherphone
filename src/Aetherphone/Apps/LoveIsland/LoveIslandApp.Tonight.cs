@@ -16,14 +16,14 @@ internal sealed partial class LoveIslandApp
 {
     private const float SectionGap = 14f;
     private const int PinnedBodyLines = 3;
-    private const int LinkshellBodyLines = 2;
+    private const int SyncshellBodyLines = 2;
     private const int AboutBodyLines = 3;
     private const string StatusCardId = "loveisland.tonight.status";
     private const string LiveCardId = "loveisland.tonight.live";
     private const string ShareCardId = "loveisland.tonight.share";
     private const string PinnedCardId = "loveisland.tonight.pinned";
     private const string PostsCardId = "loveisland.tonight.posts";
-    private const string LinkshellsCardId = "loveisland.tonight.linkshells";
+    private const string SyncshellsCardId = "loveisland.tonight.syncshells";
     private const string AboutCardId = "loveisland.tonight.about";
     private const string EndedCardId = "loveisland.tonight.ended";
     private const string TeleportButtonId = "loveisland.tonight.teleport";
@@ -90,7 +90,7 @@ internal sealed partial class LoveIslandApp
         cursorY = DrawShareCard(drawList, left, cursorY + gap, width);
         cursorY = DrawPinnedCard(drawList, left, cursorY + gap, width);
         cursorY = DrawPostsCard(drawList, left, cursorY + gap, width);
-        return DrawLinkshellsCard(drawList, left, cursorY + gap, width, campaign);
+        return DrawSyncshellsCard(drawList, left, cursorY + gap, width, campaign);
     }
 
     private float DrawStatusCard(ImDrawListPtr drawList, float left, float top, float width, CampaignDto campaign,
@@ -312,19 +312,19 @@ internal sealed partial class LoveIslandApp
         return bottom;
     }
 
-    private float DrawLinkshellsCard(ImDrawListPtr drawList, float left, float top, float width, CampaignDto campaign)
+    private float DrawSyncshellsCard(ImDrawListPtr drawList, float left, float top, float width, CampaignDto campaign)
     {
-        if (campaign.Linkshells.Length == 0)
+        if (campaign.Syncshells.Length == 0)
         {
             return top - LoveIslandKit.CardGap * UiScale.Current;
         }
 
-        var bottom = DrawCard(drawList, left, top, width, new CardContent(LinkshellsCardId,
-            Texts.T(CampaignTextKeys.LinkshellsTitle), CardPill.None, string.Empty, labels.LinkshellNames,
-            Texts.T(CampaignTextKeys.LinkshellsBody), 0, LinkshellBodyLines, true), 0, out var action);
+        var bottom = DrawCard(drawList, left, top, width, new CardContent(SyncshellsCardId,
+            Texts.T(CampaignTextKeys.SyncshellsTitle), CardPill.None, string.Empty, labels.SyncshellNames,
+            Texts.T(CampaignTextKeys.SyncshellsBody), 0, SyncshellBodyLines, true), 0, out var action);
         if (action == CardTapped)
         {
-            OpenLinkshells();
+            OpenSyncshells();
         }
 
         return bottom;

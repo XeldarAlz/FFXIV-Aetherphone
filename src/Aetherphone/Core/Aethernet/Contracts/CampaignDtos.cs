@@ -29,7 +29,7 @@ internal sealed record CampaignDto(
     CampaignTextDto[] Texts,
     CampaignExperienceDto[] Experiences,
     CampaignMemberDto[] Members,
-    CampaignLinkshellDto[] Linkshells,
+    CampaignSyncshellDto[] Syncshells,
     CampaignPostDto? PinnedPost,
     long UpdatedAtUnix);
 
@@ -58,8 +58,8 @@ internal sealed record CampaignExperienceDto(
 internal sealed record CampaignMemberDto(string Id, string Name, string Role, string World, string? PortraitUrl,
     CampaignLinkDto[] Links) : IIdentified;
 
-internal sealed record CampaignLinkshellDto(string Id, string Name, string Kind, string Home, string Blurb,
-    string? ContactMemberId) : IIdentified;
+internal sealed record CampaignSyncshellDto(string Id, string Name, string Service, string SyncshellId,
+    string Password, string Blurb) : IIdentified;
 
 internal sealed record CampaignPostDto(string Id, string Title, string Body, string[] ImageUrls, string? LinkUrl,
     bool Pinned, long PublishedAtUnix) : IIdentified;

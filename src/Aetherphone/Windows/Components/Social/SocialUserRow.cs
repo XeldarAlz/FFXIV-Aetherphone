@@ -31,6 +31,18 @@ internal static class SocialUserRow
     private const float TapGap = 6f;
     private const float LineGap = 2f;
 
+    public static bool SkipHidden(in SocialUserRowStyle style)
+    {
+        var size = new Vector2(ScrollLayout.StableContentWidth(), style.Height * UiScale.Current);
+        if (ImGui.IsRectVisible(size))
+        {
+            return false;
+        }
+
+        ImGui.Dummy(size);
+        return true;
+    }
+
     public static SocialUserRowResult Draw(string idPrefix, UserDto user, string subtitle, float trailingWidth,
         in SocialUserRowStyle style, SocialInk ink, PhoneTheme theme, RemoteImageCache images,
         LodestoneService lodestone)

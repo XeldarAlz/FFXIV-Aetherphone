@@ -8,7 +8,7 @@ internal enum CampaignLaunchKind : byte
     Post,
     Experience,
     Perks,
-    Linkshells,
+    Syncshells,
 }
 
 internal readonly record struct CampaignLaunch(CampaignLaunchKind Kind, string Id)
@@ -21,7 +21,7 @@ internal sealed class CampaignLauncher
     public const string PostPrefix = "post:";
     public const string ExperiencePrefix = "experience:";
     public const string PerksKey = "perks";
-    public const string LinkshellsKey = "linkshells";
+    public const string SyncshellsKey = "syncshells";
 
     private readonly LaunchIntent intent = new();
 
@@ -56,9 +56,9 @@ internal sealed class CampaignLauncher
             return new CampaignLaunch(CampaignLaunchKind.Perks, string.Empty);
         }
 
-        if (string.Equals(groupKey, LinkshellsKey, StringComparison.Ordinal))
+        if (string.Equals(groupKey, SyncshellsKey, StringComparison.Ordinal))
         {
-            return new CampaignLaunch(CampaignLaunchKind.Linkshells, string.Empty);
+            return new CampaignLaunch(CampaignLaunchKind.Syncshells, string.Empty);
         }
 
         return CampaignLaunch.None;

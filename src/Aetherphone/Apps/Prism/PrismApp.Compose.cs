@@ -20,7 +20,6 @@ internal sealed partial class PrismApp
     private const int MaxTags = 6;
     private const float FieldUnits = 34f;
     private const double RecaptureSeconds = 1.0;
-    private const int Utf8BytesPerUnit = 3;
 
     private readonly PhotoComposeSession composeSession;
     private readonly HashSet<string> droppedMods = new(StringComparer.Ordinal);
@@ -116,7 +115,7 @@ internal sealed partial class PrismApp
         var strip = StripRect(content, scale);
         var failure = string.Empty;
         var failureHeight = 0f;
-        if (glams.PostFailed && !glams.Posting)
+        if (glams.PostFailed && !glams.Posting && postingDraft == composeDraft)
         {
             var reason = glams.PostFailureText;
             failure = reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint);
@@ -188,13 +187,7 @@ internal sealed partial class PrismApp
     {
         var height = FieldUnits * scale;
         var field = new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
-        GlassField.Text(field, id, hint, ref text, PrismArt.Fore, PrismArt.Muted, 0f,
-            maxLength * Utf8BytesPerUnit + 1, ImGuiInputTextFlags.None);
-        if (text.Length > maxLength)
-        {
-            text = text[..(char.IsHighSurrogate(text[maxLength - 1]) ? maxLength - 1 : maxLength)];
-        }
-
+        GlassField.Text(field, id, hint, ref text, PrismArt.Fore, PrismArt.Muted, 0f, maxLength);
         PrismArt.Hairline(drawList, left, left + width, top + height, ImGui.IsItemActive() ? PrismArt.Fore : PrismArt.Faint,
             scale);
         return top + height;
@@ -273,26 +266,24 @@ internal sealed partial class PrismApp
 
         capturedModsFor = captured;
         capturedModsLanguage = Loc.Current.Code;
-        var count = 0;
-        for (var index = 0; index < captured.Length; index++)
-        {
-            count += captured[index].Mods?.Length ?? 0;
-        }
-
-        var mods = new CapturedMod[count];
-        var next = 0;
+        var mods = new List<CapturedMod>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
         for (var index = 0; index < captured.Length; index++)
         {
             var pieceMods = captured[index].Mods ?? Array.Empty<GlamModDto>();
             for (var modIndex = 0; modIndex < pieceMods.Length; modIndex++)
             {
                 var mod = pieceMods[modIndex];
-                mods[next++] = new CapturedMod(PostedMods.Key(captured[index].Slot, mod),
-                    mod.Author.Length > 0 ? Loc.T(L.Prism.ModBy, mod.Name, mod.Author) : mod.Name);
+                var key = PostedMods.Key(mod);
+                if (seen.Add(key))
+                {
+                    mods.Add(new CapturedMod(key,
+                        mod.Author.Length > 0 ? Loc.T(L.Prism.ModBy, mod.Name, mod.Author) : mod.Name));
+                }
             }
         }
 
-        capturedMods = mods;
+        capturedMods = mods.ToArray();
     }
 
     private string CapturedLine()
@@ -306,15 +297,7 @@ internal sealed partial class PrismApp
             }
         }
 
-        var mods = 0;
-        for (var index = 0; index < capturedMods.Length; index++)
-        {
-            if (!droppedMods.Contains(capturedMods[index].Key))
-            {
-                mods++;
-            }
-        }
-
+        var mods = KeptModCount();
         var key = HashCode.Combine(pieces, mods, Loc.Current.Code);
         return capturedText.IsCurrent(key)
             ? capturedText.Value
@@ -325,7 +308,7 @@ internal sealed partial class PrismApp
     {
         captured = glamour.Capture(out var race, out var gender);
         capturedVanilla = GlamourService.IsVanilla(captured);
-        captured = PostedMods.Without(captured, droppedMods);
+        var gear = PostedMods.Without(captured, droppedMods);
         var paths = composeSession.SelectedArray();
         var crops = composeSession.CropsArray();
         var count = Math.Min(paths.Length, GlamStore.MaxPhotos);
@@ -343,7 +326,7 @@ internal sealed partial class PrismApp
         postOutcome = OutcomePending;
         postingDraft = composeDraft;
         postingCover = count > 0 ? photos[0].Path : string.Empty;
-        glams.Post(photos, captured, glamTitle.Trim(), SplitTags(glamTags), race, gender, capturedVanilla,
+        glams.Post(photos, gear, glamTitle.Trim(), SplitTags(glamTags), race, gender, capturedVanilla,
             glamour.TryingOn ? wearingGlamId : string.Empty, postSettled);
     }
 

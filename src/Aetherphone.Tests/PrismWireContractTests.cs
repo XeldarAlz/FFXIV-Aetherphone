@@ -251,9 +251,14 @@ public sealed class PrismWireContractTests
         Assert.Contains("\"race\":6", made);
         Assert.Contains("\"gender\":1", made);
 
+        var male = JsonSerializer.Serialize(new PrismEntryRequest("k", 810, 1080, Race: 1, Gender: 0),
+            AethernetJsonContext.Default.PrismEntryRequest);
+        Assert.Contains("\"gender\":0", male);
+
         var unknown = JsonSerializer.Serialize(new PrismEntryRequest("k", 810, 1080),
             AethernetJsonContext.Default.PrismEntryRequest);
         Assert.DoesNotContain("race", unknown);
+        Assert.DoesNotContain("gender", unknown);
     }
 
     [Fact]

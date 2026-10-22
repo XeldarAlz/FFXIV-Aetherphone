@@ -65,6 +65,41 @@ internal sealed class UserListSearch
             ? Loc.T(L.Common.Searching)
             : Loc.T(L.Social.ListSearchNoMatches);
 
+    public static bool Failed(SocialFeedStore store) => store.UserListFailed || store.UserListSearchStalled;
+
+    public static void DrawFailure(Rect area, SocialFeedStore store, AppSkin ui)
+    {
+        var hint = store.UserListFailed ? Loc.T(L.Common.LoadFailedHint) : Loc.T(L.Social.ListSearchStalled);
+        if (EmptyState.Draw(area, ui, PhoneIcons.HelpCircle, Loc.T(L.Common.LoadFailed), hint, Loc.T(L.Common.Retry)))
+        {
+            store.RetryUserList();
+        }
+    }
+
+    public static void DrawStalledFooter(SocialFeedStore store, AppSkin ui, Vector4 ink)
+    {
+        if (!store.UserListSearchStalled)
+        {
+            return;
+        }
+
+        DrawNote(Loc.T(L.Social.ListSearchStalled), ink);
+        var scale = UiScale.Current;
+        var label = Loc.T(L.Common.Retry);
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ScrollLayout.StableContentWidth();
+        var buttonWidth = Button.WidthFor(label, ButtonSize.Small);
+        var buttonHeight = Button.SmallHeight * scale;
+        var left = origin.X + (width - buttonWidth) * 0.5f;
+        var button = new Rect(new Vector2(left, origin.Y), new Vector2(left + buttonWidth, origin.Y + buttonHeight));
+        if (Button.Draw(button, label, ui.Ink, ButtonStyle.Gray, id: "userListSearch.retry"))
+        {
+            store.RetryUserList();
+        }
+
+        ImGui.Dummy(new Vector2(width, buttonHeight));
+    }
+
     public string CappedNote(SocialFeedStore store)
     {
         if (!store.UserListSearchCapped)
@@ -154,6 +189,5 @@ internal sealed class UserListSearch
 
     private bool IsMatch(UserDto user) =>
         user.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase)
-        || user.Handle.Contains(handleQuery, StringComparison.OrdinalIgnoreCase)
-        || user.Name.Contains(query, StringComparison.OrdinalIgnoreCase);
+        || user.Handle.Contains(handleQuery, StringComparison.OrdinalIgnoreCase);
 }

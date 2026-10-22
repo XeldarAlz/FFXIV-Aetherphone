@@ -95,20 +95,6 @@ internal sealed class GlamClient
         Action<AepFailure>? onFailure = null) =>
         net.GetAsync(UserProfilePath(userId), AethernetJsonContext.Default.GlamProfileDto, token, null, onFailure);
 
-    public Task<GlamCollectionDto[]?> CollectionsAsync(CancellationToken token, Action<AepFailure>? onFailure = null) =>
-        net.GetAsync("/me/prism/collections", AethernetJsonContext.Default.GlamCollectionDtoArray, token, null,
-            onFailure);
-
-    public Task<GlamCollectionDto?> CreateCollectionAsync(string name, CancellationToken token,
-        Action<AepFailure>? onFailure = null) =>
-        net.PostAsync("/me/prism/collections", new GlamCollectionRequest(name),
-            AethernetJsonContext.Default.GlamCollectionRequest, AethernetJsonContext.Default.GlamCollectionDto, token,
-            null, onFailure);
-
-    public Task<bool> DeleteCollectionAsync(string collectionId, CancellationToken token,
-        Action<AepFailure>? onFailure = null) =>
-        net.SendAsync(HttpMethod.Delete, CollectionPath(collectionId), token, null, onFailure);
-
     public Task<GlamPage?> CollectionGlamsAsync(string collectionId, string? cursor, CancellationToken token,
         Action<AepFailure>? onFailure = null) =>
         net.GetAsync(CollectionGlamsPath(collectionId, cursor), AethernetJsonContext.Default.GlamPage, token, null,
