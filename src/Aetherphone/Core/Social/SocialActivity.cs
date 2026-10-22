@@ -27,7 +27,7 @@ internal static class SocialActivity
     public const int TypeAdInquiry = 19;
     public const int TypeMissedCall = 20;
     public const int TypeRadioLive = 21;
-    public const int TypePlacing = 22;
+    public const int TypePlacing = 23;
     public const string ChirperApp = "chirper";
     public const string AethergramApp = "aethergram";
     public const string VelvetApp = "velvet";

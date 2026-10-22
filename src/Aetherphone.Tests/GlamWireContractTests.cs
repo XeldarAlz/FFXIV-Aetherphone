@@ -79,7 +79,7 @@ public sealed class GlamWireContractTests
     [Fact]
     public void PrismActivityRowsCarryTheirRankAndThumbnail()
     {
-        var page = JsonSerializer.Deserialize("{\"items\":[{\"id\":\"n_1\",\"type\":22,\"app\":\"prism\","
+        var page = JsonSerializer.Deserialize("{\"items\":[{\"id\":\"n_1\",\"type\":23,\"app\":\"prism\","
             + "\"postId\":\"g_1\",\"actorId\":\"\",\"actorName\":\"\",\"actorDisplayName\":\"\",\"actorHandle\":\"\","
             + "\"preview\":\"Midnight Garden\",\"createdAtUnix\":1792540000,\"rank\":2,\"imageUrl\":\"https://x/1.jpg\"},"
             + "{\"id\":\"n_2\",\"type\":0,\"app\":\"prism\",\"postId\":\"g_1\",\"actorId\":\"u_1\",\"actorName\":\"Ada\","

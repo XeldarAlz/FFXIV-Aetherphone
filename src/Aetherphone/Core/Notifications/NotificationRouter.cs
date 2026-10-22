@@ -50,7 +50,7 @@ internal sealed class NotificationRouter
     private const int TypeAdInquiry = 19;
     private const int TypeMissedCall = 20;
     private const int TypeRadioLive = 21;
-    private const int TypePlacing = 22;
+    private const int TypePlacing = 23;
     private const string CallGroupPrefix = "call:";
     private readonly INavigator navigation;
     private readonly NotificationService notifications;
