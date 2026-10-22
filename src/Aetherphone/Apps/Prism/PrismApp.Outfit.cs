@@ -37,6 +37,7 @@ internal sealed partial class PrismApp
     private int gearResultCount;
     private int editingSlot;
     private int editingDye;
+    private float outfitScroll;
     private bool focusGearSearch;
     private CachedText dyeChannelText;
 
@@ -394,6 +395,7 @@ internal sealed partial class PrismApp
         gearQuery = string.Empty;
         gearResultsSlot = -1;
         focusGearSearch = true;
+        outfitScroll = bodyScroll;
         gearCatalog.EnsureBuilt();
         Go(PrismScreen.GearSearch);
     }
@@ -402,8 +404,15 @@ internal sealed partial class PrismApp
     {
         editingSlot = slot;
         editingDye = channel;
+        outfitScroll = bodyScroll;
         gearCatalog.EnsureBuilt();
         Go(PrismScreen.DyePick);
+    }
+
+    private void BackToOutfit()
+    {
+        Go(PrismScreen.Outfit, -1);
+        pendingScroll = outfitScroll;
     }
 
     private void DrawGearSearch(ImDrawListPtr drawList, Rect content, float scale)
@@ -490,7 +499,7 @@ internal sealed partial class PrismApp
             draftStain0[editingSlot] = 0;
         }
 
-        Go(PrismScreen.Outfit, -1);
+        BackToOutfit();
     }
 
     private void DrawDyePick(ImDrawListPtr drawList, Rect content, float scale)
@@ -575,7 +584,7 @@ internal sealed partial class PrismApp
                 draftStain1[editingSlot] = stainId;
             }
 
-            Go(PrismScreen.Outfit, -1);
+            BackToOutfit();
         }
 
         return row.Max.Y;
