@@ -77,13 +77,12 @@ internal sealed partial class PrismApp
     private void KeepEntryDrops()
     {
         droppedMods.Clear();
-        if (VanillaEntry || store.Week?.MyEntry is not { } entry || entry.Track != store.Track)
+        if (VanillaEntry || store.Week?.MyEntry?.Outfit is not { } outfit)
         {
             return;
         }
 
         var sent = new HashSet<string>(StringComparer.Ordinal);
-        var outfit = entry.Outfit ?? Array.Empty<GlamGearDto>();
         for (var index = 0; index < outfit.Length; index++)
         {
             var mods = outfit[index].Mods ?? Array.Empty<GlamModDto>();
@@ -94,12 +93,23 @@ internal sealed partial class PrismApp
         }
 
         SyncCapturedMods();
+        var sameLook = false;
         for (var index = 0; index < capturedMods.Length; index++)
         {
-            if (!sent.Contains(capturedMods[index].Key))
+            var key = capturedMods[index].Key;
+            if (sent.Contains(key))
             {
-                droppedMods.Add(capturedMods[index].Key);
+                sameLook = true;
             }
+            else
+            {
+                droppedMods.Add(key);
+            }
+        }
+
+        if (!sameLook)
+        {
+            droppedMods.Clear();
         }
     }
 
