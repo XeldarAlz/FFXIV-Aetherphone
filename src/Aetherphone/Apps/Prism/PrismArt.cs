@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -13,6 +14,7 @@ internal static class PrismArt
     public const float IconUnits = 24f;
     public const int Stars = 5;
     public const int PodiumRanks = 3;
+    public const float TryOnSeconds = 1.45f;
 
     private const float IconDotUnits = 4f;
     private const float IconDotRimUnits = 1.5f;
@@ -52,6 +54,12 @@ internal static class PrismArt
     private const float MedalFill = 0.12f;
     private const int MedalSegments = 48;
     private const float SwatchShadeShare = 0.45f;
+    private const float ScrimShare = 0.35f;
+    private const float ChipUnits = 28f;
+    private const float ChipGlyphUnits = 13f;
+    private const float FailedGlyphShare = 0.3f;
+    private const float TryOnHoldSeconds = 0.9f;
+    private const float TryOnDim = 0.25f;
 
     public static readonly Vector4 Bone = new(0.957f, 0.945f, 0.918f, 1f);
     public static readonly Vector4 Ink = new(0.067f, 0.067f, 0.067f, 1f);
@@ -61,6 +69,10 @@ internal static class PrismArt
     private static readonly Vector4 ShadeClear = new(0f, 0f, 0f, 0f);
     private static readonly Vector4 ShadeMid = new(0f, 0f, 0f, 0.72f);
     private static readonly Vector4 ShadeDeep = new(0f, 0f, 0f, 0.92f);
+    private static readonly Vector4 ScrimMid = new(0f, 0f, 0f, 0.4f);
+    private static readonly Vector4 ScrimDeep = new(0f, 0f, 0f, 0.7f);
+    private static readonly Vector4 ChipFill = new(0.07f, 0.07f, 0.08f, 0.55f);
+    private static readonly Vector4 ChipHover = new(0.07f, 0.07f, 0.08f, 0.7f);
     private static readonly Vector4 Stitch = new(0.067f, 0.067f, 0.067f, 0.35f);
 
     private static readonly Inks PhotoInks = new(new Vector4(0f, 0f, 0f, 1f), White, new Vector4(1f, 1f, 1f, 0.66f),
@@ -85,6 +97,10 @@ internal static class PrismArt
 
     public static Vector4 OnFore => inks.OnFore;
 
+    public static Vector4 PhotoMuted => PhotoInks.Muted;
+
+    public static bool Light => Palette.Luminance(themeInks.Back) >= 0.5f;
+
     public static void Follow(PhoneTheme theme)
     {
         themeInks = new Inks(theme.AppBackground, theme.TextStrong, theme.TextMuted, theme.Separator,
@@ -103,6 +119,13 @@ internal static class PrismArt
     private static readonly uint[] SpectrumPacked = PackAll(Spectrum);
 
     private static readonly string[] Digits = { "1", "2", "3", "4", "5" };
+
+    private static string momentLabel = string.Empty;
+    private static string momentFitted = string.Empty;
+    private static float momentRoom;
+    private static float momentSize;
+    private static int momentFonts;
+    private static Rect momentPill;
 
     public static float LabelPixels() => LabelUnits * UiScale.Current;
 
@@ -422,6 +445,18 @@ internal static class PrismArt
         }
     }
 
+    public static void Placeholder(ImDrawListPtr drawList, Rect rect, bool failed, float scale, float opacity = 1f)
+    {
+        var fill = Surfaces.Fill(themeInks.Fore, FillLevel.Tertiary);
+        drawList.AddRectFilled(rect.Min, rect.Max, ImGui.GetColorU32(fill with { W = fill.W * opacity }));
+        if (failed)
+        {
+            PhoneIcon.Draw(drawList, rect.Center, PhoneIcons.Photo,
+                themeInks.Muted with { W = themeInks.Muted.W * opacity },
+                MathF.Min(IconUnits * scale, rect.Width * FailedGlyphShare));
+        }
+    }
+
     private static void DrawStitch(ImDrawListPtr drawList, Rect rect, float scale)
     {
         var inset = StitchInsetUnits * scale;
@@ -469,6 +504,102 @@ internal static class PrismArt
         DrawStitch(drawList, rect, scale);
         PrismType.Draw(drawList, min + new Vector2(pad, pad), label, Ink, PrismFace.Label, pixels);
         return rect.Center;
+    }
+
+    public static void Scrim(ImDrawListPtr drawList, Rect photo, float textHeight, float scale)
+    {
+        var carry = MathF.Min(photo.Height, textHeight + Metrics.Space.Xl * scale);
+        var textTop = photo.Max.Y - carry;
+        var fade = MathF.Max(photo.Height * ScrimShare - carry, Metrics.Space.Xl * scale);
+        var top = MathF.Max(photo.Min.Y, textTop - fade);
+        var clear = ImGui.GetColorU32(ShadeClear);
+        var middle = ImGui.GetColorU32(ScrimMid);
+        var deep = ImGui.GetColorU32(ScrimDeep);
+        drawList.AddRectFilledMultiColor(new Vector2(photo.Min.X, top), new Vector2(photo.Max.X, textTop), clear, clear,
+            middle, middle);
+        drawList.AddRectFilledMultiColor(new Vector2(photo.Min.X, textTop), photo.Max, middle, middle, deep, deep);
+    }
+
+    public static void TopFog(ImDrawListPtr drawList, Rect photo, float scale)
+    {
+        var fog = ImGui.GetColorU32(PhotoInks.Fog);
+        var clear = ImGui.GetColorU32(ShadeClear);
+        drawList.AddRectFilledMultiColor(photo.Min,
+            new Vector2(photo.Max.X, MathF.Min(photo.Max.Y, photo.Min.Y + TopShadeUnits * scale)), fog, fog, clear,
+            clear);
+    }
+
+    public static bool PhotoChip(ImDrawListPtr drawList, Vector2 bottomLeft, float maxWidth, string glyph,
+        string label, bool selected, float scale)
+    {
+        var half = ChipUnits * scale * 0.5f;
+        var chip = PillRect(new Vector2(bottomLeft.X, bottomLeft.Y - half), maxWidth, label, false, scale,
+            out var fitted);
+        var reach = MathF.Max(half, Metrics.Size.TapTarget * scale * 0.5f) - half;
+        var hit = new Rect(new Vector2(chip.Min.X, chip.Min.Y - reach), new Vector2(chip.Max.X, chip.Max.Y + reach));
+        var hovered = UiInteract.HoverOverlay(hit);
+        PhotoPill(drawList, chip, glyph, fitted, selected ? White : hovered ? ChipHover : ChipFill,
+            selected ? Ink : White, scale);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return UiInteract.Click(hit.Min, hit.Max, hovered);
+    }
+
+    public static void TryOnMoment(ImDrawListPtr drawList, Rect photo, string glyph, string label, float age,
+        float scale)
+    {
+        if (age <= 0f || age >= TryOnSeconds)
+        {
+            return;
+        }
+
+        var sweep = PrismMotion.At(age, 0f, Motion.Sheet);
+        var show = sweep * (1f - PrismMotion.At(age, TryOnHoldSeconds, Motion.Appear));
+        drawList.AddRectFilled(photo.Min, photo.Max, Palette.Pack(ShadeClear with { W = TryOnDim * show }));
+        Refraction(drawList, photo, sweep);
+        var room = photo.Width - Metrics.Space.Lg * scale * 2f;
+        var size = PrismType.Snap(PrismFace.Label, LabelPixels());
+        if (!ReferenceEquals(label, momentLabel) || room != momentRoom || size != momentSize ||
+            Plugin.Fonts.Generation != momentFonts)
+        {
+            momentLabel = label;
+            momentRoom = room;
+            momentSize = size;
+            momentFonts = Plugin.Fonts.Generation;
+            momentPill = PillRect(Vector2.Zero, room, label, true, scale, out momentFitted);
+        }
+
+        var pill = new Rect(momentPill.Min + photo.Center, momentPill.Max + photo.Center);
+        PhotoPill(drawList, pill, glyph, momentFitted, ChipFill with { W = ChipFill.W * show }, White with { W = show },
+            scale);
+    }
+
+    private static Rect PillRect(Vector2 anchor, float maxWidth, string label, bool centered, float scale,
+        out string fitted)
+    {
+        var pixels = LabelPixels();
+        var chrome = (Metrics.Space.Md * 2f + ChipGlyphUnits + Metrics.Space.Xxs) * scale;
+        fitted = PrismType.FitLabel(label, pixels, MathF.Max(1f, maxWidth - chrome));
+        var width = chrome + PrismType.Measure(fitted, PrismFace.Label, pixels).X;
+        var left = centered ? anchor.X - width * 0.5f : anchor.X;
+        var half = ChipUnits * scale * 0.5f;
+        return new Rect(new Vector2(left, anchor.Y - half), new Vector2(left + width, anchor.Y + half));
+    }
+
+    private static void PhotoPill(ImDrawListPtr drawList, Rect pill, string glyph, string label, Vector4 fill,
+        Vector4 ink, float scale)
+    {
+        var pixels = LabelPixels();
+        var glyphSize = ChipGlyphUnits * scale;
+        var left = pill.Min.X + Metrics.Space.Md * scale;
+        drawList.AddRectFilled(pill.Min, pill.Max, Palette.Pack(fill), pill.Height * 0.5f);
+        PhoneIcon.Draw(drawList, new Vector2(left + glyphSize * 0.5f, pill.Center.Y), glyph, ink, glyphSize);
+        PrismType.Draw(drawList,
+            new Vector2(left + glyphSize + Metrics.Space.Xxs * scale,
+                pill.Center.Y - PrismType.Snap(PrismFace.Label, pixels) * 0.5f), label, ink, PrismFace.Label, pixels);
     }
 
     private static uint[] PackAll(Vector4[] colors)
