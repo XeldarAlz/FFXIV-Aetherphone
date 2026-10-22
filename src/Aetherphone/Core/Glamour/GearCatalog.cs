@@ -11,6 +11,7 @@ internal readonly record struct DyePick(byte StainId, string Name, uint Color);
 internal sealed class GearCatalog
 {
     private const int Expected = 16384;
+    private const long RetryAfterMilliseconds = 30_000;
 
     private readonly IDataManager data;
     private readonly object sync = new();
@@ -24,6 +25,7 @@ internal sealed class GearCatalog
     private DyePick[] dyes = Array.Empty<DyePick>();
     private volatile bool building;
     private volatile bool ready;
+    private long retryAt;
 
     public GearCatalog(IDataManager data)
     {
@@ -36,7 +38,7 @@ internal sealed class GearCatalog
 
     public void EnsureBuilt()
     {
-        if (ready || building || !GameSheets.Available)
+        if (ready || building || !GameSheets.Available || Environment.TickCount64 < Interlocked.Read(ref retryAt))
         {
             return;
         }
@@ -178,6 +180,7 @@ internal sealed class GearCatalog
         catch (Exception exception)
         {
             AepLog.Warning(exception, "Gear catalog build failed");
+            Interlocked.Exchange(ref retryAt, Environment.TickCount64 + RetryAfterMilliseconds);
         }
         finally
         {
