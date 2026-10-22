@@ -51,7 +51,6 @@ internal sealed partial class PrismApp
     private int rewardFrameDays;
     private CachedText rewardDaysText;
     private CachedText monogramText;
-    private CachedText gilText;
 
     private PrismPrizesDto? Prizes => store.Week?.Prizes ?? store.Results?.Prizes;
 
@@ -250,11 +249,10 @@ internal sealed partial class PrismApp
             pixels) + Metrics.Space.Xs * scale;
         cursor += Typography.DrawWrappedLeft(new Vector2(textLeft, cursor), Loc.T(RewardBodies[(int)kind]), PrismArt.Muted,
             TextStyles.Subheadline, textWidth);
-        var extra = RewardExtra(kind);
-        if (extra.Length > 0)
+        cursor = DrawRewardNote(textLeft, cursor, textWidth, RewardExtra(kind), scale);
+        if (kind == PrismRewardKind.Gil && Prizes is { GilNote.Length: > 0 } prizes)
         {
-            cursor += Metrics.Space.Sm * scale + Typography.DrawWrappedLeft(new Vector2(textLeft, cursor + Metrics.Space.Sm * scale),
-                extra, PrismArt.Fore, TextStyles.Footnote, textWidth);
+            cursor = DrawRewardNote(textLeft, cursor, textWidth, prizes.GilNote, scale);
         }
 
         PrismMotion.Rise(drawList, mark, PrismMotion.At(screenAge, ChapterDelay + number * PrismMotion.Stagger,
@@ -262,10 +260,15 @@ internal sealed partial class PrismApp
         return MathF.Max(cursor, top + art * 2f) + Metrics.Space.Xl * scale;
     }
 
-    private string GilLines(string note)
+    private static float DrawRewardNote(float left, float top, float width, string note, float scale)
     {
-        var key = HashCode.Combine(note, Loc.Current.Code);
-        return gilText.IsCurrent(key) ? gilText.Value : gilText.Store(key, string.Concat(Loc.T(L.Prism.GilSent), " ", note));
+        if (note.Length == 0)
+        {
+            return top;
+        }
+
+        return top + Metrics.Space.Sm * scale + Typography.DrawWrappedLeft(new Vector2(left, top + Metrics.Space.Sm * scale),
+            note, PrismArt.Fore, TextStyles.Footnote, width);
     }
 
     private string RewardExtra(PrismRewardKind kind)
@@ -280,7 +283,7 @@ internal sealed partial class PrismApp
             case PrismRewardKind.Coin:
                 return RewardLine(store.Week?.JudgeReward);
             case PrismRewardKind.Gil:
-                return Prizes is { GilNote.Length: > 0 } prizes ? GilLines(prizes.GilNote) : Loc.T(L.Prism.GilSent);
+                return Loc.T(L.Prism.GilSent);
             default:
                 return string.Empty;
         }
