@@ -581,6 +581,14 @@ internal sealed partial class PrismApp : IResumableApp
         }
 
         DrawLook(drawList, photo, url, false);
+        var hovered = UiInteract.Hover(tile.Min, tile.Max);
+        if (hovered)
+        {
+            drawList.AddRectFilled(photo.Min, photo.Max,
+                ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Quaternary)));
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
         var middle = (photo.Max.Y + tile.Max.Y) * 0.5f;
         var left = photo.Min.X;
         var right = photo.Max.X;
@@ -614,12 +622,6 @@ internal sealed partial class PrismApp : IResumableApp
         Typography.Draw(drawList,
             new Vector2(left, middle - Typography.Measure(fitted, PrismType.Headline).Y * 0.5f), fitted, PrismArt.Fore,
             PrismType.Headline);
-        var hovered = UiInteract.Hover(tile.Min, tile.Max);
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
         return UiInteract.Click(tile.Min, tile.Max, hovered);
     }
 
