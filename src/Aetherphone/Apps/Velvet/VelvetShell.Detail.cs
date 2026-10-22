@@ -19,12 +19,15 @@ internal sealed partial class VelvetShell
     private static readonly TextStyle CommentBodyStyle = TextStyles.Subheadline;
     private const float CommentHeadHeight = 18f;
     private const float CommentPadY = 10f;
+    private const float CommentReplyGap = 4f;
+    private const int MaxCommentLength = 500;
     private const float CommentActionWidth = 40f;
     private const float CommentHeartSize = 16f;
     private const float CommentHeartHitRadius = 14f;
     private const float CommentCountGap = 3f;
 
     private static readonly TextStyle CommentCountStyle = TextStyles.Caption1;
+    private static readonly TextStyle CommentReplyStyle = TextStyles.FootnoteEmphasized;
 
     private readonly ActionSheet commentSheet = new();
     private readonly ActionSheet.Item[] commentSheetItems = new ActionSheet.Item[1];
@@ -33,6 +36,7 @@ internal sealed partial class VelvetShell
 
     private string commentsPostId = string.Empty;
     private string commentDraft = string.Empty;
+    private bool commentFocusPending;
 
     private void DrawPostDetail(Rect area, string postId)
     {
@@ -80,7 +84,12 @@ internal sealed partial class VelvetShell
         {
             commentsPostId = postId;
             commentDraft = string.Empty;
+            commentFocusPending = false;
             store.OpenComments(postId);
+            if (!store.ConnectionsLoaded && !store.LoadingConnections)
+            {
+                store.RefreshConnections();
+            }
         }
 
         var composerHeight = 52f * scale;
@@ -300,7 +309,11 @@ internal sealed partial class VelvetShell
 
         var textHeight = commentLayout?.Size.Y ?? Typography.MeasureWrapped(commentText, wrapWidth, CommentBodyStyle.Scale);
         var linkHeight = TranslateLink.Height(translation, commentKey, comment.Lang, scale);
-        var bodyHeight = CommentHeadHeight * scale + textHeight + linkHeight;
+        var mine = store.Me is { } me && me.UserId == comment.AuthorId;
+        var canReply = !mine && comment.AuthorHandle.Length > 0 && IsConnected(comment.AuthorId);
+        var replyGap = canReply ? CommentReplyGap * scale : 0f;
+        var replyHeight = canReply ? ReplyMention.Height(CommentReplyStyle) : 0f;
+        var bodyHeight = CommentHeadHeight * scale + textHeight + linkHeight + replyGap + replyHeight;
         var cellHeight = MathF.Max(avatarRadius * 2f, bodyHeight) + CommentPadY * 2f * scale;
         var drawList = ImGui.GetWindowDrawList();
         var cell = FeedCell.Begin(drawList, cellHeight, VelvetTheme.HoverWash, interactive: false);
@@ -348,6 +361,14 @@ internal sealed partial class VelvetShell
                 scale);
         }
 
+        if (canReply && ReplyMention.DrawLink(drawList,
+                new Vector2(nameLeft, textTop + textHeight + linkHeight + replyGap), Loc.T(L.Velvet.Reply), wrapWidth,
+                CommentReplyStyle, VelvetTheme.MutedInk, VelvetTheme.TitleInk))
+        {
+            commentDraft = ReplyMention.Prefill(commentDraft, comment.AuthorHandle, MaxCommentLength);
+            commentFocusPending = true;
+        }
+
         if (UiInteract.HoverClick(new Vector2(nameLeft, origin.Y), new Vector2(nameLeft + nameWidth, textTop)))
         {
             OpenProfile(comment.AuthorId);
@@ -356,7 +377,6 @@ internal sealed partial class VelvetShell
         var heartCenter = new Vector2(cell.Bounds.Max.X - pad - CommentHeartSize * 0.5f * scale,
             origin.Y + CommentHeadHeight * 0.5f * scale);
         DrawCommentHeart(drawList, comment, heartCenter);
-        var mine = store.Me is { } me && me.UserId == comment.AuthorId;
         if ((mine || viewerOwnsPost) && UiInteract.Hover(cell.Bounds.Min, cell.Bounds.Max)
             && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
         {
@@ -364,6 +384,20 @@ internal sealed partial class VelvetShell
         }
 
         FeedCell.End(drawList, cell, VelvetTheme.Hairline);
+    }
+
+    private bool IsConnected(string userId)
+    {
+        var connections = store.Connections;
+        for (var index = 0; index < connections.Length; index++)
+        {
+            if (connections[index].UserId == userId && connections[index].State == VelvetConnectionState.Connected)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void DrawCommentHeart(ImDrawListPtr drawList, VelvetCommentDto comment, Vector2 center)
@@ -445,10 +479,9 @@ internal sealed partial class VelvetShell
                 bar.Width - 28f * UiScale.Current);
         }
 
-        var focusPending = false;
         if (CommentComposerBar.Draw(bar, screen, ui, theme, style, "##velvetComment", Loc.T(L.Velvet.AddComment),
-                ref commentDraft, 500, commentMentions, mentionPopup, images, lodestone, store.Commenting,
-                ref focusPending, commentEmoji))
+                ref commentDraft, MaxCommentLength, commentMentions, mentionPopup, images, lodestone,
+                store.Commenting, ref commentFocusPending, commentEmoji))
         {
             var text = commentDraft;
             commentDraft = string.Empty;
