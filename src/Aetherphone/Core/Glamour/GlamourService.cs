@@ -11,6 +11,7 @@ internal sealed class GlamourService : IDisposable
     private readonly PenumbraBridge penumbra;
     private readonly GlamourerBridge glamourer;
     private readonly Dictionary<int, HashSet<string>> foldersBySlot = new();
+    private readonly ModMetaCache modMeta = new();
     private bool penumbraReady;
     private bool glamourerReady;
     private bool probed;
@@ -389,7 +390,7 @@ internal sealed class GlamourService : IDisposable
         foreach (var folder in folders)
         {
             var listed = names.TryGetValue(folder, out var name) ? name : string.Empty;
-            var mod = ModAttribution.Describe(root, folder, listed);
+            var mod = modMeta.Describe(root, folder, listed);
             mods[index++] = hasCollection
                 ? mod with { Options = ModAttribution.Options(penumbra.CurrentOptions(collection, folder)) }
                 : mod;
@@ -403,6 +404,7 @@ internal sealed class GlamourService : IDisposable
         if (!probed || penumbra.ConsumeReady() || penumbra.ConsumeDisposing())
         {
             penumbraReady = penumbra.Probe();
+            modMeta.Clear();
         }
 
         if (!probed || glamourer.ConsumeReady() || glamourer.ConsumeDisposing())

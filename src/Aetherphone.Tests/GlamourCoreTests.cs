@@ -62,6 +62,33 @@ public sealed class GlamourCoreTests
     }
 
     [Fact]
+    public void ModMetaIsReadOncePerFolderUntilPenumbraRenamesItOrReloads()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "aetherphone-mods-" + Guid.NewGuid().ToString("N"));
+        var meta = Path.Combine(root, "Coat", "meta.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(meta)!);
+        try
+        {
+            var cache = new ModMetaCache();
+            File.WriteAllText(meta, "{\"Name\":\"Cute Coat\",\"Author\":\"Ada\",\"Version\":\"1.0\"}");
+            Assert.Equal(new GlamModDto("Cute Coat", "Ada", "1.0"), cache.Describe(root, "Coat", "Cute Coat"));
+
+            File.WriteAllText(meta, "{\"Name\":\"Cuter Coat\",\"Author\":\"Ada\",\"Version\":\"2.0\"}");
+            Assert.Equal("1.0", cache.Describe(root, "coat", "Cute Coat").Version);
+            Assert.Equal(new GlamModDto("Cuter Coat", "Ada", "2.0"), cache.Describe(root, "Coat", "Cuter Coat"));
+
+            File.WriteAllText(meta, "{\"Name\":\"Cuter Coat\",\"Author\":\"Ada\",\"Version\":\"3.0\"}");
+            cache.Clear();
+            Assert.Equal("3.0", cache.Describe(root, "Coat", "Cuter Coat").Version);
+            Assert.Equal(new GlamModDto("Boots"), cache.Describe(root, "Boots", "Boots"));
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
     public void OptionsRoundTripIntoPenumbraSettings()
     {
         var options = ModAttribution.Options(new Dictionary<string, List<string>>
