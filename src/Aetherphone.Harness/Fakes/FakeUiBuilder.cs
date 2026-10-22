@@ -15,6 +15,8 @@ internal sealed class FakeUiBuilder : IUiBuilder
     private readonly FakeFontHandle defaultHandle;
     private readonly FakeFontHandle iconHandle;
     private readonly WindowDrawer windowDrawer = new();
+    private Action? subscribedDraw;
+    private Delegate[] drawHandlers = Array.Empty<Delegate>();
 
     public FakeUiBuilder(FakeFontAtlas atlas, FakeFontHandle defaultHandle, FakeFontHandle iconHandle)
     {
@@ -104,16 +106,17 @@ internal sealed class FakeUiBuilder : IUiBuilder
 
     public bool InvokeDraw()
     {
-        var handlers = Draw?.GetInvocationList();
-        if (handlers is null)
+        var draw = Draw;
+        if (!ReferenceEquals(draw, subscribedDraw))
         {
-            return true;
+            subscribedDraw = draw;
+            drawHandlers = draw?.GetInvocationList() ?? Array.Empty<Delegate>();
         }
 
         var healthy = true;
-        for (var index = 0; index < handlers.Length; index++)
+        for (var index = 0; index < drawHandlers.Length; index++)
         {
-            var handler = (Action)handlers[index];
+            var handler = (Action)drawHandlers[index];
             try
             {
                 if (handler.Target is WindowSystem windowSystem)

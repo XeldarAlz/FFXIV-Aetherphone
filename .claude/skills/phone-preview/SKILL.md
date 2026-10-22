@@ -42,6 +42,7 @@ Every command is `tools/harness/aep <command>` (`tools\harness\aep.cmd` on Windo
 | `step N` | Advance N frames (60 per simulated second) |
 | `tree [--all] [--json]` | Every visible line of text with its rect and size, in reading order, plus the anchors |
 | `shot [path] [--full]` | Save a PNG of the phone (or the whole display); then Read the file |
+| `perf [--frames N] [--warmup N]` | Per-frame allocations (draw and update), draw time, errors, and the allocating types for the current screen |
 | `anchors` | Named UI elements on screen with centers, for taps by name |
 | `tap NAME`, `tap X Y`, `tap --text TEXT` | Tap an anchor, a point, or the first visible text match; `--settle N` frames afterwards (default 12) |
 | `drag X1 Y1 X2 Y2 [--frames N]` | Swipe or drag |
@@ -65,6 +66,8 @@ Every command is `tools/harness/aep <command>` (`tools\harness\aep.cmd` on Windo
 2. Tap with `tap --text "General"` or by anchor name; fall back to pixels only when neither exists.
 3. After each action, `tree` again and check `log` for warnings. Buttons that drive the game (invites, chat sends, gearset swaps, item links) succeed and log a `game action: ...` line instead of touching a game.
 4. Take a `shot` and Read the PNG when the question is visual: layout, color, spacing, images, or motion. `tree` sees no images.
+
+After changing draw code, open the screen and run `perf`: the draw path should allocate 0 B per frame. The sampled types name the class to look in.
 
 ## What the harness cannot show
 

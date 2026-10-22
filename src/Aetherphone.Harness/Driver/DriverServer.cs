@@ -7,6 +7,7 @@ using Aetherphone.Core;
 using Aetherphone.Harness.Fakes;
 using Aetherphone.Harness.Host;
 using Aetherphone.Harness.Inspection;
+using Aetherphone.Harness.Profiling;
 using Aetherphone.Harness.Scenarios;
 
 namespace Aetherphone.Harness.Driver;
@@ -15,6 +16,8 @@ internal sealed class DriverServer
 {
     private const int DefaultSettleFrames = 12;
     private const int DefaultDragFrames = 12;
+    private const int DefaultPerfFrames = 600;
+    private const int DefaultPerfWarmup = 60;
     private const float MinimumLiveDelta = 1f / 90f;
     private const float MaximumLiveDelta = 1f / 10f;
     private const float FirstLiveDelta = 1f / 60f;
@@ -222,6 +225,11 @@ internal sealed class DriverServer
             case "/tree":
                 host.Step(Int(query, "frames", 0));
                 return Tree(query);
+            case "/perf":
+                var report = FrameProfiler.Measure(host, Int(query, "warmup", DefaultPerfWarmup), Int(query, "frames", DefaultPerfFrames));
+                return query["format"] == "json"
+                    ? Json(200, report)
+                    : new Response(200, "text/plain; charset=utf-8", Encoding.UTF8.GetBytes(report.Format()));
             case "/log":
                 return Json(200, new { ok = true, latest = HarnessLog.LatestSequence, lines = HarnessLog.Since(Long(query, "since", 0)) });
             case "/login":

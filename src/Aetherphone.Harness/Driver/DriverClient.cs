@@ -98,6 +98,21 @@ internal static class DriverClient
                 }
 
                 break;
+            case "perf":
+                for (var index = 0; index < rest.Count; index++)
+                {
+                    if (rest[index] == "--json")
+                    {
+                        query.Add(new("format", "json"));
+                    }
+                    else if (rest[index] is "--frames" or "--warmup" && index + 1 < rest.Count)
+                    {
+                        query.Add(new(rest[index][2..], rest[index + 1]));
+                        index += 1;
+                    }
+                }
+
+                break;
             case "drag":
                 if (rest.Count < 4)
                 {
@@ -162,7 +177,7 @@ internal static class DriverClient
             case "quit":
                 break;
             default:
-                return Usage("url | state | step [N] | shot [PATH] [--full] | tree [--all] [--full] [--json] | tap X Y | tap ANCHOR | tap --text TEXT | drag X1 Y1 X2 Y2 | scroll X Y DY | type TEXT | key NAME | open [APP] | home | settings | anchors | log [--since N] | command TEXT | scenario [NAME|none] | install [APP|all] | login | logout | quit");
+                return Usage("url | state | step [N] | shot [PATH] [--full] | tree [--all] [--full] [--json] | perf [--frames N] [--warmup N] [--json] | tap X Y | tap ANCHOR | tap --text TEXT | drag X1 Y1 X2 Y2 | scroll X Y DY | type TEXT | key NAME | open [APP] | home | settings | anchors | log [--since N] | command TEXT | scenario [NAME|none] | install [APP|all] | login | logout | quit");
         }
 
         var url = BuildUrl(port, command, query);

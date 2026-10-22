@@ -19,7 +19,9 @@ internal sealed class FakeTextureProvider : ITextureProvider
     private const int PlaceholderIconSize = 64;
     private readonly TextureStore store;
     private readonly FakeDataManager data;
-    private readonly Dictionary<string, FakeSharedTexture> shared = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, FakeSharedTexture> files = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, FakeSharedTexture> gameFiles = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<(uint IconId, bool HiRes, bool ItemHq), FakeSharedTexture> icons = new();
     private readonly FakeTextureWrap empty;
 
     public FakeTextureProvider(TextureStore store, FakeDataManager data)
@@ -29,20 +31,33 @@ internal sealed class FakeTextureProvider : ITextureProvider
         empty = FakeTextureWrap.Upload(store, CpuTexture.Solid(4, 4, 0, 0, 0, 0), false);
     }
 
-    public ISharedImmediateTexture GetFromFile(string path) => Shared("file:" + path, () => Upload(LoadImage(path), false));
+    public ISharedImmediateTexture GetFromFile(string path)
+    {
+        lock (files)
+        {
+            return files.TryGetValue(path, out var texture) ? texture : AddFile(path);
+        }
+    }
 
     public ISharedImmediateTexture GetFromFile(FileInfo file) => GetFromFile(file.FullName);
 
     public ISharedImmediateTexture GetFromFileAbsolute(string fullPath) => GetFromFile(fullPath);
 
-    public ISharedImmediateTexture GetFromGame(string path) => Shared("game:" + path, () => Upload(LoadGameTexture(path), false));
+    public ISharedImmediateTexture GetFromGame(string path)
+    {
+        lock (gameFiles)
+        {
+            return gameFiles.TryGetValue(path, out var texture) ? texture : AddGameFile(path);
+        }
+    }
 
     public ISharedImmediateTexture GetFromGameIcon(in GameIconLookup lookup)
     {
-        var iconId = lookup.IconId;
-        var hiRes = lookup.HiRes;
-        var itemHq = lookup.ItemHq;
-        return Shared($"icon:{iconId}:{hiRes}:{itemHq}", () => Upload(LoadGameIcon(iconId, hiRes, itemHq), false));
+        var key = (lookup.IconId, lookup.HiRes, lookup.ItemHq);
+        lock (icons)
+        {
+            return icons.TryGetValue(key, out var texture) ? texture : AddIcon(key.IconId, key.HiRes, key.ItemHq);
+        }
     }
 
     public bool TryGetFromGameIcon(in GameIconLookup lookup, [NotNullWhen(true)] out ISharedImmediateTexture? texture)
@@ -131,18 +146,25 @@ internal sealed class FakeTextureProvider : ITextureProvider
 
     public nint ConvertToKernelTexture(IDalamudTextureWrap wrap, bool leaveWrapOpen = false) => throw new NotSupportedException();
 
-    private ISharedImmediateTexture Shared(string key, Func<FakeTextureWrap> loader)
+    private FakeSharedTexture AddFile(string path)
     {
-        lock (shared)
-        {
-            if (!shared.TryGetValue(key, out var texture))
-            {
-                texture = new FakeSharedTexture(loader, empty);
-                shared[key] = texture;
-            }
+        var texture = new FakeSharedTexture(() => Upload(LoadImage(path), false), empty);
+        files[path] = texture;
+        return texture;
+    }
 
-            return texture;
-        }
+    private FakeSharedTexture AddGameFile(string path)
+    {
+        var texture = new FakeSharedTexture(() => Upload(LoadGameTexture(path), false), empty);
+        gameFiles[path] = texture;
+        return texture;
+    }
+
+    private FakeSharedTexture AddIcon(uint iconId, bool hiRes, bool itemHq)
+    {
+        var texture = new FakeSharedTexture(() => Upload(LoadGameIcon(iconId, hiRes, itemHq), false), empty);
+        icons[(iconId, hiRes, itemHq)] = texture;
+        return texture;
     }
 
     private FakeTextureWrap Upload(CpuTexture texture, bool owned) => FakeTextureWrap.Upload(store, texture, owned);

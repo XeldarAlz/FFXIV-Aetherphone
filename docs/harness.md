@@ -14,6 +14,7 @@ This doc covers `src/Aetherphone.Harness`, a console host that runs the real plu
 | src/Aetherphone.Harness/Fonts | The font atlas fake over ImGui's own atlas |
 | src/Aetherphone.Harness/Rendering | The CPU rasterizer and PNG output, used for driver screenshots |
 | src/Aetherphone.Harness/Inspection | Reads the frame's text back out of the draw data for `tree` and `tap --text` |
+| src/Aetherphone.Harness/Profiling | Per-frame allocation and draw time measurement for `perf` |
 | src/Aetherphone.Harness/Viewer | The native window: GLFW input and the OpenGL renderer |
 | src/Aetherphone.Harness/Scenarios | Loads a scenario file into the simulated character |
 | tools/harness/scenarios | The bundled scenarios, copied next to the harness binary |
@@ -54,6 +55,7 @@ Every driver command is available as a CLI verb and as an HTTP route with the sa
 | `shot [path] [--full]` | `/shot?full=1&frames=N` | PNG cropped to the phone window by default |
 | `tree [--all] [--full] [--json]` | `/tree?all=1&full=1&format=json` | Every visible line of text with its rect, plus the anchors; never advances time |
 | `tap NAME`, `tap X Y`, or `tap --text TEXT` | `/tap?anchor=NAME`, `/tap?x=&y=`, or `/tap?text=` | `--settle N`, `--button N`, `--space screen` |
+| `perf [--frames N] [--warmup N] [--json]` | `/perf?frames=N&warmup=N&format=json` | Steps the current screen and reports per-frame allocations, draw time, and the allocating types |
 | `drag X1 Y1 X2 Y2` | `/drag` | `--frames N` for the move duration |
 | `scroll X Y DY` | `/scroll` | Wheel delta at a point |
 | `type TEXT` | `/type?text=` | Sends the characters to ImGui |
@@ -92,6 +94,27 @@ It is read back out of the frame ImGui just drew, so every string counts, includ
 `tap --text TEXT` taps the centre of the first visible match: an exact line first, then a substring, then a case-insensitive substring. A miss answers 404 with every visible line, so the next call can correct itself.
 
 What it does not see: images (emoji, avatars, photos, app icons), text drawn under a fill lighter than half opacity, and a glyph cut on both its left and right edges at once.
+
+## Measuring allocations
+
+The draw path must not allocate (see [Conventions](conventions.md)), and `perf` measures that on whatever screen is open. It steps `--warmup` frames (default 60) so first-time loads settle, then measures `--frames` frames (default 600):
+
+```
+perf  app home  600 frames after 60 warmup
+  draw time     avg 0.78 ms  p95 1.70 ms  max 26.38 ms
+  draw alloc    avg 2.6 KB/frame  max 2.6 KB  in 600 of 600 frames
+  update alloc  avg 1.1 KB/frame  max 2.4 KB  in 600 of 600 frames
+  gc            gen0 0  gen1 0  gen2 0
+  sampled UI-thread allocations (one sample per ~100 KB)
+    936.6 KB  Aetherphone.Core.Aethernet.AppAvailability+<>c__DisplayClass27_0
+```
+
+- **draw alloc** counts bytes the UI thread allocated between `NewFrame` and `Render`; **update alloc** counts the `IFramework.Update` handlers and framework-thread work of the same frame. Both are exact, read from `GC.GetAllocatedBytesForCurrentThread`.
+- **sampled allocations** come from the runtime's GC allocation events on the UI thread, one sample per roughly 100 KB, so they rank where the bytes go rather than count them. A closure prints as its declaring class, `Class+<>c__DisplayClassN_M`: a lambda in that class that captures locals or parameters.
+- **errors** counts errors the plugin logged while measuring. A screen that throws every frame allocates for the exception, so fix those first.
+- The harness fakes allocate nothing on hot paths and anchor recording is paused while measuring, so the numbers are the plugin's own. Draw time is the harness CPU's, so compare it between runs rather than against the game.
+
+A common cause is a lambda that captures a method-scope variable: the compiler allocates the closure when the method is entered, before any early return or cache hit. Move the path that needs the lambda into its own method.
 
 ## The browser viewer
 

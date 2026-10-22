@@ -13,6 +13,8 @@ internal sealed class FakeFramework : IFramework
     private readonly object scheduleGate = new();
     private readonly FrameworkTaskScheduler scheduler;
     private long tickCount;
+    private IFramework.OnUpdateDelegate? subscribedUpdate;
+    private Delegate[] updateHandlers = Array.Empty<Delegate>();
 
     public FakeFramework()
     {
@@ -45,15 +47,16 @@ internal sealed class FakeFramework : IFramework
         }
 
         RunDue();
-        var handlers = Update?.GetInvocationList();
-        if (handlers is null)
+        var update = Update;
+        if (!ReferenceEquals(update, subscribedUpdate))
         {
-            return;
+            subscribedUpdate = update;
+            updateHandlers = update?.GetInvocationList() ?? Array.Empty<Delegate>();
         }
 
-        for (var index = 0; index < handlers.Length; index++)
+        for (var index = 0; index < updateHandlers.Length; index++)
         {
-            var handler = (IFramework.OnUpdateDelegate)handlers[index];
+            var handler = (IFramework.OnUpdateDelegate)updateHandlers[index];
             try
             {
                 handler(this);

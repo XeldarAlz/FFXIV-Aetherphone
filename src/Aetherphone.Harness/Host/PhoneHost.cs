@@ -6,6 +6,7 @@ using Aetherphone.Harness.Fakes;
 using Aetherphone.Harness.Fonts;
 using Aetherphone.Harness.Inspection;
 using Aetherphone.Harness.Native;
+using Aetherphone.Harness.Profiling;
 using Aetherphone.Harness.Rendering;
 using Aetherphone.Harness.Scenarios;
 using Dalamud.Bindings.ImGui;
@@ -196,6 +197,8 @@ internal sealed unsafe class PhoneHost : IDisposable
 
     public int FrameIndex { get; private set; }
 
+    public FrameCost LastFrame { get; private set; }
+
     public int Width => renderer.Width;
 
     public int Height => renderer.Height;
@@ -261,12 +264,16 @@ internal sealed unsafe class PhoneHost : IDisposable
         fontAtlas.RebuildIfDirty();
         var io = ImGui.GetIO();
         io.DeltaTime = deltaSeconds;
+        var beforeUpdate = GC.GetAllocatedBytesForCurrentThread();
         framework.Tick(TimeSpan.FromSeconds(deltaSeconds));
+        var beforeDraw = GC.GetAllocatedBytesForCurrentThread();
         stopwatch.Restart();
         ImGui.NewFrame();
         uiBuilder.InvokeDraw();
         ImGui.Render();
         stopwatch.Stop();
+        LastFrame = new FrameCost(beforeDraw - beforeUpdate, GC.GetAllocatedBytesForCurrentThread() - beforeDraw,
+            stopwatch.Elapsed.TotalMilliseconds);
         uiBuilder.FrameCount += 1;
         FrameIndex += 1;
         if (FrameIndex % 300 == 0)
