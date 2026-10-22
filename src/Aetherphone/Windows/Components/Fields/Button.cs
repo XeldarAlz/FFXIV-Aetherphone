@@ -11,6 +11,7 @@ internal enum ButtonStyle : byte
     Tinted,
     Gray,
     Plain,
+    Solid,
 }
 
 internal enum ButtonSize : byte
@@ -41,12 +42,19 @@ internal static class Button
     private const float TintedHoverAlpha = 0.28f;
     private const float ProminentHoverLift = 0.10f;
     private const float ProminentTopLift = 0.12f;
+    private const float SolidHoverMix = 0.08f;
+    private const float SolidPressMix = 0.15f;
     private const float HaloRest = 0.08f;
     private const float HaloHover = 0.26f;
     private const float SheenAlpha = 0.55f;
     private const float TopEdgeAlpha = 0.28f;
     private const float RimLightAlpha = 0.6f;
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
+    private static readonly Vector4 Black = new(0f, 0f, 0f, 1f);
+    private static Vector4 solidTone = new(-1f);
+    private static Vector4 solidInk;
+    private static Vector4 solidLabel;
+    private static bool solidLight;
 
     public static float Height(ButtonSize size) => size switch
     {
@@ -121,6 +129,11 @@ internal static class Button
                 Squircle.Fill(drawList, face.Min, face.Max, radius, ImGui.GetColorU32(gray with { W = gray.W * alpha }));
                 labelInk = role == ButtonRole.Destructive ? toneInk : ink.Ink;
                 break;
+            case ButtonStyle.Solid:
+                labelInk = SolidLabel(tone, ink);
+                Squircle.Fill(drawList, face.Min, face.Max, radius, ImGui.GetColorU32(Palette.Mix(tone, labelInk,
+                    SolidHoverMix * pose.Hover + SolidPressMix * pose.Press) with { W = alpha }));
+                break;
             default:
                 if (pose.Hover > 0.001f)
                 {
@@ -133,7 +146,7 @@ internal static class Button
                 break;
         }
 
-        if (style != ButtonStyle.Plain)
+        if (style is not ButtonStyle.Plain and not ButtonStyle.Solid)
         {
             MotionButton.RimLight(drawList, face, radius, pose.Hover * RimLightAlpha * alpha);
         }
@@ -179,6 +192,21 @@ internal static class Button
         BrandMark.Sheen(drawList, face.Min, face.Max, radius, pose.Sheen, SheenAlpha * alpha);
         Squircle.StrokeDirectional(drawList, face.Min, face.Max, radius,
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, TopEdgeAlpha * alpha)), 1f * scale, new Vector2(0f, -1f), 2f);
+    }
+
+    private static Vector4 SolidLabel(Vector4 tone, in ControlInk ink)
+    {
+        if (tone == solidTone && ink.Ink == solidInk && ink.Light == solidLight)
+        {
+            return solidLabel;
+        }
+
+        var opposite = ink.Light ? White : Black;
+        solidTone = tone;
+        solidInk = ink.Ink;
+        solidLight = ink.Light;
+        solidLabel = Palette.ContrastRatio(tone, ink.Ink) >= Palette.ContrastRatio(tone, opposite) ? ink.Ink : opposite;
+        return solidLabel;
     }
 
     private static float Lerp(float from, float to, float amount) => from + (to - from) * amount;
