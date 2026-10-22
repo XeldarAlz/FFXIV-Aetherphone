@@ -16,12 +16,8 @@ internal enum EntryChoice : byte
 
 internal sealed partial class PrismApp
 {
-    private const float StatusPillUnits = 28f;
-    private const float StatusGlyphUnits = 13f;
     private const string EntryPrimaryId = "prism.entry.primary";
     private const int EntryChoiceCount = 3;
-
-    private static readonly Vector4 StatusPillFill = new(0.07f, 0.07f, 0.08f, 0.55f);
 
     private readonly ActionSheet entrySheet = new();
     private readonly ActionSheet.Item[] entrySheetItems = new ActionSheet.Item[EntryChoiceCount];
@@ -72,9 +68,9 @@ internal sealed partial class PrismApp
         else
         {
             var frame = DrawLook(drawList, photo, entry.ImageUrl, true);
-            DrawStatusPill(drawList, new Vector2(frame.Min.X + Metrics.Space.Md * scale,
+            PrismArt.PhotoPill(drawList, new Vector2(frame.Min.X + Metrics.Space.Md * scale,
                 frame.Max.Y - Metrics.Space.Md * scale), frame.Width - Metrics.Space.Md * scale * 2f,
-                StatusGlyph(entry.Status), Loc.T(StatusName(entry.Status)), scale);
+                StatusGlyph(entry.Status), Loc.T(StatusName(entry.Status)), false, scale);
         }
 
         textTop += PrismType.DrawHero(drawList, new Vector2(left, textTop), title, width, PrismArt.Fore);
@@ -168,27 +164,6 @@ internal sealed partial class PrismApp
                 Go(PrismScreen.Cover, -1);
                 break;
         }
-    }
-
-    private static void DrawStatusPill(ImDrawListPtr drawList, Vector2 bottomLeft, float maxWidth, string glyph,
-        string label, float scale)
-    {
-        var pixels = PrismArt.LabelPixels();
-        var height = StatusPillUnits * scale;
-        var pad = Metrics.Space.Md * scale;
-        var glyphSize = StatusGlyphUnits * scale;
-        var chrome = pad * 2f + glyphSize + Metrics.Space.Xxs * scale;
-        var fitted = PrismType.FitLabel(label, pixels, MathF.Max(1f, maxWidth - chrome));
-        var min = new Vector2(bottomLeft.X, bottomLeft.Y - height);
-        var max = new Vector2(min.X + chrome + PrismType.Measure(fitted, PrismFace.Label, pixels).X, bottomLeft.Y);
-        var middle = (min.Y + max.Y) * 0.5f;
-        drawList.AddRectFilled(min, max, ImGui.GetColorU32(StatusPillFill), height * 0.5f);
-        PhoneIcon.Draw(drawList, new Vector2(min.X + pad + glyphSize * 0.5f, middle), glyph, PrismArt.PhotoFore,
-            glyphSize);
-        PrismType.Draw(drawList,
-            new Vector2(min.X + pad + glyphSize + Metrics.Space.Xxs * scale,
-                middle - PrismType.Snap(PrismFace.Label, pixels) * 0.5f), fitted, PrismArt.PhotoFore,
-            PrismFace.Label, pixels);
     }
 
     private static string StatusGlyph(string status) => status switch
