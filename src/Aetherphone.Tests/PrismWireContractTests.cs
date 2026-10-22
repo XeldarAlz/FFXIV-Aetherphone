@@ -357,6 +357,16 @@ public sealed class PrismWireContractTests
     }
 
     [Fact]
+    public void ACameraShotTakenWithoutTheScanStaysUnchecked()
+    {
+        var stamps = new Dictionary<string, byte>();
+        ModScan.Stamp(stamps, "AEP_20261022_120000_000.png", ModSigns.Unchecked);
+
+        Assert.Equal(L.Prism.VanillaUnchecked.Key,
+            PrismTracks.VanillaBlock(ModScan.Stamped(stamps, "AEP_20261022_120000_000.png"))?.Key);
+    }
+
+    [Fact]
     public void AReplacedRoundWithTheSameWeekIdDropsTheHeldResults()
     {
         var held = new PrismResultsDto(WeekId: "2026-W43", Revision: 1000);

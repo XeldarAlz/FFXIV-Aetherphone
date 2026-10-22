@@ -2,6 +2,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Notifications;
@@ -75,6 +76,7 @@ internal sealed class CameraApp : IPhoneApp
     private readonly Configuration configuration;
     private readonly GameUiVisibility gameUiVisibility;
     private readonly CameraShutter shutter;
+    private readonly AppGate prismGate;
     private readonly CameraModeDial dial = new(Modes, ModeAnchors);
     private readonly CancellationTokenSource cancellation = new();
     private CachedText timerLabel;
@@ -100,13 +102,14 @@ internal sealed class CameraApp : IPhoneApp
     private float requestedShotDelay;
 
     public CameraApp(PhotoCaptureService capture, PhotoLibrary library, Configuration configuration,
-        GameUiVisibility gameUiVisibility, CameraShutter shutter)
+        GameUiVisibility gameUiVisibility, CameraShutter shutter, AppGate prismGate)
     {
         this.capture = capture;
         this.library = library;
         this.configuration = configuration;
         this.gameUiVisibility = gameUiVisibility;
         this.shutter = shutter;
+        this.prismGate = prismGate;
     }
 
     private bool TimerRunning => timerEndsAt > 0d;
@@ -544,7 +547,7 @@ internal sealed class CameraApp : IPhoneApp
             }
 
             PhotoPlaces.Stamp(configuration.PhotoPlaces, path, Plugin.ClientState.TerritoryType);
-            ModScan.Stamp(configuration.PhotoModSigns, path, ModScan.Scan());
+            ModScan.Stamp(configuration.PhotoModSigns, path, prismGate.Open ? ModScan.Scan() : ModSigns.Unchecked);
             configuration.Save();
 
             UiFeedback.Play(UiSound.Shutter);
