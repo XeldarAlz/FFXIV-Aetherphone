@@ -71,6 +71,16 @@ internal sealed partial class PrismApp
         rewardFrameDays = 0;
         rewardKindCount = PrismRewards.Offered(prizes, store.Week?.JudgeReward, rewardKinds);
         PrismRewards.Fill(rewardRows, prizes, PrismPhases.StageFinal);
+        TakeRewardArt();
+        if (rewardBadge is null || rewardFrame is null)
+        {
+            PrismRewards.Fill(rewardRows, prizes, PrismPhases.StageHeat);
+            TakeRewardArt();
+        }
+    }
+
+    private void TakeRewardArt()
+    {
         for (var index = 0; index < rewardRows.Count; index++)
         {
             var row = rewardRows[index];
