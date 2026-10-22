@@ -36,7 +36,29 @@ internal static class HomeTileView
     private const float EffectMoteCoreReach = 0.45f;
     private const float EffectMoteCoreLift = 0.55f;
     private const int EffectMoteSegments = 12;
+    private const float EffectSpectrumCycleSeconds = 6f;
+    private const int EffectGlintCount = 6;
+    private const float EffectGlintLifeSeconds = 2.4f;
+    private const float EffectGlintArcStart = MathF.PI * 0.8f;
+    private const float EffectGlintArcSpan = MathF.PI * 1.4f;
+    private const float EffectGlintInset = 0.9f;
+    private const float EffectGlintClearance = 0.18f;
+    private const float EffectGlintTravel = 0.22f;
+    private const float EffectGlintSizeMin = 3.5f;
+    private const float EffectGlintSizeMax = 6.5f;
+    private const float EffectGlintWaist = 0.2f;
+    private const float EffectGlintSpin = 0.6f;
+    private const float EffectGlintHaloReach = 1.1f;
+    private const float EffectGlintHaloAlpha = 0.3f;
+    private const float EffectGlintInkLift = 0.45f;
+    private const float EffectGlintMinSize = 0.5f;
+    private const int EffectGlintSizeSalt = 7;
     private static readonly Vector4 EffectMoteCoreLight = new(1f, 1f, 1f, 1f);
+
+    private static readonly Vector4[] EffectSpectrum =
+    {
+        AccentRing.Red, AccentRing.Orange, AccentRing.Gold, AccentRing.Green, AccentRing.Azure, AccentRing.Violet,
+    };
 
     public static Vector2 FolderMiniCenter(int index) =>
         new(FolderMiniPadFraction + (index % FolderMiniColumns + 0.5f) * FolderMiniCellFraction,
@@ -55,7 +77,12 @@ internal static class HomeTileView
         var surface = IconTile.Surface(app.Accent);
         var ink = AppAccents.InkFor(app.Id);
         var effect = app.TileEffect;
-        if (effect != HomeTileEffect.None)
+        if (effect == HomeTileEffect.Spectrum)
+        {
+            DrawEffectGlow(dl, drawMin, drawMax, radius, drawHalf,
+                SpectrumAt((float)(ImGui.GetTime() / EffectSpectrumCycleSeconds)));
+        }
+        else if (effect != HomeTileEffect.None)
         {
             DrawEffectGlow(dl, drawMin, drawMax, radius, drawHalf, app.Accent);
         }
@@ -78,6 +105,67 @@ internal static class HomeTileView
         {
             DrawEffectMotes(dl, center, drawHalf, app.Accent, scale);
         }
+        else if (effect == HomeTileEffect.Spectrum)
+        {
+            DrawEffectGlints(dl, center, drawHalf, scale);
+        }
+    }
+
+    private static Vector4 SpectrumAt(float position)
+    {
+        var scaled = (position - MathF.Floor(position)) * EffectSpectrum.Length;
+        var index = (int)scaled;
+        return Palette.Mix(EffectSpectrum[index % EffectSpectrum.Length],
+            EffectSpectrum[(index + 1) % EffectSpectrum.Length], scaled - index);
+    }
+
+    private static void DrawEffectGlints(ImDrawListPtr dl, Vector2 center, float half, float scale)
+    {
+        var time = (float)ImGui.GetTime();
+        for (var glintIndex = 0; glintIndex < EffectGlintCount; glintIndex++)
+        {
+            var clock = time / EffectGlintLifeSeconds + (float)glintIndex / EffectGlintCount;
+            var cycle = (int)MathF.Floor(clock);
+            var life = clock - cycle;
+            var angle = EffectGlintArcStart + EffectGlintArcSpan * Scatter(cycle, glintIndex);
+            var direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+            var edge = half / MathF.Max(MathF.Abs(direction.X), MathF.Abs(direction.Y));
+            var distance = edge * EffectGlintInset + half * (EffectGlintClearance + EffectGlintTravel * life);
+            var bloom = MathF.Sin(life * MathF.PI);
+            var sizeShare = Scatter(cycle + EffectGlintSizeSalt, glintIndex);
+            var size = (EffectGlintSizeMin + (EffectGlintSizeMax - EffectGlintSizeMin) * sizeShare) * scale * bloom;
+            var color = EffectSpectrum[(glintIndex + cycle) % EffectSpectrum.Length];
+            DrawGlint(dl, center + direction * distance, size, life * EffectGlintSpin, color, bloom);
+        }
+    }
+
+    private static void DrawGlint(ImDrawListPtr dl, Vector2 position, float size, float spin, Vector4 color,
+        float alpha)
+    {
+        if (size < EffectGlintMinSize)
+        {
+            return;
+        }
+
+        dl.AddCircleFilled(position, size * EffectGlintHaloReach,
+            ImGui.GetColorU32(Palette.WithAlpha(color, alpha * EffectGlintHaloAlpha)), EffectMoteSegments);
+        var ink = ImGui.GetColorU32(Palette.WithAlpha(Palette.Mix(color, EffectMoteCoreLight, EffectGlintInkLift),
+            alpha));
+        var along = new Vector2(MathF.Cos(spin), MathF.Sin(spin)) * size;
+        var across = new Vector2(-along.Y, along.X);
+        dl.AddQuadFilled(position - along, position + across * EffectGlintWaist, position + along,
+            position - across * EffectGlintWaist, ink);
+        dl.AddQuadFilled(position - across, position + along * EffectGlintWaist, position + across,
+            position - along * EffectGlintWaist, ink);
+    }
+
+    private static float Scatter(int cycle, int index)
+    {
+        var hash = (uint)cycle * 2654435761u ^ (uint)(index + 1) * 2246822519u;
+        hash ^= hash >> 15;
+        hash *= 2246822519u;
+        hash ^= hash >> 13;
+        return (hash & 0xFFFFu) / (float)0xFFFFu;
     }
 
     private static void DrawEffectGlow(ImDrawListPtr dl, Vector2 min, Vector2 max, float radius, float half,
