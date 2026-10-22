@@ -33,8 +33,11 @@ internal sealed partial class PrismApp
     private readonly DeferredTap photoTap = new();
     private readonly Dictionary<string, string> handleLines = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> tagLabels = new(StringComparer.Ordinal);
+    private readonly ChipRail tagRail = new();
     private readonly Dictionary<uint, (string Name, uint Icon)> itemRows = new();
     private readonly HashSet<uint> ownedIds = new();
+    private readonly Dictionary<int, string> dyeLines = new();
+    private readonly Dictionary<GlamModDto, (string Line, bool Allowed, bool Installed)> modLines = new();
     private string? statsFor;
     private bool statsStorage;
     private CachedText ownedText;
@@ -42,6 +45,7 @@ internal sealed partial class PrismApp
     private CachedText triedText;
     private CachedText bodyText;
     private CachedText moreText;
+    private CachedText getText;
     private int ownedPieces;
     private int totalPieces;
     private int missingMods;
@@ -50,6 +54,10 @@ internal sealed partial class PrismApp
     private string likeBloomId = string.Empty;
     private double likeBloomAt;
     private bool likeBloomOnPhoto;
+    private string linesLanguage = string.Empty;
+    private string[]? tagRailFor;
+    private string[] tagRailLabels = Array.Empty<string>();
+    private bool[] tagRailActive = Array.Empty<bool>();
 
     private void OpenGlam(GlamDto glam)
     {
@@ -378,7 +386,7 @@ internal sealed partial class PrismApp
             top += labelLine;
         }
 
-        top = DrawTags(drawList, left, top, width, glam.Tags, scale);
+        top = DrawTags(left, top, width, glam.Tags, scale);
         if (glam.InspiredBy.Length > 0)
         {
             top += Metrics.Space.Sm * scale;
@@ -394,36 +402,35 @@ internal sealed partial class PrismApp
         return top + Metrics.Space.Lg * scale;
     }
 
-    private float DrawTags(ImDrawListPtr drawList, float left, float top, float width, string[]? tags, float scale)
+    private float DrawTags(float left, float top, float width, string[]? tags, float scale)
     {
         if (tags is not { Length: > 0 })
         {
             return top;
         }
 
-        var labelPixels = PrismArt.LabelPixels();
-        var gap = Metrics.Space.Lg * scale;
-        top += Metrics.Space.Sm * scale;
-        var x = left;
-        for (var index = 0; index < tags.Length; index++)
+        if (!ReferenceEquals(tags, tagRailFor))
         {
-            var label = TagLabel(tags[index]);
-            var tagWidth = PrismType.Measure(label, PrismFace.Label, labelPixels).X;
-            if (x + tagWidth > left + width)
+            tagRailFor = tags;
+            tagRailLabels = new string[tags.Length];
+            tagRailActive = new bool[tags.Length];
+            for (var index = 0; index < tags.Length; index++)
             {
-                break;
+                tagRailLabels[index] = TagLabel(tags[index]);
             }
 
-            if (PrismArt.Link(drawList, new Vector2(x, top), label, PrismArt.Muted, scale,
-                    PrismType.LineHeight(PrismFace.Label, labelPixels) + Metrics.Space.Sm * scale))
-            {
-                OpenTagGlams(tags[index]);
-            }
-
-            x += tagWidth + gap;
+            tagRail.Reset();
         }
 
-        return top + PrismType.LineHeight(PrismFace.Label, labelPixels);
+        var row = new Rect(new Vector2(left, top + Metrics.Space.Sm * scale),
+            new Vector2(left + width, top + Metrics.Space.Sm * scale + ChipRail.RowHeight * scale));
+        var tapped = tagRail.Draw(row, ui, tagRailLabels, tagRailActive);
+        if (tapped >= 0)
+        {
+            OpenTagGlams(tags[tapped]);
+        }
+
+        return row.Max.Y;
     }
 
     private static string AuthorName(GlamAuthorDto? author) =>
@@ -797,8 +804,6 @@ internal sealed partial class PrismApp
         return line;
     }
 
-    private readonly Dictionary<int, string> dyeLines = new();
-
     private float DrawModChips(ImDrawListPtr drawList, float left, float top, float width, GlamModDto[] mods,
         bool interactive, float scale)
     {
@@ -844,10 +849,6 @@ internal sealed partial class PrismApp
 
         return top + Metrics.Space.Sm * scale;
     }
-
-    private readonly Dictionary<GlamModDto, (string Line, bool Allowed, bool Installed)> modLines = new();
-    private CachedText getText;
-    private string linesLanguage = string.Empty;
 
     private (string Line, bool Allowed, bool Installed) ModLine(GlamModDto mod)
     {
