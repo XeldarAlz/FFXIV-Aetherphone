@@ -78,7 +78,7 @@ Each row names the component, when to pick something else, and one real file to 
 | Need | Use | Not when | Copy from |
 | --- | --- | --- | --- |
 | A labelled button | `Button.Draw`, or the `AppSkin` pill helpers | Never `ImGui.Button` or a new painter | Apps/Announcements/AnnouncementsStatePanel.cs |
-| A round icon button | `RoundButton.Icon` | Over media or in bars: `GlassCircle` | Apps/Fishing/FishingApp.cs |
+| A round icon button | `RoundButton.Icon` | Over media or in bars: `GlassCircle` (see below) | Apps/Fishing/FishingApp.cs |
 | A custom tappable shape | `UiInteract.HoverClick`, with `PressFx.Scale` for the press | A standard control fits | Apps/Music/MusicApp.MiniPlayer.cs |
 | A hover label for an icon | `HoverTooltip.Show` | `RoundButton.Icon` shows one | Apps/Velvet/Kit/VIcon.cs |
 | An on and off setting | `SettingsRow.Bool` in a card, `Toggle` elsewhere | An action | Apps/Clock/ClockApp.Alarms.cs |
@@ -103,7 +103,7 @@ Each row names the component, when to pick something else, and one real file to 
 | Need | Use | Not when | Copy from |
 | --- | --- | --- | --- |
 | A social header or top bar | `SocialChrome`, inks from `SocialInk` | Other apps: the large title | Apps/Aethergram/AethergramApp.EditProfile.cs |
-| Two feeds or an icon tab row | `UnderlineTabs` | App navigation: `TabBar` | Apps/Chirper/ChirperApp.cs |
+| A few feeds or sections, as labels or icons | `UnderlineTabs` (two labels, a span of labels, or `DrawIcons`) | App navigation: `TabBar` | Apps/Chirper/ChirperApp.cs |
 | People with a follow pill | `SocialUserRow` | Settings rows | Apps/Chirper/ChirperApp.Screens.cs |
 | A person's picture | `AvatarView` | Never a hand-drawn circle | Apps/Velvet/Kit/VAvatar.cs |
 
@@ -117,7 +117,9 @@ These hold across every app, and reviewers check them.
 - **Glass in an app refracts the app's own backdrop**, which `AppSkin.Backdrop` records, so a tab bar lifts the color behind it instead of darkening into a black block.
 - **Content fills come from one ladder.** `Surfaces.Fill` derives four levels from the title ink, right in dark and light. Never hand-pick a white-alpha fill.
 - **A top highlight follows the corner.** Use `Material.Sheen`; a straight line inset by the radius stops short of the squircle edge.
-- **Every labelled button is a `Button`**: Prominent, Tinted, Gray or Plain, in three capsule sizes, with a destructive role. In a tinted app pass the app's ink (`ui.Ink`), or the button falls back to the system accent.
+- **Every labelled button is a `Button`**: Prominent, Solid, Tinted, Gray or Plain, in three capsule sizes, with a destructive role. In a tinted app pass the app's ink (`ui.Ink`), or the button falls back to the system accent.
+- **Solid is the flat Prominent.** A capsule in the tone with no gradient, halo or sheen; the label takes the ink or its opposite (black or white), whichever contrasts more with the fill, so it works for an accent that is nearly white or nearly black. It shades toward the label while hovered, and further while pressed.
+- **A glass button over media keeps a full tap target.** `GlassCircle` takes `hitRadius` for a 44 unit target around a smaller glass. Pass `reserve: true` when it sits over something with its own tap (a photo that opens a viewer or likes on a double tap): the rect is reserved with `UiInteract.HoverOverlay` even while the button is disabled, so a tap never falls through. `reserve` is not `overlay`: a control inside a gated sheet still passes `overlay: true` where it has one.
 - **Fields are filled capsules.** `GlassField` draws no background, so a field in content sits on `SearchBar.Surface` (navigation chrome uses the glass `GlassField.Surface`). `SearchBar.Surface` paints a capsule at most 36 units tall, centered in the rectangle it gets, so a field laid out at `GlassField.HeightUnits` (44) keeps a 44 unit tap target.
 - **Chips sit in one pannable `ChipRail`.** They never wrap into a second line.
 - **Free input over preset chips.** Let the user enter any value, as `TimeOfDayField` steps through the whole day.
@@ -226,6 +228,8 @@ For confirms, call `ConfirmService.Ask` or `Alert`; the shell shows the dialog o
 ## Scrolling
 
 `AppSurface.Begin` wraps the standard body in a child window with `DragScrollHost`, so a press and drag anywhere scrolls with a fling and cancels pending taps. Drag scrolling is on only while the phone's position is locked; unlocked, a drag moves the window and the native scrollbar returns. Content sized to the full width then makes that scrollbar flicker on and off, so size rows with `ScrollLayout.StableContentWidth()`, not `ImGui.GetContentRegionAvail().X`.
+
+The mouse wheel can glide instead of stepping: pass `smoothWheel: true` to `AppSurface.BeginEdgeToEdge`. Each notch adds the distance ImGui would scroll to a target clamped to the scroll range, and the position follows it on a critically damped spring (`Motion.PageSettle`), so it never runs past either end, even when the content shrinks. The glide yields to anything else: a press, a drag, `JumpTo`, the native scrollbar or keyboard navigation moving the view, and a notch while the left button is held takes the plain step. `disableMouseWheelScroll` wins over `smoothWheel`. Nested smooth surfaces are fine: the innermost one under the pointer that has something to scroll glides, and one that fits its content passes the wheel on to its parent. A smooth surface whose parent would scroll with the wheel itself (a plain `AppSurface` around it) falls back to the native step, because ImGui hands the wheel to that parent first; the phone root and `ScreenLayer` stages never scroll with the wheel, so app bodies are safe.
 
 `FeedVirtualizer` caches each row's height and skips rows outside the view. Change the revision passed to `Skip` and `Record` whenever a row's height can change:
 
