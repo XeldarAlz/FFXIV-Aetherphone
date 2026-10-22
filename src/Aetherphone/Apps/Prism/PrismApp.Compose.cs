@@ -369,6 +369,9 @@ internal sealed partial class PrismApp
         return kept.ToArray();
     }
 
+    private (int Race, int Gender) WornBody() =>
+        glamour.TryBody(out var race, out var gender) ? (race, gender) : Appearance();
+
     private static (int Race, int Gender) Appearance()
     {
         var player = GameMemory.Attached ? Plugin.ObjectTable.LocalPlayer : null;

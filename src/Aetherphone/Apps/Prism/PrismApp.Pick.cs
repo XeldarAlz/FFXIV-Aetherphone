@@ -66,8 +66,9 @@ internal sealed partial class PrismApp
         var ready = pickSession.HasSelection && !store.Busy && blocked is null;
         if (PrismArt.Strip(drawList, strip, label, "→", true, ready, UiSound.Shutter))
         {
+            var (race, gender) = WornBody();
             store.Enter(pickSession.FirstSelected, pickSession.CropsArray()[0],
-                configuration.PrismShareOutfit ? glamour.Capture() : null, entrySettled);
+                configuration.PrismShareOutfit ? glamour.Capture() : null, race, gender, entrySettled);
         }
 
         var gridBottom = strip.Min.Y - Metrics.Space.Lg * scale -

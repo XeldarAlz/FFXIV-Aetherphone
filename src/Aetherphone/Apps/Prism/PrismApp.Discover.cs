@@ -120,9 +120,7 @@ internal sealed partial class PrismApp
 
         if (DrawToggleLink(drawList, cursor, top, fits, fitsWidth, glams.FitsBody, labelLine, scale))
         {
-            var (race, gender) = glams.FitsBody ? (0, 0) : glamour.TryBody(out var shown, out var shownGender)
-                ? (shown, shownGender)
-                : Appearance();
+            var (race, gender) = glams.FitsBody ? (0, 0) : WornBody();
             glams.SetBody(race, gender);
             RefreshDiscover(true);
         }

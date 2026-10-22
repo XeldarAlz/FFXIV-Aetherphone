@@ -243,6 +243,19 @@ public sealed class PrismWireContractTests
     }
 
     [Fact]
+    public void AnEntryCarriesTheBodyItWasMadeOn()
+    {
+        var made = JsonSerializer.Serialize(new PrismEntryRequest("k", 810, 1080, Race: 6, Gender: 1),
+            AethernetJsonContext.Default.PrismEntryRequest);
+        Assert.Contains("\"race\":6", made);
+        Assert.Contains("\"gender\":1", made);
+
+        var unknown = JsonSerializer.Serialize(new PrismEntryRequest("k", 810, 1080),
+            AethernetJsonContext.Default.PrismEntryRequest);
+        Assert.DoesNotContain("race", unknown);
+    }
+
+    [Fact]
     public void AnOutfitRidesAlongOnlyWhenShared()
     {
         var bare = JsonSerializer.Serialize(new PrismEntryRequest("k", 810, 1080),

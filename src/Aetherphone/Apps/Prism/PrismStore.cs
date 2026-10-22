@@ -191,7 +191,8 @@ internal sealed class PrismStore : IDisposable
         week.Id.Length > 0 && (week.Phase == PrismPhases.Results || (week.ResultsAtUnix > 0 &&
             DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= week.ResultsAtUnix));
 
-    public void Enter(string sourcePath, WallpaperCrop crop, GlamGearDto[]? outfit, Action<bool> onComplete)
+    public void Enter(string sourcePath, WallpaperCrop crop, GlamGearDto[]? outfit, int race, int gender,
+        Action<bool> onComplete)
     {
         if (rawWeek is not { } current || !BeginAction())
         {
@@ -215,7 +216,7 @@ internal sealed class PrismStore : IDisposable
             }
 
             var request = new PrismEntryRequest(upload.Key, baked.Width, baked.Height,
-                entering.Length > 0 ? entering : null, outfit);
+                entering.Length > 0 ? entering : null, outfit, race, gender);
             var entry = await client.EnterAsync(current.Id, request, token, received => failure = received)
                 .ConfigureAwait(false);
             if (entry is null)
