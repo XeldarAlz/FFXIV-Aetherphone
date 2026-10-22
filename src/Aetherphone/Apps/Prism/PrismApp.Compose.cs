@@ -112,11 +112,16 @@ internal sealed partial class PrismApp
             }
         }
 
-        var trailing = ButtonWidth([action, widestAction], row.Width * 0.3f, scale);
+        var trailing = ButtonWidth([action, widestAction], row.Width * 0.5f, scale);
         acted = DrawButton(drawList, new Rect(new Vector2(row.Max.X - trailing, row.Min.Y), row.Max), action,
             ButtonStyle.Solid, scale, enabled: enabled, id: "prism.headerAction");
         var side = MathF.Max(leading, trailing) + Metrics.Space.Sm * scale;
-        var room = MathF.Max(1f, row.Width - side * 2f);
+        var room = row.Width - side * 2f;
+        if (room < Metrics.Size.TapTarget * scale)
+        {
+            return row.Max.Y;
+        }
+
         var style = new TextStyle(Typography.FitScale(heading, room, PrismType.Headline.Scale, PrismType.Caption.Scale,
             PrismType.Headline.Weight), PrismType.Headline.Weight);
         var title = Typography.FitText(heading, room, style);
