@@ -244,9 +244,11 @@ internal sealed partial class PrismApp
         var bottom = DrawGlamGrid(drawList, left, top, width, items, scale);
         if (lane.LoadingMore)
         {
+            var resume = ImGui.GetCursorScreenPos();
             ImGui.SetCursorScreenPos(new Vector2(left, bottom));
             InfiniteScroll.DrawLoadingRow(left + width * 0.5f, PrismArt.Muted);
             bottom = ImGui.GetCursorScreenPos().Y;
+            ImGui.SetCursorScreenPos(resume);
         }
 
         return bottom + PrismArt.BottomMargin(scale);
