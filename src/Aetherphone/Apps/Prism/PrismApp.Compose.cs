@@ -78,7 +78,7 @@ internal sealed partial class PrismApp
         if (PrismArt.Strip(drawList, strip, Loc.T(L.Common.Next), Arrow, true, composeSession.HasSelection))
         {
             captured = glamour.Capture();
-            capturedVanilla = GlamourService.IsVanilla(captured) && PhotosAreVanilla();
+            capturedVanilla = GlamourService.IsVanilla(captured);
             composeDetails = true;
             focusTitle = true;
         }
@@ -110,7 +110,7 @@ internal sealed partial class PrismApp
         if (RecaptureDue())
         {
             captured = glamour.Capture();
-            capturedVanilla = GlamourService.IsVanilla(captured) && PhotosAreVanilla();
+            capturedVanilla = GlamourService.IsVanilla(captured);
         }
 
         var strip = StripRect(content, scale);
@@ -217,6 +217,14 @@ internal sealed partial class PrismApp
             TextStyles.Subheadline, width);
         top += Typography.DrawWrappedLeft(new Vector2(left, top), note, PrismArt.Muted, TextStyles.Subheadline,
             PrismType.BalancedWidth(note, TextStyles.Subheadline, width)) + Metrics.Space.Md * scale;
+        top = DrawModRows(drawList, left, top, width, scale);
+        return DrawStillTryingOn(drawList, left, top, width, scale) + PrismArt.BottomMargin(scale);
+    }
+
+    private float DrawModRows(ImDrawListPtr drawList, float left, float top, float width, float scale)
+    {
+        var labelPixels = PrismArt.LabelPixels();
+        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var leaveOut = Loc.T(L.Prism.LeaveOutMod);
         var addBack = Loc.T(L.Prism.AddBackMod);
         var actionWidth = MathF.Max(PrismType.Measure(leaveOut, PrismFace.Label, labelPixels).X,
@@ -253,7 +261,7 @@ internal sealed partial class PrismApp
             top += Metrics.Space.Lg * scale;
         }
 
-        return DrawStillTryingOn(drawList, left, top, width, scale) + PrismArt.BottomMargin(scale);
+        return top;
     }
 
     private void SyncCapturedMods()
@@ -313,24 +321,10 @@ internal sealed partial class PrismApp
             : capturedText.Store(key, Loc.T(L.Prism.CapturedCounts, pieces, mods));
     }
 
-    private bool PhotosAreVanilla()
-    {
-        var paths = composeSession.SelectedArray();
-        for (var index = 0; index < paths.Length; index++)
-        {
-            if (ModScan.Stamped(configuration.PhotoModSigns, paths[index]) != ModSigns.None)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     private void PostGlam()
     {
         captured = glamour.Capture(out var race, out var gender);
-        capturedVanilla = GlamourService.IsVanilla(captured) && PhotosAreVanilla();
+        capturedVanilla = GlamourService.IsVanilla(captured);
         captured = PostedMods.Without(captured, droppedMods);
         var paths = composeSession.SelectedArray();
         var crops = composeSession.CropsArray();

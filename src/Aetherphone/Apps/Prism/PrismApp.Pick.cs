@@ -5,6 +5,7 @@ using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Platform;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
+using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Prism;
@@ -19,12 +20,14 @@ internal sealed partial class PrismApp
         new(PrismArt.Fore, PrismArt.Muted, Palette.WithAlpha(PrismArt.Fore, PickFillAlpha), PrismArt.Faint, false);
 
     private volatile int entryOutcome;
+    private CachedText outfitLinkText;
 
     private void StartPick()
     {
         pickSession.Open(true);
         pickIntake.Discard();
         pickReturn = screen == PrismScreen.Entry ? PrismScreen.Entry : PrismScreen.Cover;
+        ResetEntryOutfit();
         Go(PrismScreen.Pick);
     }
 
@@ -62,33 +65,24 @@ internal sealed partial class PrismApp
 
         var strip = StripRect(content, scale);
         var label = Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.EnterThisLook);
-        var blocked = VanillaBlock(pickSession.HasSelection ? pickSession.FirstSelected : string.Empty);
-        var ready = pickSession.HasSelection && !store.Busy && blocked is null;
+        var ready = pickSession.HasSelection && !store.Busy && (!VanillaEntry || DraftPieces() > 0);
         if (PrismArt.Strip(drawList, strip, label, Arrow, true, ready, UiSound.Shutter))
         {
             var (race, gender) = WornBody();
-            store.Enter(pickSession.FirstSelected, pickSession.CropsArray()[0],
-                configuration.PrismShareOutfit ? glamour.Capture() : null, race, gender, entrySettled);
+            store.Enter(pickSession.FirstSelected, pickSession.CropsArray()[0], EntryOutfit(), race, gender,
+                entrySettled);
         }
 
         var gridBottom = strip.Min.Y - Metrics.Space.Lg * scale -
                          PrismType.LineHeight(PrismFace.Label, PrismArt.LabelPixels());
-        if (PrismArt.Link(drawList, new Vector2(strip.Min.X, gridBottom),
-                Loc.T(configuration.PrismShareOutfit ? L.Prism.SharingOutfit : L.Prism.ShareOutfit), PrismArt.Muted,
-                scale))
+        var link = OutfitLink();
+        if (link.Length > 0 && PrismArt.Link(drawList, new Vector2(strip.Min.X, gridBottom), link,
+                VanillaEntry && DraftPieces() == 0 ? PrismArt.Fore : PrismArt.Muted, scale))
         {
             OpenOutfit();
         }
 
         gridBottom -= Metrics.Space.Xl * scale;
-        if (blocked is { } why)
-        {
-            var text = Loc.T(why);
-            gridBottom -= Typography.MeasureWrappedBlock(text, TextStyles.Subheadline, strip.Width).Y;
-            Typography.DrawWrappedLeft(new Vector2(strip.Min.X, gridBottom), text, PrismArt.Muted,
-                TextStyles.Subheadline, strip.Width);
-            gridBottom -= Metrics.Space.Md * scale;
-        }
 
         if (store.Failed(PrismAction.Enter) && !store.Busy)
         {
@@ -110,6 +104,36 @@ internal sealed partial class PrismApp
                 pickIntake.Paste(library);
             }
         }
+    }
+
+    private string OutfitLink()
+    {
+        var count = VanillaEntry ? DraftPieces() : KeptModCount();
+        var key = HashCode.Combine(VanillaEntry, count, Loc.Current.Code);
+        if (outfitLinkText.IsCurrent(key))
+        {
+            return outfitLinkText.Value;
+        }
+
+        var text = VanillaEntry
+            ? count == 0 ? Loc.T(L.Prism.AddYourGear) : Loc.Plural(L.Prism.GearSummary, count)
+            : count == 0 ? string.Empty : Loc.Plural(L.Prism.ModsSummary, count);
+        return outfitLinkText.Store(key, text.Length > 0 ? string.Concat(text, " ", Arrow) : string.Empty);
+    }
+
+    private int KeptModCount()
+    {
+        SyncCapturedMods();
+        var count = 0;
+        for (var index = 0; index < capturedMods.Length; index++)
+        {
+            if (!droppedMods.Contains(capturedMods[index].Key))
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     private void SettleEntry(bool succeeded)

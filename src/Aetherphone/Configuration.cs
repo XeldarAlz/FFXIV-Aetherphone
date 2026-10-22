@@ -201,7 +201,6 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public string PrismRevealedWeek { get; set; } = string.Empty;
     public long PrismRevealedRevision { get; set; }
     public int PrismGuideVersion { get; set; }
-    public bool PrismShareOutfit { get; set; }
     public float ScreenBrightness { get; set; } = 1f;
     public float PhoneScale { get; set; } = PhoneSizeCatalog.DefaultWidth / PhoneSizeCatalog.DesignWidth;
     public float PhoneWidth { get; set; }
@@ -463,7 +462,6 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public Dictionary<string, List<string>> CustomAlbumPhotos { get; set; } = new();
     public List<string> PhotoFavorites { get; set; } = new();
     public Dictionary<string, uint> PhotoPlaces { get; set; } = new();
-    public Dictionary<string, byte> PhotoModSigns { get; set; } = new();
     public const int VelvetGateVersion = 1;
     public const int VelvetOnboardVersion = 3;
     public bool VelvetAcknowledgedGate { get; set; }

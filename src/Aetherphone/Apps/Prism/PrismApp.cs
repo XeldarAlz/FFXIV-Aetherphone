@@ -45,6 +45,8 @@ internal enum PrismScreen : byte
     WardrobeOutfit,
     WardrobeCover,
     Activity,
+    GearSearch,
+    DyePick,
 }
 
 internal sealed partial class PrismApp : IResumableApp
@@ -276,6 +278,12 @@ internal sealed partial class PrismApp : IResumableApp
             case PrismScreen.Outfit:
                 DrawOutfit(drawList, content, scale);
                 break;
+            case PrismScreen.GearSearch:
+                DrawGearSearch(drawList, content, scale);
+                break;
+            case PrismScreen.DyePick:
+                DrawDyePick(drawList, content, scale);
+                break;
             case PrismScreen.Track:
                 DrawTrackChoice(drawList, content, scale);
                 break;
@@ -351,6 +359,7 @@ internal sealed partial class PrismApp : IResumableApp
                 {
                     PrismScreen.Pick => pickReturn,
                     PrismScreen.Outfit => outfitReturn,
+                    PrismScreen.GearSearch or PrismScreen.DyePick => PrismScreen.Outfit,
                     _ => PrismScreen.Cover,
                 }, -1);
             }

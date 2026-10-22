@@ -1,6 +1,5 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
@@ -17,26 +16,10 @@ internal sealed partial class PrismApp
     private readonly CachedText[] trackCountTexts = new CachedText[MaxTracks];
     private CachedText trackTitleText;
     private bool trackJudging;
-    private string vanillaCheckedPath = string.Empty;
-    private LocString? vanillaBlock;
 
     private bool HasTracks => store.Tracks.Length > 1;
 
-    private LocString? VanillaBlock(string path)
-    {
-        if (!HasTracks || store.Track != PrismTracks.Vanilla || path.Length == 0)
-        {
-            return null;
-        }
-
-        if (!string.Equals(path, vanillaCheckedPath, StringComparison.Ordinal))
-        {
-            vanillaCheckedPath = path;
-            vanillaBlock = PrismTracks.VanillaBlock(ModScan.Stamped(configuration.PhotoModSigns, path));
-        }
-
-        return vanillaBlock;
-    }
+    private bool VanillaEntry => HasTracks && store.Track == PrismTracks.Vanilla;
 
     private void StartTrackChoice(bool judging)
     {

@@ -342,31 +342,6 @@ public sealed class PrismWireContractTests
     }
 
     [Fact]
-    public void VanillaTakesOnlyCleanCameraShots()
-    {
-        var stamps = new Dictionary<string, byte>();
-        ModScan.Stamp(stamps, @"C:\photos\clean.png", ModSigns.None);
-        ModScan.Stamp(stamps, @"C:\photos\posed.png", ModSigns.Posing | ModSigns.BodyScaling);
-
-        Assert.Null(PrismTracks.VanillaBlock(ModScan.Stamped(stamps, @"D:\elsewhere\clean.png")));
-        Assert.Equal(L.Prism.VanillaCameraOnly.Key, PrismTracks.VanillaBlock(ModScan.Stamped(stamps, "pasted.png"))?.Key);
-        Assert.Equal(L.Prism.VanillaBodyScaling.Key, PrismTracks.VanillaBlock(ModScan.Stamped(stamps, "posed.png"))?.Key);
-        Assert.Equal(L.Prism.VanillaPenumbra.Key,
-            PrismTracks.VanillaBlock(ModSigns.Penumbra | ModSigns.Appearance)?.Key);
-        Assert.Equal(L.Prism.VanillaUnchecked.Key, PrismTracks.VanillaBlock(ModSigns.Unchecked)?.Key);
-    }
-
-    [Fact]
-    public void ACameraShotTakenWithoutTheScanStaysUnchecked()
-    {
-        var stamps = new Dictionary<string, byte>();
-        ModScan.Stamp(stamps, "AEP_20261022_120000_000.png", ModSigns.Unchecked);
-
-        Assert.Equal(L.Prism.VanillaUnchecked.Key,
-            PrismTracks.VanillaBlock(ModScan.Stamped(stamps, "AEP_20261022_120000_000.png"))?.Key);
-    }
-
-    [Fact]
     public void AReplacedRoundWithTheSameWeekIdDropsTheHeldResults()
     {
         var held = new PrismResultsDto(WeekId: "2026-W43", Revision: 1000);

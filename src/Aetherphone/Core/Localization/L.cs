@@ -10995,29 +10995,29 @@ internal static class L
             "Gil prizes are sent to you in game by the Aetherphone team.");
         public static readonly LocString WhatWinnersGet = new("prism.whatWinnersGet", "What winners get");
         public static readonly LocString NoPodium = new("prism.noPodium", "Too few glams were entered this week for a podium.");
-        public static readonly LocString OutfitTitle = new("prism.outfitTitle", "Your outfit");
-        public static readonly LocString OutfitBody = new("prism.outfitBody",
-            "The items, dyes and mods you have on right now. Anyone who sees the results can see them and try them on, and your photo may show something else.");
-        public static readonly LocString ShareOutfit = new("prism.shareOutfit", "Share my outfit");
-        public static readonly LocString SharingOutfit = new("prism.sharingOutfit", "Sharing my outfit");
-        public static readonly LocString StopSharingOutfit = new("prism.stopSharingOutfit", "Stop sharing my outfit");
-        public static readonly LocString UpdateOutfit = new("prism.updateOutfit", "Update my shared outfit");
-        public static readonly LocString NothingEquipped = new("prism.nothingEquipped", "Nothing equipped to share right now");
+        public static readonly LocString YourGear = new("prism.yourGear", "Your gear");
+        public static readonly LocString GearNote = new("prism.gearNote",
+            "Add each piece in your photo and pick its dyes. Everyone who sees your entry sees this list.");
+        public static readonly LocString YourMods = new("prism.yourMods", "Your mods");
+        public static readonly LocString ModsNote = new("prism.modsNote",
+            "Read from Penumbra. Leave out any you'd rather not credit.");
+        public static readonly LocString NoModsFound = new("prism.noModsFound", "No mods found on your character.");
+        public static readonly LocString AddPiece = new("prism.addPiece", "Add a piece");
+        public static readonly LocString RemovePiece = new("prism.removePiece", "Remove");
+        public static readonly LocString AddDye = new("prism.addDye", "Add dye");
+        public static readonly LocString NoDye = new("prism.noDye", "No dye");
+        public static readonly LocString DyeChannel = new("prism.dyeChannel", "Dye {0}");
+        public static readonly LocString SlotRing = new("prism.slotRing", "Ring");
+        public static readonly LocString AddYourGear = new("prism.addYourGear", "Add your gear");
+        public static readonly LocPlural GearSummary = new("prism.gearSummary", "Your gear, {0} piece",
+            "Your gear, {0} pieces");
+        public static readonly LocPlural ModsSummary = new("prism.modsSummary", "{0} mod credited", "{0} mods credited");
+        public static readonly LocString EditGear = new("prism.editGear", "Edit gear");
+        public static readonly LocString EditMods = new("prism.editMods", "Edit mods");
+        public static readonly LocString SaveOutfit = new("prism.saveOutfit", "Save");
         public static readonly LocString WinnersOutfit = new("prism.winnersOutfit", "The winner's outfit");
         public static readonly LocString OutfitCaveat = new("prism.outfitCaveat",
             "Saved when they entered, so it may not match the photo.");
-        public static readonly LocString VanillaCameraOnly = new("prism.vanillaCameraOnly",
-            "Vanilla only takes photos from the phone camera. Take one with Camera, or enter this one in Modded.");
-        public static readonly LocString VanillaPenumbra = new("prism.vanillaPenumbra",
-            "Penumbra mods were on your character when this photo was taken.");
-        public static readonly LocString VanillaAppearance = new("prism.vanillaAppearance",
-            "Your character didn't match your equipped glamour when this photo was taken, as if Glamourer or a similar tool was on.");
-        public static readonly LocString VanillaBodyScaling = new("prism.vanillaBodyScaling",
-            "A Customize+ profile was on when this photo was taken.");
-        public static readonly LocString VanillaPosing = new("prism.vanillaPosing",
-            "A posing tool (Brio or Ktisis) was running when this photo was taken.");
-        public static readonly LocString VanillaUnchecked = new("prism.vanillaUnchecked",
-            "The mod check couldn't run when this photo was taken.");
         public static readonly LocString TrackVanilla = new("prism.trackVanilla", "Vanilla");
         public static readonly LocString TrackModded = new("prism.trackModded", "Modded");
         public static readonly LocString ChooseTrack = new("prism.chooseTrack", "Which contest?");

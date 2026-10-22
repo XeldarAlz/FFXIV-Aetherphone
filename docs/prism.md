@@ -12,7 +12,7 @@ A glam is one outfit with up to four portrait (3:4) photos. Everything about the
 | Race and body type | Glamourer's state, otherwise the character |
 | Mods per slot (name, author, version, link, picked options) | Penumbra, through `Core/Glamour/GlamourService.Capture` |
 | Character mods (body, face, hair) | The same capture, on slot `-1` |
-| Vanilla stamp | No mods on any slot, plus the camera's `ModScan` at the shutter |
+| Vanilla stamp | No mods on any slot |
 | Owned pieces ("you own 7 of 9") | Bags, armoury, glamour dresser and armoire on the viewer's side (`OwnedItems`) |
 
 ### How mods are attributed
@@ -100,7 +100,7 @@ Uploads use `/media/upload-url` with scope `prism`, the same as contest entries.
 
 ### The contest on glams
 
-A contest entry keeps today's routes (`PUT /prism/weeks/{id}/entry`, tracks, ballots, results). Its `outfit` now carries the full glam gear with mods. While the week runs the entry stays nameless and out of every feed. When results are out the server publishes it as a glam on the author's profile with `weekId` and `placing` set, and a glam that is already public can't be entered. Each podium placing in the results carries that glam's `glamId`, so tapping a winner opens the full glam page (likes, saves, try on); without it the client shows the placing's photo and outfit read only.
+A contest entry keeps today's routes (`PUT /prism/weeks/{id}/entry`, tracks, ballots, results). Any photo can be entered in either track: a GPose or ReShade shot imported from the PC works the same as a phone camera shot. A Vanilla entry lists its gear by hand, one item and its dyes per slot, and needs at least one piece; that list is the entry's `outfit`, and the server refuses mods on it. A Modded entry has no gear list: its `outfit` is an optional list of mods on slot `-1`, read from Penumbra, with any mod the entrant leaves out removed. While the week runs the entry stays nameless and out of every feed. When results are out the server publishes it as a glam on the author's profile with `weekId` and `placing` set, and a glam that is already public can't be entered. Each podium placing in the results carries that glam's `glamId`, so tapping a winner opens the full glam page (likes, saves, try on); without it the client shows the placing's photo and outfit read only.
 
 ### Activity
 

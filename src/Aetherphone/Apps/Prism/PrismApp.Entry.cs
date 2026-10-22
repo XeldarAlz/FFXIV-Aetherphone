@@ -88,7 +88,7 @@ internal sealed partial class PrismApp
             StartPick();
         }
 
-        var outfit = Loc.T(HasOutfit(entry.Outfit) ? L.Prism.SharingOutfit : L.Prism.ShareOutfit);
+        var outfit = Loc.T(VanillaEntry ? L.Prism.EditGear : L.Prism.EditMods);
         var outfitWidth = PrismType.Measure(outfit, PrismFace.Label, labelPixels).X;
         if (!store.Busy && PrismArt.Link(drawList, new Vector2(left + width - outfitWidth, linkTop), outfit,
                 PrismArt.Muted, scale))
