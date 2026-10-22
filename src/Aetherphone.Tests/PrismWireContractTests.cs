@@ -213,6 +213,28 @@ public sealed class PrismWireContractTests
     }
 
     [Fact]
+    public void RewardsOnlyListTheKindsTheWeekPaysOut()
+    {
+        var kinds = new int[PrismRewards.KindCount];
+        var coinsOnly = JsonSerializer.Deserialize("{\"id\":\"w_1\",\"prizes\":{\"heat\":[30,20,10],"
+            + "\"final\":[2000,1500,1000],\"placings\":[{\"stage\":\"final\",\"rank\":1,\"coins\":2000,\"gil\":0,"
+            + "\"badge\":null,\"frame\":null}]}}", AethernetJsonContext.Default.PrismWeekDto);
+        Assert.Equal(1, PrismRewards.Offered(coinsOnly?.Prizes, null, kinds));
+        Assert.Equal(PrismRewards.CoinKind, kinds[0]);
+
+        var everything = JsonSerializer.Deserialize("{\"id\":\"w_2\",\"prizes\":{\"placings\":[{\"stage\":\"final\","
+            + "\"rank\":1,\"gil\":500000,\"badge\":{\"id\":\"prism-gold\",\"name\":\"Cover star\",\"icon\":\"f005\"},"
+            + "\"frame\":{\"id\":\"prism-frame\",\"name\":\"Spectrum\",\"assetUrl\":\"https://x/f.png\"}}]}}",
+            AethernetJsonContext.Default.PrismWeekDto);
+        Assert.Equal(3, PrismRewards.Offered(everything?.Prizes, null, kinds));
+        Assert.Equal(new[] { PrismRewards.BadgeKind, PrismRewards.FrameKind, PrismRewards.GilKind }, kinds[..3]);
+
+        Assert.Equal(0, PrismRewards.Offered(null, null, kinds));
+        Assert.Equal(1, PrismRewards.Offered(null, new PrismJudgeRewardDto(5, 4, 4), kinds));
+        Assert.Equal(PrismRewards.CoinKind, kinds[0]);
+    }
+
+    [Fact]
     public void NoPrizesMeansNoPrizeRows()
     {
         var rows = new List<PrismPrizeRow> { new(1, 5) };

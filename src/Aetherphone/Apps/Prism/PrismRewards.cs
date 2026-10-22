@@ -35,7 +35,76 @@ internal sealed class PrismPrizeRow
 
 internal static class PrismRewards
 {
+    public const int BadgeKind = 0;
+    public const int FrameKind = 1;
+    public const int CoinKind = 2;
+    public const int GilKind = 3;
+    public const int KindCount = 4;
+
     private static readonly Comparison<PrismPrizeRow> ByRank = (left, right) => left.Rank.CompareTo(right.Rank);
+
+    public static int Offered(PrismPrizesDto? prizes, PrismJudgeRewardDto? judging, int[] into)
+    {
+        var badge = false;
+        var frame = false;
+        var coins = judging is { Amount: > 0 };
+        var gil = false;
+        if (prizes is not null)
+        {
+            var placings = prizes.Placings ?? Array.Empty<PrismPrizeDto>();
+            for (var index = 0; index < placings.Length; index++)
+            {
+                var placing = placings[index];
+                badge |= placing.Badge is not null;
+                frame |= placing.Frame is not null;
+                coins |= placing.Coins > 0;
+                gil |= placing.Gil > 0;
+            }
+
+            coins |= AnyPositive(prizes.Heat) || AnyPositive(prizes.Final);
+        }
+
+        var count = 0;
+        if (badge)
+        {
+            into[count++] = BadgeKind;
+        }
+
+        if (frame)
+        {
+            into[count++] = FrameKind;
+        }
+
+        if (coins)
+        {
+            into[count++] = CoinKind;
+        }
+
+        if (gil)
+        {
+            into[count++] = GilKind;
+        }
+
+        return count;
+    }
+
+    private static bool AnyPositive(long[]? amounts)
+    {
+        if (amounts is null)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < amounts.Length; index++)
+        {
+            if (amounts[index] > 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     public static PrismRewardLine LineFor(PrismJudgeRewardDto? reward)
     {

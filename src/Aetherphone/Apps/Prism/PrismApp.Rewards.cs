@@ -31,7 +31,6 @@ internal sealed partial class PrismApp
     private const float RingTurnPerSecond = 0.12f;
     private const float RewardMonogramScale = 0.8f;
     private const int RewardAvatarSegments = 48;
-    private const int RewardKinds = 4;
 
     private static readonly LocString[] RewardTitles =
     {
@@ -44,6 +43,8 @@ internal sealed partial class PrismApp
     };
 
     private readonly List<PrismPrizeRow> rewardRows = new();
+    private readonly int[] rewardKinds = new int[PrismRewards.KindCount];
+    private int rewardKindCount;
     private PrismPrizesDto? rewardsFor;
     private BadgeStyle? rewardBadge;
     private FrameStyle? rewardFrame;
@@ -68,6 +69,7 @@ internal sealed partial class PrismApp
         rewardBadge = null;
         rewardFrame = null;
         rewardFrameDays = 0;
+        rewardKindCount = PrismRewards.Offered(prizes, store.Week?.JudgeReward, rewardKinds);
         PrismRewards.Fill(rewardRows, prizes, PrismPhases.StageFinal);
         for (var index = 0; index < rewardRows.Count; index++)
         {
@@ -94,9 +96,9 @@ internal sealed partial class PrismApp
         var left = origin.X + gutter;
         var cursor = DrawRewardsHero(list, left, origin.Y, width, scale);
         cursor = DrawRewardMedals(list, left, cursor, width, scale);
-        for (var index = 0; index < RewardKinds; index++)
+        for (var index = 0; index < rewardKindCount; index++)
         {
-            cursor = DrawRewardChapter(list, left, cursor, width, index, scale);
+            cursor = DrawRewardChapter(list, left, cursor, width, rewardKinds[index], index, scale);
         }
 
         if (store.Week is { Phase: PrismPhases.Entering, MyEntry: null })
@@ -143,15 +145,20 @@ internal sealed partial class PrismApp
 
     private float DrawRewardMedals(ImDrawListPtr drawList, float left, float top, float width, float scale)
     {
+        if (rewardKindCount == 0)
+        {
+            return top;
+        }
+
         var gap = Metrics.Space.Md * scale;
-        var column = (width - gap * (RewardKinds - 1)) / RewardKinds;
+        var column = (width - gap * (PrismRewards.KindCount - 1)) / PrismRewards.KindCount;
         var radius = MathF.Min(MedalUnits * scale, column * 0.5f);
         var turn = (float)(ImGui.GetTime() * RingTurnPerSecond);
-        for (var index = 0; index < RewardKinds; index++)
+        for (var index = 0; index < rewardKindCount; index++)
         {
             var center = new Vector2(left + column * (index + 0.5f) + gap * index, top + radius);
             var mark = PrismMotion.Mark(drawList);
-            DrawRewardArt(drawList, center, radius, index, turn, scale);
+            DrawRewardArt(drawList, center, radius, rewardKinds[index], turn, scale);
             var shown = PrismMotion.At(screenAge, MedalDelay + index * PrismMotion.Stagger, Motion.PageSettle);
             PrismMotion.Scale(drawList, mark, center, MedalRestScale + (1f - MedalRestScale) * shown, shown);
         }
@@ -208,7 +215,8 @@ internal sealed partial class PrismApp
         }
     }
 
-    private float DrawRewardChapter(ImDrawListPtr drawList, float left, float top, float width, int kind, float scale)
+    private float DrawRewardChapter(ImDrawListPtr drawList, float left, float top, float width, int kind, int number,
+        float scale)
     {
         var mark = PrismMotion.Mark(drawList);
         var labelPixels = PrismArt.LabelPixels();
@@ -221,7 +229,7 @@ internal sealed partial class PrismApp
         top += Metrics.Space.Lg * scale;
         DrawRewardArt(drawList, new Vector2(left + art, top + art), art, kind, 0f, scale);
         var cursor = top;
-        PrismType.Draw(drawList, new Vector2(textLeft, cursor), Padded[kind + 1], PrismArt.Muted, PrismFace.Label,
+        PrismType.Draw(drawList, new Vector2(textLeft, cursor), Padded[number + 1], PrismArt.Muted, PrismFace.Label,
             labelPixels);
         cursor += labelLine;
         var pixels = PrismType.Fit(Loc.T(RewardTitles[kind]), PrismFace.Headline, textWidth, RewardTitleUnits * scale,
@@ -237,7 +245,7 @@ internal sealed partial class PrismApp
                 extra, PrismArt.Fore, TextStyles.Footnote, textWidth);
         }
 
-        PrismMotion.Rise(drawList, mark, PrismMotion.At(screenAge, ChapterDelay + kind * PrismMotion.Stagger,
+        PrismMotion.Rise(drawList, mark, PrismMotion.At(screenAge, ChapterDelay + number * PrismMotion.Stagger,
             Motion.PageSettle), PrismMotion.RiseUnits * scale);
         return MathF.Max(cursor, top + art * 2f) + Metrics.Space.Xl * scale;
     }
