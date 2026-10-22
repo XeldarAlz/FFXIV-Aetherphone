@@ -36,7 +36,20 @@ internal static class HomeTileView
     private const float EffectMoteCoreReach = 0.45f;
     private const float EffectMoteCoreLift = 0.55f;
     private const int EffectMoteSegments = 12;
+    private const float AuraBloomReach = 2.1f;
+    private const float AuraBloomLow = 0.78f;
+    private const float AuraBloomHigh = 1f;
+    private const float AuraGlowBoost = 3.2f;
+    private const float AuraGlowReach = 0.62f;
+    private const float AuraGlowLift = 0.32f;
+    private const float AuraBloomLift = 0.18f;
+    private const float AuraRingPad = 0.10f;
+    private const float AuraRingSeconds = 5.2f;
+    private const float AuraRingSharpness = 6f;
+    private const float AuraRingLift = 0.55f;
     private const float EffectSpectrumCycleSeconds = 6f;
+    private const float EffectSpectrumGlowBoost = 2.4f;
+    private const float EffectSpectrumGlowReach = 0.5f;
     private const int EffectGlintCount = 6;
     private const float EffectGlintLifeSeconds = 2.4f;
     private const float EffectGlintArcStart = MathF.PI * 0.8f;
@@ -77,14 +90,23 @@ internal static class HomeTileView
         var surface = IconTile.Surface(app.Accent);
         var ink = AppAccents.InkFor(app.Id);
         var effect = app.TileEffect;
+        if (effect == HomeTileEffect.Aura)
+        {
+            DrawAuraBloom(dl, center, drawHalf, app.Accent);
+        }
+
         if (effect == HomeTileEffect.Spectrum)
         {
             DrawEffectGlow(dl, drawMin, drawMax, radius, drawHalf,
-                SpectrumAt((float)(ImGui.GetTime() / EffectSpectrumCycleSeconds)));
+                SpectrumAt((float)(ImGui.GetTime() / EffectSpectrumCycleSeconds)), EffectSpectrumGlowBoost,
+                EffectSpectrumGlowReach);
         }
         else if (effect != HomeTileEffect.None)
         {
-            DrawEffectGlow(dl, drawMin, drawMax, radius, drawHalf, app.Accent);
+            var aura = effect == HomeTileEffect.Aura;
+            DrawEffectGlow(dl, drawMin, drawMax, radius, drawHalf,
+                aura ? Palette.Mix(app.Accent, EffectMoteCoreLight, AuraGlowLift) : app.Accent,
+                aura ? AuraGlowBoost : 1f, aura ? AuraGlowReach : EffectGlowReach);
         }
 
         var firstVertex = dl.VtxBuffer.Size;
@@ -103,6 +125,7 @@ internal static class HomeTileView
 
         if (effect == HomeTileEffect.Aura)
         {
+            DrawAuraRing(dl, drawMin, drawMax, radius, drawHalf, app.Accent, scale);
             DrawEffectMotes(dl, center, drawHalf, app.Accent, scale);
         }
         else if (effect == HomeTileEffect.Spectrum)
@@ -169,11 +192,12 @@ internal static class HomeTileView
     }
 
     private static void DrawEffectGlow(ImDrawListPtr dl, Vector2 min, Vector2 max, float radius, float half,
-        Vector4 accent)
+        Vector4 accent, float boost, float reachShare)
     {
         var phase = (float)(ImGui.GetTime() * Math.Tau / EffectGlowPeriodSeconds);
-        var peak = EffectGlowAlphaLow + (EffectGlowAlphaHigh - EffectGlowAlphaLow) * (0.5f + 0.5f * MathF.Sin(phase));
-        var reach = half * EffectGlowReach;
+        var wave = 0.5f + 0.5f * MathF.Sin(phase);
+        var peak = (EffectGlowAlphaLow + (EffectGlowAlphaHigh - EffectGlowAlphaLow) * wave) * boost;
+        var reach = half * reachShare;
         var weightTotal = EffectGlowLayers * (EffectGlowLayers + 1) * 0.5f;
         for (var layer = EffectGlowLayers; layer >= 1; layer--)
         {
@@ -182,6 +206,29 @@ internal static class HomeTileView
             Squircle.Fill(dl, new Vector2(min.X - pad, min.Y - pad), new Vector2(max.X + pad, max.Y + pad),
                 radius + pad, ImGui.GetColorU32(Palette.WithAlpha(accent, alpha)));
         }
+    }
+
+    private static void DrawAuraBloom(ImDrawListPtr dl, Vector2 center, float half, Vector4 accent)
+    {
+        var phase = (float)(ImGui.GetTime() * Math.Tau / EffectGlowPeriodSeconds);
+        var alpha = AuraBloomLow + (AuraBloomHigh - AuraBloomLow) * (0.5f + 0.5f * MathF.Sin(phase));
+        SoftGlow.Draw(dl, center, half * AuraBloomReach,
+            Palette.Mix(accent, EffectMoteCoreLight, AuraBloomLift) with { W = alpha });
+    }
+
+    private static void DrawAuraRing(ImDrawListPtr dl, Vector2 min, Vector2 max, float radius, float half,
+        Vector4 accent, float scale)
+    {
+        var pad = half * AuraRingPad;
+        var ringMin = new Vector2(min.X - pad, min.Y - pad);
+        var ringMax = new Vector2(max.X + pad, max.Y + pad);
+        var angle = (float)(ImGui.GetTime() * Math.Tau / AuraRingSeconds);
+        var direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+        var light = Palette.Mix(accent, EffectMoteCoreLight, AuraRingLift);
+        Squircle.StrokeDirectional(dl, ringMin, ringMax, radius + pad, ImGui.GetColorU32(light), 1.6f * scale,
+            direction, AuraRingSharpness);
+        Squircle.StrokeDirectional(dl, ringMin, ringMax, radius + pad,
+            ImGui.GetColorU32(light with { W = 0.45f }), 1.2f * scale, -direction, AuraRingSharpness);
     }
 
     private static void DrawEffectMotes(ImDrawListPtr dl, Vector2 center, float half, Vector4 accent, float scale)

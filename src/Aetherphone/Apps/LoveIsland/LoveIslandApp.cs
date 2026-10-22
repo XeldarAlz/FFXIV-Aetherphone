@@ -63,6 +63,7 @@ internal sealed partial class LoveIslandApp : IResumableApp
     private readonly Func<int, IDalamudTextureWrap?> photoPage;
     private readonly LoveIslandLabels labels = new();
     private readonly PostLabels postLabels = new();
+    private readonly CardEntrance entrance = new();
 
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
@@ -72,6 +73,11 @@ internal sealed partial class LoveIslandApp : IResumableApp
     private string? paletteAccentSource;
     private CampaignDto? frameCampaign;
     private long nowUnix;
+    private double nowPrecise;
+    private float rootScroll;
+    private PhoneTheme? toggleTheme;
+    private PhoneTheme? toggleThemeSource;
+    private Vector4 toggleThemeAccent;
     private float fontKey;
     private bool scrollTopPending;
 
@@ -109,6 +115,7 @@ internal sealed partial class LoveIslandApp : IResumableApp
         router.Reset();
         activeTab = LoveIslandTab.Tonight;
         scrollTopPending = true;
+        entrance.Restart();
         OnResumed();
     }
 
@@ -134,6 +141,7 @@ internal sealed partial class LoveIslandApp : IResumableApp
         }
 
         router.Reset();
+        entrance.Restart();
         switch (launch.Kind)
         {
             case CampaignLaunchKind.Post:
@@ -164,10 +172,13 @@ internal sealed partial class LoveIslandApp : IResumableApp
         SyncPalette();
         fontKey = Typography.LineHeight(TextStyles.Body);
         nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        nowPrecise = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
         var scale = UiScale.Current;
         var screen = SceneChrome.ScreenFrom(context.Content, theme, scale);
         screenRect = screen;
         ui.Backdrop(screen);
+        var appArea = SceneChrome.AppAreaFrom(context.Content, theme, scale);
+        PaintSkyStrips(screen, appArea, scale);
         if (!store.IsSignedIn)
         {
             TourHolds.Hold(Id);
@@ -186,7 +197,6 @@ internal sealed partial class LoveIslandApp : IResumableApp
             return;
         }
 
-        var appArea = SceneChrome.AppAreaFrom(context.Content, theme, scale);
         using (InputShield.Engage(sheet.CapturesPointer))
         {
             router.Draw(appArea, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
@@ -194,6 +204,35 @@ internal sealed partial class LoveIslandApp : IResumableApp
 
         DrawSheet(screen);
         toast.Draw(screen, ScreenToastStyle.From(ui));
+    }
+
+    private void PaintSkyStrips(Rect screen, Rect appArea, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var rounding = theme.ScreenRounding * scale;
+        var drift = router.Depth <= 1 ? rootScroll : 0f;
+        var moon = ShowsMoon(router.Current);
+        var top = new Rect(screen.Min, new Vector2(screen.Max.X, MathF.Floor(appArea.Min.Y)));
+        var bottom = new Rect(new Vector2(screen.Min.X, MathF.Ceiling(appArea.Max.Y)), screen.Max);
+        EclipseSky.Paint(drawList, top, screen, rounding, ui.Accent, drift, moon);
+        EclipseSky.Paint(drawList, bottom, screen, rounding, ui.Accent, drift, moon);
+    }
+
+    private bool ShowsMoon(LoveIslandRoute route) =>
+        route.Screen != LoveIslandScreen.Home || activeTab != LoveIslandTab.Tonight;
+
+    private PhoneTheme ToggleTheme()
+    {
+        var accent = ui.Accent;
+        if (toggleTheme is not null && ReferenceEquals(toggleThemeSource, theme) && toggleThemeAccent == accent)
+        {
+            return toggleTheme;
+        }
+
+        toggleThemeSource = theme;
+        toggleThemeAccent = accent;
+        toggleTheme = PhoneTheme.WithAccent(theme, accent);
+        return toggleTheme;
     }
 
     private void SyncPalette()
@@ -217,6 +256,8 @@ internal sealed partial class LoveIslandApp : IResumableApp
     private void DrawSignedOut(in PhoneContext context)
     {
         ui.Body(context.Content);
+        EclipseSky.Paint(ImGui.GetWindowDrawList(), context.Content, screenRect,
+            theme.ScreenRounding * UiScale.Current, ui.Accent, 0f, true);
         var navBar = AppHeader.BeginLargeTitle(context, false);
         if (EmptyState.Draw(navBar.Body, ui, FontAwesomeIcon.UserLock, DisplayName, Loc.T(L.LoveIsland.SignInBody),
                 Loc.T(L.Announcements.OpenSettings)))
@@ -230,7 +271,10 @@ internal sealed partial class LoveIslandApp : IResumableApp
 
     private void DrawView(LoveIslandRoute route, Rect area, int depth)
     {
+        entrance.BeginFrame();
         ui.Body(area);
+        EclipseSky.Paint(ImGui.GetWindowDrawList(), area, screenRect, theme.ScreenRounding * UiScale.Current,
+            ui.Accent, depth == 0 ? rootScroll : 0f, ShowsMoon(route));
         switch (route.Screen)
         {
             case LoveIslandScreen.Experience:
@@ -306,6 +350,7 @@ internal sealed partial class LoveIslandApp : IResumableApp
 
         activeTab = tab;
         scrollTopPending = true;
+        entrance.Restart();
         if (tab == LoveIslandTab.Gallery)
         {
             gallery.EnsureFresh(Ledger.Hashtag);
@@ -349,8 +394,7 @@ internal sealed partial class LoveIslandApp : IResumableApp
         var inlineHeight = NavBarMetrics.InlineHeight * scale;
         body = new Rect(new Vector2(area.Min.X, area.Min.Y + inlineHeight), area.Max);
         AppSurface.ArmNavBar(body.Min.Y, inlineHeight);
-        var collapsedBand = new Rect(new Vector2(area.Min.X, body.Min.Y + NavBarMetrics.TitleGap * scale), area.Max);
-        return new NavBarFrame(area, collapsedBand, scale, inlineHeight);
+        return new NavBarFrame(area, body, scale, inlineHeight);
     }
 
     private void EndPushed(in NavBarFrame frame, in PhoneContext headerContext, string id, string title,
@@ -360,8 +404,9 @@ internal sealed partial class LoveIslandApp : IResumableApp
             ReadOnlySpan<NavBarButton>.Empty, backTitle, back);
     }
 
-    private void ConsumeScrollTop(in AppSurface.SurfaceScope surface)
+    private void PrepareRootSurface(in AppSurface.SurfaceScope surface)
     {
+        rootScroll = ImGui.GetScrollY();
         if (!scrollTopPending)
         {
             return;

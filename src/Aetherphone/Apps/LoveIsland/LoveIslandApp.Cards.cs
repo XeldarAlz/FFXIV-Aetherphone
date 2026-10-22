@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -15,7 +16,8 @@ internal enum CardPill : byte
 internal readonly record struct CardButton(string Label, bool Prominent, string Id);
 
 internal readonly record struct CardContent(string Id, string Eyebrow, CardPill Pill, string PillLabel, string Title,
-    string Body, int TitleLines, int BodyLines, bool Tappable, bool LargeTitle = false);
+    string Body, int TitleLines, int BodyLines, bool Tappable, bool LargeTitle = false, bool Featured = false,
+    bool ChromeTitle = false, bool MediumTitle = false, float Progress = -1f, bool PhotoStrip = false);
 
 internal sealed partial class LoveIslandApp
 {
@@ -24,12 +26,18 @@ internal sealed partial class LoveIslandApp
     private const float LoadingOffset = 120f;
     private const float LoadingRadius = 13f;
     private const float ButtonPadX = 18f;
+    private const float EqualizerGap = 14f;
     private const int DefaultTitleLines = 3;
+    private const int PageTitleLines = 2;
+    private const float SubBeaconIndent = 16f;
+    private const double ChromePeriod = 4200.0;
+    private const float ChromeCrestLift = 0.62f;
 
     private readonly Dictionary<string, ClampedLines> titleClamps = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ClampedLines> bodyClamps = new(StringComparer.Ordinal);
     private readonly CardButton[] cardButtons = new CardButton[2];
     private readonly Rect[] cardButtonRects = new Rect[2];
+    private readonly ClampedLines pageTitleClamp = new();
 
     private ClampedLines ClampFor(Dictionary<string, ClampedLines> cache, string id)
     {
@@ -47,9 +55,12 @@ internal sealed partial class LoveIslandApp
     {
         action = CardIdle;
         var scale = UiScale.Current;
+        var firstVertex = CardEntrance.Mark(drawList);
         var pad = LoveIslandKit.CardPad * scale;
         var inner = MathF.Max(1f, width - pad * 2f);
-        var titleStyle = content.LargeTitle ? TextStyles.Title1 : LoveIslandKit.CardTitleStyle;
+        var titleStyle = content.LargeTitle
+            ? TextStyles.Title1
+            : content.MediumTitle ? TextStyles.Title3 : LoveIslandKit.CardTitleStyle;
         var titleLines = content.Title.Length == 0
             ? Array.Empty<string>()
             : ClampFor(titleClamps, content.Id).Get(content.Title, titleStyle, inner,
@@ -75,6 +86,17 @@ internal sealed partial class LoveIslandApp
             height += LoveIslandKit.TitleGap * scale + bodyLines.Length * bodyLineHeight;
         }
 
+        if (content.Progress >= 0f)
+        {
+            height += (ProgressGap + ProgressHeight) * scale;
+        }
+
+        var stripCount = content.PhotoStrip ? PhotoStripCount() : 0;
+        if (stripCount > 0)
+        {
+            height += StripGap * scale + PhotoStripHeight(inner, scale);
+        }
+
         if (buttonCount > 0)
         {
             height += (LoveIslandKit.ButtonRowGap + LoveIslandKit.ButtonHeight) * scale;
@@ -91,11 +113,12 @@ internal sealed partial class LoveIslandApp
         var visible = ImGui.IsRectVisible(rest.Min, rest.Max);
         if (!visible)
         {
+            entrance.Settle(drawList, firstVertex, scale);
             return rest.Max.Y;
         }
 
         if (LoveIslandKit.PressableCard(drawList, ui, rest, content.Id, scale, content.Tappable && !overButton,
-                out _))
+                out _, content.Featured))
         {
             action = CardTapped;
         }
@@ -111,10 +134,11 @@ internal sealed partial class LoveIslandApp
         if (titleLines.Length > 0)
         {
             cursorY += eyebrowHeight > 0f ? LoveIslandKit.EyebrowGap * scale : 0f;
+            var effect = content.ChromeTitle ? ChromeEffect() : default;
             for (var lineIndex = 0; lineIndex < titleLines.Length; lineIndex++)
             {
                 Typography.Draw(drawList, new Vector2(textLeft, cursorY), titleLines[lineIndex], ui.TitleInk,
-                    titleStyle);
+                    titleStyle, effect);
                 cursorY += titleLineHeight;
             }
         }
@@ -130,18 +154,33 @@ internal sealed partial class LoveIslandApp
             }
         }
 
+        if (content.Progress >= 0f)
+        {
+            DrawProgressBar(drawList, textLeft, cursorY + ProgressGap * scale, inner, content.Progress, scale);
+            cursorY += (ProgressGap + ProgressHeight) * scale;
+        }
+
+        if (stripCount > 0)
+        {
+            DrawPhotoStrip(drawList, textLeft, cursorY + StripGap * scale, inner, stripCount, scale);
+        }
+
         for (var index = 0; index < buttonCount; index++)
         {
             var button = cardButtons[index];
-            if (Button.Draw(drawList, cardButtonRects[index], button.Label, ui.Ink,
-                    button.Prominent ? ButtonStyle.Prominent : ButtonStyle.Gray, id: button.Id))
+            if (LoveIslandKit.CtaButton(drawList, cardButtonRects[index], button.Label, ui.Ink, button.Prominent,
+                    button.Id))
             {
                 action = index;
             }
         }
 
+        entrance.Settle(drawList, firstVertex, scale);
         return rest.Max.Y;
     }
+
+    private TextEffect ChromeEffect() =>
+        new(NameEffectKind.Chrome, EclipseFx.Rose(ui.Accent, ChromeCrestLift), Pulse.Phase(ChromePeriod));
 
     private void DrawEyebrowRow(ImDrawListPtr drawList, float left, float top, float width, float rowHeight,
         in CardContent content, float scale)
@@ -161,13 +200,17 @@ internal sealed partial class LoveIslandApp
         switch (content.Pill)
         {
             case CardPill.Live:
-                LoveIslandKit.LivePill(drawList, new Vector2(cursorX, pillTop), content.PillLabel, scale);
+                cursorX += LoveIslandKit.LivePill(drawList, new Vector2(cursorX, pillTop), content.PillLabel,
+                    ui.Accent, scale);
+                Equalizer.Draw(drawList, new Vector2(cursorX + EqualizerGap * scale, centerY), scale,
+                    LoveIslandKit.PillHeight(scale) * 0.62f, (float)ImGui.GetTime(), EclipseFx.Rose(ui.Accent, 0.4f),
+                    1f, true);
                 break;
             case CardPill.Off:
                 LoveIslandKit.OffPill(drawList, new Vector2(cursorX, pillTop), content.PillLabel, scale);
                 break;
             case CardPill.Accent:
-                LoveIslandKit.StagePill(drawList, new Vector2(cursorX, pillTop), content.PillLabel, ui.Accent, scale);
+                LoveIslandKit.LivePill(drawList, new Vector2(cursorX, pillTop), content.PillLabel, ui.Accent, scale);
                 break;
         }
     }
@@ -206,19 +249,41 @@ internal sealed partial class LoveIslandApp
     private static float NaturalButtonWidth(string label, float scale) =>
         Typography.Measure(label, TextStyles.SubheadlineEmphasized).X + ButtonPadX * 2f * scale;
 
-    private float DrawPageTitle(ImDrawListPtr drawList, float left, float top, float width, string title, string sub)
+    private float DrawPageTitle(ImDrawListPtr drawList, float left, float top, float width, string title, string sub,
+        bool beacon = false)
     {
         var scale = UiScale.Current;
-        var cursorY = top + Typography.DrawWrappedLeft(new Vector2(left, top), title, ui.TitleInk,
-            LoveIslandKit.PageTitleStyle, width);
+        var firstVertex = CardEntrance.Mark(drawList);
+        var style = LoveIslandKit.PageTitleStyle;
+        var lines = pageTitleClamp.Get(title, style, width, PageTitleLines, fontKey);
+        var lineHeight = Typography.LineHeight(style);
+        var effect = ChromeEffect();
+        var cursorY = top;
+        for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+        {
+            Typography.Draw(drawList, new Vector2(left, cursorY), lines[lineIndex], ui.TitleInk, style, effect);
+            cursorY += lineHeight;
+        }
+
         if (sub.Length == 0)
         {
+            entrance.Settle(drawList, firstVertex, scale);
             return cursorY + Metrics.Space.Md * scale;
         }
 
         cursorY += Metrics.Space.Xxs * scale;
-        cursorY += Typography.DrawWrappedLeft(new Vector2(left, cursorY), sub, ui.MutedInk, LoveIslandKit.PageSubStyle,
-            width);
+        var indent = 0f;
+        if (beacon)
+        {
+            indent = SubBeaconIndent * scale;
+            var dotY = cursorY + Typography.LineHeight(LoveIslandKit.PageSubStyle) * 0.5f;
+            EclipseFx.Beacon(drawList, new Vector2(left + indent * 0.35f, dotY), 3.5f * scale,
+                EclipseFx.Rose(ui.Accent, 0.35f), scale);
+        }
+
+        cursorY += Typography.DrawWrappedLeft(new Vector2(left + indent, cursorY), sub, ui.MutedInk,
+            LoveIslandKit.PageSubStyle, MathF.Max(1f, width - indent));
+        entrance.Settle(drawList, firstVertex, scale);
         return cursorY + Metrics.Space.Lg * scale;
     }
 
@@ -234,7 +299,7 @@ internal sealed partial class LoveIslandApp
         var rect = new Rect(new Vector2(left, top),
             new Vector2(left + width, top + Button.LargeHeight * scale));
         bottom = rect.Max.Y;
-        return Button.Draw(drawList, rect, label, ui.Ink, prominent ? ButtonStyle.Prominent : ButtonStyle.Gray, id: id);
+        return LoveIslandKit.CtaButton(drawList, rect, label, ui.Ink, prominent, id);
     }
 
     private static void Reserve(Vector2 origin, float width, float bottom)
@@ -259,7 +324,8 @@ internal sealed partial class LoveIslandApp
             : 0f;
         var height = pad * 2f + MathF.Max(labelHeight + hintHeight, toggleHeight);
         var card = new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
-        ui.Card(drawList, card.Min, card.Max, LoveIslandKit.CardRadius * scale);
+        var firstVertex = CardEntrance.Mark(drawList);
+        LoveIslandKit.GlassCard(drawList, card.Min, card.Max, LoveIslandKit.CardRadius * scale, ui.Accent, scale);
         var cursorY = top + pad;
         if (glyphSize > 0f)
         {
@@ -278,7 +344,8 @@ internal sealed partial class LoveIslandApp
 
         var toggle = new Rect(new Vector2(card.Max.X - pad - toggleWidth, card.Center.Y - toggleHeight * 0.5f),
             new Vector2(card.Max.X - pad, card.Center.Y + toggleHeight * 0.5f));
-        result = Toggle.Draw(id, toggle, value, theme);
+        result = Toggle.Draw(id, toggle, value, ToggleTheme());
+        entrance.Settle(drawList, firstVertex, scale);
         return card.Max.Y;
     }
 }

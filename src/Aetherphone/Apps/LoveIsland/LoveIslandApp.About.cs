@@ -4,6 +4,7 @@ using Aetherphone.Core.Campaigns;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core;
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Aetherphone.Windows;
 using Dalamud.Bindings.ImGui;
@@ -25,12 +26,17 @@ internal sealed partial class LoveIslandApp
     private const float MemberPortrait = 30f;
     private const int MaxMemberLinks = 4;
     private const string SheetCloseId = "loveisland.sheet.close";
+    private const int AboutTitleLines = 2;
+    private const float SheetTintTop = 0.62f;
+    private const float SheetTintBottom = 0.45f;
+    private const float SheetGlowAlpha = 0.30f;
     private const string MemberLinkPrefix = "loveisland.member.link.";
 
     private static readonly string[] MemberLinkIds = BuildMemberLinkIds();
 
     private readonly Sheet sheet = new();
     private readonly ClampedLines aboutLines = new();
+    private readonly ClampedLines aboutTitleLines = new();
     private readonly ChipRail aboutRail = new();
     private readonly Dictionary<string, string> monograms = new(StringComparer.Ordinal);
     private LoveIslandSheet sheetKind;
@@ -98,6 +104,7 @@ internal sealed partial class LoveIslandApp
             return;
         }
 
+        TintSheet(in frame);
         if (sheetKind == LoveIslandSheet.About)
         {
             DrawAboutSheet(in frame, screen);
@@ -110,6 +117,25 @@ internal sealed partial class LoveIslandApp
         sheet.End(in frame);
     }
 
+    private void TintSheet(in SheetFrame frame)
+    {
+        var scale = UiScale.Current;
+        var drawList = frame.DrawList;
+        var panel = frame.Panel;
+        var rounding = theme.ScreenRounding * scale;
+        var opacity = frame.Opacity;
+        Squircle.FillVerticalGradient(drawList, panel.Min, panel.Max, rounding,
+            ImGui.GetColorU32(Palette.Mix(ui.Accent, LoveIslandKit.Night, 0.72f) with { W = SheetTintTop * opacity }),
+            ImGui.GetColorU32(LoveIslandKit.Night with { W = SheetTintBottom * opacity }));
+        drawList.PushClipRect(panel.Min, panel.Max, true);
+        SoftGlow.Draw(drawList, new Vector2(panel.Center.X, panel.Min.Y), panel.Width * 0.62f,
+            ui.Accent with { W = SheetGlowAlpha * opacity * (0.85f + 0.15f * EclipseFx.Breath(3400.0)) });
+        drawList.PopClipRect();
+        Squircle.StrokeDirectional(drawList, panel.Min, panel.Max, rounding,
+            ImGui.GetColorU32(EclipseFx.Rose(ui.Accent, 0.5f) with { W = 0.55f * opacity }), 1.2f * scale,
+            new Vector2(0f, -1f), 3f);
+    }
+
     private float SheetTextWidth(Rect screen) => MathF.Max(1f, screen.Width - SheetPadX * 2f * UiScale.Current);
 
     private float SheetChrome(float scale) =>
@@ -120,7 +146,8 @@ internal sealed partial class LoveIslandApp
     {
         var scale = UiScale.Current;
         var width = SheetTextWidth(screen);
-        var titleHeight = Typography.MeasureWrappedBlock(labels.AboutTitle, TextStyles.Title3, width).Y;
+        var titleHeight = aboutTitleLines.Get(labels.AboutTitle, TextStyles.Title3, width, AboutTitleLines, fontKey)
+            .Length * Typography.LineHeight(TextStyles.Title3);
         var footerHeight = Typography.MeasureWrappedBlock(Texts.T(CampaignTextKeys.AboutFooter), TextStyles.Footnote,
             width).Y;
         var railHeight = labels.LinkLabels.Length > 0 ? (ChipRail.RowHeight + SheetGap) * scale : 0f;
@@ -147,8 +174,15 @@ internal sealed partial class LoveIslandApp
         var left = content.Min.X + SheetPadX * scale;
         var width = SheetTextWidth(screen);
         var cursorY = content.Min.Y + SheetGap * scale;
-        cursorY += Typography.DrawWrappedLeft(new Vector2(left, cursorY), labels.AboutTitle, ink, TextStyles.Title3,
-            width);
+        var titleLines = aboutTitleLines.Get(labels.AboutTitle, TextStyles.Title3, width, AboutTitleLines, fontKey);
+        var titleEffect = ChromeEffect();
+        for (var lineIndex = 0; lineIndex < titleLines.Length; lineIndex++)
+        {
+            Typography.Draw(drawList, new Vector2(left, cursorY), titleLines[lineIndex], ink, TextStyles.Title3,
+                titleEffect);
+            cursorY += Typography.LineHeight(TextStyles.Title3);
+        }
+
         cursorY += SheetGap * scale;
         var footer = Texts.T(CampaignTextKeys.AboutFooter);
         var bodyLines = aboutBodyLines;

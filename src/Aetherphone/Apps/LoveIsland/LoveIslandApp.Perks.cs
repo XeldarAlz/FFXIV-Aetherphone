@@ -20,11 +20,16 @@ internal enum PerkArt : byte
 
 internal sealed partial class LoveIslandApp
 {
-    private const float PerkPreview = 76f;
+    private const float PerkPreview = 84f;
+    private const int PerkRays = 10;
+    private const float PerkRayHalfAngle = 0.11f;
+    private const float PerkRaySecondsEarned = 14f;
+    private const float PerkRaySecondsLocked = 40f;
+    private const float PerkLockBadge = 11f;
+    private const float PerkGlintPeak = 0.07f;
     private const float PerkAvatarRadius = 28f;
-    private const float PerkBadgeSize = 40f;
+    private const float PerkBadgeSize = 50f;
     private const float PerkRingStroke = 3f;
-    private const float PerkBloomAlpha = 0.22f;
     private const string EarnCardId = "loveisland.perks.earn";
     private const string EquipButtonId = "loveisland.perks.equip";
     private const string PerksPostButtonId = "loveisland.perks.post";
@@ -36,7 +41,7 @@ internal sealed partial class LoveIslandApp
         var frame = BeginRoot(area, out var context);
         using (var surface = AppSurface.BeginEdgeToEdge(frame.Body))
         {
-            ConsumeScrollTop(surface);
+            PrepareRootSurface(surface);
             var scale = UiScale.Current;
             var drawList = ImGui.GetWindowDrawList();
             var origin = ImGui.GetCursorScreenPos();
@@ -79,9 +84,19 @@ internal sealed partial class LoveIslandApp
         var textHeight = nameHeight + LoveIslandKit.TitleGap * scale + bodyHeight + Metrics.Space.Sm * scale + pillHeight;
         var height = pad * 2f + MathF.Max(preview, textHeight);
         var card = new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
-        ui.Card(drawList, card.Min, card.Max, LoveIslandKit.CardRadius * scale);
+        var firstVertex = CardEntrance.Mark(drawList);
+        var rounding = LoveIslandKit.CardRadius * scale;
+        if (earned)
+        {
+            LoveIslandKit.FeaturedCard(drawList, card.Min, card.Max, rounding, ui.Accent, scale);
+        }
+        else
+        {
+            LoveIslandKit.GlassCard(drawList, card.Min, card.Max, rounding, ui.Accent, scale);
+        }
+
         var previewCenter = new Vector2(left + pad + preview * 0.5f, card.Center.Y);
-        DrawPerkBloom(drawList, previewCenter, preview * 0.5f);
+        DrawPerkStage(drawList, previewCenter, preview * 0.5f, earned, (int)art);
         switch (art)
         {
             case PerkArt.Frame:
@@ -114,26 +129,55 @@ internal sealed partial class LoveIslandApp
             DrawEarnedPill(drawList, new Vector2(textLeft, cursorY), earned, scale);
         }
 
+        if (earned)
+        {
+            DrawEmblemMotes(drawList, previewCenter, preview * 0.55f, scale);
+        }
+        else
+        {
+            DrawPerkLock(drawList, previewCenter + new Vector2(preview * 0.34f, preview * 0.34f), scale);
+        }
+
+        EclipseFx.Glint(drawList, card.Min, card.Max, rounding, PerkGlintPeak, (int)art * 0.21f);
         UiAnchors.Report(art == PerkArt.Frame ? "loveisland.perks.frame" : art == PerkArt.Badge
             ? "loveisland.perks.badge"
             : "loveisland.perks.coins", card);
+        entrance.Settle(drawList, firstVertex, scale);
         return card.Max.Y;
+    }
+
+    private void DrawPerkStage(ImDrawListPtr drawList, Vector2 center, float radius, bool earned, int seed)
+    {
+        var time = (float)ImGui.GetTime();
+        var seconds = earned ? PerkRaySecondsEarned : PerkRaySecondsLocked;
+        var rotation = time * MathF.Tau / seconds + seed * 0.7f;
+        var breath = EclipseFx.Breath(2600.0, seed * 0.3f);
+        var strength = earned ? 1f : 0.55f;
+        SoftGlow.Draw(drawList, center, radius * 1.25f, ui.Accent with { W = (0.40f + 0.15f * breath) * strength });
+        EclipseFx.Rays(drawList, center, radius * 1.15f, PerkRays, rotation, PerkRayHalfAngle,
+            EclipseFx.Rose(ui.Accent, 0.5f) with { W = (0.22f + 0.10f * breath) * strength });
+        drawList.AddCircleFilled(center, radius * 0.78f, ImGui.GetColorU32(LoveIslandKit.Night with { W = 0.55f }), 48);
+        drawList.AddCircle(center, radius * 0.78f,
+            ImGui.GetColorU32(EclipseFx.Rose(ui.Accent, 0.5f) with { W = 0.35f * strength + 0.2f }), 48, 1f);
+    }
+
+    private void DrawPerkLock(ImDrawListPtr drawList, Vector2 center, float scale)
+    {
+        var radius = PerkLockBadge * scale;
+        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(LoveIslandKit.Night), 24);
+        drawList.AddCircle(center, radius, ImGui.GetColorU32(LoveIslandKit.White with { W = 0.25f }), 24, 1f);
+        PhoneIcon.Draw(drawList, center, PhoneIcons.Lock, LoveIslandKit.OffPillInk, radius * 1.05f);
     }
 
     private void DrawEarnedPill(ImDrawListPtr drawList, Vector2 topLeft, bool earned, float scale)
     {
         if (earned)
         {
-            LoveIslandKit.LivePill(drawList, topLeft, Texts.T(CampaignTextKeys.Earned), scale);
+            LoveIslandKit.LivePill(drawList, topLeft, Texts.T(CampaignTextKeys.Earned), ui.Accent, scale);
             return;
         }
 
         LoveIslandKit.OffPill(drawList, topLeft, Texts.T(CampaignTextKeys.NotYet), scale);
-    }
-
-    private void DrawPerkBloom(ImDrawListPtr drawList, Vector2 center, float radius)
-    {
-        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, PerkBloomAlpha)), 48);
     }
 
     private void DrawFramePreview(ImDrawListPtr drawList, Vector2 center, CampaignRewardDto? reward, float scale)
@@ -199,7 +243,7 @@ internal sealed partial class LoveIslandApp
             : new CardButton(texts.T(CampaignTextKeys.PostCta), true, PerksPostButtonId);
         var bottom = DrawCard(drawList, left, top, width, new CardContent(EarnCardId,
             texts.T(CampaignTextKeys.HowToEarn), CardPill.None, string.Empty, labels.EarnTitle, labels.EarnBody, 0, 0,
-            false), 1, out var action);
+            false, Featured: !earned), 1, out var action);
         if (action != 0)
         {
             return bottom;

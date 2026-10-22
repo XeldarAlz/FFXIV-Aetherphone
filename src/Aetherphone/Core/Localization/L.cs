@@ -11169,6 +11169,10 @@ internal static class L
         public static readonly LocString CountdownDays = new("loveisland.countdownDays", "{0}d {1}h {2:00}m");
         public static readonly LocString CountdownHours = new("loveisland.countdownHours", "{0}h {1:00}m {2:00}s");
         public static readonly LocString CountdownMinutes = new("loveisland.countdownMinutes", "{0}:{1:00}");
+        public static readonly LocString UnitDays = new("loveisland.unitDays", "Days");
+        public static readonly LocString UnitHours = new("loveisland.unitHours", "Hours");
+        public static readonly LocString UnitMinutes = new("loveisland.unitMinutes", "Min");
+        public static readonly LocString UnitSeconds = new("loveisland.unitSeconds", "Sec");
         public static readonly LocString HashtagCopied = new("loveisland.hashtagCopied", "Copied #{0}. Paste it in your post.");
         public static readonly LocString ReminderOn = new("loveisland.reminderOn", "Reminder set for {0} minutes before");
         public static readonly LocString ReminderOff = new("loveisland.reminderOff", "Reminder off");

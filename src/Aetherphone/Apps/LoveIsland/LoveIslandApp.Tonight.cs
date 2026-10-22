@@ -14,10 +14,6 @@ namespace Aetherphone.Apps.LoveIsland;
 
 internal sealed partial class LoveIslandApp
 {
-    private const float HeroLogoSide = 56f;
-    private const float HeroLogoRim = 3f;
-    private const float HeroInset = 14f;
-    private const float HeroScrimShare = 0.6f;
     private const float SectionGap = 14f;
     private const int PinnedBodyLines = 3;
     private const int LinkshellBodyLines = 2;
@@ -42,7 +38,6 @@ internal sealed partial class LoveIslandApp
     private readonly bool[] linkActive = new bool[16];
     private readonly CampaignTextSlot announcementsTitle = new();
     private CachedText postCountText;
-    private CountdownText countdown;
     private string? twitchChannelSource;
     private string twitchChannelUrl = string.Empty;
     private string? shareBodySource;
@@ -51,17 +46,20 @@ internal sealed partial class LoveIslandApp
 
     private void DrawTonightTab(Rect area)
     {
+        gallery.EnsureFresh(Ledger.Hashtag);
         var frame = BeginRoot(area, out var context);
+        var scale = UiScale.Current;
+        var heroHeight = HeroHeight(area.Width, scale);
         using (var surface = AppSurface.BeginEdgeToEdge(frame.Body))
         {
-            ConsumeScrollTop(surface);
-            var scale = UiScale.Current;
+            PrepareRootSurface(surface);
             var drawList = ImGui.GetWindowDrawList();
             var origin = ImGui.GetCursorScreenPos();
             var width = ScrollLayout.StableContentWidth();
-            var cursorY = DrawHero(drawList, origin, width, scale);
             var left = LeftOf(origin.X);
             var inner = InnerWidth(width);
+            var heroLine = origin.Y + area.Min.Y + heroHeight - frame.Body.Min.Y;
+            var cursorY = DrawEmblem(drawList, origin.X + width * 0.5f, heroLine, inner, scale);
             ImGui.SetCursorScreenPos(new Vector2(origin.X, cursorY + SectionGap * scale));
             if (DrawLoadState(frame.Body, out var stateBottom))
             {
@@ -77,61 +75,8 @@ internal sealed partial class LoveIslandApp
             }
         }
 
+        DrawHeroBackdrop(area, heroHeight, rootScroll, scale);
         EndRoot(in frame, in context, "loveisland.nav.tonight");
-    }
-
-    private float DrawHero(ImDrawListPtr drawList, Vector2 origin, float width, float scale)
-    {
-        var campaign = frameCampaign;
-        var height = MathF.Min(width * LoveIslandKit.HeroAspect, LoveIslandKit.HeroMaxHeight * scale);
-        var hero = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
-        UiAnchors.Report("loveisland.hero", hero);
-        LoveIslandKit.CoverImage(drawList, images, campaign?.HeroUrl, hero, 0f, ui.Accent);
-        MediaOverlay.BottomScrim(drawList, hero.Min, hero.Max, HeroScrimShare);
-        var inset = LoveIslandKit.PadX * scale;
-        var side = HeroLogoSide * scale;
-        var logo = new Rect(new Vector2(hero.Min.X + inset, hero.Max.Y - HeroInset * scale - side),
-            new Vector2(hero.Min.X + inset + side, hero.Max.Y - HeroInset * scale));
-        var rim = HeroLogoRim * scale;
-        var logoRadius = side * Metrics.Radius.TileFactor;
-        Squircle.Fill(drawList, logo.Min - new Vector2(rim, rim), logo.Max + new Vector2(rim, rim), logoRadius + rim,
-            ImGui.GetColorU32(MediaOverlay.Fill));
-        var logoUrl = campaign?.LogoUrl;
-        var logoTexture = string.IsNullOrEmpty(logoUrl) ? null : images.Sized(logoUrl, side * LoveIslandKit.ThumbOversample);
-        if (logoTexture is null)
-        {
-            Squircle.Fill(drawList, logo.Min, logo.Max, logoRadius, ImGui.GetColorU32(ui.Accent));
-            PhoneIcon.Draw(drawList, logo.Center, PhoneIcons.MoonStars, LoveIslandKit.White, side * 0.5f);
-        }
-        else
-        {
-            var (uv0, uv1) = ImageFit.CoverSquare(logoTexture.Size);
-            Squircle.FillImage(drawList, logo.Min, logo.Max, logoRadius, logoTexture.Handle, 0xFFFFFFFFu, uv0, uv1);
-        }
-
-        var textLeft = logo.Max.X + Metrics.Space.Md * scale;
-        var textWidth = MathF.Max(1f, hero.Max.X - inset - textLeft);
-        var windowLine = labels.WindowLine;
-        var lineHeight = Typography.LineHeight(TextStyles.FootnoteEmphasized);
-        var showName = string.IsNullOrEmpty(campaign?.HeroUrl);
-        var nameHeight = showName ? Typography.LineHeight(TextStyles.Title3) : 0f;
-        var blockHeight = nameHeight + (windowLine.Length > 0 ? lineHeight : 0f);
-        var cursorY = logo.Center.Y - blockHeight * 0.5f;
-        if (showName)
-        {
-            Typography.Draw(drawList, new Vector2(textLeft, cursorY),
-                Typography.FitText(DisplayName, textWidth, TextStyles.Title3), LoveIslandKit.White, TextStyles.Title3);
-            cursorY += nameHeight;
-        }
-
-        if (windowLine.Length > 0)
-        {
-            Typography.Draw(drawList, new Vector2(textLeft, cursorY),
-                Typography.FitText(windowLine, textWidth, TextStyles.FootnoteEmphasized),
-                LoveIslandKit.White with { W = 0.85f }, TextStyles.FootnoteEmphasized);
-        }
-
-        return hero.Max.Y;
     }
 
     private float DrawTonightCards(ImDrawListPtr drawList, float left, float top, float width, float scale)
@@ -162,10 +107,8 @@ internal sealed partial class LoveIslandApp
         if (moment.Phase == CampaignPhase.Before)
         {
             var when = moment.NextIndex >= 0 ? labels.Experiences[moment.NextIndex].DoorsLine : labels.StartsLine;
-            var bottom = DrawCard(drawList, left, top, width, new CardContent(StatusCardId,
-                texts.T(CampaignTextKeys.DoorsOpenIn), CardPill.None, string.Empty,
-                countdown.Get(moment.SecondsToStart), when, 1, 0, true, true), 0, out var action);
-            if (action == CardTapped)
+            var bottom = DrawCountdownCard(drawList, left, top, width, moment.SecondsToStart, when, out var tapped);
+            if (tapped)
             {
                 SelectTab(LoveIslandTab.Experiences);
             }
@@ -188,8 +131,10 @@ internal sealed partial class LoveIslandApp
         var line = live is not null
             ? labels.Experiences[moment.CurrentIndex].LiveLine
             : moment.NextIndex >= 0 ? labels.Experiences[moment.NextIndex].NextLine : texts.T(CampaignTextKeys.TabExperiences);
+        var progress = live is null ? -1f : LiveProgress(moment.CurrentIndex);
         var liveBottom = DrawCard(drawList, left, top, width, new CardContent(StatusCardId, string.Empty, CardPill.Live,
-            texts.T(CampaignTextKeys.LiveNow), title, line, 0, 0, true), buttonCount, out var liveAction);
+            texts.T(CampaignTextKeys.LiveNow), title, line, 0, 0, true, Featured: live is not null,
+            MediumTitle: true, Progress: progress), buttonCount, out var liveAction);
         if (liveAction == CardTapped)
         {
             if (live is null)
@@ -293,7 +238,8 @@ internal sealed partial class LoveIslandApp
         cardButtons[1] = new CardButton(texts.T(CampaignTextKeys.GalleryCta), false, GalleryButtonId);
         var bottom = DrawCard(drawList, left, top, width, new CardContent(ShareCardId,
             texts.T(CampaignTextKeys.ShareTitle), CardPill.None, string.Empty, labels.HashtagTitle,
-            ShareBody(texts), 0, 0, false), 2, out var action);
+            ShareBody(texts), 0, 0, false, ChromeTitle: true, MediumTitle: true, PhotoStrip: true), 2,
+            out var action);
         if (action == 0)
         {
             PostWithHashtag();

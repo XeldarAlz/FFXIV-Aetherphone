@@ -12,7 +12,9 @@ namespace Aetherphone.Apps.LoveIsland;
 internal sealed partial class LoveIslandApp
 {
     private const float LineupAvatar = 26f;
-    private const float BannerStripHeight = 72f;
+    private const float BannerBottomFade = 0.45f;
+    private const int DetailTitleLines = 3;
+    private const float LineupRingAlpha = 0.55f;
     private const int LineupColumns = 4;
     private const string AddressCardId = "loveisland.detail.address";
     private const string DetailTeleportId = "loveisland.detail.teleport";
@@ -20,6 +22,7 @@ internal sealed partial class LoveIslandApp
     private const string DetailTwitchId = "loveisland.detail.twitch";
     private const string ReminderToggleId = "loveisland.detail.reminder";
 
+    private readonly ClampedLines detailTitleClamp = new();
     private CountdownText detailCountdown;
     private string detailCountdownSource = string.Empty;
     private string detailCountdownText = string.Empty;
@@ -79,14 +82,17 @@ internal sealed partial class LoveIslandApp
     private float DrawExperienceBody(ImDrawListPtr drawList, CampaignExperienceDto experience,
         ExperienceLabels experienceLabels, Vector2 origin, float width, float left, float inner, float scale)
     {
-        var bannerHeight = string.IsNullOrEmpty(experience.BannerUrl)
-            ? BannerStripHeight * scale
-            : MathF.Min(width * LoveIslandKit.HeroAspect, LoveIslandKit.HeroMaxHeight * scale);
-        var banner = new Rect(origin, new Vector2(origin.X + width, origin.Y + bannerHeight));
-        LoveIslandKit.CoverImage(drawList, images, experience.BannerUrl, banner, 0f, ui.Accent);
-        var cursorY = banner.Max.Y + Metrics.Space.Lg * scale;
-        cursorY += Typography.DrawWrappedLeft(new Vector2(left, cursorY), experience.Title, ui.TitleInk,
-            TextStyles.Title1, inner);
+        var cursorY = DrawDetailBanner(drawList, experience.BannerUrl, origin, width, scale);
+        var titleStyle = TextStyles.Title1;
+        var titleLines = detailTitleClamp.Get(experience.Title, titleStyle, inner, DetailTitleLines, fontKey);
+        var effect = ChromeEffect();
+        for (var lineIndex = 0; lineIndex < titleLines.Length; lineIndex++)
+        {
+            Typography.Draw(drawList, new Vector2(left, cursorY), titleLines[lineIndex], ui.TitleInk, titleStyle,
+                effect);
+            cursorY += Typography.LineHeight(titleStyle);
+        }
+
         cursorY += Metrics.Space.Xs * scale;
         var metaLeft = left;
         if (experience.Stage.Length > 0)
@@ -106,7 +112,8 @@ internal sealed partial class LoveIslandApp
         switch (state)
         {
             case ExperienceState.Live:
-                LoveIslandKit.LivePill(drawList, new Vector2(left, cursorY), Loc.T(L.LoveIsland.OnNow), scale);
+                LoveIslandKit.LivePill(drawList, new Vector2(left, cursorY), Loc.T(L.LoveIsland.OnNow), ui.Accent,
+                    scale);
                 break;
             case ExperienceState.Ended:
                 LoveIslandKit.OffPill(drawList, new Vector2(left, cursorY), Loc.T(L.LoveIsland.Finished), scale);
@@ -150,6 +157,21 @@ internal sealed partial class LoveIslandApp
         }
 
         return cursorY;
+    }
+
+    private float DrawDetailBanner(ImDrawListPtr drawList, string? url, Vector2 origin, float width, float scale)
+    {
+        var texture = string.IsNullOrEmpty(url) ? null : images.Sized(url, width * LoveIslandKit.ThumbOversample);
+        if (texture is null)
+        {
+            return origin.Y + Metrics.Space.Lg * scale;
+        }
+
+        var height = MathF.Min(width * LoveIslandKit.HeroAspect, LoveIslandKit.HeroMaxHeight * scale);
+        var banner = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
+        var (uv0, uv1) = ImageFit.Cover(texture.Size.X, texture.Size.Y, banner.Width, banner.Height);
+        DrawFadedImage(drawList, texture, banner, uv0, uv1, 1f, 0f, BannerBottomFade);
+        return banner.Max.Y - height * BannerBottomFade * 0.5f;
     }
 
     private string DetailCountdown(long remainingSeconds)
@@ -205,7 +227,7 @@ internal sealed partial class LoveIslandApp
                          + Typography.LineHeight(TextStyles.Caption1);
         var height = pad * 2f + eyebrowHeight + Metrics.Space.Sm * scale + rows * cellHeight;
         var card = new Rect(new Vector2(left, cardTop), new Vector2(left + width, cardTop + height));
-        ui.Card(drawList, card.Min, card.Max, LoveIslandKit.CardRadius * scale);
+        LoveIslandKit.GlassCard(drawList, card.Min, card.Max, LoveIslandKit.CardRadius * scale, ui.Accent, scale);
         LoveIslandKit.Eyebrow(drawList, new Vector2(card.Min.X + pad, card.Min.Y + pad),
             Texts.T(CampaignTextKeys.WhoIsOn), ui.Accent, width - pad * 2f);
         var gridTop = card.Min.Y + pad + eyebrowHeight + Metrics.Space.Sm * scale;
@@ -228,8 +250,11 @@ internal sealed partial class LoveIslandApp
         var radius = LineupAvatar * scale;
         var center = new Vector2(cell.Center.X, cell.Min.Y + radius);
         var name = member?.Name ?? memberId;
+        SoftGlow.Draw(drawList, center, radius * 1.6f, ui.Accent with { W = 0.35f });
         LoveIslandKit.Portrait(drawList, images, member?.PortraitUrl, center, radius, ui.Accent,
             MonogramFor(memberId, name), ui.TitleInk);
+        drawList.AddCircle(center, radius + 1.5f * scale,
+            ImGui.GetColorU32(EclipseFx.Rose(ui.Accent, 0.5f) with { W = LineupRingAlpha }), 48, 1.5f * scale);
         var label = Typography.FitText(name, cell.Width - Metrics.Space.Xxs * scale, TextStyles.Caption1);
         var labelWidth = Typography.Measure(label, TextStyles.Caption1).X;
         Typography.Draw(drawList, new Vector2(cell.Center.X - labelWidth * 0.5f, center.Y + radius + Metrics.Space.Xs * scale),

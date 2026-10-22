@@ -93,7 +93,8 @@ internal static class AppPalettes
     public static readonly AppPalette AetherStream = For("aetherstream");
     public static readonly AppPalette Hunts = For("hunts");
     public static readonly AppPalette Notifications = For("notifications");
-    public static readonly AppPalette LoveIsland = For("loveisland");
+    public static readonly AppPalette LoveIsland = Night(AppAccents.For("loveisland"),
+        new(0.075f, 0.016f, 0.040f, 1f), new(0.016f, 0.004f, 0.010f, 1f), new(0.812f, 0.145f, 0.357f, 0.10f));
 
     private static AppPalette MessageChrome(Vector4 accent) => new()
     {

@@ -146,7 +146,7 @@ internal sealed partial class LoveIslandApp
         var metaLeft = rest.Min.X + pad;
         if (post.PublishedAtUnix > postsVisitSeenUnix)
         {
-            metaLeft += LoveIslandKit.StagePill(drawList, new Vector2(metaLeft, cursorY), Loc.T(L.LoveIsland.NewBadge),
+            metaLeft += LoveIslandKit.LivePill(drawList, new Vector2(metaLeft, cursorY), Loc.T(L.LoveIsland.NewBadge),
                 ui.Accent, scale) + Metrics.Space.Xs * scale;
         }
 
