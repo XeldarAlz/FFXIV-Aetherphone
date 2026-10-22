@@ -10,9 +10,11 @@ internal sealed class HomeTile : IGridTile
     private readonly IHomeWidget? widget;
     private readonly string instanceKey = string.Empty;
     private string config = string.Empty;
+    private string? dockKey;
     private int stackIndex;
 
     public required string Key { get; init; }
+    public string DockKey => dockKey ??= string.Concat("dock:", Key);
     public IPhoneApp? App { get; init; }
     public ShortcutEntry? Shortcut { get; init; }
     public GridCell Cell { get; set; } = HomeGridSolver.Unassigned;

@@ -8,6 +8,7 @@ internal static class HoverTooltip
 {
     private const float MaxFrameSeconds = 0.1f;
     private static readonly Dictionary<string, Spring> springs = new();
+    private static readonly Dictionary<long, Spring> positionSprings = new();
     private static readonly List<PendingLabel> pending = new();
     private static int frame = -1;
 
@@ -34,7 +35,7 @@ internal static class HoverTooltip
             return;
         }
 
-        Show(Key(target), target, label, side);
+        Track(Step(positionSprings, Key(target), UiInteract.Hover(target.Min, target.Max)), target, label, side);
     }
 
     public static void Show(string id, Rect target, string label, HoverLabelSide side = HoverLabelSide.Below)
@@ -44,8 +45,11 @@ internal static class HoverTooltip
             return;
         }
 
-        var hovered = UiInteract.Hover(target.Min, target.Max);
-        var eased = Step(id, hovered);
+        Track(Step(springs, id, UiInteract.Hover(target.Min, target.Max)), target, label, side);
+    }
+
+    private static void Track(float eased, Rect target, string label, HoverLabelSide side)
+    {
         if (eased <= 0.001f)
         {
             return;
@@ -143,10 +147,11 @@ internal static class HoverTooltip
         }
     }
 
-    private static float Step(string id, bool hovered)
+    private static float Step<TKey>(Dictionary<TKey, Spring> table, TKey id, bool hovered)
+        where TKey : notnull
     {
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, MaxFrameSeconds);
-        if (!springs.TryGetValue(id, out var spring))
+        if (!table.TryGetValue(id, out var spring))
         {
             spring = default;
         }
@@ -155,18 +160,18 @@ internal static class HoverTooltip
         var value = Math.Clamp(spring.Value, 0f, 1f);
         if (!hovered && value <= 0.001f)
         {
-            springs.Remove(id);
+            table.Remove(id);
             return 0f;
         }
 
-        springs[id] = spring;
+        table[id] = spring;
         return value;
     }
 
-    private static string Key(Rect target)
+    private static long Key(Rect target)
     {
         var x = (int)MathF.Round(target.Center.X);
         var y = (int)MathF.Round(target.Center.Y);
-        return string.Concat("t:", x.ToString(), ":", y.ToString());
+        return ((long)x << 32) | (uint)y;
     }
 }
