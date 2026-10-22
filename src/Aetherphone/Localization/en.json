@@ -3084,6 +3084,7 @@
   "aethergram.send": "Send",
   "aethergram.sent": "Sent",
   "aethergram.replyToStory": "Reply to {0}",
+  "aethergram.replyToComment": "Reply",
   "aethergram.repliedToYourStory": "Replied to your story",
   "aethergram.youRepliedToStory": "You replied to their story",
   "aethergram.storyUnavailable": "Story unavailable",

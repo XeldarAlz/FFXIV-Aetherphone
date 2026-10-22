@@ -3084,6 +3084,7 @@
   "aethergram.send": "发送",
   "aethergram.sent": "已发送",
   "aethergram.replyToStory": "回复{0}",
+  "aethergram.replyToComment": "回复",
   "aethergram.repliedToYourStory": "回复了你的快拍",
   "aethergram.youRepliedToStory": "你回复了对方的快拍",
   "aethergram.storyUnavailable": "快拍不可用",

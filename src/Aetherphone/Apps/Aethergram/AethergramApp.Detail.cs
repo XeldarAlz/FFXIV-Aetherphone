@@ -35,6 +35,7 @@ internal sealed partial class AethergramApp
     private static readonly TextStyle CommentNameStyle = TextStyles.Headline;
     private static readonly TextStyle CommentBodyStyle = TextStyles.Callout;
     private static readonly TextStyle CommentMetaStyle = TextStyles.Footnote;
+    private static readonly TextStyle CommentReplyStyle = TextStyles.FootnoteEmphasized;
     private static readonly TextStyle CommentCountStyle = TextStyles.Caption1;
     private static readonly TextStyle EarlierCommentsStyle = TextStyles.SubheadlineEmphasized;
 
@@ -193,8 +194,13 @@ internal sealed partial class AethergramApp
         {
             var metaTop = nameTop + (nameHeight - metaSize.Y) * 0.5f;
             Typography.Draw(drawList, new Vector2(metaLeft, metaTop), meta, Ink.MutedInk, CommentMetaStyle);
-            CommentReviewTag.Draw(new Vector2(metaLeft + metaSize.X + CommentMetaGap * scale, metaTop), textRight,
-                comment.ScanStatus, CommentMetaStyle.Scale);
+            var tagLeft = metaLeft + metaSize.X + CommentMetaGap * scale;
+            if (!mine && comment.AuthorHandle.Length > 0)
+            {
+                tagLeft = DrawCommentReply(drawList, comment, new Vector2(tagLeft, metaTop), textRight);
+            }
+
+            CommentReviewTag.Draw(new Vector2(tagLeft, metaTop), textRight, comment.ScanStatus, CommentMetaStyle.Scale);
         }
 
         var textTop = nameTop + nameHeight + textGap;
@@ -252,6 +258,42 @@ internal sealed partial class AethergramApp
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, rowHeight));
+    }
+
+    private float DrawCommentReply(ImDrawListPtr drawList, CommentDto comment, Vector2 position, float maxRight)
+    {
+        var label = Loc.T(L.Aethergram.ReplyToComment);
+        var size = Typography.Measure(label, CommentReplyStyle);
+        var max = position + size;
+        if (max.X > maxRight)
+        {
+            return position.X;
+        }
+
+        var hovered = UiInteract.Hover(position, max);
+        Typography.Draw(drawList, position, label, hovered ? Ink.TitleInk : Ink.MutedInk, CommentReplyStyle);
+        if (UiInteract.HoverClick(position, max))
+        {
+            StartReply(comment.AuthorHandle);
+        }
+
+        return max.X + CommentMetaGap * UiScale.Current;
+    }
+
+    private void StartReply(string handle)
+    {
+        var mention = "@" + handle + " ";
+        commentFocusPending = true;
+        if (commentDraft.StartsWith(mention, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var draft = mention + commentDraft;
+        if (draft.Length <= MaxCommentLength)
+        {
+            commentDraft = draft;
+        }
     }
 
     private void DrawCommentHeart(ImDrawListPtr drawList, CommentDto comment, Vector2 center)

@@ -7170,6 +7170,7 @@ internal static class L
         public static readonly LocString Send = new("aethergram.send", "Send");
         public static readonly LocString Sent = new("aethergram.sent", "Sent");
         public static readonly LocString ReplyToStory = new("aethergram.replyToStory", "Reply to {0}");
+        public static readonly LocString ReplyToComment = new("aethergram.replyToComment", "Reply");
         public static readonly LocString RepliedToYourStory = new("aethergram.repliedToYourStory", "Replied to your story");
         public static readonly LocString YouRepliedToStory = new("aethergram.youRepliedToStory", "You replied to their story");
         public static readonly LocString StoryUnavailable = new("aethergram.storyUnavailable", "Story unavailable");

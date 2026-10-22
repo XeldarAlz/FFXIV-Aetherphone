@@ -3084,6 +3084,7 @@
   "aethergram.send": "送信",
   "aethergram.sent": "送信済み",
   "aethergram.replyToStory": "{0}に返信",
+  "aethergram.replyToComment": "返信",
   "aethergram.repliedToYourStory": "あなたのストーリーに返信しました",
   "aethergram.youRepliedToStory": "相手のストーリーに返信しました",
   "aethergram.storyUnavailable": "ストーリーは利用できません",

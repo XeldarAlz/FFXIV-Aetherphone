@@ -3084,6 +3084,7 @@
   "aethergram.send": "Gönder",
   "aethergram.sent": "Gönderildi",
   "aethergram.replyToStory": "{0} kişisine yanıt ver",
+  "aethergram.replyToComment": "Yanıtla",
   "aethergram.repliedToYourStory": "Hikayene yanıt verdi",
   "aethergram.youRepliedToStory": "Onun hikayesine yanıt verdin",
   "aethergram.storyUnavailable": "Hikaye kullanılamıyor",
