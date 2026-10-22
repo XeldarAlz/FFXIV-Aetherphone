@@ -68,7 +68,7 @@ internal sealed partial class PrismApp
 
         var next = Loc.T(L.Common.Next);
         var top = DrawActionHeader(drawList, content, Loc.T(L.Prism.PostGlam), false, next, next,
-            composeSession.HasSelection, UiSound.Tap, scale, out var advance) +
+            composeSession.HasSelection, scale, out var advance) +
                   Metrics.Space.Sm * scale;
         if (advance)
         {
@@ -93,7 +93,7 @@ internal sealed partial class PrismApp
     }
 
     private float DrawActionHeader(ImDrawListPtr drawList, Rect content, string heading, bool back, string action,
-        string widestAction, bool enabled, UiSound sound, float scale, out bool acted)
+        string widestAction, bool enabled, float scale, out bool acted)
     {
         var row = new Rect(content.Min, new Vector2(content.Max.X, content.Min.Y + Metrics.Size.TapTarget * scale));
         var leading = row.Height;
@@ -113,8 +113,8 @@ internal sealed partial class PrismApp
         }
 
         var trailing = ButtonWidth([action, widestAction], row.Width * 0.3f, scale);
-        acted = Button.Draw(drawList, new Rect(new Vector2(row.Max.X - trailing, row.Min.Y), row.Max), action, controls,
-            ButtonStyle.Solid, enabled: enabled, id: "prism.headerAction", tapSound: sound);
+        acted = DrawButton(drawList, new Rect(new Vector2(row.Max.X - trailing, row.Min.Y), row.Max), action,
+            ButtonStyle.Solid, scale, enabled: enabled, id: "prism.headerAction");
         var side = MathF.Max(leading, trailing) + Metrics.Space.Sm * scale;
         var title = Typography.FitText(heading, MathF.Max(1f, row.Width - side * 2f), PrismType.Headline);
         var size = Typography.Measure(title, PrismType.Headline);
@@ -127,7 +127,7 @@ internal sealed partial class PrismApp
         var label = Loc.T(glams.Posting ? L.Prism.Posting : L.Prism.Post);
         var ready = !string.IsNullOrWhiteSpace(glamTitle) && !glams.Posting;
         var top = DrawActionHeader(drawList, content, Loc.T(L.Prism.PostGlam), true, label,
-            Loc.T(L.Prism.Posting), ready, UiSound.Shutter, scale, out var post) +
+            Loc.T(L.Prism.Posting), ready, scale, out var post) +
                   Metrics.Space.Sm * scale;
         if (post)
         {
