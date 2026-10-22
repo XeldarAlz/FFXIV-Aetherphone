@@ -22,6 +22,7 @@ internal sealed partial class AethergramApp
     private const float CommentTextGap = 3f;
     private const float CommentMetaGap = 8f;
     private const float CommentMediaGap = 6f;
+    private const float CommentReplyGap = 4f;
     private const float CommentHeartColumn = 40f;
     private const float CommentHeartSize = 16f;
     private const float CommentHeartHitRadius = 14f;
@@ -177,7 +178,11 @@ internal sealed partial class AethergramApp
         var mediaHidden = CommentMediaHidden(comment.MediaUrl);
         var mediaHeight = mediaHidden ? 0f : CommentMedia.MeasureHeight(comment, textWidth, scale);
         var mediaGap = mediaHeight > 0f && (textHeight > 0f || linkHeight > 0f) ? CommentMediaGap * scale : 0f;
-        var contentHeight = nameHeight + textGap + textHeight + linkHeight + mediaGap + mediaHeight;
+        var canReply = !mine && comment.AuthorHandle.Length > 0;
+        var replyGap = canReply ? CommentReplyGap * scale : 0f;
+        var replyHeight = canReply ? Typography.LineHeight(CommentReplyStyle) : 0f;
+        var contentHeight = nameHeight + textGap + textHeight + linkHeight + mediaGap + mediaHeight + replyGap
+            + replyHeight;
         var rowHeight = padY * 2f + MathF.Max(contentHeight, radius * 2f);
         var rowMax = new Vector2(origin.X + width, origin.Y + rowHeight);
 
@@ -194,13 +199,8 @@ internal sealed partial class AethergramApp
         {
             var metaTop = nameTop + (nameHeight - metaSize.Y) * 0.5f;
             Typography.Draw(drawList, new Vector2(metaLeft, metaTop), meta, Ink.MutedInk, CommentMetaStyle);
-            var tagLeft = metaLeft + metaSize.X + CommentMetaGap * scale;
-            if (!mine && comment.AuthorHandle.Length > 0)
-            {
-                tagLeft = DrawCommentReply(drawList, comment, new Vector2(tagLeft, metaTop), textRight);
-            }
-
-            CommentReviewTag.Draw(new Vector2(tagLeft, metaTop), textRight, comment.ScanStatus, CommentMetaStyle.Scale);
+            CommentReviewTag.Draw(new Vector2(metaLeft + metaSize.X + CommentMetaGap * scale, metaTop), textRight,
+                comment.ScanStatus, CommentMetaStyle.Scale);
         }
 
         var textTop = nameTop + nameHeight + textGap;
@@ -242,6 +242,12 @@ internal sealed partial class AethergramApp
             }
         }
 
+        if (canReply)
+        {
+            var replyTop = textTop + textHeight + linkHeight + mediaGap + mediaHeight + replyGap;
+            DrawCommentReply(drawList, comment.AuthorHandle, new Vector2(textLeft, replyTop), textWidth);
+        }
+
         var avatarExtent = new Vector2(radius, radius);
         if (UiInteract.HoverClick(avatarCenter - avatarExtent, avatarCenter + avatarExtent)
             || UiInteract.HoverClick(new Vector2(textLeft, nameTop), new Vector2(textLeft + nameWidth, nameTop + nameHeight)))
@@ -260,24 +266,16 @@ internal sealed partial class AethergramApp
         ImGui.Dummy(new Vector2(width, rowHeight));
     }
 
-    private float DrawCommentReply(ImDrawListPtr drawList, CommentDto comment, Vector2 position, float maxRight)
+    private void DrawCommentReply(ImDrawListPtr drawList, string handle, Vector2 position, float maxWidth)
     {
-        var label = Loc.T(L.Aethergram.ReplyToComment);
-        var size = Typography.Measure(label, CommentReplyStyle);
-        var max = position + size;
-        if (max.X > maxRight)
-        {
-            return position.X;
-        }
-
+        var label = Typography.FitText(Loc.T(L.Aethergram.ReplyToComment), maxWidth, CommentReplyStyle);
+        var max = position + Typography.Measure(label, CommentReplyStyle);
         var hovered = UiInteract.Hover(position, max);
         Typography.Draw(drawList, position, label, hovered ? Ink.TitleInk : Ink.MutedInk, CommentReplyStyle);
         if (UiInteract.HoverClick(position, max))
         {
-            StartReply(comment.AuthorHandle);
+            StartReply(handle);
         }
-
-        return max.X + CommentMetaGap * UiScale.Current;
     }
 
     private void StartReply(string handle)
