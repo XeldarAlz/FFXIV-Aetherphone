@@ -62,7 +62,6 @@ internal sealed class GlamStore : IDisposable
     private volatile string moreFor = string.Empty;
     private volatile int listOpened;
     private volatile GlamProfileDto? profile;
-    private volatile GlamCollectionDto[] collections = Array.Empty<GlamCollectionDto>();
     private volatile GlamItemDto? item;
     private volatile GlamSeasonDto? season;
     private volatile bool posting;
@@ -102,8 +101,6 @@ internal sealed class GlamStore : IDisposable
         more is { } shown && shown.GlamId == glamId ? shown.Items : Array.Empty<GlamDto>();
 
     public GlamProfileDto? Profile => profile;
-
-    public GlamCollectionDto[] Collections => collections;
 
     public GlamItemDto? Item => item;
 
@@ -491,36 +488,6 @@ internal sealed class GlamStore : IDisposable
 
     public void Report(string glamId, ReportReason reason, Action<bool> done) =>
         work.Run("report", token => safety.ReportAsync(GlamClient.ReportTarget, glamId, reason, token), done);
-
-    public void RefreshCollections()
-    {
-        work.Run("collections", async token =>
-        {
-            var fetched = await client.CollectionsAsync(token).ConfigureAwait(false);
-            if (fetched is not null)
-            {
-                collections = fetched;
-            }
-        });
-    }
-
-    public void CreateCollection(string name)
-    {
-        work.Run("new collection", async token =>
-        {
-            var created = await client.CreateCollectionAsync(name, token).ConfigureAwait(false);
-            if (created is not null)
-            {
-                collections = CopyOnWrite.Append(collections, created);
-            }
-        });
-    }
-
-    public void AddToCollection(string collectionId, GlamDto glam)
-    {
-        var glamId = glam.Id;
-        work.Run("collect", token => client.SetInCollectionAsync(collectionId, glamId, true, token));
-    }
 
     public void RefreshSeason()
     {
