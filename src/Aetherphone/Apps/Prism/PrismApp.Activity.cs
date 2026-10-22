@@ -90,8 +90,9 @@ internal sealed partial class PrismApp
 
         if (sections == 0)
         {
-            cursor += Typography.DrawWrappedLeft(new Vector2(left, cursor), Loc.T(L.Prism.ActivityEmpty),
-                PrismArt.Muted, TextStyles.Subheadline, width);
+            cursor += Typography.DrawWrappedLeft(new Vector2(left, cursor),
+                Loc.T(activityFeed.Loaded ? L.Prism.ActivityEmpty : L.Common.Loading), PrismArt.Muted,
+                TextStyles.Subheadline, width);
         }
 
         ImGui.Dummy(new Vector2(width, cursor - origin.Y + PrismArt.BottomMargin(scale)));
