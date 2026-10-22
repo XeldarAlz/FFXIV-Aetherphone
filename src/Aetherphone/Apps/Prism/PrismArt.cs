@@ -100,6 +100,8 @@ internal static class PrismArt
         AccentRing.Red, AccentRing.Orange, AccentRing.Gold, AccentRing.Green, AccentRing.Azure, AccentRing.Violet,
     };
 
+    private static readonly uint[] SpectrumPacked = PackAll(Spectrum);
+
     private static readonly string[] Digits = { "1", "2", "3", "4", "5" };
 
     public static float LabelPixels() => LabelUnits * UiScale.Current;
@@ -399,7 +401,7 @@ internal static class PrismArt
 
     public static void Refraction(ImDrawListPtr drawList, Rect screen, float progress)
     {
-        if (progress <= 0f || progress >= 1f)
+        if (progress <= 0f || progress >= PrismMotion.Settled)
         {
             return;
         }
@@ -408,11 +410,15 @@ internal static class PrismArt
         var band = screen.Width * 0.6f;
         var left = screen.Min.X - band + (screen.Width + band) * progress;
         var bar = band / Spectrum.Length;
+        var alphaBits = (uint)(alpha * 255f + 0.5f) << 24;
         for (var index = 0; index < Spectrum.Length; index++)
         {
-            var min = new Vector2(left + bar * index, screen.Min.Y);
-            drawList.AddRectFilled(min, new Vector2(min.X + bar, screen.Max.Y),
-                ImGui.GetColorU32(Palette.WithAlpha(Spectrum[index], alpha)));
+            var min = new Vector2(MathF.Max(screen.Min.X, left + bar * index), screen.Min.Y);
+            var max = new Vector2(MathF.Min(screen.Max.X, left + bar * (index + 1)), screen.Max.Y);
+            if (max.X > min.X)
+            {
+                drawList.AddRectFilled(min, max, (SpectrumPacked[index] & 0x00FFFFFFu) | alphaBits);
+            }
         }
     }
 
@@ -463,5 +469,16 @@ internal static class PrismArt
         DrawStitch(drawList, rect, scale);
         PrismType.Draw(drawList, min + new Vector2(pad, pad), label, Ink, PrismFace.Label, pixels);
         return rect.Center;
+    }
+
+    private static uint[] PackAll(Vector4[] colors)
+    {
+        var packed = new uint[colors.Length];
+        for (var index = 0; index < colors.Length; index++)
+        {
+            packed[index] = Palette.Pack(colors[index]);
+        }
+
+        return packed;
     }
 }
