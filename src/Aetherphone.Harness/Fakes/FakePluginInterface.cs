@@ -18,11 +18,14 @@ internal sealed class FakePluginInterface : IDalamudPluginInterface
     private const string PluginName = "Aetherphone";
     private readonly Dictionary<string, object> dataSlots = new();
     private readonly Assembly pluginAssembly;
+    private readonly string backendUrl;
     private readonly JsonSerializerSettings jsonSettings;
 
-    public FakePluginInterface(string configDirectory, string assetDirectory, IUiBuilder uiBuilder, Assembly pluginAssembly)
+    public FakePluginInterface(string configDirectory, string assetDirectory, string backendUrl, IUiBuilder uiBuilder,
+        Assembly pluginAssembly)
     {
         this.pluginAssembly = pluginAssembly;
+        this.backendUrl = backendUrl;
         Directory.CreateDirectory(configDirectory);
         ConfigDirectory = new DirectoryInfo(Path.Combine(configDirectory, PluginName));
         ConfigDirectory.Create();
@@ -183,12 +186,11 @@ internal sealed class FakePluginInterface : IDalamudPluginInterface
 
     public IPluginConfiguration? GetPluginConfig()
     {
-        if (!File.Exists(ConfigFile.FullName))
-        {
-            return null;
-        }
-
-        return JsonConvert.DeserializeObject<IPluginConfiguration>(File.ReadAllText(ConfigFile.FullName), jsonSettings);
+        var configuration = File.Exists(ConfigFile.FullName)
+            ? (Configuration)JsonConvert.DeserializeObject<IPluginConfiguration>(File.ReadAllText(ConfigFile.FullName), jsonSettings)!
+            : new Configuration();
+        configuration.AethernetBaseUrl = backendUrl;
+        return configuration;
     }
 
     public string GetPluginConfigDirectory() => ConfigDirectory.FullName;

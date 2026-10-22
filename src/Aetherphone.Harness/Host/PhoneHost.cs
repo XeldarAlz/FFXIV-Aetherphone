@@ -60,10 +60,12 @@ internal sealed unsafe class PhoneHost : IDisposable
         clientState = new FakeClientState();
         commands = new FakeCommandManager();
         data = new FakeDataManager(options.SqpackDirectory);
-        var pluginInterface = new FakePluginInterface(options.ConfigDirectory, options.AssetDirectory, uiBuilder,
-            typeof(Plugin).Assembly);
+        var pluginInterface = new FakePluginInterface(options.ConfigDirectory, options.AssetDirectory,
+            options.BackendUrl, uiBuilder, typeof(Plugin).Assembly);
         HarnessLog.Note(data.HasGameData ? "game data: " + options.SqpackDirectory : "game data: none, sheet-bound apps disabled");
+        HarnessLog.Note("backend: " + options.BackendUrl);
         cacheDirectory = options.CacheDirectory;
+        BackendUrl = options.BackendUrl;
         GameMemory.Detach();
         GameMemory.ActionSimulated += description => HarnessLog.Note("game action: " + description);
         if (!data.HasGameData)
@@ -102,6 +104,8 @@ internal sealed unsafe class PhoneHost : IDisposable
         HarnessLog.Note("plugin constructed");
         StartScenario(options.Scenario);
     }
+
+    public string BackendUrl { get; }
 
     public string? ScenarioName => scenario?.Name;
 

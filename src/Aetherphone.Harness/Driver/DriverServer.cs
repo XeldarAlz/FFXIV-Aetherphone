@@ -366,6 +366,7 @@ internal sealed class DriverServer
             loggedIn = host.IsLoggedIn,
             gameData = host.HasGameData,
             scenario = host.ScenarioName,
+            backend = host.BackendUrl,
             phone = new { x = rect.Min.X, y = rect.Min.Y, width = rect.Width, height = rect.Height },
             display = new { width = host.Width, height = host.Height },
             latestLog = HarnessLog.LatestSequence,

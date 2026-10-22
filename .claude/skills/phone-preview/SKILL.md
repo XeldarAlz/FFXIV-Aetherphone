@@ -26,6 +26,8 @@ Run it in the background and wait for `~/.aetherphone-harness/driver.json` to ap
 tools/harness/aep serve
 ```
 
+The social apps talk to the aethernet-dev server by default. Only pass `--backend live` when the user asks for production: anything posted there is public. `state` reports the backend in use.
+
 The server steps frames only when a command asks it to. Nothing moves between commands, so screenshots are deterministic.
 
 A person can use the same phone live: `tools/harness/aep window` opens a native 60 fps window (GPU rendered) instead of the headless server, with the same driver inside it, and `tools/harness/aep url` prints a browser viewer that works with either mode. While a person is interacting, time runs in real time, so take driver screenshots when nobody is interacting.
@@ -68,4 +70,4 @@ Every command is `tools/harness/aep <command>` (`tools\harness\aep.cmd` on Windo
 - Without game data the sheet-bound apps (Skywatcher, Dailies, Wallet, Jobs, Inventory, Market, Hunts, Maps, Housing, Collections) are hidden, world or item names are blank, and no scenario loads.
 - A config created before game data was available has no sheet-bound apps on the home screen; run `install` once.
 - No audio, no video screen, no camera capture, no hooks, and no incoming game chat.
-- A fresh config runs the first-run boot and onboarding tour. `step 1000` gets past the boot; the tour has buttons to tap. Config persists in `~/.aetherphone-harness/config`, so this happens once.
+- A fresh config runs the first-run boot and onboarding tour. `step 1000` gets past the boot; the tour has buttons to tap. Config persists in `~/.aetherphone-harness/config` (one folder per backend), so this happens once per backend.
