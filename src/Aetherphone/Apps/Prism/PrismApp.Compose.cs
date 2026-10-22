@@ -115,7 +115,7 @@ internal sealed partial class PrismApp
         var strip = StripRect(content, scale);
         var failure = string.Empty;
         var failureHeight = 0f;
-        if (glams.PostFailed && !glams.Posting)
+        if (glams.PostFailed && !glams.Posting && postingDraft == composeDraft)
         {
             var reason = glams.PostFailureText;
             failure = reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint);
@@ -308,7 +308,7 @@ internal sealed partial class PrismApp
     {
         captured = glamour.Capture(out var race, out var gender);
         capturedVanilla = GlamourService.IsVanilla(captured);
-        captured = PostedMods.Without(captured, droppedMods);
+        var gear = PostedMods.Without(captured, droppedMods);
         var paths = composeSession.SelectedArray();
         var crops = composeSession.CropsArray();
         var count = Math.Min(paths.Length, GlamStore.MaxPhotos);
@@ -326,7 +326,7 @@ internal sealed partial class PrismApp
         postOutcome = OutcomePending;
         postingDraft = composeDraft;
         postingCover = count > 0 ? photos[0].Path : string.Empty;
-        glams.Post(photos, captured, glamTitle.Trim(), SplitTags(glamTags), race, gender, capturedVanilla,
+        glams.Post(photos, gear, glamTitle.Trim(), SplitTags(glamTags), race, gender, capturedVanilla,
             glamour.TryingOn ? wearingGlamId : string.Empty, postSettled);
     }
 
