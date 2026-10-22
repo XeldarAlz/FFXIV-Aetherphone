@@ -695,7 +695,6 @@ internal sealed partial class PrismApp
             var photo = new Rect(new Vector2(x, y), new Vector2(x + column, y + height));
             var opened = DrawGridTile(drawList, photo, FirstPhoto(glam), placings ? PlacingLabel(glam) : glam.Title,
                 string.Empty, null, PhoneIcons.Wand, glam.TryOns > 0 ? CountLabel(glam.TryOns) : string.Empty, scale);
-            DrawTileHover(drawList, photo, scale);
             if (opened)
             {
                 OpenGlam(glam);
@@ -736,15 +735,6 @@ internal sealed partial class PrismApp
         HoverTooltip.Show(TipIds[Math.Min(tip, TipCount - 1)], new Rect(center - extent, center + extent), tooltip,
             HoverLabelSide.Above);
         return clicked;
-    }
-
-    private static void DrawTileHover(ImDrawListPtr drawList, Rect photo, float scale)
-    {
-        if (UiInteract.Hover(photo.Min, new Vector2(photo.Max.X, photo.Max.Y + GridLine(scale))))
-        {
-            drawList.AddRectFilled(photo.Min, photo.Max,
-                ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Quaternary)));
-        }
     }
 
     private static void DrawRowHover(ImDrawListPtr drawList, Rect row, bool hovered, float scale)

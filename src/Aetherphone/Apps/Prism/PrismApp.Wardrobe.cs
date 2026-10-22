@@ -258,7 +258,6 @@ internal sealed partial class PrismApp
 
             var opened = DrawGridTile(list, photo, string.Empty, outfit.Name, string.Empty, null, string.Empty,
                 PieceLabel(outfit.Gear), scale);
-            DrawTileHover(list, photo, scale);
             if (opened)
             {
                 OpenOutfit(outfit.Id);
