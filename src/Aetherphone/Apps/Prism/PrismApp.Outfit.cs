@@ -2,6 +2,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
@@ -10,13 +11,13 @@ namespace Aetherphone.Apps.Prism;
 
 internal sealed partial class PrismApp
 {
-    private const float GearIconUnits = 32f;
+    private const float GearIconUnits = 40f;
     private const int GearSearchLimit = 40;
     private const int GearSearchLength = 40;
-    private const float DyeSwatchUnits = 5f;
-    private const float DyeMarkUnits = 3f;
+    private const float DyeSwatchUnits = 6f;
     private const int DyeSegments = 16;
     private const int DyeChannels = 2;
+    private const string OutfitPrimaryId = "prism.outfit.primary";
 
     private static readonly LocString[] SlotNames =
     {
@@ -24,6 +25,8 @@ internal sealed partial class PrismApp
         L.Inventory.SlotHands, L.Inventory.SlotLegs, L.Inventory.SlotFeet, L.Inventory.SlotEars, L.Inventory.SlotNeck,
         L.Inventory.SlotWrists, L.Prism.SlotRing, L.Prism.SlotRing,
     };
+
+    private static readonly string[] RemoveIds = SlotIds("prism.remove.");
 
     private readonly uint[] draftItems = new uint[GearSlots.All.Length];
     private readonly byte[] draftStain0 = new byte[GearSlots.All.Length];
@@ -44,6 +47,17 @@ internal sealed partial class PrismApp
     private CachedText dyeChannelText;
 
     private static bool HasOutfit(GlamGearDto[]? outfit) => outfit is { Length: > 0 };
+
+    private static string[] SlotIds(string prefix)
+    {
+        var ids = new string[GearSlots.All.Length];
+        for (var index = 0; index < ids.Length; index++)
+        {
+            ids[index] = prefix + index.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        return ids;
+    }
 
     private bool EditingEntryOutfit =>
         outfitReturn == PrismScreen.Entry && store.Week is { Phase: PrismPhases.Entering, MyEntry: not null };
@@ -246,23 +260,22 @@ internal sealed partial class PrismApp
     private void DrawOutfit(ImDrawListPtr drawList, Rect content, float scale)
     {
         var vanilla = VanillaEntry;
-        var top = DrawHeader(drawList, content, string.Empty, IssueLine(store.Week?.Issue ?? 0), true, scale);
-        var strip = StripRect(content, scale);
+        var top = DrawBackHeader(drawList, content, store.Week?.Title ?? string.Empty, scale) +
+                  Metrics.Space.Sm * scale;
+        var row = ActionRow(content, scale);
         var body = new Rect(new Vector2(content.Min.X, top),
-            new Vector2(content.Max.X, strip.Min.Y - Metrics.Space.Lg * scale));
+            new Vector2(content.Max.X, row.Min.Y - Metrics.Space.Lg * scale));
         using (BeginBody(body))
         {
             var list = ImGui.GetWindowDrawList();
             var origin = ImGui.GetCursorScreenPos();
-            var gutter = PrismArt.Gutter(scale);
-            var width = ScrollLayout.StableContentWidth() - gutter * 2f;
-            var left = origin.X + gutter;
-            var cursor = DrawSectionTitle(list, left, origin.Y, width,
-                Loc.T(vanilla ? L.Prism.YourGear : L.Prism.YourMods), scale);
-            var note = PrismType.Sentences(Loc.T(vanilla ? L.Prism.GearNote : L.Prism.ModsNote), TextStyles.Subheadline,
-                width);
-            cursor += Typography.DrawWrappedLeft(new Vector2(left, cursor), note, PrismArt.Muted, TextStyles.Subheadline,
-                PrismType.BalancedWidth(note, TextStyles.Subheadline, width)) + Metrics.Space.Lg * scale;
+            var width = ScrollLayout.StableContentWidth();
+            var left = origin.X;
+            var cursor = DrawSectionTitle(list, left, left + width, origin.Y,
+                Loc.T(vanilla ? L.Prism.YourGear : L.Prism.YourMods), string.Empty, scale) + Metrics.Space.Xs * scale;
+            cursor += Typography.DrawWrappedLeft(new Vector2(left, cursor),
+                Loc.T(vanilla ? L.Prism.GearNote : L.Prism.ModsNote), PrismArt.Muted, PrismType.Body, width) +
+                      Metrics.Space.Lg * scale;
             cursor = vanilla
                 ? DrawGearSlots(list, left, cursor, width, scale)
                 : DrawEntryMods(list, left, cursor, width, scale);
@@ -271,8 +284,8 @@ internal sealed partial class PrismApp
 
         var editing = EditingEntryOutfit;
         var ready = !store.Busy && (!vanilla || !editing || DraftPieces() > 0);
-        if (PrismArt.Strip(drawList, strip, Loc.T(editing ? L.Prism.Save : L.Prism.Done), string.Empty, true,
-                ready))
+        if (DrawButton(drawList, row, Loc.T(editing ? L.Prism.Save : L.Prism.Done), ButtonStyle.Solid, scale,
+                enabled: ready, id: OutfitPrimaryId))
         {
             if (editing)
             {
@@ -294,18 +307,19 @@ internal sealed partial class PrismApp
 
         return top + Typography.DrawWrappedLeft(new Vector2(left, top),
             Loc.T(glamour.HasPenumbra ? L.Prism.NoModsFound : L.Prism.ModsNeedPenumbra), PrismArt.Muted,
-            TextStyles.Subheadline, width);
+            PrismType.Body, width);
     }
 
     private float DrawGearSlots(ImDrawListPtr drawList, float left, float top, float width, float scale)
     {
-        var labelPixels = PrismArt.LabelPixels();
-        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
+        var tap = Metrics.Size.TapTarget * scale;
         var icon = GearIconUnits * scale;
-        var pad = Metrics.Space.Md * scale;
+        var gap = Metrics.Space.Md * scale;
+        var textLeft = left + icon + gap;
         var remove = Loc.T(L.Prism.RemovePiece);
-        var removeWidth = PrismType.Measure(remove, PrismFace.Label, labelPixels).X;
-        var textLeft = left + icon + pad;
+        var removeWidth = ButtonWidth([remove], width * 0.5f, scale);
+        var captionLine = Typography.LineHeight(PrismType.Caption);
+        var nameLine = Typography.LineHeight(PrismType.Headline);
         for (var index = 0; index < draftItems.Length; index++)
         {
             var itemId = draftItems[index];
@@ -317,108 +331,107 @@ internal sealed partial class PrismApp
             }
 
             var dyes = itemId == 0 ? 0 : known ? Math.Min((int)pick.Dyes, DyeChannels) : DyeChannels;
-            var lines = dyes > 0 ? 3 : 2;
-            var rowTop = top + pad;
-            var textTop = rowTop + MathF.Max(0f, (icon - labelLine * lines) * 0.5f);
-            var rowBottom = rowTop + MathF.Max(icon, labelLine * lines) + pad;
+            var head = MathF.Max(tap, icon);
+            var rowBottom = top + head + (dyes > 0 ? tap : 0f);
             if (!ImGui.IsRectVisible(new Vector2(left, top), new Vector2(left + width, rowBottom)))
             {
-                top = rowBottom;
+                top = rowBottom + Metrics.Space.Sm * scale;
                 continue;
             }
 
-            var row = new Rect(new Vector2(left, top), new Vector2(left + width, rowBottom));
-            var hovered = UiInteract.Hover(row.Min, row.Max);
+            var tapRight = itemId != 0 ? left + width - removeWidth - Metrics.Space.Sm * scale : left + width;
+            var hovered = UiInteract.Hover(new Vector2(left, top), new Vector2(tapRight, top + head));
             if (hovered)
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             }
 
-            if (UiInteract.Click(row.Min, row.Max, hovered))
+            if (UiInteract.Click(new Vector2(left, top), new Vector2(tapRight, top + head), hovered))
             {
                 OpenGearSearch(index);
             }
 
+            var iconTop = top + (head - icon) * 0.5f;
+            var tile = new Rect(new Vector2(left, iconTop), new Vector2(left + icon, iconTop + icon));
             if (pick.IconId != 0)
             {
-                GameIconTile.Draw(drawList, textures, pick.IconId, new Vector2(left, rowTop),
-                    new Vector2(left + icon, rowTop + icon), 0f, scale);
+                GameIconTile.Draw(drawList, textures, pick.IconId, tile.Min, tile.Max, 0f, scale);
             }
             else
             {
-                drawList.AddRect(new Vector2(left, rowTop), new Vector2(left + icon, rowTop + icon),
-                    ImGui.GetColorU32(PrismArt.Faint), 0f, ImDrawFlags.None, PrismArt.HairlineWidth(scale));
+                PrismArt.SlotTile(drawList, tile, (int)GearSlots.All[index], 0u, scale, true);
             }
 
-            PrismType.Draw(drawList, new Vector2(textLeft, textTop), Loc.T(SlotNames[index]), PrismArt.Muted,
-                PrismFace.Label, labelPixels);
+            var textTop = top + (head - captionLine - nameLine) * 0.5f;
+            Typography.Draw(drawList, new Vector2(textLeft, textTop), Loc.T(SlotNames[index]), PrismArt.Muted,
+                PrismType.Caption);
             var name = itemId == 0 ? Loc.T(L.Prism.AddPiece) : pick.Name ?? string.Empty;
-            var room = left + width - textLeft - (itemId != 0 ? removeWidth + pad : 0f);
-            PrismType.Draw(drawList, new Vector2(textLeft, textTop + labelLine),
-                PrismType.FitLabel(name, labelPixels, room), hovered || itemId != 0 ? PrismArt.Fore : PrismArt.Muted,
-                PrismFace.Label, labelPixels);
-            if (itemId != 0 && PrismArt.Link(drawList, new Vector2(left + width - removeWidth, textTop + labelLine),
-                    remove, PrismArt.Muted, scale, labelLine))
+            Typography.Draw(drawList, new Vector2(textLeft, textTop + captionLine),
+                Typography.FitText(name, MathF.Max(1f, tapRight - textLeft), PrismType.Headline),
+                itemId != 0 || hovered ? PrismArt.Fore : PrismArt.Muted, PrismType.Headline);
+            if (itemId != 0 && DrawButton(drawList,
+                    new Rect(new Vector2(left + width - removeWidth, top + (head - tap) * 0.5f),
+                        new Vector2(left + width, top + (head + tap) * 0.5f)), remove, ButtonStyle.Plain, scale,
+                    id: RemoveIds[index]))
             {
                 draftItems[index] = 0;
                 draftStain0[index] = 0;
                 draftStain1[index] = 0;
             }
 
-            var x = textLeft;
-            var dyeRoom = (left + width - textLeft) / MathF.Max(dyes, 1) - Metrics.Space.Lg * scale;
+            var dyeWidth = (left + width - textLeft) / DyeChannels;
             for (var channel = 0; channel < dyes; channel++)
             {
-                x = DrawDyeLink(drawList, x, textTop + labelLine * 2f, dyeRoom, index, channel, labelPixels, scale);
+                var dyeLeft = textLeft + channel * dyeWidth;
+                DrawDyeTarget(drawList,
+                    new Rect(new Vector2(dyeLeft, top + head), new Vector2(dyeLeft + dyeWidth, rowBottom)), index,
+                    channel, scale);
             }
 
-            PrismArt.Hairline(drawList, left, left + width, rowBottom, PrismArt.Faint, scale);
-            top = rowBottom;
+            top = rowBottom + Metrics.Space.Sm * scale;
         }
 
         return top;
     }
 
-    private float DrawDyeLink(ImDrawListPtr drawList, float left, float top, float room, int slot, int channel,
-        float labelPixels, float scale)
+    private void DrawDyeTarget(ImDrawListPtr drawList, Rect target, int slot, int channel, float scale)
     {
         var stain = channel == 0 ? draftStain0[slot] : draftStain1[slot];
-        var line = PrismType.LineHeight(PrismFace.Label, labelPixels);
-        var swatch = 0f;
-        if (stain != 0 && DyeColor(stain) is { } color)
+        var hovered = UiInteract.Hover(target.Min, target.Max);
+        var radius = DyeSwatchUnits * scale;
+        var center = new Vector2(target.Min.X + radius, target.Center.Y);
+        DrawDyeSwatch(drawList, center, radius, stain, scale);
+        var textLeft = center.X + radius + Metrics.Space.Xs * scale;
+        var label = Typography.FitText(stain == 0 ? Loc.T(L.Prism.AddDye) : gearCatalog.DyeName(stain),
+            MathF.Max(1f, target.Max.X - Metrics.Space.Sm * scale - textLeft), PrismType.Body);
+        Typography.Draw(drawList,
+            new Vector2(textLeft, target.Center.Y - Typography.LineHeight(PrismType.Body) * 0.5f), label,
+            stain != 0 || hovered ? PrismArt.Fore : PrismArt.Muted, PrismType.Body);
+        if (hovered)
         {
-            var radius = DyeSwatchUnits * scale;
-            drawList.AddCircleFilled(new Vector2(left + radius, top + line * 0.5f), radius, color, DyeSegments);
-            swatch = radius * 2f + Metrics.Space.Xs * scale;
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        var label = PrismType.FitLabel(stain == 0 ? Loc.T(L.Prism.AddDye) : gearCatalog.DyeName(stain), labelPixels,
-            room - swatch);
-        if (PrismArt.Link(drawList, new Vector2(left + swatch, top), label, stain == 0 ? PrismArt.Muted : PrismArt.Fore,
-                scale, line))
+        if (UiInteract.Click(target.Min, target.Max, hovered))
         {
             OpenDyePick(slot, channel);
         }
-
-        return left + swatch + PrismType.Measure(label, PrismFace.Label, labelPixels).X + Metrics.Space.Lg * scale;
     }
 
-    private uint? DyeColor(byte stainId)
+    private void DrawDyeSwatch(ImDrawListPtr drawList, Vector2 center, float radius, byte stain, float scale)
     {
-        var dyes = gearCatalog.Dyes;
-        for (var index = 0; index < dyes.Length; index++)
+        var rgb = gameData.StainColor(stain);
+        if (rgb == 0)
         {
-            if (dyes[index].StainId == stainId)
-            {
-                return DyeInk(dyes[index].Color);
-            }
+            drawList.AddCircle(center, radius, ImGui.GetColorU32(PrismArt.Muted), DyeSegments,
+                Metrics.Stroke.Thin * scale);
+            return;
         }
 
-        return null;
+        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.FromRgb(rgb)), DyeSegments);
+        drawList.AddCircle(center, radius, ImGui.GetColorU32(PrismArt.Faint), DyeSegments,
+            Metrics.Stroke.Hairline * scale);
     }
-
-    private static uint DyeInk(uint rgb) =>
-        0xFF000000u | ((rgb & 0xFFu) << 16) | (rgb & 0xFF00u) | ((rgb >> 16) & 0xFFu);
 
     private void OpenGearSearch(int slot)
     {
@@ -449,16 +462,15 @@ internal sealed partial class PrismApp
     private void DrawGearSearch(ImDrawListPtr drawList, Rect content, float scale)
     {
         gearCatalog.EnsureBuilt();
-        var top = DrawHeader(drawList, content, string.Empty, Loc.T(SlotNames[editingSlot]), true, scale);
-        var gutter = PrismArt.Gutter(scale);
+        var top = DrawBackHeader(drawList, content, Loc.T(SlotNames[editingSlot]), scale) + Metrics.Space.Sm * scale;
         if (focusGearSearch)
         {
             ImGui.SetKeyboardFocusHere();
             focusGearSearch = false;
         }
 
-        top = DrawInput(drawList, content.Min.X + gutter, top, content.Width - gutter * 2f, Loc.T(L.Common.Search),
-            "##gearSearch", ref gearQuery, GearSearchLength, scale) + Metrics.Space.Md * scale;
+        top = DrawInput(drawList, content.Min.X, top, content.Width, Loc.T(L.Common.Search), "##gearSearch",
+            ref gearQuery, GearSearchLength, scale) + Metrics.Space.Md * scale;
         if (gearCatalog.Ready && (gearResultsSlot != editingSlot ||
                                   !string.Equals(gearResultsQuery, gearQuery, StringComparison.Ordinal)))
         {
@@ -471,20 +483,18 @@ internal sealed partial class PrismApp
         using var surface = BeginBody(body);
         var list = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
-        var width = ScrollLayout.StableContentWidth() - gutter * 2f;
-        var left = origin.X + gutter;
+        var width = ScrollLayout.StableContentWidth();
+        var left = origin.X;
         var cursor = origin.Y;
         if (!gearCatalog.Ready || gearResultCount == 0)
         {
             cursor += Typography.DrawWrappedLeft(new Vector2(left, cursor),
-                Loc.T(gearCatalog.Ready ? L.Prism.NoMatches : L.Common.Loading), PrismArt.Muted,
-                TextStyles.Subheadline, width);
+                Loc.T(gearCatalog.Ready ? L.Prism.NoMatches : L.Common.Loading), PrismArt.Muted, PrismType.Body,
+                width);
         }
 
-        var labelPixels = PrismArt.LabelPixels();
-        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var icon = GearIconUnits * scale;
-        var pad = Metrics.Space.Sm * scale;
+        var pad = Metrics.Space.Xs * scale;
         for (var index = 0; index < gearResultCount && gearCatalog.Ready; index++)
         {
             var row = new Rect(new Vector2(left, cursor), new Vector2(left + width, cursor + icon + pad * 2f));
@@ -499,10 +509,10 @@ internal sealed partial class PrismApp
             GameIconTile.Draw(list, textures, pick.IconId, new Vector2(left, row.Min.Y + pad),
                 new Vector2(left + icon, row.Min.Y + pad + icon), 0f, scale);
             var textLeft = left + icon + Metrics.Space.Md * scale;
-            PrismType.Draw(list, new Vector2(textLeft, row.Center.Y - labelLine * 0.5f),
-                PrismType.FitLabel(pick.Name, labelPixels, row.Max.X - textLeft), hovered ? PrismArt.Fore : PrismArt.Muted,
-                PrismFace.Label, labelPixels);
-            PrismArt.Hairline(list, textLeft, row.Max.X, row.Max.Y, PrismArt.Faint, scale);
+            var nameTop = row.Center.Y - Typography.LineHeight(PrismType.Headline) * 0.5f;
+            Typography.Draw(list, new Vector2(textLeft, nameTop),
+                Typography.FitText(pick.Name, MathF.Max(1f, row.Max.X - textLeft), PrismType.Headline), PrismArt.Fore,
+                PrismType.Headline);
             if (hovered)
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -540,34 +550,33 @@ internal sealed partial class PrismApp
         var title = dyeChannelText.IsCurrent(key)
             ? dyeChannelText.Value
             : dyeChannelText.Store(key, Loc.T(L.Prism.DyeChannel, editingDye + 1));
-        var top = DrawHeader(drawList, content, string.Empty, title, true, scale);
+        var top = DrawBackHeader(drawList, content, title, scale) + Metrics.Space.Sm * scale;
         var body = new Rect(new Vector2(content.Min.X, top), content.Max);
         using var surface = BeginBody(body);
         var list = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
-        var gutter = PrismArt.Gutter(scale);
-        var width = ScrollLayout.StableContentWidth() - gutter * 2f;
-        var left = origin.X + gutter;
+        var width = ScrollLayout.StableContentWidth();
+        var left = origin.X;
         var current = editingDye == 0 ? draftStain0[editingSlot] : draftStain1[editingSlot];
-        var cursor = DrawDyeRow(list, left, origin.Y, width, 0, Loc.T(L.Prism.NoDye), null, current == 0, scale);
+        var cursor = DrawDyeRow(list, left, origin.Y, width, 0, Loc.T(L.Prism.NoDye), current == 0, scale);
         var dyes = gearCatalog.Dyes;
         for (var index = 0; index < dyes.Length; index++)
         {
             cursor = DrawDyeRow(list, left, cursor, width, dyes[index].StainId, dyes[index].Name,
-                DyeInk(dyes[index].Color), dyes[index].StainId == current, scale);
+                dyes[index].StainId == current, scale);
         }
 
         if (!gearCatalog.Ready)
         {
             cursor += Typography.DrawWrappedLeft(new Vector2(left, cursor), Loc.T(L.Common.Loading), PrismArt.Muted,
-                TextStyles.Subheadline, width);
+                PrismType.Body, width);
         }
 
         ImGui.Dummy(new Vector2(width, cursor - origin.Y + PrismArt.BottomMargin(scale)));
     }
 
     private float DrawDyeRow(ImDrawListPtr drawList, float left, float top, float width, byte stainId, string name,
-        uint? color, bool chosen, float scale)
+        bool chosen, float scale)
     {
         var row = new Rect(new Vector2(left, top), new Vector2(left + width, top + Metrics.Size.TapTarget * scale));
         if (!ImGui.IsRectVisible(row.Min, row.Max))
@@ -575,30 +584,21 @@ internal sealed partial class PrismApp
             return row.Max.Y;
         }
 
-        var labelPixels = PrismArt.LabelPixels();
-        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var radius = DyeSwatchUnits * 2f * scale;
-        var center = new Vector2(left + radius, row.Center.Y);
-        if (color is { } ink)
-        {
-            drawList.AddCircleFilled(center, radius, ink, DyeSegments);
-        }
-        else
-        {
-            drawList.AddCircle(center, radius, ImGui.GetColorU32(PrismArt.Faint), DyeSegments,
-                PrismArt.HairlineWidth(scale));
-        }
-
+        DrawDyeSwatch(drawList, new Vector2(left + radius, row.Center.Y), radius, stainId, scale);
         var hovered = UiInteract.Hover(row.Min, row.Max);
-        PrismType.Draw(drawList, new Vector2(left + radius * 2f + Metrics.Space.Md * scale, row.Center.Y - labelLine * 0.5f),
-            name, hovered || chosen ? PrismArt.Fore : PrismArt.Muted, PrismFace.Label, labelPixels);
+        var markRoom = chosen ? Metrics.Size.TapTarget * scale : 0f;
+        var textLeft = left + radius * 2f + Metrics.Space.Md * scale;
+        var nameTop = row.Center.Y - Typography.LineHeight(PrismType.Headline) * 0.5f;
+        Typography.Draw(drawList, new Vector2(textLeft, nameTop),
+            Typography.FitText(name, MathF.Max(1f, row.Max.X - markRoom - textLeft), PrismType.Headline),
+            PrismArt.Fore, PrismType.Headline);
         if (chosen)
         {
-            drawList.AddCircleFilled(new Vector2(row.Max.X - DyeMarkUnits * scale, row.Center.Y), DyeMarkUnits * scale,
-                ImGui.GetColorU32(PrismArt.Fore), DyeSegments);
+            PhoneIcon.Draw(drawList, new Vector2(row.Max.X - markRoom * 0.5f, row.Center.Y), PhoneIcons.Check,
+                PrismArt.Fore, Typography.LineHeight(PrismType.Headline));
         }
 
-        PrismArt.Hairline(drawList, left, row.Max.X, row.Max.Y, PrismArt.Faint, scale);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

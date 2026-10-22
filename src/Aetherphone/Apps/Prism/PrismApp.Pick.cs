@@ -15,6 +15,7 @@ internal sealed partial class PrismApp
     private const float PickPaneFraction = 0.52f;
 
     private const float PickFillAlpha = 0.08f;
+    private const string PickPrimaryId = "prism.pick.primary";
 
     private static PhotoComposeStyle PickStyle =>
         new(PrismArt.Fore, PrismArt.Muted, Palette.WithAlpha(PrismArt.Fore, PickFillAlpha), PrismArt.Faint, false);
@@ -47,15 +48,12 @@ internal sealed partial class PrismApp
 
         pickIntake.AcceptDrop(content, library, PrismArt.Fore);
         var week = store.Week;
-        var top = DrawHeader(drawList, content, string.Empty,
-            week is null ? Loc.T(L.Prism.EnterLook) : TrackTitle(week.Title), true, scale);
+        var top = DrawBackHeader(drawList, content, week?.Title ?? Loc.T(L.Prism.EnterLook), scale) +
+                  Metrics.Space.Sm * scale;
         if (week is { Brief.Length: > 0 })
         {
-            var gutter = PrismArt.Gutter(scale);
-            top += Typography.DrawWrappedLeft(new Vector2(content.Min.X + gutter, top), week.Brief, PrismArt.Muted,
-                TextStyles.Subheadline,
-                PrismType.BalancedWidth(week.Brief, TextStyles.Subheadline, content.Width - gutter * 2f)) +
-                   Metrics.Space.Lg * scale;
+            top += Typography.DrawWrappedLeft(new Vector2(content.Min.X, top), week.Brief, PrismArt.Muted,
+                PrismType.Body, content.Width) + Metrics.Space.Lg * scale;
         }
 
         var paneHeight = MathF.Min(content.Width, (content.Max.Y - top) * PickPaneFraction);
@@ -63,10 +61,10 @@ internal sealed partial class PrismApp
         pickSession.DrawPickPane(pane, scale, PickStyle, PrismStore.EntryRatio, PrismStore.EntryRevealsWholeImage,
             !store.Busy, Loc.T(L.Prism.EnterLook));
 
-        var strip = StripRect(content, scale);
+        var row = ActionRow(content, scale);
         var label = Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.EnterThisLook);
         var ready = pickSession.HasSelection && !store.Busy && (!VanillaEntry || DraftPieces() > 0);
-        if (PrismArt.Strip(drawList, strip, label, Arrow, true, ready, UiSound.Shutter))
+        if (DrawButton(drawList, row, label, ButtonStyle.Solid, scale, enabled: ready, id: PickPrimaryId))
         {
             var (race, gender) = WornBody();
             RememberEntryDrops();
@@ -74,24 +72,30 @@ internal sealed partial class PrismApp
                 entrySettled);
         }
 
-        var gridBottom = strip.Min.Y - Metrics.Space.Lg * scale -
-                         PrismType.LineHeight(PrismFace.Label, PrismArt.LabelPixels());
+        var gridBottom = row.Min.Y - Metrics.Space.Sm * scale;
         var link = OutfitLink();
-        if (link.Length > 0 && PrismArt.Link(drawList, new Vector2(strip.Min.X, gridBottom), link,
-                VanillaEntry && DraftPieces() == 0 ? PrismArt.Fore : PrismArt.Muted, scale))
+        if (link.Length > 0)
         {
-            OpenOutfit();
+            var linkTop = gridBottom - Button.LargeHeight * scale;
+            var linkLeft = row.Min.X - Metrics.Space.Xl * scale * 0.5f;
+            var linkRect = new Rect(new Vector2(linkLeft, linkTop),
+                new Vector2(linkLeft + ButtonWidth([link], row.Width, scale), gridBottom));
+            if (DrawButton(drawList, linkRect, link, ButtonStyle.Plain, scale, enabled: !store.Busy))
+            {
+                OpenOutfit();
+            }
+
+            gridBottom = linkTop;
         }
 
-        gridBottom -= Metrics.Space.Xl * scale;
-
+        gridBottom -= Metrics.Space.Lg * scale;
         if (store.Failed(PrismAction.Enter) && !store.Busy)
         {
             var reason = store.ActionFailureText;
             var text = reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint);
-            gridBottom -= Typography.MeasureWrappedBlock(text, TextStyles.Subheadline, strip.Width).Y;
-            Typography.DrawWrappedLeft(new Vector2(strip.Min.X, gridBottom), text, PrismArt.Muted,
-                TextStyles.Subheadline, strip.Width);
+            gridBottom -= Typography.MeasureWrappedBlock(text, PrismType.Body, row.Width).Y;
+            Typography.DrawWrappedLeft(new Vector2(row.Min.X, gridBottom), text, PrismArt.Muted, PrismType.Body,
+                row.Width);
             gridBottom -= Metrics.Space.Md * scale;
         }
 
@@ -120,7 +124,7 @@ internal sealed partial class PrismApp
         var text = VanillaEntry
             ? count == 0 ? Loc.T(L.Prism.AddYourGear) : Loc.Plural(L.Prism.GearSummary, count)
             : listed ? Loc.Plural(L.Prism.ModsSummary, count) : string.Empty;
-        return outfitLinkText.Store(key, text.Length > 0 ? string.Concat(text, " ", Arrow) : string.Empty);
+        return outfitLinkText.Store(key, text);
     }
 
     private int KeptModCount()
