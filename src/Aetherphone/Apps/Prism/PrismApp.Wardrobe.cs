@@ -250,8 +250,10 @@ internal sealed partial class PrismApp
                 }
             }
 
-            if (DrawGridTile(list, photo, string.Empty, outfit.Name, string.Empty, null, string.Empty,
-                    PieceLabel(outfit.Gear), scale))
+            var opened = DrawGridTile(list, photo, string.Empty, outfit.Name, string.Empty, null, string.Empty,
+                PieceLabel(outfit.Gear), scale);
+            DrawTileHover(list, photo, scale);
+            if (opened)
             {
                 OpenOutfit(outfit.Id);
             }
@@ -317,6 +319,11 @@ internal sealed partial class PrismApp
             {
                 PrismArt.SlotTile(drawList, tile, slot, gameData.StainColor(piece.Stain0 != 0 ? piece.Stain0 : piece.Stain1),
                     scale);
+                if (showEmpty)
+                {
+                    BoardTooltip(tile, piece);
+                }
+
                 return;
             }
         }
@@ -324,6 +331,23 @@ internal sealed partial class PrismApp
         if (showEmpty)
         {
             PrismArt.SlotTile(drawList, tile, slot, 0, scale, true);
+        }
+    }
+
+    private void BoardTooltip(Rect tile, GlamGearDto piece)
+    {
+        for (var index = 0; index < fitPieces.Count; index++)
+        {
+            if (ReferenceEquals(fitPieces[index].Piece, piece))
+            {
+                HoverTooltip.Show(tile, fitPieces[index].Name);
+                return;
+            }
+        }
+
+        if (piece.ItemId == 0 && fitModsTitle.Length > 0)
+        {
+            HoverTooltip.Show(tile, fitModsTitle);
         }
     }
 
@@ -474,6 +498,12 @@ internal sealed partial class PrismApp
         float scale)
     {
         var row = new Rect(new Vector2(left, top), new Vector2(right, top + FitRowHeight(scale)));
+        var reach = Metrics.Size.TapTarget * scale;
+        var tryCenter = new Vector2(right - reach * 0.5f, row.Center.Y);
+        var overTry = UiInteract.Hover(tryCenter - new Vector2(reach * 0.5f, reach * 0.5f),
+            tryCenter + new Vector2(reach * 0.5f, reach * 0.5f));
+        var hovered = UiInteract.Hover(row.Min, row.Max) && !overTry;
+        DrawRowHover(drawList, row, hovered, scale);
         var icon = PieceIconUnits * scale;
         var iconMin = new Vector2(left, row.Center.Y - icon * 0.5f);
         GameIconTile.Draw(drawList, textures, piece.Icon, iconMin, iconMin + new Vector2(icon, icon),
@@ -490,10 +520,6 @@ internal sealed partial class PrismApp
             drawList.AddCircle(mark, OwnedMarkUnits * scale, ImGui.GetColorU32(PrismArt.Fore), 0, Metrics.Stroke.Thin * scale);
         }
 
-        var reach = Metrics.Size.TapTarget * scale;
-        var tryCenter = new Vector2(right - reach * 0.5f, row.Center.Y);
-        var overTry = UiInteract.Hover(tryCenter - new Vector2(reach * 0.5f, reach * 0.5f),
-            tryCenter + new Vector2(reach * 0.5f, reach * 0.5f));
         if (RoundButton.Icon(drawList, tryCenter, reach * 0.5f, PhoneIcons.Wand, controls, ButtonStyle.Plain,
                 Loc.T(L.Prism.TryOnGlam), glyphInk: PrismArt.Muted))
         {
@@ -519,12 +545,6 @@ internal sealed partial class PrismApp
             Typography.Draw(drawList, new Vector2(dyeLeft, textTop + nameHeight),
                 Typography.FitText(piece.Dyes, MathF.Max(1f, textLeft + room - dyeLeft), PrismType.Caption),
                 PrismArt.Muted, PrismType.Caption);
-        }
-
-        var hovered = UiInteract.Hover(row.Min, row.Max) && !overTry;
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
         if (UiInteract.Click(row.Min, row.Max, hovered))
@@ -563,6 +583,8 @@ internal sealed partial class PrismApp
         {
             var mod = fitMods[index];
             var row = new Rect(new Vector2(left, top), new Vector2(right, top + FitRowHeight(scale)));
+            var hovered = UiInteract.Hover(row.Min, row.Max);
+            DrawRowHover(drawList, row, hovered, scale);
             var iconMin = new Vector2(left, row.Center.Y - icon * 0.5f);
             PrismArt.SlotTile(drawList, new Rect(iconMin, iconMin + new Vector2(icon, icon)), mod.Slot, 0, scale);
             var action = mod.Installed ? Loc.T(L.Prism.Installed) : mod.Allowed ? Loc.T(L.Prism.GetMod) : string.Empty;
@@ -576,12 +598,6 @@ internal sealed partial class PrismApp
                 Typography.FitText(mod.Mod.Name, room, PrismType.Headline), PrismArt.Fore, PrismType.Headline);
             Typography.Draw(drawList, new Vector2(textLeft, textTop + nameHeight),
                 Typography.FitText(mod.Author, room, PrismType.Caption), PrismArt.Muted, PrismType.Caption);
-            var hovered = UiInteract.Hover(row.Min, row.Max);
-            if (hovered)
-            {
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            }
-
             if (UiInteract.Click(row.Min, row.Max, hovered))
             {
                 if (mod.Allowed)

@@ -704,9 +704,11 @@ internal sealed partial class PrismApp
             var x = tileLeft + shown % TileColumns * (column + gap);
             var y = top + shown / TileColumns * pitch;
             shown++;
-            if (DrawGridTile(drawList, new Rect(new Vector2(x, y), new Vector2(x + column, y + height)),
-                    FirstPhoto(glam), placings ? PlacingLabel(glam) : glam.Title, string.Empty, null, PhoneIcons.Wand,
-                    glam.TryOns > 0 ? CountLabel(glam.TryOns) : string.Empty, scale))
+            var photo = new Rect(new Vector2(x, y), new Vector2(x + column, y + height));
+            var opened = DrawGridTile(drawList, photo, FirstPhoto(glam), placings ? PlacingLabel(glam) : glam.Title,
+                string.Empty, null, PhoneIcons.Wand, glam.TryOns > 0 ? CountLabel(glam.TryOns) : string.Empty, scale);
+            DrawTileHover(drawList, photo, scale);
+            if (opened)
             {
                 OpenGlam(glam);
             }
@@ -724,6 +726,28 @@ internal sealed partial class PrismApp
         bottom = ImGui.GetCursorScreenPos().Y;
         ImGui.SetCursorScreenPos(resume);
         return bottom;
+    }
+
+    private static void DrawTileHover(ImDrawListPtr drawList, Rect photo, float scale)
+    {
+        if (UiInteract.Hover(photo.Min, new Vector2(photo.Max.X, photo.Max.Y + GridLine(scale))))
+        {
+            drawList.AddRectFilled(photo.Min, photo.Max,
+                ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Quaternary)));
+        }
+    }
+
+    private static void DrawRowHover(ImDrawListPtr drawList, Rect row, bool hovered, float scale)
+    {
+        if (!hovered)
+        {
+            return;
+        }
+
+        var pad = Metrics.Space.Xs * scale;
+        drawList.AddRectFilled(row.Min - new Vector2(pad, 0f), row.Max + new Vector2(pad, 0f),
+            ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Quaternary)), Metrics.Radius.Md * scale);
+        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
     }
 
     private float DrawLaneState(ImDrawListPtr drawList, float left, float width, float top, FeedLane<GlamDto> lane,
