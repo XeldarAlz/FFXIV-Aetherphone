@@ -1,12 +1,14 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Harness.Native;
 
 internal static unsafe class NativeImGuiLoader
 {
     private const string BindingLibraryFileName = "cimgui.dll";
+    private const string ImportLibraryName = "cimgui";
 
     public static string? LastAssert { get; private set; }
 
@@ -20,7 +22,10 @@ internal static unsafe class NativeImGuiLoader
             throw new FileNotFoundException("Native ImGui library missing next to the harness.", path);
         }
 
-        InstallAssertHook(NativeLibrary.Load(path));
+        var handle = NativeLibrary.Load(path);
+        NativeLibrary.SetDllImportResolver(typeof(ImGui).Assembly,
+            (name, _, _) => string.Equals(name, ImportLibraryName, StringComparison.Ordinal) ? handle : 0);
+        InstallAssertHook(handle);
     }
 
     public static void ClearAssert() => LastAssert = null;
