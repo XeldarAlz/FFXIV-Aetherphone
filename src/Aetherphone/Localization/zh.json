@@ -2889,7 +2889,7 @@
   "camera.modePhoto": "照片",
   "camera.modeScreen": "全屏",
   "camera.screenTitle": "拍摄整个屏幕",
-  "camera.screenHint": "手机会移开，倒数后拍下不含手机的画面。",
+  "camera.screenHint": "手机会移开，倒数后拍下不含手机的画面。按 Esc 可取消倒数。",
   "camera.showGameUi": "显示游戏界面",
   "camera.hideGameUi": "隐藏游戏界面",
   "camera.flashOn": "闪光灯开启",

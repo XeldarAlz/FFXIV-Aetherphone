@@ -2889,7 +2889,7 @@
   "camera.modePhoto": "PHOTO",
   "camera.modeScreen": "ÉCRAN",
   "camera.screenTitle": "Capture tout l'écran",
-  "camera.screenHint": "Le téléphone s'écarte, lance un compte à rebours et prend la photo sans apparaître dessus.",
+  "camera.screenHint": "Le téléphone s'écarte, lance un compte à rebours et prend la photo sans apparaître dessus. Échap annule le compte à rebours.",
   "camera.showGameUi": "Afficher l'interface du jeu",
   "camera.hideGameUi": "Masquer l'interface du jeu",
   "camera.flashOn": "Flash activé",

@@ -2889,7 +2889,7 @@
   "camera.modePhoto": "FOTO",
   "camera.modeScreen": "BILDSCHIRM",
   "camera.screenTitle": "Nimmt den ganzen Bildschirm auf",
-  "camera.screenHint": "Das Handy rutscht zur Seite, zählt herunter und macht die Aufnahme, ohne selbst darauf zu sein.",
+  "camera.screenHint": "Das Handy rutscht zur Seite, zählt herunter und macht die Aufnahme, ohne selbst darauf zu sein. Esc bricht den Countdown ab.",
   "camera.showGameUi": "Spiel-UI anzeigen",
   "camera.hideGameUi": "Spiel-UI ausblenden",
   "camera.flashOn": "Blitz an",

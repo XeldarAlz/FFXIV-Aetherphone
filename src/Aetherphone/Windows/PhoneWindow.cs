@@ -243,6 +243,7 @@ internal sealed class PhoneWindow : Window
         {
             Flags |= ImGuiWindowFlags.NoInputs;
         }
+
         Components.DragScrollHost.Enabled = locked;
         if (phase == MinimizePhase.None && lastPhase == MinimizePhase.Expanding)
         {

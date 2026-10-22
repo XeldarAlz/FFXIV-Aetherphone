@@ -166,10 +166,10 @@ internal sealed class CameraApp : IPhoneApp
         if (screenMode)
         {
             var whole = WholeScreen();
-            var foreground = ImGui.GetForegroundDrawList();
+            var background = ImGui.GetBackgroundDrawList();
             CameraChrome.ScreenNote(drawList, viewfinder, Loc.T(L.Camera.ScreenTitle), Loc.T(L.Camera.ScreenHint), scale);
-            CameraChrome.Viewfinder(foreground, whole, whole, configuration.CameraGrid, scale);
-            CameraChrome.ScreenCorners(foreground, whole, scale);
+            CameraChrome.Viewfinder(background, whole, whole, configuration.CameraGrid, scale);
+            CameraChrome.ScreenCorners(background, whole, scale);
         }
 
         CameraChrome.Reticle(drawList, reticleAge, ReticleDuration, reticlePosition, scale);
@@ -438,6 +438,14 @@ internal sealed class CameraApp : IPhoneApp
             timerEndsAt = 0d;
             pendingCaptureRect = ShotRect(captureRect);
             StartCapture();
+            return;
+        }
+
+        if (PhoneAside.Requested && ImGui.IsKeyPressed(ImGuiKey.Escape, false))
+        {
+            timerEndsAt = 0d;
+            DetachCaptureHooks();
+            UiFeedback.Play(UiSound.ToggleOff);
             return;
         }
 

@@ -2889,7 +2889,7 @@
   "camera.modePhoto": "FOTO",
   "camera.modeScreen": "PANTALLA",
   "camera.screenTitle": "Captura toda la pantalla",
-  "camera.screenHint": "El teléfono se aparta, hace una cuenta atrás y saca la foto sin salir en ella.",
+  "camera.screenHint": "El teléfono se aparta, hace una cuenta atrás y saca la foto sin salir en ella. Esc cancela la cuenta atrás.",
   "camera.showGameUi": "Mostrar la interfaz del juego",
   "camera.hideGameUi": "Ocultar la interfaz del juego",
   "camera.flashOn": "Flash activado",

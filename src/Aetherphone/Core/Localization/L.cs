@@ -7150,7 +7150,7 @@ internal static class L
         public static readonly LocString ModeScreen = new("camera.modeScreen", "SCREEN");
         public static readonly LocString ScreenTitle = new("camera.screenTitle", "Shoots the whole screen");
         public static readonly LocString ScreenHint = new("camera.screenHint",
-            "The phone slides out of the way, counts down and takes the shot without itself in it.");
+            "The phone slides out of the way, counts down and takes the shot without itself in it. Esc stops the countdown.");
         public static readonly LocString ShowGameUi = new("camera.showGameUi", "Show game UI");
         public static readonly LocString HideGameUi = new("camera.hideGameUi", "Hide game UI");
         public static readonly LocString FlashOn = new("camera.flashOn", "Flash On");

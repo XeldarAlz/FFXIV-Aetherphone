@@ -2889,7 +2889,7 @@
   "camera.modePhoto": "PHOTO",
   "camera.modeScreen": "SCREEN",
   "camera.screenTitle": "Shoots the whole screen",
-  "camera.screenHint": "The phone slides out of the way, counts down and takes the shot without itself in it.",
+  "camera.screenHint": "The phone slides out of the way, counts down and takes the shot without itself in it. Esc stops the countdown.",
   "camera.showGameUi": "Show game UI",
   "camera.hideGameUi": "Hide game UI",
   "camera.flashOn": "Flash On",
