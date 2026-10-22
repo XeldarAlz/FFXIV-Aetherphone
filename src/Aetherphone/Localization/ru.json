@@ -5871,6 +5871,7 @@
   "prism.emptyFeedTitle": "Гламуров пока нет",
   "prism.emptyFeedHint": "Опубликуйте тот, что на вас сейчас, и будьте первыми.",
   "prism.followingEmptyTitle": "От ваших подписок пока ничего",
+  "prism.activityEmptyTitle": "Активности пока нет",
   "announcements.signInRequired": "Войдите в Aethernet в Настройках, чтобы читать объявления",
   "announcements.signInTitle": "Требуется вход",
   "announcements.emptyTitle": "Пока нет объявлений",

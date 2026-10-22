@@ -5871,6 +5871,7 @@
   "prism.emptyFeedTitle": "Aucun mirage pour l'instant",
   "prism.emptyFeedHint": "Publiez celui que vous portez et soyez le premier.",
   "prism.followingEmptyTitle": "Rien de la part de vos abonnements",
+  "prism.activityEmptyTitle": "Aucune activité pour l'instant",
   "announcements.signInRequired": "Connectez-vous à Aethernet dans les Paramètres pour lire les annonces",
   "announcements.signInTitle": "Connexion requise",
   "announcements.emptyTitle": "Aucune annonce pour le moment",

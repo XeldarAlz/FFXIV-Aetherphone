@@ -5871,6 +5871,7 @@
   "prism.emptyFeedTitle": "Noch keine Projektionen",
   "prism.emptyFeedHint": "Teile die, die du gerade trägst, und sei die erste Person.",
   "prism.followingEmptyTitle": "Nichts von Leuten, denen du folgst",
+  "prism.activityEmptyTitle": "Noch keine Aktivität",
   "announcements.signInRequired": "Melde dich in den Einstellungen bei Aethernet an, um Ankündigungen zu lesen",
   "announcements.signInTitle": "Anmeldung erforderlich",
   "announcements.emptyTitle": "Noch keine Ankündigungen",

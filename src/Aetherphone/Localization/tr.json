@@ -5871,6 +5871,7 @@
   "prism.emptyFeedTitle": "Henüz glam yok",
   "prism.emptyFeedHint": "Üzerindekini paylaş ve ilk sen ol.",
   "prism.followingEmptyTitle": "Takip ettiklerinden henüz bir şey yok",
+  "prism.activityEmptyTitle": "Henüz etkinlik yok",
   "announcements.signInRequired": "Duyuruları okumak için Ayarlar'dan Aethernet'e giriş yapın",
   "announcements.signInTitle": "Giriş gerekli",
   "announcements.emptyTitle": "Henüz duyuru yok",

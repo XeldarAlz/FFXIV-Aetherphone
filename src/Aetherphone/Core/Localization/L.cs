@@ -11099,6 +11099,7 @@ internal static class L
             "Post the one you're wearing and be the first.");
         public static readonly LocString FollowingEmptyTitle = new("prism.followingEmptyTitle",
             "Nothing from people you follow");
+        public static readonly LocString ActivityEmptyTitle = new("prism.activityEmptyTitle", "No activity yet");
     }
 
     internal static class Announcements

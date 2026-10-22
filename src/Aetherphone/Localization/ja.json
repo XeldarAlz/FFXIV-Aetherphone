@@ -5871,6 +5871,7 @@
   "prism.emptyFeedTitle": "まだミラプリがありません",
   "prism.emptyFeedHint": "今着ているミラプリを投稿して、一番乗りになりましょう。",
   "prism.followingEmptyTitle": "フォロー中の人の投稿はまだありません",
+  "prism.activityEmptyTitle": "まだアクティビティはありません",
   "announcements.signInRequired": "お知らせを読むには設定からAethernetにログインしてください",
   "announcements.signInTitle": "ログインが必要です",
   "announcements.emptyTitle": "まだお知らせはありません",
