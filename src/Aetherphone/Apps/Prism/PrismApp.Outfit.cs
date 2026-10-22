@@ -144,7 +144,7 @@ internal sealed partial class PrismApp
             var mods = gear[index].Mods ?? Array.Empty<GlamModDto>();
             for (var modIndex = 0; modIndex < mods.Length; modIndex++)
             {
-                if (seen.Add(PostedMods.Key(GearSlots.None, mods[modIndex])))
+                if (seen.Add(PostedMods.Key(mods[modIndex])))
                 {
                     kept.Add(mods[modIndex]);
                 }

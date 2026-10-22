@@ -266,26 +266,24 @@ internal sealed partial class PrismApp
 
         capturedModsFor = captured;
         capturedModsLanguage = Loc.Current.Code;
-        var count = 0;
-        for (var index = 0; index < captured.Length; index++)
-        {
-            count += captured[index].Mods?.Length ?? 0;
-        }
-
-        var mods = new CapturedMod[count];
-        var next = 0;
+        var mods = new List<CapturedMod>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
         for (var index = 0; index < captured.Length; index++)
         {
             var pieceMods = captured[index].Mods ?? Array.Empty<GlamModDto>();
             for (var modIndex = 0; modIndex < pieceMods.Length; modIndex++)
             {
                 var mod = pieceMods[modIndex];
-                mods[next++] = new CapturedMod(PostedMods.Key(captured[index].Slot, mod),
-                    mod.Author.Length > 0 ? Loc.T(L.Prism.ModBy, mod.Name, mod.Author) : mod.Name);
+                var key = PostedMods.Key(mod);
+                if (seen.Add(key))
+                {
+                    mods.Add(new CapturedMod(key,
+                        mod.Author.Length > 0 ? Loc.T(L.Prism.ModBy, mod.Name, mod.Author) : mod.Name));
+                }
             }
         }
 
-        capturedMods = mods;
+        capturedMods = mods.ToArray();
     }
 
     private string CapturedLine()
@@ -299,15 +297,7 @@ internal sealed partial class PrismApp
             }
         }
 
-        var mods = 0;
-        for (var index = 0; index < capturedMods.Length; index++)
-        {
-            if (!droppedMods.Contains(capturedMods[index].Key))
-            {
-                mods++;
-            }
-        }
-
+        var mods = KeptModCount();
         var key = HashCode.Combine(pieces, mods, Loc.Current.Code);
         return capturedText.IsCurrent(key)
             ? capturedText.Value
