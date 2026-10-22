@@ -401,7 +401,11 @@ internal sealed partial class PrismApp : IResumableApp
 
     private void LeaveScreen()
     {
-        if (screen == PrismScreen.Compose && composeDetails)
+        if (piecesOpen)
+        {
+            piecesOpen = false;
+        }
+        else if (screen == PrismScreen.Compose && composeDetails)
         {
             composeDetails = false;
         }
