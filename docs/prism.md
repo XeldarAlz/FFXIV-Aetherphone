@@ -25,7 +25,7 @@ With Glamourer, Try on sets each slot with `Glamourer.SetItem.V3` (once, equipme
 
 ### Mod links
 
-A link is clickable only when it is `https` on an allowed host: `xivmodarchive.com`, `heliosphere.app`, `patreon.com`, `ko-fi.com`, `gumroad.com` and `*.carrd.co` (`Core/Glamour/ModLinks.cs`). Any other link shows as plain text. The server applies the same list. A mod that is 18+ can't be linked at all, and every glam has to be safe for work as shown.
+A link is clickable only when it is `https` on an allowed host: `xivmodarchive.com`, `heliosphere.app`, `patreon.com`, `ko-fi.com`, `gumroad.com` and `*.carrd.co` (`Core/Glamour/ModLinks.cs`). Any other link shows as plain text, and the server applies the same list by dropping it when the glam is posted. A mod that is 18+ can't be linked at all, and every glam has to be safe for work as shown.
 
 ### What the client adds on its own
 
@@ -117,7 +117,7 @@ Follow requests and accepts (types 14 and 15) belong to Aethergram, which owns t
 ### Rules the server enforces
 
 - Up to 5 new glams per account per day, 4 photos each, 3:4.
-- Mod links outside the allowlist are stored as plain text.
+- Mod links outside the allowlist are dropped.
 - Glam of the day (`scope=today`) changes at the daily reset, 15:00 UTC. The client shows it as the card on top of Discover, not as a tab.
 - Popular (`scope=popular`) ranks the last seven days by likes and try ons.
 - Popular orderings count likes and try-ons from distinct, established accounts only.
