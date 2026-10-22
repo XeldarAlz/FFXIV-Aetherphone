@@ -60,21 +60,17 @@ internal sealed partial class PrismApp
     private void DrawCompose(ImDrawListPtr drawList, Rect content, float scale)
     {
         composeSession.ConsumePendingImport();
-        var top = DrawBackHeader(drawList, content, Loc.T(L.Prism.PostGlam), scale) + Metrics.Space.Sm * scale;
         if (composeDetails)
         {
-            DrawComposeDetails(drawList, content, top, scale);
+            DrawComposeDetails(drawList, content, scale);
             return;
         }
 
-        top += Typography.DrawWrappedLeft(new Vector2(content.Min.X, top), Loc.T(L.Prism.PhotosHint), PrismArt.Muted,
-            PrismType.Body, content.Width) + Metrics.Space.Md * scale;
-        var paneHeight = MathF.Min(content.Width, (content.Max.Y - top) * PickPaneFraction);
-        var pane = new Rect(new Vector2(content.Min.X, top), new Vector2(content.Max.X, top + paneHeight));
-        composeSession.DrawPickPane(pane, scale, PickStyle, GlamStore.PhotoRatio, true, true, Loc.T(L.Prism.PostGlam));
-        var next = BottomButton(content, scale);
-        if (DrawButton(drawList, next, Loc.T(L.Common.Next), ButtonStyle.Solid, scale,
-                enabled: composeSession.HasSelection))
+        var next = Loc.T(L.Common.Next);
+        var top = DrawActionHeader(drawList, content, Loc.T(L.Prism.PostGlam), false, next, next,
+            composeSession.HasSelection, UiSound.Tap, scale, out var advance) +
+                  Metrics.Space.Sm * scale;
+        if (advance)
         {
             captured = glamour.Capture();
             capturedVanilla = GlamourService.IsVanilla(captured);
@@ -82,8 +78,13 @@ internal sealed partial class PrismApp
             focusTitle = true;
         }
 
+        top += Typography.DrawWrappedLeft(new Vector2(content.Min.X, top), Loc.T(L.Prism.PhotosHint), PrismArt.Muted,
+            PrismType.Body, content.Width) + Metrics.Space.Md * scale;
+        var paneHeight = MathF.Min(content.Width, (content.Max.Y - top) * PickPaneFraction);
+        var pane = new Rect(new Vector2(content.Min.X, top), new Vector2(content.Max.X, top + paneHeight));
+        composeSession.DrawPickPane(pane, scale, PickStyle, GlamStore.PhotoRatio, true, true, Loc.T(L.Prism.PostGlam));
         var gridRect = new Rect(new Vector2(content.Min.X, pane.Max.Y + Metrics.Space.Md * scale),
-            new Vector2(content.Max.X, next.Min.Y - Metrics.Space.Lg * scale));
+            new Vector2(content.Max.X, content.Max.Y - PrismArt.BottomMargin(scale)));
         using (AppSurface.BeginEdgeToEdge(gridRect))
         {
             composeSession.DrawPickGrid(gridRect, scale, PickStyle, true, Loc.T(L.Common.ImportFromPc),
@@ -91,15 +92,48 @@ internal sealed partial class PrismApp
         }
     }
 
-    private Rect BottomButton(Rect content, float scale)
+    private float DrawActionHeader(ImDrawListPtr drawList, Rect content, string heading, bool back, string action,
+        string widestAction, bool enabled, UiSound sound, float scale, out bool acted)
     {
-        var bottom = content.Max.Y - bottomChrome - PrismArt.BottomMargin(scale);
-        return new Rect(new Vector2(content.Min.X, bottom - Button.LargeHeight * scale),
-            new Vector2(content.Max.X, bottom));
+        var row = new Rect(content.Min, new Vector2(content.Max.X, content.Min.Y + Metrics.Size.TapTarget * scale));
+        var leading = row.Height;
+        if (back)
+        {
+            DrawBackHeader(drawList, content, string.Empty, scale);
+        }
+        else
+        {
+            var cancel = Loc.T(L.Common.Cancel);
+            leading = ButtonWidth([cancel], row.Width * 0.3f, scale);
+            if (DrawButton(drawList, new Rect(row.Min, new Vector2(row.Min.X + leading, row.Max.Y)), cancel,
+                    ButtonStyle.Plain, scale))
+            {
+                LeaveScreen();
+            }
+        }
+
+        var trailing = ButtonWidth([action, widestAction], row.Width * 0.3f, scale);
+        acted = Button.Draw(drawList, new Rect(new Vector2(row.Max.X - trailing, row.Min.Y), row.Max), action, controls,
+            ButtonStyle.Solid, enabled: enabled, id: "prism.headerAction", tapSound: sound);
+        var side = MathF.Max(leading, trailing) + Metrics.Space.Sm * scale;
+        var title = Typography.FitText(heading, MathF.Max(1f, row.Width - side * 2f), PrismType.Headline);
+        var size = Typography.Measure(title, PrismType.Headline);
+        Typography.Draw(drawList, row.Center - size * 0.5f, title, PrismArt.Fore, PrismType.Headline);
+        return row.Max.Y;
     }
 
-    private void DrawComposeDetails(ImDrawListPtr drawList, Rect content, float top, float scale)
+    private void DrawComposeDetails(ImDrawListPtr drawList, Rect content, float scale)
     {
+        var label = Loc.T(glams.Posting ? L.Prism.Posting : L.Prism.Post);
+        var ready = !string.IsNullOrWhiteSpace(glamTitle) && !glams.Posting;
+        var top = DrawActionHeader(drawList, content, Loc.T(L.Prism.PostGlam), true, label,
+            Loc.T(L.Prism.Posting), ready, UiSound.Shutter, scale, out var post) +
+                  Metrics.Space.Sm * scale;
+        if (post)
+        {
+            PostGlam();
+        }
+
         var left = content.Min.X;
         var width = content.Width;
         if (focusTitle)
@@ -118,20 +152,20 @@ internal sealed partial class PrismApp
             capturedVanilla = GlamourService.IsVanilla(captured);
         }
 
-        var post = BottomButton(content, scale);
+        var bottom = content.Max.Y - PrismArt.BottomMargin(scale);
         var failureHeight = 0f;
         if (glams.PostFailed && !glams.Posting && postingDraft == composeDraft)
         {
             var reason = glams.PostFailureText;
             var failure = reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint);
             failureHeight = Typography.MeasureWrappedBlock(failure, PrismType.Body, width).Y;
-            Typography.DrawWrappedLeft(new Vector2(left, post.Min.Y - Metrics.Space.Lg * scale - failureHeight),
+            Typography.DrawWrappedLeft(new Vector2(left, bottom - failureHeight),
                 failure, PrismArt.Muted, PrismType.Body, width);
             failureHeight += Metrics.Space.Lg * scale;
         }
 
         var body = new Rect(new Vector2(content.Min.X, top),
-            new Vector2(content.Max.X, post.Min.Y - Metrics.Space.Lg * scale - failureHeight));
+            new Vector2(content.Max.X, bottom - failureHeight));
         using (BeginBody(body))
         {
             var list = ImGui.GetWindowDrawList();
@@ -139,14 +173,6 @@ internal sealed partial class PrismApp
             var bodyWidth = ScrollLayout.StableContentWidth();
             var cursor = DrawCaptured(list, origin.X, origin.Y, bodyWidth, scale);
             ImGui.Dummy(new Vector2(bodyWidth, cursor - origin.Y));
-        }
-
-        var label = Loc.T(glams.Posting ? L.Prism.Posting : L.Prism.Post);
-        var ready = !string.IsNullOrWhiteSpace(glamTitle) && !glams.Posting;
-        if (Button.Draw(drawList, post, label, controls, ButtonStyle.Solid, enabled: ready, id: "prism.post",
-                tapSound: UiSound.Shutter))
-        {
-            PostGlam();
         }
     }
 
