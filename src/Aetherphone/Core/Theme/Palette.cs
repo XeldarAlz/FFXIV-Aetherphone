@@ -4,6 +4,10 @@ internal static class Palette
 {
     public static Vector4 WithAlpha(Vector4 color, float alpha) => color with { W = alpha };
     public static Vector4 Mix(Vector4 from, Vector4 to, float amount) => Vector4.Lerp(from, to, amount);
+
+    public static Vector4 FromRgb(uint rgb) =>
+        new(((rgb >> 16) & 0xFFu) / 255f, ((rgb >> 8) & 0xFFu) / 255f, (rgb & 0xFFu) / 255f, 1f);
+
     public static float Luminance(Vector4 color) => color.X * 0.299f + color.Y * 0.587f + color.Z * 0.114f;
 
     public static float RelativeLuminance(Vector4 color) =>
