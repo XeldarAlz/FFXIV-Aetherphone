@@ -148,14 +148,14 @@ internal sealed class WallpaperPage : ISettingsPage
         var entries = wallpapers.Entries;
         var gap = 10f * scale;
         using (AppSurface.Begin(region))
-        using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(gap, gap)))
+        using (UiScope.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(gap, gap)))
         {
             var cellWidth = (ScrollLayout.StableContentWidth() - gap * (Columns - 1)) / Columns;
             var cellHeight = aspect > 0f ? cellWidth / aspect : cellWidth;
             var tileCount = entries.Count + 1;
             for (var index = 0; index < tileCount; index++)
             {
-                using (ImRaii.PushId(index))
+                using (UiScope.PushId(index))
                 {
                     ImGui.Dummy(new Vector2(cellWidth, cellHeight));
                     var min = ImGui.GetItemRectMin();

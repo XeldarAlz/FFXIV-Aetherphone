@@ -51,7 +51,7 @@ internal sealed class EmojiPicker
         var theme = ui.Theme;
         string? picked = null;
         ImGui.SetCursorScreenPos(area.Min);
-        using (ImRaii.PushStyle(ImGuiStyleVar.WindowPadding, Vector2.Zero))
+        using (UiScope.PushStyle(ImGuiStyleVar.WindowPadding, Vector2.Zero))
         using (var panel = ImRaii.Child("##emojiPanel", area.Size, false,
                    ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoBackground))
         {
@@ -283,7 +283,7 @@ internal sealed class EmojiPicker
         string? pickedCode = null;
         var gridKey = ImGui.GetID("##emojiGrid");
         ImGui.SetCursorScreenPos(body.Min);
-        using (ImRaii.PushStyle(ImGuiStyleVar.WindowPadding, Vector2.Zero))
+        using (UiScope.PushStyle(ImGuiStyleVar.WindowPadding, Vector2.Zero))
         using (var child = ImRaii.Child("##emojiGrid", body.Size, false,
                    DragScrollHost.ScrollFlags(ImGuiWindowFlags.NoBackground)))
         {

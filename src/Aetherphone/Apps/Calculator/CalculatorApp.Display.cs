@@ -7,7 +7,6 @@ using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Calculator;
 
@@ -184,9 +183,9 @@ internal sealed partial class CalculatorApp
     {
         UiAnchors.Report("calculator.tape", rect);
         CalculatorHistoryRecord? recalled = null;
-        using (ImRaii.PushId("calculator.tape"))
+        using (UiScope.PushId("calculator.tape"))
         using (AppSurface.BeginEdgeToEdge(rect))
-        using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
+        using (UiScope.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
         {
             var drawList = ImGui.GetWindowDrawList();
             var width = ImGui.GetContentRegionAvail().X;

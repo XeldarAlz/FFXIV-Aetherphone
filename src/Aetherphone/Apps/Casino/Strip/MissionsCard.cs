@@ -8,7 +8,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino.Strip;
 
@@ -105,7 +104,7 @@ internal sealed class MissionsCard
             var mission = missions.Missions![index];
             var row = new Rect(new Vector2(min.X, rowTop), new Vector2(max.X, rowTop + rowHeights[index]));
             rowTop = row.Max.Y;
-            using (ImRaii.PushId(index))
+            using (UiScope.PushId(index))
             {
                 if (DrawRow(drawList, ui, mission, sentences[index], row, index > 0, claiming, scale))
                 {

@@ -3,7 +3,6 @@ using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino.Tables;
 
@@ -103,10 +102,10 @@ internal sealed class HostRulesPage
         RefreshOptions();
         var block = HostCards.FooterBlock(string.Empty, summary, string.Empty, body.Width, scale);
         var scroll = new Rect(body.Min, new Vector2(body.Max.X, body.Max.Y - HostFlowLayout.FooterHeight(scale, block)));
-        using (ImRaii.PushId("casino.host.rules"))
+        using (UiScope.PushId("casino.host.rules"))
         {
             using (AppSurface.Begin(scroll))
-            using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
+            using (UiScope.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
             {
                 DrawSections(ui, draft, ScrollLayout.StableContentWidth(), scale);
             }

@@ -8,7 +8,6 @@ using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Coin;
 
@@ -24,7 +23,7 @@ internal sealed partial class CoinApp
         ledgerText.Sync(store.Entries);
         var index = ledgerText.Find(route.ItemId);
         var title = index >= 0 ? ledgerText.Title(index) : Loc.T(L.Coin.TabHistory);
-        using (ImRaii.PushId("coin.entry"))
+        using (UiScope.PushId("coin.entry"))
         using (AppSurface.Begin(navBar.Body))
         {
             var scale = UiScale.Current;

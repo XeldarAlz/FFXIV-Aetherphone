@@ -156,9 +156,9 @@ internal sealed partial class CalculatorApp
             ImGui.GetColorU32(Palette.WithAlpha(ink, HairlineAlpha * frame.Opacity)), Metrics.Stroke.Hairline);
         var picked = -1;
         var removed = -1;
-        using (ImRaii.PushId("calculator.history"))
+        using (UiScope.PushId("calculator.history"))
         using (AppSurface.BeginEdgeToEdge(list))
-        using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
+        using (UiScope.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
         {
             var rowsDrawList = ImGui.GetWindowDrawList();
             for (var index = 0; index < historyRows.Count; index++)

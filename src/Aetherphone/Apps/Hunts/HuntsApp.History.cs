@@ -7,7 +7,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Hunts;
 
@@ -41,7 +40,7 @@ internal sealed partial class HuntsApp
     {
         var scale = UiScale.Current;
         var navBar = AppHeader.BeginLargeTitle(context, false);
-        using (ImRaii.PushId("hunts.history"))
+        using (UiScope.PushId("hunts.history"))
         using (AppSurface.Begin(navBar.Body))
         {
             DrawHistoryBody(navBar.Body, scale);

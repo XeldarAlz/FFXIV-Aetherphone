@@ -249,8 +249,8 @@ internal sealed class AutoBetSheet
         var inset = capsule.Height * 0.4f;
         ImGui.SetCursorScreenPos(new Vector2(capsule.Min.X + inset, field.Center.Y - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(capsule.Width - inset * 2f);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, CasinoColors.InkTitle))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, CasinoColors.InkTitle))
         {
             ImGui.InputText($"##{id}.field{index}", ref buffers[index], digits + 1,
                 ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.AutoSelectAll);

@@ -102,7 +102,7 @@ internal sealed class RaffleEntrantsSheet
         var width = ScrollLayout.NativeScrollContentWidth();
         for (var index = 0; index < entrants.Length; index++)
         {
-            using (ImRaii.PushId(index))
+            using (UiScope.PushId(index))
             {
                 DrawRow(ui, entrants[index], ticketLines[index], width, scale);
             }

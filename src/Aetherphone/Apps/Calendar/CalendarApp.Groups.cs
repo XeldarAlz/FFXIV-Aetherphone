@@ -9,7 +9,6 @@ using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Calendar;
 
@@ -326,11 +325,11 @@ internal sealed partial class CalendarApp
         var fieldLeft = dotCenter.X + dotRadius + Metrics.Space.Md * scale;
         ImGui.SetCursorScreenPos(new Vector2(fieldLeft, origin.Y + rowHeight * 0.5f - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(max.X - pad - fieldLeft);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.FrameBgHovered, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.FrameBgActive, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
-        using (ImRaii.PushColor(ImGuiCol.TextDisabled, ui.MutedInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.FrameBgHovered, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.FrameBgActive, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, ui.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.TextDisabled, ui.MutedInk))
         {
             var hint = Loc.T(L.Calendar.GroupNamePlaceholder);
             Plugin.Fonts.NoticeText(hint);
@@ -350,7 +349,7 @@ internal sealed partial class CalendarApp
         var step = (width - pad * 2f) / count;
         var radius = MathF.Min(SwatchRadius * scale, step * 0.36f);
         var centerY = origin.Y + SwatchRowHeight * scale * 0.5f;
-        using (ImRaii.PushId("calendar.swatches"))
+        using (UiScope.PushId("calendar.swatches"))
         {
             for (var index = 0; index < count; index++)
             {

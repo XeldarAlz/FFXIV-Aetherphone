@@ -7,7 +7,6 @@ using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Social;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Velvet;
 
@@ -159,7 +158,7 @@ internal sealed partial class VelvetShell
         var changedInclude = false;
         var changedMutes = false;
         using (AppSurface.BeginEdgeToEdge(body))
-        using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
+        using (UiScope.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
         {
             Gap(8f);
             DrawInsetHelpText(Loc.T(L.Velvet.FilterPickHint));

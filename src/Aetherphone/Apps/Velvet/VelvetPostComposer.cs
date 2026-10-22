@@ -11,7 +11,6 @@ using Aetherphone.Core.Social;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Velvet;
 
@@ -446,8 +445,8 @@ internal sealed class VelvetPostComposer
             captionFocus = false;
         }
 
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, VelvetTheme.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, VelvetTheme.TitleInk))
         {
             var wrapWidth = field.Width - padding.X * 2f - 4f * scale;
             if (storyMode)

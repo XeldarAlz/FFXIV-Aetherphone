@@ -11,7 +11,6 @@ using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Shortcuts;
 
@@ -186,8 +185,8 @@ internal sealed partial class ShortcutsApp
         ImGui.SetNextItemWidth(field.Width - inset * 2f);
         var name = draft!.Name;
         Plugin.Fonts.NoticeText(name);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, ui.TitleInk))
         {
             if (ImGui.InputTextWithHint("##shortcutName", Loc.T(L.Shortcuts.NameHint), ref name,
                     ShortcutStore.NameMaxLength, ImGuiInputTextFlags.None))

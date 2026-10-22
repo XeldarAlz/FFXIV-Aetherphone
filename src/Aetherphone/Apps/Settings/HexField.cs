@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Settings;
 
@@ -33,7 +32,7 @@ internal static class HexField
         ImGui.SetCursorScreenPos(new Vector2(inputLeft, origin.Y + height * 0.5f - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(origin.X + width - Metrics.Space.Md * scale - inputLeft);
         bool edited;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, Transparent)
+        using (UiScope.PushColor(ImGuiCol.FrameBg, Transparent)
                    .Push(ImGuiCol.FrameBgHovered, Transparent)
                    .Push(ImGuiCol.FrameBgActive, Transparent)
                    .Push(ImGuiCol.Text, theme.TextStrong))

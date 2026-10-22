@@ -4,7 +4,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Message;
 
@@ -27,7 +26,7 @@ internal sealed partial class MessagePopoutWindow
     private void DrawSettingsPanel(Rect body, PhoneTheme theme)
     {
         var scale = UiScale.Current;
-        using (ImRaii.PushId(settingIds.Panel))
+        using (UiScope.PushId(settingIds.Panel))
         using (AppSurface.Begin(body))
         {
             DrawPopoutCard(theme, scale);

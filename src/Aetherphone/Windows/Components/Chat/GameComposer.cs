@@ -5,7 +5,6 @@ using Aetherphone.Core.GameChat;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -339,8 +338,8 @@ internal sealed class GameComposer
 
         var line = editor.Text;
         Plugin.Fonts.NoticeText(line);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
             if (ImGui.InputTextWithHint("##linkpearl.composer", Loc.T(L.Messages.Placeholder), ref line,
                     Math.Max(1, capacityBytes), ImGuiInputTextFlags.EnterReturnsTrue))
@@ -370,8 +369,8 @@ internal sealed class GameComposer
             focus = false;
         }
 
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
             if (editor.Draw("##linkpearl.composer", new Vector2(innerWidth, boxHeight), 0, capacityBytes))
             {

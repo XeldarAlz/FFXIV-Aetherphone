@@ -11,7 +11,6 @@ using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -340,9 +339,9 @@ internal sealed class StoryViewerOverlay
         Plugin.Fonts.NoticeText(hint);
         Plugin.Fonts.NoticeText(replyDraft);
         bool submitted;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, new Vector4(1f, 1f, 1f, 0.96f)))
-        using (ImRaii.PushColor(ImGuiCol.TextDisabled, new Vector4(1f, 1f, 1f, 0.55f)))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
+        using (UiScope.PushColor(ImGuiCol.Text, new Vector4(1f, 1f, 1f, 0.96f)))
+        using (UiScope.PushColor(ImGuiCol.TextDisabled, new Vector4(1f, 1f, 1f, 0.55f)))
         {
             submitted = ImGui.InputTextWithHint("##storyReply", hint, ref replyDraft, ReplyMaxLength,
                 ImGuiInputTextFlags.EnterReturnsTrue);

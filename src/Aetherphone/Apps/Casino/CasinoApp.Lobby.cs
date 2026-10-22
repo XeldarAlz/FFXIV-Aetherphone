@@ -11,7 +11,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino;
 
@@ -51,7 +50,7 @@ internal sealed partial class CasinoApp
         var scale = UiScale.Current;
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         DrawWordmark(ImGui.GetWindowDrawList(), body, scale);
-        using (ImRaii.PushId("casino.lobby"))
+        using (UiScope.PushId("casino.lobby"))
         using (var surface = AppSurface.Begin(body))
         {
             lobbyRefresh.Draw(body, surface.Pull, surface.Dragging, casino.State is null, ui.MutedInk, refreshFloor);

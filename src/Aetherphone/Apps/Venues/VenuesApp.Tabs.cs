@@ -5,7 +5,6 @@ using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Venues;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Venues;
 
@@ -77,7 +76,7 @@ internal sealed partial class VenuesApp
     {
         var title = Loc.T(L.Venues.LiveNowLabel);
         var navBar = AppHeader.BeginLargeTitle(context, false);
-        using (ImRaii.PushId("venues.live"))
+        using (UiScope.PushId("venues.live"))
         using (var surface = AppSurface.Begin(navBar.Body))
         {
             liveRefresh.Draw(navBar.Body, surface.Pull, surface.Dragging, venues.Busy, ui.MutedInk, refreshAction);
@@ -146,7 +145,7 @@ internal sealed partial class VenuesApp
     {
         var title = Loc.T(L.Venues.Events);
         var navBar = AppHeader.BeginLargeTitle(context, false);
-        using (ImRaii.PushId("venues.events"))
+        using (UiScope.PushId("venues.events"))
         using (var surface = AppSurface.Begin(navBar.Body))
         {
             eventsRefresh.Draw(navBar.Body, surface.Pull, surface.Dragging, venues.Busy, ui.MutedInk, refreshAction);
@@ -224,7 +223,7 @@ internal sealed partial class VenuesApp
     {
         var title = Loc.T(L.Venues.Favorites);
         var navBar = AppHeader.BeginLargeTitle(context, false);
-        using (ImRaii.PushId("venues.saved"))
+        using (UiScope.PushId("venues.saved"))
         using (AppSurface.Begin(navBar.Body))
         {
             var scale = UiScale.Current;
@@ -277,7 +276,7 @@ internal sealed partial class VenuesApp
     {
         RefreshList(route.List, route.Category);
         var navBar = AppHeader.BeginLargeTitle(context);
-        using (ImRaii.PushId("venues.list"))
+        using (UiScope.PushId("venues.list"))
         using (AppSurface.Begin(navBar.Body))
         {
             var scale = UiScale.Current;

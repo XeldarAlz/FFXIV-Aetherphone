@@ -7,7 +7,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Notes;
 
@@ -145,10 +144,10 @@ internal sealed partial class NotesApp
             focusEditor = false;
         }
 
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
-        using (ImRaii.PushColor(ImGuiCol.TextSelectedBg, Palette.WithAlpha(ui.Accent, SelectionAlpha)))
-        using (ImRaii.PushColor(ImGuiCol.ScrollbarBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, ui.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.TextSelectedBg, Palette.WithAlpha(ui.Accent, SelectionAlpha)))
+        using (UiScope.PushColor(ImGuiCol.ScrollbarBg, AppSkin.Transparent))
         using (Plugin.Fonts.Push(TextStyles.Body.Scale, TextStyles.Body.Weight))
         {
             noteEditor.Rewrap(fieldSize.X - framePadding.X * 2f - Metrics.Space.Xxs * scale);

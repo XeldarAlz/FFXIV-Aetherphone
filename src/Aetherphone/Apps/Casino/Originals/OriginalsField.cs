@@ -4,7 +4,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino.Originals;
 
@@ -81,8 +80,8 @@ internal sealed class OriginalsField
         }
 
         bool committed;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, CasinoColors.InkTitle))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, CasinoColors.InkTitle))
         {
             committed = ImGui.InputText(fieldId, ref buffer, BufferLength,
                 ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.AutoSelectAll |

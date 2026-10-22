@@ -9,7 +9,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Music;
 
@@ -379,10 +378,10 @@ internal sealed partial class MusicApp
         }
 
         ImGui.SetCursorScreenPos(innerMin);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.FrameBgHovered, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.FrameBgActive, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.FrameBgHovered, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.FrameBgActive, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, ui.TitleInk))
         {
             var wrapWidth = innerSize.X - ImGui.GetStyle().FramePadding.X * 2f - Metrics.Space.Xxs * scale;
             if (focusEditDescription)

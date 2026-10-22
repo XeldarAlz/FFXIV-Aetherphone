@@ -9,7 +9,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Fishing;
 
@@ -35,7 +34,7 @@ internal sealed partial class FishingApp
         var labels = voyageText.For(slot.Destination, slot.Time);
         var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var navBar = AppHeader.BeginLargeTitle(context);
-        using (ImRaii.PushId("fishing.voyage"))
+        using (UiScope.PushId("fishing.voyage"))
         using (AppSurface.Begin(navBar.Body))
         {
             DrawVoyageSummary(labels, target, nowUnix, scale);

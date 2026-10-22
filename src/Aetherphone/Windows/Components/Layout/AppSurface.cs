@@ -83,7 +83,7 @@ internal static class AppSurface
 
         ImGui.SetCursorScreenPos(area.Min);
         var key = ImGui.GetID("##appSurface");
-        var padding = ImRaii.PushStyle(ImGuiStyleVar.WindowPadding,
+        var padding = UiScope.PushStyle(ImGuiStyleVar.WindowPadding,
                 new Vector2(horizontalPadding * scale, TopPadding * scale))
             .Push(ImGuiStyleVar.ScrollbarSize, ScrollbarSizeUnits * scale)
             .Push(ImGuiStyleVar.ScrollbarRounding, ScrollbarRoundingUnits * scale);
@@ -93,7 +93,7 @@ internal static class AppSurface
             flags |= ImGuiWindowFlags.NoScrollWithMouse;
         }
 
-        var scrollbar = ScrollbarInk is { } ink ? ScrollLayout.PushScrollbarInk(ink) : null;
+        var scrollbar = ScrollbarInk is { } ink ? ScrollLayout.PushScrollbarInk(ink) : default;
         var child = ImRaii.Child("##appSurface", area.Size, false, flags);
         var freshVisit = ResetScrollOnNewVisit();
         ActiveFreshVisit = freshVisit;
@@ -214,13 +214,13 @@ internal static class AppSurface
     public ref struct SurfaceScope
     {
         private ImRaii.ChildDisposable child;
-        private readonly IDisposable padding;
-        private readonly IDisposable? scrollbar;
+        private readonly UiScope.StyleScope padding;
+        private readonly UiScope.ColorScope scrollbar;
         private readonly DragScrollHost.Surface surface;
         private readonly bool freshVisit;
         private readonly float bottomInset;
 
-        internal SurfaceScope(ImRaii.ChildDisposable child, IDisposable padding, IDisposable? scrollbar,
+        internal SurfaceScope(ImRaii.ChildDisposable child, UiScope.StyleScope padding, UiScope.ColorScope scrollbar,
             DragScrollHost.Surface surface, bool freshVisit, float bottomInset)
         {
             this.child = child;
@@ -256,8 +256,8 @@ internal static class AppSurface
             TrackIndicator(surface.Grabbing);
             depth = Math.Max(0, depth - 1);
             child.Dispose();
-            padding?.Dispose();
-            scrollbar?.Dispose();
+            padding.Dispose();
+            scrollbar.Dispose();
         }
     }
 }

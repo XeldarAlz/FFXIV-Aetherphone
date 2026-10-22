@@ -812,7 +812,7 @@ internal sealed partial class DynamicIsland
             var glyph = IconGlyph.Of(icon);
             var size = ImGui.CalcTextSize(glyph);
             ImGui.SetCursorScreenPos(center - size * 0.5f);
-            using (ImRaii.PushColor(ImGuiCol.Text, Palette.WithAlpha(ink, alpha)))
+            using (UiScope.PushColor(ImGuiCol.Text, Palette.WithAlpha(ink, alpha)))
             {
                 Typography.Plain(glyph);
             }

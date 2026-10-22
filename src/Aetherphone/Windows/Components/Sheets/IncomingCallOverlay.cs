@@ -105,7 +105,7 @@ internal sealed class IncomingCallOverlay
             var glyph = IconGlyph.Of(icon);
             var size = ImGui.CalcTextSize(glyph);
             ImGui.SetCursorScreenPos(center - size * 0.5f);
-            using (ImRaii.PushColor(ImGuiCol.Text, Ink with { W = alpha }))
+            using (UiScope.PushColor(ImGuiCol.Text, Ink with { W = alpha }))
             {
                 Typography.Plain(glyph);
             }

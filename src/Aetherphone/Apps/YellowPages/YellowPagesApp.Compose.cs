@@ -10,7 +10,6 @@ using Aetherphone.Core.YellowPages;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.YellowPages;
 
@@ -746,8 +745,8 @@ internal sealed partial class YellowPagesApp
         var fieldTop = bodyLabelTop + bodyLabelHeight + 6f * scale;
         var fieldWidth = width - pad * 2f;
         ImGui.SetCursorScreenPos(new Vector2(card.Min.X + pad, fieldTop));
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, Ink.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, Ink.TitleInk))
         {
             var wrapWidth = fieldWidth - ImGui.GetStyle().FramePadding.X * 2f - 4f * scale;
             SoftWrapField.Multiline("##adBody", ref composeBody, BodyBufferLength,
@@ -805,8 +804,8 @@ internal sealed partial class YellowPagesApp
         ImGui.SetNextItemWidth(MathF.Max(1f, right - left));
         Plugin.Fonts.NoticeText(value);
         bool changed;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, Ink.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, Ink.TitleInk))
         {
             changed = ImGui.InputText(id, ref value, maxLength, flags);
         }
@@ -856,8 +855,8 @@ internal sealed partial class YellowPagesApp
         var fieldTop = card.Min.Y + pad + labelHeight + 6f * scale;
         var fieldWidth = width - pad * 2f;
         ImGui.SetCursorScreenPos(new Vector2(card.Min.X + pad, fieldTop));
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, Ink.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, Ink.TitleInk))
         {
             var wrapWidth = fieldWidth - ImGui.GetStyle().FramePadding.X * 2f - 4f * scale;
             SoftWrapField.Multiline(id, ref value, maxLength, new Vector2(fieldWidth, fieldHeight * scale), wrapWidth);

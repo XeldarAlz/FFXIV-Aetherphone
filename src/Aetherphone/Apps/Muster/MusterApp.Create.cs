@@ -11,7 +11,6 @@ using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Muster;
 
@@ -103,7 +102,7 @@ internal sealed partial class MusterApp
         var scale = UiScale.Current;
         var nowUnix = NowUnix();
         var navBar = AppHeader.BeginLargeTitle(context);
-        using (ImRaii.PushId("muster.create"))
+        using (UiScope.PushId("muster.create"))
         using (var surface = AppSurface.Begin(navBar.Body))
         {
             var drawList = ImGui.GetWindowDrawList();
@@ -266,10 +265,10 @@ internal sealed partial class MusterApp
         }
 
         ImGui.SetCursorScreenPos(notesMin);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.FrameBgHovered, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.FrameBgActive, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.FrameBgHovered, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.FrameBgActive, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, ui.TitleInk))
         using (Plugin.Fonts.Push(TextStyles.Body.Scale, TextStyles.Body.Weight))
         {
             var wrapWidth = notesSize.X - framePadding.X * 2f - Metrics.Space.Xxs * scale;
@@ -286,11 +285,11 @@ internal sealed partial class MusterApp
         ImGui.SetCursorScreenPos(new Vector2(left + pad - framePadding.X,
             spotTop + rowHeight * 0.5f - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(width - pad * 2f + framePadding.X * 2f);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.FrameBgHovered, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.FrameBgActive, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
-        using (ImRaii.PushColor(ImGuiCol.TextDisabled, ui.MutedInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.FrameBgHovered, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.FrameBgActive, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, ui.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.TextDisabled, ui.MutedInk))
         {
             var hint = Loc.T(L.Muster.MeetingSpot);
             Plugin.Fonts.NoticeText(hint);

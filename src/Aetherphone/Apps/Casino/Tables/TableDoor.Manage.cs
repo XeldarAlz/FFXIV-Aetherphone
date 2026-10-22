@@ -7,7 +7,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino.Tables;
 
@@ -183,7 +182,7 @@ internal sealed partial class TableDoor
                     ImGui.GetColorU32(ui.Hairline), Metrics.Stroke.Hairline);
             }
 
-            using (ImRaii.PushId(index))
+            using (UiScope.PushId(index))
             {
                 if (DrawRow(drawList, ui, control, card, row, index == 0, index == count - 1 && !(renaming
                         && control == DoorControl.Rename), ControlEnabled(control, busy, card.Paused), scale))

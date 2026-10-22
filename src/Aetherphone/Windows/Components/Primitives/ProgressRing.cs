@@ -2,7 +2,6 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -148,7 +147,7 @@ internal static class ProgressRing
             ImGui.SetWindowFontScale(scale);
             var size = ImGui.CalcTextSize(glyph);
             ImGui.SetCursorScreenPos(new Vector2(c.X - size.X * 0.5f, c.Y - size.Y * 0.5f));
-            using (ImRaii.PushColor(ImGuiCol.Text, col))
+            using (UiScope.PushColor(ImGuiCol.Text, col))
             {
                 Typography.Plain(glyph);
             }

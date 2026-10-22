@@ -3,7 +3,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino.Strip;
 
@@ -61,7 +60,7 @@ internal sealed class StripShelves
         var tileWidth = StripGrid.CellWidth(width, columns, gap);
         var textBlock = PosterTile.TextBlock(layout, scale);
         var tileHeight = PosterTile.TileHeight(layout, textBlock, scale);
-        using (ImRaii.PushId(shelfIds[(int)shelf]))
+        using (UiScope.PushId(shelfIds[(int)shelf]))
         {
             for (var index = 0; index < entries.Length; index++)
             {
@@ -72,7 +71,7 @@ internal sealed class StripShelves
                     continue;
                 }
 
-                using (ImRaii.PushId(index))
+                using (UiScope.PushId(index))
                 {
                     if (DrawEntry(drawList, floor, entries[index], tile, layout, textBlock, phase, deltaSeconds, live,
                             scale, out var pressed))

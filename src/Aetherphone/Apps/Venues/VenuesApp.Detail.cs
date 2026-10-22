@@ -9,7 +9,6 @@ using Aetherphone.Core.Venues;
 using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Venues;
 
@@ -145,7 +144,7 @@ internal sealed partial class VenuesApp
     {
         var venue = ResolveDetail(route.Venue!);
         var navBar = AppHeader.BeginLargeTitle(context);
-        using (ImRaii.PushId("venues.detail"))
+        using (UiScope.PushId("venues.detail"))
         using (AppSurface.Begin(navBar.Body))
         {
             var scale = UiScale.Current;
@@ -495,7 +494,7 @@ internal sealed partial class VenuesApp
         var aboutText = translation.View(venueKey, venue.Description).Text;
         ImGui.SetCursorScreenPos(new Vector2(left, textTop));
         using (Plugin.Fonts.Push(TextStyles.Body.Scale, TextStyles.Body.Weight))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.BodyInk))
+        using (UiScope.PushColor(ImGuiCol.Text, ui.BodyInk))
         {
             ImGui.PushTextWrapPos(left + width - ImGui.GetWindowPos().X);
             Typography.Plain(aboutText);

@@ -8,7 +8,6 @@ using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Strats;
 
@@ -106,7 +105,7 @@ internal sealed partial class StratsApp
         mechanicAnchorTaken = false;
         UiAnchors.Report("strats.scroll",
             new Rect(new Vector2(body.Min.X, body.Max.Y - body.Height * ScrollAnchorShare), body.Max));
-        using (ImRaii.PushId(fight.Key))
+        using (UiScope.PushId(fight.Key))
         using (var surface = AppSurface.Begin(body))
         {
             DrawFightHeader(fight, scale);
@@ -495,14 +494,14 @@ internal sealed partial class StratsApp
         for (var phaseIndex = 0; phaseIndex < current.Phases.Length; phaseIndex++)
         {
             var phase = current.Phases[phaseIndex];
-            using var phaseScope = ImRaii.PushId(phaseIndex);
+            using var phaseScope = UiScope.PushId(phaseIndex);
             MarkEntry();
             DrawChapterHeading(phase.Name, scale);
             DrawPhaseIntro(phase, phaseIndex, scale);
             for (var mechIndex = 0; mechIndex < phase.Mechs.Length; mechIndex++)
             {
                 MarkEntry();
-                using (ImRaii.PushId(mechIndex))
+                using (UiScope.PushId(mechIndex))
                 {
                     DrawMechanicCard(current, phase.Mechs[mechIndex], phaseIndex, mechIndex, scale);
                 }
@@ -669,7 +668,7 @@ internal sealed partial class StratsApp
             var pillWidth = MathF.Min(width, AppSkin.PillWidthFor(link.Label, pillHeight));
             var left = flow.Place(pillWidth);
             var top = origin.Y + flow.Row * (pillHeight + rowGap);
-            using var linkScope = ImRaii.PushId(index);
+            using var linkScope = UiScope.PushId(index);
             if (ui.GhostButton(new Rect(new Vector2(left, top), new Vector2(left + pillWidth, top + pillHeight)),
                     Typography.FitText(link.Label, pillWidth - pillHeight * 0.5f, TextStyles.Subheadline)))
             {

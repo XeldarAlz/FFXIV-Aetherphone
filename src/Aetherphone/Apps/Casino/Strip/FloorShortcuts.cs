@@ -7,7 +7,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino.Strip;
 
@@ -113,7 +112,7 @@ internal sealed class FloorShortcuts
         {
             var left = origin.X + index * (tileWidth + gap);
             var tile = new Rect(new Vector2(left, origin.Y), new Vector2(left + tileWidth, bottom));
-            using (ImRaii.PushId(index))
+            using (UiScope.PushId(index))
             {
                 if (DrawTile(drawList, ui, items[index], fits[index], tile, labelBlock, band, scale))
                 {

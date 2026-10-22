@@ -6,7 +6,6 @@ using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Maps;
 
@@ -75,8 +74,8 @@ internal sealed partial class MapsApp
         }
 
         contentClip = content;
-        using (ImRaii.PushId((int)page))
-        using (ImRaii.PushId(page == MapsPage.Place && openPlace is not null ? (int)openPlace.RowId : openExpansion))
+        using (UiScope.PushId((int)page))
+        using (UiScope.PushId(page == MapsPage.Place && openPlace is not null ? (int)openPlace.RowId : openExpansion))
         using (AppSurface.Begin(content))
         {
             switch (page)

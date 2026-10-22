@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -271,7 +270,7 @@ internal sealed class AppSkin
         ImGuiInputTextFlags extraFlags = ImGuiInputTextFlags.None)
     {
         var scale = UiScale.Current;
-        using (ImRaii.PushColor(ImGuiCol.Text, Palette.MutedInk))
+        using (UiScope.PushColor(ImGuiCol.Text, Palette.MutedInk))
         {
             Typography.Plain(label);
         }
@@ -284,8 +283,8 @@ internal sealed class AppSkin
         ImGui.SetCursorScreenPos(new Vector2(origin.X + Metrics.Space.Md * scale,
             origin.Y + (multiline ? Metrics.Space.Sm * scale : height * 0.5f - ImGui.GetFrameHeight() * 0.5f)));
         ImGui.SetNextItemWidth(width - Metrics.Space.Md * 2f * scale);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, Palette.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, Palette.TitleInk))
         {
             if (multiline)
             {
@@ -325,13 +324,13 @@ internal sealed class AppSkin
 
     public void LabelValue(string label, string value)
     {
-        using (ImRaii.PushColor(ImGuiCol.Text, Palette.MutedInk))
+        using (UiScope.PushColor(ImGuiCol.Text, Palette.MutedInk))
         {
             Typography.Plain(label);
         }
 
         ImGui.PushTextWrapPos(0f);
-        using (ImRaii.PushColor(ImGuiCol.Text, Theme.TextStrong))
+        using (UiScope.PushColor(ImGuiCol.Text, Theme.TextStrong))
         {
             Typography.Wrapped(value);
         }
@@ -365,7 +364,7 @@ internal sealed class AppSkin
     public void HelpText(string text)
     {
         ImGui.PushTextWrapPos(0f);
-        using (ImRaii.PushColor(ImGuiCol.Text, Palette.MutedInk))
+        using (UiScope.PushColor(ImGuiCol.Text, Palette.MutedInk))
         using (Plugin.Fonts.Push(0.82f))
         {
             Typography.Wrapped(text);

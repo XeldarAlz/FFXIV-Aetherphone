@@ -28,7 +28,6 @@ using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Aethergram;
 
@@ -570,7 +569,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         }
 
         using (TabBar.ReserveContent(scale))
-        using (ImRaii.PushId((int)activeTab))
+        using (UiScope.PushId((int)activeTab))
         {
             switch (activeTab)
             {
@@ -1154,7 +1153,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             Typography.FitText(Loc.T(L.PhotoTag.PendingTitle), textWidth, CardNameStyle), Ink.TitleInk, CardNameStyle);
         ImGui.SetCursorScreenPos(new Vector2(textLeft, titleTop + titleHeight + TagPromptTitleGap * scale));
         using (Typography.WrapAt(textLeft + textWidth))
-        using (ImRaii.PushColor(ImGuiCol.Text, Ink.MutedInk))
+        using (UiScope.PushColor(ImGuiCol.Text, Ink.MutedInk))
         using (Plugin.Fonts.Push(CardMetaStyle.Scale, CardMetaStyle.Weight))
         {
             Typography.Wrapped(Loc.T(L.PhotoTag.PendingHint));
@@ -1407,7 +1406,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             {
                 ImGui.SetCursorScreenPos(new Vector2(innerX, y));
                 using (Typography.WrapAt(innerX + innerWidth))
-                using (ImRaii.PushColor(ImGuiCol.Text, Ink.BodyInk))
+                using (UiScope.PushColor(ImGuiCol.Text, Ink.BodyInk))
                 using (Plugin.Fonts.Push(CardCaptionScale))
                 {
                     Typography.Wrapped(captionText);

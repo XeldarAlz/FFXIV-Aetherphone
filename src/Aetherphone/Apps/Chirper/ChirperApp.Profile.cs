@@ -10,7 +10,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Core.Translation;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Chirper;
 
@@ -124,7 +123,7 @@ internal sealed partial class ChirperApp
         var headerVisible = reveal > ProfileHeaderVisibleFloor;
         if (reveal < 1f - ProfileHeaderVisibleFloor)
         {
-            using (ImRaii.PushStyle(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * (1f - reveal)))
+            using (UiScope.PushStyle(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * (1f - reveal)))
             {
                 DrawProfileBackChip(bannerOrigin, !headerVisible);
             }
@@ -138,7 +137,7 @@ internal sealed partial class ChirperApp
         var bar = new Rect(area.Min, new Vector2(area.Max.X, headerBottom));
         var backdrop = new Rect(new Vector2(area.Min.X, MathF.Min(area.Min.Y, ImGui.GetWindowPos().Y)), bar.Max);
         UiInteract.HoverOverlay(backdrop);
-        using (ImRaii.PushStyle(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * reveal))
+        using (UiScope.PushStyle(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * reveal))
         {
             ui.PaintGradient(ImGui.GetWindowDrawList(), backdrop, screenRect, 0f);
             DrawScreenHeader(bar, title, centered: true, overlay: true);

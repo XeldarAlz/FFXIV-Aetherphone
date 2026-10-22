@@ -10,7 +10,6 @@ using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Hunts;
 
@@ -86,7 +85,7 @@ internal sealed partial class HuntsApp
         listReadyForTour = false;
         var scale = UiScale.Current;
         var navBar = AppHeader.BeginLargeTitle(context, false);
-        using (ImRaii.PushId("hunts.now"))
+        using (UiScope.PushId("hunts.now"))
         using (AppSurface.Begin(navBar.Body))
         {
             DrawStatusCapsule(scale);

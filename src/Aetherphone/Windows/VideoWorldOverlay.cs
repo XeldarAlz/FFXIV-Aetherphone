@@ -4,7 +4,6 @@ using Aetherphone.Core.Video;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows;
 
@@ -192,9 +191,9 @@ internal sealed class VideoWorldOverlay
         ImGui.SetNextWindowSize(size);
         bool hovered;
         bool active;
-        using (ImRaii.PushStyle(ImGuiStyleVar.WindowPadding, Vector2.Zero))
-        using (ImRaii.PushStyle(ImGuiStyleVar.WindowBorderSize, 0f))
-        using (ImRaii.PushStyle(ImGuiStyleVar.WindowMinSize, Vector2.One))
+        using (UiScope.PushStyle(ImGuiStyleVar.WindowPadding, Vector2.Zero))
+        using (UiScope.PushStyle(ImGuiStyleVar.WindowBorderSize, 0f))
+        using (UiScope.PushStyle(ImGuiStyleVar.WindowMinSize, Vector2.One))
         {
             ImGui.Begin(id, GripFlags);
             ImGui.InvisibleButton("##grip", size);
@@ -232,9 +231,9 @@ internal sealed class VideoWorldOverlay
         ImGui.SetNextWindowSize(size);
         bool hovered;
         bool clicked;
-        using (ImRaii.PushStyle(ImGuiStyleVar.WindowPadding, Vector2.Zero))
-        using (ImRaii.PushStyle(ImGuiStyleVar.WindowBorderSize, 0f))
-        using (ImRaii.PushStyle(ImGuiStyleVar.WindowMinSize, Vector2.One))
+        using (UiScope.PushStyle(ImGuiStyleVar.WindowPadding, Vector2.Zero))
+        using (UiScope.PushStyle(ImGuiStyleVar.WindowBorderSize, 0f))
+        using (UiScope.PushStyle(ImGuiStyleVar.WindowMinSize, Vector2.One))
         {
             ImGui.Begin("##aepScreenDone", GripFlags);
             clicked = ImGui.InvisibleButton("##done", size);

@@ -13,7 +13,6 @@ using Aetherphone.Core.Venues;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Muster;
 
@@ -100,7 +99,7 @@ internal sealed partial class MusterApp
         var muster = ResolveMuster(musterId);
         var navBar = AppHeader.BeginLargeTitle(context);
         var scale = UiScale.Current;
-        using (ImRaii.PushId("muster.detail"))
+        using (UiScope.PushId("muster.detail"))
         using (AppSurface.Begin(navBar.Body))
         {
             var drawList = ImGui.GetWindowDrawList();

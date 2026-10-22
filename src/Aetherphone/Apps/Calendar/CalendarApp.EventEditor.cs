@@ -10,7 +10,6 @@ using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Calendar;
 
@@ -173,11 +172,11 @@ internal sealed partial class CalendarApp
         var titleRow = new Rect(origin, new Vector2(max.X, origin.Y + rowHeight));
         ImGui.SetCursorScreenPos(new Vector2(titleRow.Min.X + pad, titleRow.Center.Y - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(titleRow.Width - pad * 2f);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.FrameBgHovered, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.FrameBgActive, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
-        using (ImRaii.PushColor(ImGuiCol.TextDisabled, ui.MutedInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.FrameBgHovered, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.FrameBgActive, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, ui.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.TextDisabled, ui.MutedInk))
         {
             var hint = Loc.T(L.Calendar.TitlePlaceholder);
             Plugin.Fonts.NoticeText(hint);
@@ -190,10 +189,10 @@ internal sealed partial class CalendarApp
         var notesSize = new Vector2(width - pad * 2f, max.Y - notesMin.Y - Metrics.Space.Xs * scale);
         var framePadding = ImGui.GetStyle().FramePadding;
         ImGui.SetCursorScreenPos(notesMin);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.FrameBgHovered, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.FrameBgActive, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.FrameBgHovered, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.FrameBgActive, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, ui.TitleInk))
         using (Plugin.Fonts.Push(TextStyles.Body.Scale, TextStyles.Body.Weight))
         {
             var wrapWidth = notesSize.X - framePadding.X * 2f - Metrics.Space.Xxs * scale;

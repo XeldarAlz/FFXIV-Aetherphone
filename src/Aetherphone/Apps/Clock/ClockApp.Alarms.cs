@@ -8,7 +8,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Clock;
 
@@ -46,7 +45,7 @@ internal sealed partial class ClockApp
 
         EnsureAlarmOrder();
         var navBar = AppHeader.BeginLargeTitle(context, false);
-        using (ImRaii.PushId("clock.alarms"))
+        using (UiScope.PushId("clock.alarms"))
         using (AppSurface.Begin(navBar.Body))
         {
             var width = ImGui.GetContentRegionAvail().X;

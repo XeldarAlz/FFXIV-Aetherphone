@@ -525,7 +525,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         }
 
         using (TabBar.ReserveContent(scale))
-        using (ImRaii.PushId((int)homeTab))
+        using (UiScope.PushId((int)homeTab))
         {
             switch (homeTab)
             {
@@ -1405,7 +1405,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             ImGui.SetCursorScreenPos(new Vector2(contentLeft, textTop));
             using (Typography.WrapAt(contentRight))
             using (Plugin.Fonts.Push(bodyStyle.Scale))
-            using (ImRaii.PushColor(ImGuiCol.Text, ChirperInk.BodyInk))
+            using (UiScope.PushColor(ImGuiCol.Text, ChirperInk.BodyInk))
             {
                 Typography.Wrapped(bodyText);
             }
@@ -2296,7 +2296,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             ImGui.SetCursorScreenPos(new Vector2(min.X + padX, bodyTop));
             using (Typography.WrapAt(min.X + padX + innerWidth))
             using (Plugin.Fonts.Push(QuoteBodyStyle.Scale))
-            using (ImRaii.PushColor(ImGuiCol.Text, ChirperInk.QuoteBodyInk))
+            using (UiScope.PushColor(ImGuiCol.Text, ChirperInk.QuoteBodyInk))
             {
                 Typography.Wrapped(quoted.Text);
             }

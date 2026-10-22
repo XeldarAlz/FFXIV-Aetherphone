@@ -9,7 +9,6 @@ using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Strats;
 
@@ -76,7 +75,7 @@ internal sealed partial class StratsApp
     private void DrawLibrary(Rect body, StratsManifest manifest)
     {
         var scale = UiScale.Current;
-        using (ImRaii.PushId("strats.index"))
+        using (UiScope.PushId("strats.index"))
         using (AppSurface.Begin(body))
         {
             var drawList = ImGui.GetWindowDrawList();

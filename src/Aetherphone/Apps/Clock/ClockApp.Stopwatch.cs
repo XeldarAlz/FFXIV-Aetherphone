@@ -8,7 +8,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Clock;
 
@@ -57,7 +56,7 @@ internal sealed partial class ClockApp
         var elapsed = StopwatchElapsedMs;
         EnsureLapNames();
         var navBar = AppHeader.BeginLargeTitle(context, false);
-        using (ImRaii.PushId("clock.stopwatch"))
+        using (UiScope.PushId("clock.stopwatch"))
         using (AppSurface.Begin(navBar.Body))
         {
             var width = ImGui.GetContentRegionAvail().X;

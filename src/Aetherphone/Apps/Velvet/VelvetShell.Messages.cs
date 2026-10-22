@@ -6,7 +6,6 @@ using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Velvet;
 
@@ -173,7 +172,7 @@ internal sealed partial class VelvetShell
         chatsSearchFocus = false;
         drawList.PopClipRect();
         ImGui.SetCursorScreenPos(origin);
-        using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
+        using (UiScope.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
         {
             ImGui.Dummy(new Vector2(width, height));
         }
@@ -743,7 +742,7 @@ internal sealed partial class VelvetShell
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + VHeader.Height * scale), area.Max);
         var profile = store.ProfileUserId == userId ? store.ProfileUser : null;
         using (AppSurface.BeginEdgeToEdge(body))
-        using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
+        using (UiScope.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
         {
             var drawList = ImGui.GetWindowDrawList();
             var width = ScrollLayout.StableContentWidth();
@@ -857,7 +856,7 @@ internal sealed partial class VelvetShell
 
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + VHeader.Height * scale), area.Max);
         using (AppSurface.BeginEdgeToEdge(body))
-        using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
+        using (UiScope.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
         {
             var drawList = ImGui.GetWindowDrawList();
             var width = ScrollLayout.StableContentWidth();
@@ -959,8 +958,8 @@ internal sealed partial class VelvetShell
         var textLeft = field.Min.X + IntroFieldPad * scale;
         var wrapWidth = MathF.Max(1f, field.Width - (IntroFieldPad * 2f) * scale - padding.X * 2f - 4f * scale);
         ImGui.SetCursorScreenPos(new Vector2(textLeft, field.Min.Y + IntroFieldPad * scale));
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, VelvetTheme.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, VelvetTheme.TitleInk))
         {
             SoftWrapField.Multiline("##introText", ref introText, IntroLimit,
                 new Vector2(field.Width - IntroFieldPad * 2f * scale, field.Height - IntroFieldPad * 2f * scale),

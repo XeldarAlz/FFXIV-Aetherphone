@@ -7,7 +7,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -328,8 +327,8 @@ internal sealed class ChatComposer : IDisposable
         }
 
         bool submitted;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, model.Ui.Theme.TextStrong))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
+        using (UiScope.PushColor(ImGuiCol.Text, model.Ui.Theme.TextStrong))
         {
             submitted = editor.Draw("##chatComposerInput", new Vector2(fieldWidth, fieldHeight), model.MaxLength, 0)
                         && !suggestions.Showing;

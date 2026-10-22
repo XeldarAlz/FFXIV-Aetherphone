@@ -5,7 +5,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino.Tables;
 
@@ -42,7 +41,7 @@ internal sealed class TableHandsCard
         for (var index = 0; index < hands.Length; index++)
         {
             var rowTop = top + index * rowHeight;
-            using (ImRaii.PushId(index))
+            using (UiScope.PushId(index))
             {
                 DrawRow(drawList, ui, hands[index], new Rect(new Vector2(min.X, rowTop),
                     new Vector2(max.X, rowTop + rowHeight)), index > 0, scale);

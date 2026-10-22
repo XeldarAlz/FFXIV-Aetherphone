@@ -10,7 +10,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Fishing;
 
@@ -60,7 +59,7 @@ internal sealed partial class FishingApp
 
     private void DrawVoyages(Rect body, float scale)
     {
-        using var id = ImRaii.PushId("fishing.voyages");
+        using var id = UiScope.PushId("fishing.voyages");
         using var surface = AppSurface.Begin(body);
         var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         DrawRouteSwitch(scale);

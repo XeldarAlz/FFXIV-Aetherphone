@@ -6,7 +6,6 @@ using Aetherphone.Core.Media;
 using Aetherphone.Core.Social;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Aethergram;
 
@@ -122,7 +121,7 @@ internal sealed partial class AethergramApp
         var gap = GridGap * scale;
         var cellWidth = (width - gap * (GridColumns - 1)) / GridColumns;
         var cellHeight = cellWidth * style.Aspect;
-        using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(gap, gap)))
+        using (UiScope.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(gap, gap)))
         {
             for (var index = 0; index < posts.Length; index++)
             {

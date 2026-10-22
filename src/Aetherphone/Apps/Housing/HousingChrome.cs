@@ -7,7 +7,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Housing;
 
@@ -110,8 +109,8 @@ internal static class HousingChrome
         ImGui.SetCursorScreenPos(new Vector2(fieldMin.X + 5f * scale,
             rect.Center.Y - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(inputWidth);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, ui.TitleInk))
         {
             ImGui.InputText(id, ref text, 6,
                 ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.AutoSelectAll);

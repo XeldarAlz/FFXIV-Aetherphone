@@ -6,7 +6,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Report;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Velvet;
 
@@ -83,7 +82,7 @@ internal sealed partial class VelvetShell
     private static void WrapText(string text, Vector4 color, in TextStyle style)
     {
         ImGui.PushTextWrapPos(0f);
-        using (ImRaii.PushColor(ImGuiCol.Text, color))
+        using (UiScope.PushColor(ImGuiCol.Text, color))
         using (Plugin.Fonts.Push(style.Scale, style.Weight))
         {
             Typography.Wrapped(text);

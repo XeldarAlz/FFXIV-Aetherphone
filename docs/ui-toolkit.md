@@ -10,6 +10,7 @@ This doc is the guide to the shared component library in src/Aetherphone/Windows
 | src/Aetherphone/Windows/Components/Primitives/TextStyles.cs | The named text styles |
 | src/Aetherphone/Windows/Components/Primitives/Metrics.cs | Spacing, radius, size and stroke tokens |
 | src/Aetherphone/UiScale.cs | The one scale every size is multiplied by |
+| src/Aetherphone/Windows/Components/Primitives/UiScope.cs | Allocation-free color, style, id and disabled scopes; use it in place of `ImRaii` |
 | src/Aetherphone/Windows/Components/Primitives/UiInteract.cs | Hit testing, tap claims, input blocking |
 | src/Aetherphone/Windows/Components/Primitives/Material.cs | Glass for the navigation layer |
 | src/Aetherphone/Windows/Components/Primitives/Surfaces.cs | The content fill ladder |

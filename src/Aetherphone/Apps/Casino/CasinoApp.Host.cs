@@ -5,7 +5,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino;
 
@@ -26,7 +25,7 @@ internal sealed partial class CasinoApp
     private void DrawHostTab(Rect body)
     {
         var scale = UiScale.Current;
-        using (ImRaii.PushId("casino.host"))
+        using (UiScope.PushId("casino.host"))
         using (AppSurface.Begin(body))
         {
             var drawList = ImGui.GetWindowDrawList();

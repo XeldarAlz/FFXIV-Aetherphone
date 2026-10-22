@@ -13,7 +13,6 @@ using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Coin;
 
@@ -52,7 +51,7 @@ internal sealed partial class CoinApp
     private void DrawWallet(in PhoneContext context)
     {
         var navBar = AppHeader.BeginLargeTitle(context, false);
-        using (ImRaii.PushId("coin.wallet"))
+        using (UiScope.PushId("coin.wallet"))
         using (var surface = AppSurface.Begin(navBar.Body))
         {
             var wallet = store.Wallet;

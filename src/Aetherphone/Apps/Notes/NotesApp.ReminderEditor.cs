@@ -10,7 +10,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Notes;
 
@@ -146,10 +145,10 @@ internal sealed partial class NotesApp
 
         var fieldLeft = checkCenter.X + radius + CheckTextGap * scale - ImGui.GetStyle().FramePadding.X;
         var fieldWidth = origin.X + width - pad - fieldLeft;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
-        using (ImRaii.PushColor(ImGuiCol.TextDisabled, ui.MutedInk))
-        using (ImRaii.PushColor(ImGuiCol.TextSelectedBg, Palette.WithAlpha(ui.Accent, SelectionAlpha)))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, ui.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.TextDisabled, ui.MutedInk))
+        using (UiScope.PushColor(ImGuiCol.TextSelectedBg, Palette.WithAlpha(ui.Accent, SelectionAlpha)))
         using (Plugin.Fonts.Push(TextStyles.Body.Scale, TextStyles.Body.Weight))
         {
             ImGui.SetCursorScreenPos(new Vector2(fieldLeft, origin.Y + (height - ImGui.GetFrameHeight()) * 0.5f));

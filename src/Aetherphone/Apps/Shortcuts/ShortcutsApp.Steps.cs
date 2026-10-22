@@ -8,7 +8,6 @@ using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Shortcuts;
 
@@ -322,8 +321,8 @@ internal sealed partial class ShortcutsApp
             ImGui.SetKeyboardFocusHere();
         }
 
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ink))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, ink))
         {
             if (ImGui.InputTextWithHint($"##shortcutStep{index}", hint, ref text, ShortcutStore.CommandMaxLength,
                     ImGuiInputTextFlags.None))

@@ -7,7 +7,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino.Tables;
 
@@ -141,7 +140,7 @@ internal sealed partial class TableDoor
             DrawTitle(ui, Loc.T(L.HostDesk.Knocking), width, false, scale);
             for (var index = 0; index < knocks.Length; index++)
             {
-                using (ImRaii.PushId(index))
+                using (UiScope.PushId(index))
                 {
                     DrawKnock(ui, knocks[index], width, scale);
                 }

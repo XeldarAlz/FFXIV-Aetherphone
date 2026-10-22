@@ -6,7 +6,6 @@ using Aetherphone.Core.Video;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.AetherStream;
 
@@ -55,7 +54,7 @@ internal sealed partial class AetherStreamApp
             (int)librarySegment, ui.Palette);
 
         var list = new Rect(new Vector2(body.Min.X, strip.Max.Y + Metrics.Space.Sm * scale), body.Max);
-        using (ImRaii.PushId((int)librarySegment))
+        using (UiScope.PushId((int)librarySegment))
         using (var surface = AppSurface.BeginEdgeToEdge(list))
         {
             switch (librarySegment)

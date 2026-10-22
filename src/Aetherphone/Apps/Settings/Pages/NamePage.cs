@@ -8,7 +8,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Settings.Pages;
 
@@ -131,7 +130,7 @@ internal sealed class NamePage : ISettingsPage, IDisposable
         ImGui.SetCursorScreenPos(new Vector2(inputLeft, field.Center.Y - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(MathF.Max(1f, field.Max.X - Metrics.Space.Lg * scale - inputLeft));
         var valid = SocialProfilePages.IsHandleValid(editHandle);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, Transparent)
+        using (UiScope.PushColor(ImGuiCol.FrameBg, Transparent)
                    .Push(ImGuiCol.FrameBgHovered, Transparent)
                    .Push(ImGuiCol.FrameBgActive, Transparent)
                    .Push(ImGuiCol.Text, valid ? theme.TextStrong : theme.Danger))

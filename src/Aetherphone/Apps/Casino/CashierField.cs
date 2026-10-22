@@ -3,7 +3,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino;
 
@@ -103,10 +102,10 @@ internal sealed class CashierField
             var padding = ImGui.GetStyle().FramePadding.X;
             ImGui.SetCursorScreenPos(new Vector2(area.Min.X - padding, area.Center.Y - ImGui.GetFrameHeight() * 0.5f));
             ImGui.SetNextItemWidth(area.Width + padding * 2f);
-            using (ImRaii.Disabled(!interactive))
-            using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-            using (ImRaii.PushColor(ImGuiCol.Text, showInput ? ui.TitleInk : AppSkin.Transparent))
-            using (ImRaii.PushColor(ImGuiCol.TextDisabled, showInput ? ui.MutedInk : AppSkin.Transparent))
+            using (UiScope.Disabled(!interactive))
+            using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+            using (UiScope.PushColor(ImGuiCol.Text, showInput ? ui.TitleInk : AppSkin.Transparent))
+            using (UiScope.PushColor(ImGuiCol.TextDisabled, showInput ? ui.MutedInk : AppSkin.Transparent))
             {
                 ImGui.InputTextWithHint(id, Placeholder, ref buffer, CashierAmounts.FieldLength, Flags);
                 editing = interactive && ImGui.IsItemActive();

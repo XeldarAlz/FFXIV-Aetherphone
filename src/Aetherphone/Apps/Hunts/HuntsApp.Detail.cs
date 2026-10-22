@@ -138,7 +138,7 @@ internal sealed partial class HuntsApp
         var now = DateTimeOffset.UtcNow;
         EnsureDetailModel(view, mob, now);
         SyncDetailMap(view, mob);
-        using (ImRaii.PushId("hunts.detail"))
+        using (UiScope.PushId("hunts.detail"))
         using (AppSurface.Begin(navBar.Body, disableMouseWheelScroll: detailMapHovered))
         {
             DrawDetailHero(mob, now, scale);
@@ -715,7 +715,7 @@ internal sealed partial class HuntsApp
             new Vector2(card.Max.X - pad, card.Min.Y + pad + AlertStripHeight * scale));
         int picked;
         bool pressed;
-        using (ImRaii.PushStyle(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * (signedIn ? 1f : AlertsDisabledAlpha)))
+        using (UiScope.PushStyle(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * (signedIn ? 1f : AlertsDisabledAlpha)))
         {
             picked = SegmentStrip.Draw("hunts.detail.alertMode", strip, alertOptions, selected,
                 Surfaces.Fill(ui.Ink, FillLevel.Tertiary), ui.Accent, ui.MutedInk, AccentRing.Ink, out pressed,

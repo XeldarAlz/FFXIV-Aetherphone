@@ -189,7 +189,7 @@ internal sealed class CommentAttachment
         UiInteract.HoverOverlay(panel);
         var scale = UiScale.Current;
         ImGui.SetCursorScreenPos(panel.Min);
-        using (ImRaii.PushStyle(ImGuiStyleVar.WindowPadding, Vector2.Zero))
+        using (UiScope.PushStyle(ImGuiStyleVar.WindowPadding, Vector2.Zero))
         using (var host = ImRaii.Child("##commentPhotoPanel", panel.Size, false,
                    ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoBackground))
         {

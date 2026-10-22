@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Music.Jam;
 
@@ -88,14 +87,14 @@ internal sealed class JamCodeField
         ImGui.SetCursorScreenPos(field.Min);
         ImGui.SetNextItemWidth(field.Width);
         var submitted = false;
-        using (ImRaii.PushStyle(ImGuiStyleVar.FramePadding,
+        using (UiScope.PushStyle(ImGuiStyleVar.FramePadding,
                    new Vector2(0f, MathF.Max(0f, (field.Height - fontHeight) * 0.5f))))
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, Invisible))
-        using (ImRaii.PushColor(ImGuiCol.FrameBgHovered, Invisible))
-        using (ImRaii.PushColor(ImGuiCol.FrameBgActive, Invisible))
-        using (ImRaii.PushColor(ImGuiCol.Text, Invisible))
-        using (ImRaii.PushColor(ImGuiCol.TextSelectedBg, Invisible))
-        using (ImRaii.PushColor(ImGuiCol.Border, Invisible))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, Invisible))
+        using (UiScope.PushColor(ImGuiCol.FrameBgHovered, Invisible))
+        using (UiScope.PushColor(ImGuiCol.FrameBgActive, Invisible))
+        using (UiScope.PushColor(ImGuiCol.Text, Invisible))
+        using (UiScope.PushColor(ImGuiCol.TextSelectedBg, Invisible))
+        using (UiScope.PushColor(ImGuiCol.Border, Invisible))
         {
             submitted = ImGui.InputText(imguiId, ref buffer, InputCapacity,
                 ImGuiInputTextFlags.EnterReturnsTrue | ImGuiInputTextFlags.CharsUppercase);

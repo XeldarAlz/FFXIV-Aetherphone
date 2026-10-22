@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -25,7 +24,7 @@ internal static class SubmitField
             var glyph = IconGlyph.Of(icon);
             var size = ImGui.CalcTextSize(glyph);
             ImGui.SetCursorScreenPos(new Vector2(glyphCenter.X - size.X * 0.5f, glyphCenter.Y - size.Y * 0.5f));
-            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+            using (UiScope.PushColor(ImGuiCol.Text, theme.TextMuted))
             {
                 Typography.Plain(glyph);
             }
@@ -43,8 +42,8 @@ internal static class SubmitField
             TextStyles.Body);
         Plugin.Fonts.NoticeText(shownHint);
         Plugin.Fonts.NoticeText(text);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
+        using (UiScope.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
             submitted = ImGui.InputTextWithHint(imguiId, shownHint, ref text, maxLength,
                 ImGuiInputTextFlags.EnterReturnsTrue);
@@ -97,7 +96,7 @@ internal static class SubmitField
             var glyph = IconGlyph.Of(icon);
             var size = ImGui.CalcTextSize(glyph);
             ImGui.SetCursorScreenPos(new Vector2(glyphCenter.X - size.X * 0.5f, glyphCenter.Y - size.Y * 0.5f));
-            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+            using (UiScope.PushColor(ImGuiCol.Text, theme.TextMuted))
             {
                 Typography.Plain(glyph);
             }
@@ -117,8 +116,8 @@ internal static class SubmitField
         ImGui.SetCursorScreenPos(new Vector2(inputLeft, fieldTop));
         Plugin.Fonts.NoticeText(hint);
         bool submitted;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
+        using (UiScope.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
             submitted = editor.Draw(imguiId, new Vector2(fieldWidth, fieldHeight), maxLength, 0);
         }

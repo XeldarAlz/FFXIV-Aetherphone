@@ -8,7 +8,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Muster;
 
@@ -28,7 +27,7 @@ internal sealed partial class MusterApp
         var nowUnix = NowUnix();
         syncNow ??= SyncPlans;
         var navBar = AppHeader.BeginLargeTitle(context, false);
-        using (ImRaii.PushId("muster.plans"))
+        using (UiScope.PushId("muster.plans"))
         using (var surface = AppSurface.Begin(navBar.Body))
         {
             plansRefresh.Draw(navBar.Body, surface.Pull, surface.Dragging, store.Syncing, ui.MutedInk, syncNow);

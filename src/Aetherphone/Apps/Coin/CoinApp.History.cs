@@ -5,7 +5,6 @@ using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Coin;
 
@@ -17,7 +16,7 @@ internal sealed partial class CoinApp
     private void DrawHistory(in PhoneContext context)
     {
         var navBar = AppHeader.BeginLargeTitle(context, false);
-        using (ImRaii.PushId("coin.history"))
+        using (UiScope.PushId("coin.history"))
         using (var surface = AppSurface.Begin(navBar.Body))
         {
             historyRefresh.Draw(navBar.Body, surface.Pull, surface.Dragging, !store.LoadedOnce, ui.MutedInk,

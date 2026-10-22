@@ -7,7 +7,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Muster;
 
@@ -21,7 +20,7 @@ internal sealed partial class MusterApp
     {
         var scale = UiScale.Current;
         var navBar = AppHeader.BeginLargeTitle(context);
-        using (ImRaii.PushId("muster.datacenters"))
+        using (UiScope.PushId("muster.datacenters"))
         using (AppSurface.Begin(navBar.Body))
         {
             var drawList = ImGui.GetWindowDrawList();

@@ -242,7 +242,7 @@ internal sealed partial class StratsApp
             new Vector2(list.Max.X - ContentsPadX * scale, list.Min.Y),
             ImGui.GetColorU32(Palette.WithAlpha(ink, ContentsHairlineAlpha * frame.Opacity)), Metrics.Stroke.Hairline);
         var picked = -1;
-        using (ImRaii.PushId("strats.contents"))
+        using (UiScope.PushId("strats.contents"))
         using (var surface = AppSurface.BeginEdgeToEdge(list))
         {
             if (contentsScrollPending > 0)
@@ -255,7 +255,7 @@ internal sealed partial class StratsApp
             }
 
             var rowsDrawList = ImGui.GetWindowDrawList();
-            using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
+            using (UiScope.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
             {
                 for (var index = 0; index < contents.Length; index++)
                 {

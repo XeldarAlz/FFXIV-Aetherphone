@@ -3,7 +3,6 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Geography;
 using Aetherphone.Core.Localization;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -77,7 +76,7 @@ internal sealed class GeoScopeScreen
         Prepare(currentKind, currentValue, pickWorlds, 0f, Metrics.Radius.Widget);
         var scale = UiScale.Current;
         var navBar = AppHeader.BeginLargeTitle(context);
-        using (ImRaii.PushId(id))
+        using (UiScope.PushId(id))
         using (AppSurface.Begin(navBar.Body))
         {
             DrawCards(homeWorld, scale);

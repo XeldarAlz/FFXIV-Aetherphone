@@ -8,7 +8,6 @@ using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -1249,7 +1248,7 @@ internal sealed partial class SetupOverlay
         ImGui.SetCursorScreenPos(new Vector2(textLeft, rect.Center.Y - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(rect.Max.X - Metrics.Space.Md * scale - textLeft);
         var transparent = new Vector4(0f, 0f, 0f, 0f);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, transparent)
+        using (UiScope.PushColor(ImGuiCol.FrameBg, transparent)
                    .Push(ImGuiCol.FrameBgHovered, transparent)
                    .Push(ImGuiCol.FrameBgActive, transparent)
                    .Push(ImGuiCol.TextSelectedBg, Fade(BrandMark.Violet, 0.45f))

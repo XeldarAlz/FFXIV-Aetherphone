@@ -8,7 +8,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino;
 
@@ -128,7 +127,7 @@ internal sealed partial class CasinoApp
     private void DrawHistory(Rect body)
     {
         var scale = UiScale.Current;
-        using (ImRaii.PushId("casino.history"))
+        using (UiScope.PushId("casino.history"))
         using (AppSurface.Begin(body))
         {
             history.EnsureFresh();
@@ -167,7 +166,7 @@ internal sealed partial class CasinoApp
                         continue;
                     }
 
-                    using (ImRaii.PushId(entryIndex))
+                    using (UiScope.PushId(entryIndex))
                     {
                         DrawHistoryRow(drawList, row, entryIndex, entryIndex > day.Start, scale);
                     }
@@ -290,7 +289,7 @@ internal sealed partial class CasinoApp
     private void DrawFairness(Rect body)
     {
         var scale = UiScale.Current;
-        using (ImRaii.PushId("casino.fairness"))
+        using (UiScope.PushId("casino.fairness"))
         using (AppSurface.Begin(body))
         {
             history.EnsureFresh();
@@ -401,7 +400,7 @@ internal sealed partial class CasinoApp
                 continue;
             }
 
-            using (ImRaii.PushId(index))
+            using (UiScope.PushId(index))
             {
                 DrawHistoryRow(drawList, RowAt(origin, max.X, rowHeight, drawn), index, drawn > 0, scale);
             }
@@ -415,7 +414,7 @@ internal sealed partial class CasinoApp
     private void DrawRoundDetail(Rect body, string roundId)
     {
         var scale = UiScale.Current;
-        using (ImRaii.PushId("casino.round"))
+        using (UiScope.PushId("casino.round"))
         using (AppSurface.Begin(body))
         {
             if (history.TakeVerifyFailure())

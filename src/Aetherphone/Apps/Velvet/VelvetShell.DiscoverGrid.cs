@@ -6,7 +6,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Velvet;
 
@@ -46,7 +45,7 @@ internal sealed partial class VelvetShell
 
         EnsureGridLabels();
         var scale = UiScale.Current;
-        using (ImRaii.PushId(ListSurfaceId))
+        using (UiScope.PushId(ListSurfaceId))
         using (var surface = AppSurface.BeginEdgeToEdge(body))
         {
             if (gridScrollTopPending)

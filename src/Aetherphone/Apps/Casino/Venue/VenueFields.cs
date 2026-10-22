@@ -2,7 +2,6 @@ using System.Globalization;
 using Aetherphone.Core;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino.Venue;
 
@@ -71,8 +70,8 @@ internal static class VenueFields
         var flags = numeric
             ? ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.AutoSelectAll
             : ImGuiInputTextFlags.None;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, ui.TitleInk))
         {
             ImGui.InputTextWithHint(id, hint, ref buffer, maxLength + 1, flags);
         }

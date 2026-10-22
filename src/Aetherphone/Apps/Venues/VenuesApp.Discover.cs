@@ -8,7 +8,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Core.Venues;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Venues;
 
@@ -117,7 +116,7 @@ internal sealed partial class VenuesApp
     {
         var navBar = AppHeader.BeginLargeTitle(context, false);
         railOwnsPointer = false;
-        using (ImRaii.PushId("venues.discover"))
+        using (UiScope.PushId("venues.discover"))
         using (var surface = AppSurface.Begin(navBar.Body))
         {
             discoverRefresh.Draw(navBar.Body, surface.Pull, surface.Dragging, venues.Busy, ui.MutedInk,

@@ -7,7 +7,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino.Tables;
 
@@ -188,7 +187,7 @@ internal sealed class BlackjackPit
             var origin = ImGui.GetCursorScreenPos();
             var height = TableRow.HeightOf(hostedViews[index], width) * scale;
             var rect = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
-            using (ImRaii.PushId(index))
+            using (UiScope.PushId(index))
             {
                 if (TableRow.Draw(drawList, rect, ui, hostedViews[index], scale))
                 {

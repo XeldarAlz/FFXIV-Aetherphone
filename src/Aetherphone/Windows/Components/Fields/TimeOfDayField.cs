@@ -3,7 +3,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Localization;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -30,7 +29,7 @@ internal static class TimeOfDayField
 
     public static int Draw(AppSkin ui, Rect rect, int minuteOfDay, float scale)
     {
-        using var id = ImRaii.PushId(NextOrdinal());
+        using var id = UiScope.PushId(NextOrdinal());
         var gap = Metrics.Space.Sm * scale;
         var meridiemSpan = TimeText.Use24Hour ? 0f : MeridiemWidth * scale + gap;
         var stepperWidth = (rect.Width - meridiemSpan - gap) * 0.5f;
@@ -162,8 +161,8 @@ internal static class TimeOfDayField
             ImGui.SetCursorScreenPos(new Vector2(rect.Center.X - inputWidth * 0.5f,
                 rect.Center.Y - ImGui.GetFrameHeight() * 0.5f));
             ImGui.SetNextItemWidth(inputWidth);
-            using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-            using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
+            using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+            using (UiScope.PushColor(ImGuiCol.Text, ui.TitleInk))
             {
                 ImGui.InputText(id, ref editText, EditBufferLength,
                     ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.AutoSelectAll);

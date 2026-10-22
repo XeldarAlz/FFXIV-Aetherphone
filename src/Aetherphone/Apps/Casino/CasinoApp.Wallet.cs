@@ -2,7 +2,6 @@ using Aetherphone.Apps.Coin;
 using Aetherphone.Core;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino;
 
@@ -11,7 +10,7 @@ internal sealed partial class CasinoApp
     private void DrawCashierTab(Rect body)
     {
         var scale = UiScale.Current;
-        using (ImRaii.PushId("casino.cashier"))
+        using (UiScope.PushId("casino.cashier"))
         using (AppSurface.Begin(body))
         {
             var drawList = ImGui.GetWindowDrawList();
