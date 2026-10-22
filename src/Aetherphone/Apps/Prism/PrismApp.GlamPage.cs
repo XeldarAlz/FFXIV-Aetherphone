@@ -53,6 +53,7 @@ internal sealed partial class PrismApp
     private readonly ActionSheet.Item[] glamMenuItems = new ActionSheet.Item[GlamMenuSize];
     private readonly GlamMenuAction[] glamMenuActions = new GlamMenuAction[GlamMenuSize];
     private readonly string[] pillLabels = new string[3];
+    private readonly string[] followLabels = new string[2];
     private readonly Dictionary<string, string> handleLines = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> tagLabels = new(StringComparer.Ordinal);
     private readonly Dictionary<string, bool> followed = new(StringComparer.Ordinal);
@@ -766,11 +767,9 @@ internal sealed partial class PrismApp
             TextStyles.Caption2.Scale);
         var handleLeft = left + radius * 2f + Metrics.Space.Sm * scale;
         var other = author.Id.Length > 0 && author.Id != glams.MyId;
-        var labelStyle = Button.LabelStyle(Button.SmallHeight * scale);
-        var followWidth = other
-            ? MathF.Max(Typography.Measure(Loc.T(L.Prism.Follow), labelStyle).X,
-                Typography.Measure(Loc.T(L.Prism.Following), labelStyle).X) + Metrics.Space.Lg * 2f * scale
-            : 0f;
+        followLabels[0] = Loc.T(L.Prism.Follow);
+        followLabels[1] = Loc.T(L.Prism.Following);
+        var followWidth = other ? ButtonWidth(followLabels, (right - handleLeft) * 0.5f, scale) : 0f;
         var handle = Typography.FitText(AuthorLine(author),
             MathF.Max(1f, right - handleLeft - followWidth - Metrics.Space.Sm * scale), PrismType.Headline);
         var handleWidth = Typography.Measure(handle, PrismType.Headline).X;
@@ -789,11 +788,10 @@ internal sealed partial class PrismApp
         }
 
         var following = Following(author);
-        var half = Button.SmallHeight * scale * 0.5f;
-        var hit = new Rect(new Vector2(right - followWidth, top), new Vector2(right, top + tap));
-        var face = new Rect(new Vector2(hit.Min.X, middle - half), new Vector2(right, middle + half));
-        if (DrawPill(drawList, hit, face, Loc.T(following ? L.Prism.Following : L.Prism.Follow),
-                following ? ButtonStyle.Tinted : ButtonStyle.Solid, string.Empty, false, FollowId, scale))
+        var followLeft = handleLeft + handleWidth;
+        if (DrawButton(drawList, new Rect(new Vector2(followLeft, top), new Vector2(followLeft + followWidth, top + tap)),
+                followLabels[following ? 1 : 0], ButtonStyle.Plain, scale,
+                ink: following ? controls with { Accent = PrismArt.Muted } : null, id: FollowId))
         {
             followed[author.Id] = !following;
             glams.SetFollow(author, !following);
