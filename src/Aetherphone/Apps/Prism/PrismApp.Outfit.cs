@@ -287,6 +287,11 @@ internal sealed partial class PrismApp
             var itemId = draftItems[index];
             var pick = default(GearPick);
             var known = itemId != 0 && gearCatalog.TryGet(itemId, out pick);
+            if (!known && itemId != 0 && GearItem(itemId, out var itemName, out var itemIcon))
+            {
+                pick = new GearPick(itemId, itemName, itemIcon, DyeChannels);
+            }
+
             var dyes = itemId == 0 ? 0 : known ? Math.Min((int)pick.Dyes, DyeChannels) : DyeChannels;
             var lines = dyes > 0 ? 3 : 2;
             var rowTop = top + pad;
@@ -298,7 +303,7 @@ internal sealed partial class PrismApp
                 continue;
             }
 
-            if (known)
+            if (pick.IconId != 0)
             {
                 GameIconTile.Draw(drawList, textures, pick.IconId, new Vector2(left, rowTop),
                     new Vector2(left + icon, rowTop + icon), 0f, scale);
@@ -311,7 +316,7 @@ internal sealed partial class PrismApp
 
             PrismType.Draw(drawList, new Vector2(textLeft, textTop), Loc.T(SlotNames[index]), PrismArt.Muted,
                 PrismFace.Label, labelPixels);
-            var name = itemId == 0 ? Loc.T(L.Prism.AddPiece) : pick.Name;
+            var name = itemId == 0 ? Loc.T(L.Prism.AddPiece) : pick.Name ?? string.Empty;
             var room = left + width - textLeft - (itemId != 0 ? removeWidth + pad : 0f);
             if (PrismArt.Link(drawList, new Vector2(textLeft, textTop + labelLine),
                     PrismType.FitLabel(name, labelPixels, room), itemId == 0 ? PrismArt.Muted : PrismArt.Fore, scale))
