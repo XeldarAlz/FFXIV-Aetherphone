@@ -11121,6 +11121,23 @@ internal static class L
         public static readonly LocString YourPicks = new("prism.yourPicks", "Your picks");
         public static readonly LocString PicksHint = new("prism.picksHint", "Sorted by your stars. Tap a glam to change them.");
         public static readonly LocString SendPicks = new("prism.sendPicks", "Send my picks");
+        public static readonly LocPlural GlamCount = new("prism.glamCount", "{0} glam", "{0} glams");
+        public static readonly LocPlural TriedOnTotal = new("prism.triedOnTotal", "{0} tried on", "{0} tried on");
+        public static readonly LocPlural LikeCount = new("prism.likeCount", "{0} like", "{0} likes");
+        public static readonly LocString SeasonRank = new("prism.seasonRank", "Season rank {0}");
+        public static readonly LocString PlacingLine = new("prism.placingLine", "#{0} · {1}");
+        public static readonly LocString NoPlacings = new("prism.noPlacings", "No placings yet");
+        public static readonly LocString FirstGlamTitle = new("prism.firstGlamTitle", "Share your first glam");
+        public static readonly LocString FirstGlamHint = new("prism.firstGlamHint",
+            "Up to four photos of one outfit. Prism reads the gear, dyes and mods for you.");
+        public static readonly LocString EditProfile = new("prism.editProfile", "Edit profile");
+        public static readonly LocString MeSignInTitle = new("prism.meSignInTitle", "Sign in to see your profile");
+        public static readonly LocString MeSignInHint = new("prism.meSignInHint",
+            "Sign in to Aethernet in Settings to browse glams, post your own and follow players. Your wardrobe works without signing in.");
+        public static readonly LocString SavedOn = new("prism.savedOn", "saved {0}");
+        public static readonly LocString WardrobeEmptyTitle = new("prism.wardrobeEmptyTitle", "No outfits yet");
+        public static readonly LocString FavouritesEmptyTitle = new("prism.favouritesEmptyTitle", "No favourites yet");
+        public static readonly LocString Edit = new("prism.edit", "Edit");
     }
 
     internal static class Announcements
