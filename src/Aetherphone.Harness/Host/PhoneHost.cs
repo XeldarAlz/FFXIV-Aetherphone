@@ -4,6 +4,7 @@ using Aetherphone.Core.Game;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Harness.Fakes;
 using Aetherphone.Harness.Fonts;
+using Aetherphone.Harness.Inspection;
 using Aetherphone.Harness.Native;
 using Aetherphone.Harness.Rendering;
 using Aetherphone.Harness.Scenarios;
@@ -37,6 +38,8 @@ internal sealed unsafe class PhoneHost : IDisposable
     private readonly Plugin plugin;
     private readonly Stopwatch stopwatch = new();
     private readonly List<KeyValuePair<string, Rect>> anchorScratch = new();
+    private readonly GlyphCatalog glyphs = new();
+    private readonly ScreenReader screenReader = new();
     private Scenario? scenario;
 
     public PhoneHost(HarnessOptions options)
@@ -427,6 +430,16 @@ internal sealed unsafe class PhoneHost : IDisposable
     }
 
     public bool TryFindAnchor(string key, out Rect rect) => UiAnchors.TryGet(key, out rect);
+
+    public List<ScreenLine> ReadScreen()
+    {
+        if (glyphs.Generation != fontAtlas.Generation)
+        {
+            glyphs.Rebuild(fontAtlas.ImAtlas, fontAtlas.Generation);
+        }
+
+        return screenReader.Read(ImGui.GetDrawData(), glyphs);
+    }
 
     public byte[] ScreenshotPng(bool cropToPhone) => ScreenshotPng(cropToPhone, false, out _, out _);
 

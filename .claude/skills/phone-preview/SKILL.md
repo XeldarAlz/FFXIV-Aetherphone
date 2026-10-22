@@ -38,9 +38,10 @@ Every command is `tools/harness/aep <command>` (`tools\harness\aep.cmd` on Windo
 | --- | --- |
 | `state` | Frame counter, current app id, phone rect, minimize phase |
 | `step N` | Advance N frames (60 per simulated second) |
+| `tree [--all] [--json]` | Every visible line of text with its rect and size, in reading order, plus the anchors |
 | `shot [path] [--full]` | Save a PNG of the phone (or the whole display); then Read the file |
 | `anchors` | Named UI elements on screen with centers, for taps by name |
-| `tap NAME` or `tap X Y` | Tap an anchor or a point; `--settle N` frames afterwards (default 12) |
+| `tap NAME`, `tap X Y`, `tap --text TEXT` | Tap an anchor, a point, or the first visible text match; `--settle N` frames afterwards (default 12) |
 | `drag X1 Y1 X2 Y2 [--frames N]` | Swipe or drag |
 | `scroll X Y DY` | Mouse wheel at a point |
 | `type TEXT` | Type into the focused field |
@@ -58,9 +59,10 @@ Every command is `tools/harness/aep <command>` (`tools\harness\aep.cmd` on Windo
 
 ## Typical review loop
 
-1. `tools/harness/aep open settings` then `tools/harness/aep shot /tmp/settings.png`, then Read the PNG.
-2. Find targets with `anchors`; tap by name when one exists, by pixel otherwise.
-3. After each action, `shot` again and check `log` for warnings. Buttons that drive the game (invites, chat sends, gearset swaps, item links) succeed and log a `game action: ...` line instead of touching a game.
+1. `tools/harness/aep open settings`, then `tools/harness/aep tree` to read what is on screen. It is plain text, costs far fewer tokens than a screenshot, and flags clipped text.
+2. Tap with `tap --text "General"` or by anchor name; fall back to pixels only when neither exists.
+3. After each action, `tree` again and check `log` for warnings. Buttons that drive the game (invites, chat sends, gearset swaps, item links) succeed and log a `game action: ...` line instead of touching a game.
+4. Take a `shot` and Read the PNG when the question is visual: layout, color, spacing, images, or motion. `tree` sees no images.
 
 ## What the harness cannot show
 

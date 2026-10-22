@@ -13,6 +13,7 @@ This doc covers `src/Aetherphone.Harness`, a console host that runs the real plu
 | src/Aetherphone.Harness/Fakes | One fake per Dalamud service the plugin consumes |
 | src/Aetherphone.Harness/Fonts | The font atlas fake over ImGui's own atlas |
 | src/Aetherphone.Harness/Rendering | The CPU rasterizer and PNG output, used for driver screenshots |
+| src/Aetherphone.Harness/Inspection | Reads the frame's text back out of the draw data for `tree` and `tap --text` |
 | src/Aetherphone.Harness/Viewer | The native window: GLFW input and the OpenGL renderer |
 | src/Aetherphone.Harness/Scenarios | Loads a scenario file into the simulated character |
 | tools/harness/scenarios | The bundled scenarios, copied next to the harness binary |
@@ -49,7 +50,8 @@ Every driver command is available as a CLI verb and as an HTTP route with the sa
 | `state` | `/state` | Frame, current app, phone rect, minimize phase, login and data flags, scenario |
 | `step N` | `/step?frames=N` | 60 frames per simulated second |
 | `shot [path] [--full]` | `/shot?full=1&frames=N` | PNG cropped to the phone window by default |
-| `tap NAME` or `tap X Y` | `/tap?anchor=NAME` or `/tap?x=&y=` | `--settle N`, `--button N`, `--space screen` |
+| `tree [--all] [--full] [--json]` | `/tree?all=1&full=1&format=json` | Every visible line of text with its rect, plus the anchors; never advances time |
+| `tap NAME`, `tap X Y`, or `tap --text TEXT` | `/tap?anchor=NAME`, `/tap?x=&y=`, or `/tap?text=` | `--settle N`, `--button N`, `--space screen` |
 | `drag X1 Y1 X2 Y2` | `/drag` | `--frames N` for the move duration |
 | `scroll X Y DY` | `/scroll` | Wheel delta at a point |
 | `type TEXT` | `/type?text=` | Sends the characters to ImGui |
@@ -67,6 +69,27 @@ Every driver command is available as a CLI verb and as an HTTP route with the sa
 | `url` | | Prints the viewer address |
 
 Coordinates are phone-relative pixels, the same space as the cropped screenshot. Anchors come from `UiAnchors.Report` calls in draw code; the harness forces recording every frame, so anything the onboarding tours can point at can be tapped by name.
+
+## Reading the screen as text
+
+`tree` answers what is on screen without a screenshot: one row per visible line of text, in reading order, with its phone-relative rect and pixel size, then the anchors.
+
+```
+frame 780  app chirper  phone 486x1053  30 lines
+  95,94 83x24  29px  Chirper
+  356,95 20x20  26px  [icon:AdjustmentsHorizontal]
+  99,154 66x14  22px  For You
+```
+
+It is read back out of the frame ImGui just drew, so every string counts, including raw `AddText` calls that bypass Typography. Each glyph quad in the draw data is matched to its font atlas entry. Icon glyphs print by name (`[icon:Bell]` for PhoneIcons, `[icon:Check]` for FontAwesome), so icon buttons can be found and tapped too.
+
+- **`(clipped)`** marks a line cut off sideways by its clip rect: text overflowing its container, or a chip scrolled partly out of a rail. Lines cut at the top or bottom of a scroll area are ordinary scrolling and carry no flag.
+- **`(covered)`** marks text that a later, at least half-opaque fill hides, such as the screen under a sheet. Covered lines are left out unless you pass `--all`.
+- **`--json`** returns the same lines with color and flags, for scripts.
+
+`tap --text TEXT` taps the centre of the first visible match: an exact line first, then a substring, then a case-insensitive substring. A miss answers 404 with every visible line, so the next call can correct itself.
+
+What it does not see: images (emoji, avatars, photos, app icons), text drawn under a fill lighter than half opacity, and a glyph cut on both its left and right edges at once.
 
 ## The browser viewer
 
