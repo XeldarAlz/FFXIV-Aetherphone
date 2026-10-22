@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
@@ -58,6 +59,7 @@ internal sealed partial class PrismApp : IResumableApp
 
     private readonly PrismStore store;
     private readonly GlamStore glams;
+    private readonly AccountClient account;
     private readonly GlamourService glamour;
     private readonly RemoteImageCache images;
     private readonly PhotoLibrary library;
@@ -100,6 +102,7 @@ internal sealed partial class PrismApp : IResumableApp
     {
         store = new PrismStore(session, api);
         glams = new GlamStore(session, api);
+        account = api.Account;
         this.glamour = glamour;
         this.images = images;
         this.library = library;

@@ -41,13 +41,21 @@ internal sealed partial class PrismApp
 
     private void OpenOwnProfile()
     {
-        if (!glams.IsSignedIn || store.CurrentUser is not { } me)
+        if (!glams.IsSignedIn)
         {
+            return;
+        }
+
+        if (store.CurrentUser is not { } me)
+        {
+            account.EnsureCurrentUser();
             return;
         }
 
         glams.OpenProfile(new GlamAuthorDto(me.Id, me.DisplayName, me.Handle, me.AvatarUrl ?? string.Empty), showSaved);
     }
+
+    private bool ShowsOwnProfile() => glams.MyId.Length > 0 && glams.Profile?.User?.Id == glams.MyId;
 
     private void OpenProfile(GlamAuthorDto author)
     {
@@ -120,6 +128,18 @@ internal sealed partial class PrismApp
         }
 
         var mine = screen == PrismScreen.Me;
+        if (mine && !ShowsOwnProfile())
+        {
+            if (glams.MyId.Length == 0)
+            {
+                DrawMasthead(drawList, content, Loc.T(L.Prism.TabMe), string.Empty, string.Empty, scale, out _);
+                DrawCenteredLabel(drawList, content, Loc.T(L.Common.Loading));
+                return;
+            }
+
+            OpenOwnProfile();
+        }
+
         var profile = glams.Profile;
         var author = profile?.User;
         var gutter = PrismArt.Gutter(scale);
