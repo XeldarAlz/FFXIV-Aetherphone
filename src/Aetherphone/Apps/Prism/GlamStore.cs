@@ -52,7 +52,7 @@ internal sealed class GlamStore : IDisposable
     private readonly FeedLane<GlamDto> list = FeedLane<GlamDto>.ServerOrdered();
     private readonly HashSet<string> triedOn = new(StringComparer.Ordinal);
 
-    private Func<string?, CancellationToken, Task<GlamPage?>>? listFetch;
+    private Func<string?, CancellationToken, Action<AepFailure>?, Task<GlamPage?>>? listFetch;
     private volatile string listKey = string.Empty;
     private volatile GlamDto? detail;
     private volatile GlamDto? posted;
@@ -240,7 +240,8 @@ internal sealed class GlamStore : IDisposable
         }
         else
         {
-            OpenList(UserListKey(userId), (cursor, token) => client.UserGlamsAsync(userId, cursor, token));
+            OpenList(UserListKey(userId),
+                (cursor, token, failure) => client.UserGlamsAsync(userId, cursor, token, failure));
         }
 
         work.Run("profile", async token =>
@@ -254,13 +255,14 @@ internal sealed class GlamStore : IDisposable
     }
 
     public void OpenCollection(string collectionId) =>
-        OpenList("collection:" + collectionId, (cursor, token) => client.CollectionGlamsAsync(collectionId, cursor, token));
+        OpenList("collection:" + collectionId,
+            (cursor, token, failure) => client.CollectionGlamsAsync(collectionId, cursor, token, failure));
 
     public void OpenItem(uint itemId)
     {
         item = null;
         var key = "item:" + itemId;
-        OpenList(key, (cursor, token) => client.ItemGlamsAsync(itemId, cursor, token));
+        OpenList(key, (cursor, token, failure) => client.ItemGlamsAsync(itemId, cursor, token, failure));
         work.Run("item", async token =>
         {
             var fetched = await client.ItemAsync(itemId, token).ConfigureAwait(false);
@@ -272,7 +274,7 @@ internal sealed class GlamStore : IDisposable
     }
 
     public void OpenTag(string tag) =>
-        OpenList("tag:" + tag, (cursor, token) => client.TagGlamsAsync(tag, cursor, token));
+        OpenList("tag:" + tag, (cursor, token, failure) => client.TagGlamsAsync(tag, cursor, token, failure));
 
     public void OpenMoreFrom(GlamDto glam)
     {
@@ -306,7 +308,8 @@ internal sealed class GlamStore : IDisposable
     }
 
     public void OpenMod(string name, string author) =>
-        OpenList("mod:" + name + "|" + author, (cursor, token) => client.ModGlamsAsync(name, author, cursor, token));
+        OpenList("mod:" + name + "|" + author,
+            (cursor, token, failure) => client.ModGlamsAsync(name, author, cursor, token, failure));
 
     public void LoadMoreList()
     {
@@ -321,7 +324,7 @@ internal sealed class GlamStore : IDisposable
         list.LoadingMore = true;
         work.Run("list more", async token =>
         {
-            var page = await fetch(cursor, token).ConfigureAwait(false);
+            var page = await fetch(cursor, token, null).ConfigureAwait(false);
             if (page is not null && key == listKey)
             {
                 list.ApplyMore(page.Items ?? Array.Empty<GlamDto>(), page.NextCursor);
@@ -538,7 +541,7 @@ internal sealed class GlamStore : IDisposable
 
     private static string UserListKey(string userId) => "user:" + userId;
 
-    private void OpenList(string key, Func<string?, CancellationToken, Task<GlamPage?>> fetch)
+    private void OpenList(string key, Func<string?, CancellationToken, Action<AepFailure>?, Task<GlamPage?>> fetch)
     {
         if (key == listKey && !list.Failed && (list.Loading || !list.NeverLoaded))
         {
@@ -553,7 +556,7 @@ internal sealed class GlamStore : IDisposable
         work.Run("list", async token =>
         {
             var reported = AepFailure.None;
-            var page = await fetch(null, token).ConfigureAwait(false);
+            var page = await fetch(null, token, failure => reported = failure).ConfigureAwait(false);
             if (opened != listOpened)
             {
                 return;
