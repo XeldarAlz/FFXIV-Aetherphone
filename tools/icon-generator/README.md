@@ -80,6 +80,12 @@ Every mini-game and every online room has a painted pair as well, all in the `co
 - Two games on one shelf must not share a silhouette. Grid glyphs are the usual trap (sudoku,
   nonogram and breakout already use one), which is why Pegfall shows confetti rather than a dot grid.
 
+## Bespoke icons
+
+The `bespoke` table paints an app whose icon is drawn from shapes instead of one Phosphor glyph.
+Prism is the only one: a faceted crystal filled with the same six-colour spectrum as the app's
+rule, with three white glints. Its `.fg.png` keeps the crystal and glints without the tile and halo.
+
 ## Seasonal icons
 
 The `seasonal` table paints six Halloween pairs, `<id>.halloween.png` and `<id>.halloween.fg.png`,
@@ -91,7 +97,7 @@ pair needs no code at all.
 
 ## Regenerating one id
 
-Pass ids as arguments to repaint only those. Seasonal ids work too:
+Pass ids as arguments to repaint only those. Bespoke and seasonal ids work too:
 
 ```sh
 node generate-painted-icons.mjs messages
@@ -101,7 +107,7 @@ node generate-painted-icons.mjs settings camera chirper.halloween
 Arguments are app ids, including game ids: `2048` repaints the 2048 game, it is not a size. An
 unknown id stops the run before anything is written.
 
-`npm run build` with no arguments repaints every id in `map` and `seasonal`. Once an id's pair is
+`npm run build` with no arguments repaints every id in `map`, `bespoke` and `seasonal`. Once an id's pair is
 hand-painted, take that id out of the `map`, or the next full run overwrites the artist's files.
 
 To change a symbol, edit that id's entry in the `map`
