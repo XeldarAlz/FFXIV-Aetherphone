@@ -62,6 +62,10 @@ internal sealed partial class PrismApp : IResumableApp
     private const float BackChevronUnits = 15f;
     private const float PhotoGlyphUnits = 18f;
     private const int LabelWidthLimit = 64;
+    private const float GridLineUnits = 28f;
+    private const float GridAvatarUnits = 20f;
+    private const float GridGlyphUnits = 14f;
+    private const int GridAvatarSegments = 32;
 
     private readonly PrismStore store;
     private readonly GlamStore glams;
@@ -96,6 +100,7 @@ internal sealed partial class PrismApp : IResumableApp
     private PhoneTheme? followedTheme;
     private ControlInk controls;
     private ControlInk photoControls;
+    private SocialInk? tabInk;
     private string loadedWeek = string.Empty;
     private bool onPhoto;
     private float screenAge;
@@ -428,6 +433,14 @@ internal sealed partial class PrismApp : IResumableApp
         followedTheme = theme;
         controls = new ControlInk(PrismArt.Fore, PrismArt.Fore, PrismArt.Muted, theme.Danger);
         photoControls = new ControlInk(PrismArt.PhotoFore, PrismArt.PhotoFore, PrismArt.PhotoMuted, theme.Danger);
+        tabInk = new SocialInk(AppPalettes.Neutral(PrismArt.Fore) with
+        {
+            TitleInk = PrismArt.Fore,
+            BodyInk = PrismArt.Fore,
+            MutedInk = PrismArt.Muted,
+            Hairline = PrismArt.Faint,
+            BackdropTop = PrismArt.Back,
+        });
     }
 
     private float DrawBackHeader(ImDrawListPtr drawList, Rect content, string title, float scale)
@@ -445,6 +458,25 @@ internal sealed partial class PrismApp : IResumableApp
         Typography.Draw(drawList, new Vector2(content.Center.X - size.X * 0.5f, hit.Center.Y - size.Y * 0.5f), fitted,
             PrismArt.Fore, PrismType.Headline);
         return hit.Max.Y;
+    }
+
+    private float DrawSectionTitle(ImDrawListPtr drawList, float left, float right, float top, string title,
+        string caption, float scale)
+    {
+        var height = Typography.LineHeight(PrismType.Title);
+        var room = right - left;
+        if (caption.Length > 0)
+        {
+            var fitted = Typography.FitText(caption, room * 0.5f, PrismType.Caption);
+            var size = Typography.Measure(fitted, PrismType.Caption);
+            Typography.Draw(drawList, new Vector2(right - size.X, top + (height - size.Y) * 0.5f), fitted,
+                PrismArt.Muted, PrismType.Caption);
+            room -= size.X + Metrics.Space.Sm * scale;
+        }
+
+        Typography.Draw(drawList, new Vector2(left, top),
+            Typography.FitText(title, MathF.Max(1f, room), PrismType.Title), PrismArt.Fore, PrismType.Title);
+        return top + height;
     }
 
     private static float PhotoTop(Rect full, Rect content) => PrismArt.Light ? content.Min.Y : full.Min.Y;
@@ -521,6 +553,80 @@ internal sealed partial class PrismApp : IResumableApp
         Typography.Draw(drawList, face.Face.Center - Typography.Measure(fitted, labelStyle) * 0.5f, fitted,
             face.LabelInk, labelStyle);
         return enabled && UiInteract.Click(rect.Min, rect.Max, hovered);
+    }
+
+    private int DrawTabs(Rect row, ReadOnlySpan<string> labels, int active, ref Spring slide) =>
+        UnderlineTabs.Draw(row, labels, active, ref slide, tabInk!,
+            new UnderlineTabStyle(PrismType.Headline, PrismType.Headline, PrismArt.Fore, PrismArt.Muted,
+                PrismArt.Fore, Metrics.Stroke.Ring, 0f, Motion.Release));
+
+    private static bool TabsFit(ReadOnlySpan<string> labels, float width, float scale)
+    {
+        var room = width / MathF.Max(1, labels.Length) - UnderlineTabs.LabelPadUnits * scale;
+        for (var index = 0; index < labels.Length; index++)
+        {
+            if (Typography.Measure(labels[index], PrismType.Headline).X > room)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static float GridLine(float scale) =>
+        MathF.Max(GridLineUnits * scale, Typography.LineHeight(PrismType.Headline));
+
+    private bool DrawGridTile(ImDrawListPtr drawList, Rect photo, string url, string label, string avatarName,
+        string? avatarUrl, string glyph, string count, float scale)
+    {
+        var tile = new Rect(photo.Min, new Vector2(photo.Max.X, photo.Max.Y + GridLine(scale)));
+        if (!ImGui.IsRectVisible(tile.Min, tile.Max))
+        {
+            return false;
+        }
+
+        DrawLook(drawList, photo, url, false);
+        var middle = (photo.Max.Y + tile.Max.Y) * 0.5f;
+        var left = photo.Min.X;
+        var right = photo.Max.X;
+        if (avatarName.Length > 0)
+        {
+            var radius = GridAvatarUnits * scale * 0.5f;
+            AvatarView.Draw(drawList, new Vector2(left + radius, middle), radius, PrismArt.Muted,
+                Initials.Of(avatarName), TextStyles.Caption2.Scale, images.Avatar(avatarUrl, radius * 2f),
+                GridAvatarSegments);
+            left += radius * 2f + Metrics.Space.Xs * scale;
+        }
+
+        if (count.Length > 0)
+        {
+            var size = Typography.Measure(count, PrismType.Caption);
+            Typography.Draw(drawList, new Vector2(right - size.X, middle - size.Y * 0.5f), count, PrismArt.Muted,
+                PrismType.Caption);
+            right -= size.X + Metrics.Space.Xxs * scale;
+            if (glyph.Length > 0)
+            {
+                var glyphSize = GridGlyphUnits * scale;
+                PhoneIcon.Draw(drawList, new Vector2(right - glyphSize * 0.5f, middle), glyph, PrismArt.Muted,
+                    glyphSize);
+                right -= glyphSize;
+            }
+
+            right -= Metrics.Space.Sm * scale;
+        }
+
+        var fitted = Typography.FitText(label, MathF.Max(1f, right - left), PrismType.Headline);
+        Typography.Draw(drawList,
+            new Vector2(left, middle - Typography.Measure(fitted, PrismType.Headline).Y * 0.5f), fitted, PrismArt.Fore,
+            PrismType.Headline);
+        var hovered = UiInteract.Hover(tile.Min, tile.Max);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return UiInteract.Click(tile.Min, tile.Max, hovered);
     }
 
     private Rect DrawLook(ImDrawListPtr drawList, Rect rect, string url, bool contain, float alpha = 1f,
