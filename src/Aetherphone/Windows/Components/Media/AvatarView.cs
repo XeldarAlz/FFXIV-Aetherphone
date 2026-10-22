@@ -9,11 +9,12 @@ namespace Aetherphone.Windows.Components;
 
 internal static class AvatarView
 {
+    public const float MinFrameRadius = 15f;
+
     private const float FadeDurationSeconds = 0.34f;
     private const float PulsePeriodSeconds = 1.15f;
     private const float PulseFloor = 0.72f;
     private const float SettleOvershoot = 0.06f;
-    private const float MinFrameRadius = 15f;
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Dictionary<string, float> fadeByKey = new(StringComparer.Ordinal);
 

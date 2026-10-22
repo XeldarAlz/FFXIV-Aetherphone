@@ -196,7 +196,7 @@ internal sealed partial class PrismApp
                 PrismType.Draw(drawList, center - size * 0.5f, Plain[1], PrismArt.Fore, PrismFace.Numerals, pixels);
                 break;
             case PrismRewardKind.Frame:
-                DrawRewardAvatar(drawList, center, radius * MedalAvatarShare);
+                DrawRewardAvatar(drawList, center, radius * MedalAvatarShare, scale);
                 break;
             case PrismRewardKind.Coin:
                 CurrencyGlyph.Draw(drawList, CurrencyKind.Coins, center, radius * MedalGlyphShare);
@@ -212,9 +212,10 @@ internal sealed partial class PrismApp
         }
     }
 
-    private void DrawRewardAvatar(ImDrawListPtr drawList, Vector2 center, float room)
+    private void DrawRewardAvatar(ImDrawListPtr drawList, Vector2 center, float room, float scale)
     {
-        var radius = room / (1f + AvatarView.Reserve(rewardFrame, room) / room);
+        var radius = MathF.Max(room / (1f + AvatarView.Reserve(rewardFrame, room) / room),
+            AvatarView.MinFrameRadius * scale);
         var user = store.CurrentUser;
         var name = user?.DisplayName is { Length: > 0 } display ? display : user?.Name ?? string.Empty;
         var key = HashCode.Combine(name);
