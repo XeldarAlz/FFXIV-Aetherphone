@@ -82,9 +82,8 @@ internal sealed partial class PrismApp
 
             if (wornOutfit.Length == 0)
             {
-                PrismType.Draw(list, new Vector2(left, cursor), Loc.T(L.Prism.NothingEquipped), PrismArt.Muted,
-                    PrismFace.Label, PrismArt.LabelPixels());
-                cursor += Metrics.Size.TapTarget * scale;
+                cursor += Typography.DrawWrappedLeft(new Vector2(left, cursor), Loc.T(L.Prism.NothingEquipped),
+                    PrismArt.Muted, TextStyles.Subheadline, width) + Metrics.Space.Lg * scale;
             }
 
             cursor = DrawGearList(list, left, cursor, width, wornOutfit, false, scale);
