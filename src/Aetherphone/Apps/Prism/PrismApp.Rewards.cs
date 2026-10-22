@@ -46,6 +46,7 @@ internal sealed partial class PrismApp
     private readonly PrismRewardKind[] rewardKinds = new PrismRewardKind[PrismRewards.KindCount];
     private int rewardKindCount;
     private PrismPrizesDto? rewardsFor;
+    private PrismJudgeRewardDto? rewardsJudging;
     private BadgeStyle? rewardBadge;
     private FrameStyle? rewardFrame;
     private int rewardFrameDays;
@@ -61,16 +62,18 @@ internal sealed partial class PrismApp
     private void SyncRewardArt()
     {
         var prizes = Prizes;
-        if (ReferenceEquals(prizes, rewardsFor))
+        var judging = store.Week?.JudgeReward;
+        if (ReferenceEquals(prizes, rewardsFor) && ReferenceEquals(judging, rewardsJudging))
         {
             return;
         }
 
         rewardsFor = prizes;
+        rewardsJudging = judging;
         rewardBadge = null;
         rewardFrame = null;
         rewardFrameDays = 0;
-        rewardKindCount = PrismRewards.Offered(prizes, store.Week?.JudgeReward, rewardKinds);
+        rewardKindCount = PrismRewards.Offered(prizes, judging, rewardKinds);
         PrismRewards.Fill(rewardRows, prizes, PrismPhases.StageFinal);
         TakeRewardArt();
         if (rewardBadge is null || rewardFrame is null)
