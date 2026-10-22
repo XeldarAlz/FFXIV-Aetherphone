@@ -16,6 +16,11 @@ internal static class InstallSourceNotice
             return;
         }
 
+        Ask(notice, confirm);
+    }
+
+    private static void Ask(string notice, ConfirmService confirm)
+    {
         var blocked = string.Equals(notice, AethernetClientIdentity.StatusBlocked, StringComparison.Ordinal);
         var url = AepConstants.OfficialRepositoryUrl;
         confirm.Ask(new ConfirmRequest
