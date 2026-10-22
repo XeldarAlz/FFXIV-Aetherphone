@@ -11119,6 +11119,9 @@ internal static class L
         public static readonly LocString EnterTrack = new("prism.enterTrack", "Enter {0}");
         public static readonly LocString JudgeTrack = new("prism.judgeTrack", "Judge {0}");
         public static readonly LocString LastWeekWinner = new("prism.lastWeekWinner", "Last week's winner, {0}");
+        public static readonly LocString YourPicks = new("prism.yourPicks", "Your picks");
+        public static readonly LocString PicksHint = new("prism.picksHint", "Sorted by your stars. Tap a glam to change them.");
+        public static readonly LocString SendPicks = new("prism.sendPicks", "Send my picks");
     }
 
     internal static class Announcements

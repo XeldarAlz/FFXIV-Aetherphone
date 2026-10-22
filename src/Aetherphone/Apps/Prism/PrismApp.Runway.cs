@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
@@ -11,16 +12,21 @@ namespace Aetherphone.Apps.Prism;
 
 internal sealed partial class PrismApp
 {
-    private const float DoneNumeralUnits = 120f;
-    private const float DoneNumeralMinUnits = 48f;
-    private const float QuestionUnits = PrismType.HeadingUnits;
-    private const float ScoreRowUnits = 52f;
+    private const float ScoreButtonUnits = 56f;
     private const float ScoreDone = 0.97f;
+    private const float ScorePitchLow = 0.84f;
+    private const float ScorePitchStep = 0.08f;
     private const float TurnShift = 0.35f;
     private const float TurnIdle = 10f;
     private const float DoneTextDelay = 0.12f;
     private const float InspectZoom = 2.2f;
     private const float InspectHoldSeconds = 0.18f;
+    private const int PicksColumns = 3;
+    private const float PickPillUnits = 20f;
+    private const float PickStarUnits = 11f;
+    private const float PodiumLeadShare = 0.38f;
+    private const float PodiumMedalUnits = 14f;
+    private const string SendPicksId = "prism.sendPicks";
     private const string MoreGlyph = "•••";
     private const int OutcomePending = 0;
     private const int OutcomeSent = 1;
@@ -28,16 +34,26 @@ internal sealed partial class PrismApp
 
     private static readonly string[] Padded = BuildDigits("00");
     private static readonly string[] Plain = BuildDigits("0");
+    private static readonly uint PickPillFill = Palette.Pack(new Vector4(0f, 0f, 0f, 0.55f));
+    private static readonly uint PickHoverWash = Palette.Pack(new Vector4(1f, 1f, 1f, 0.12f));
+
+    private readonly ActionSheet lookMenu = new();
+    private readonly ActionSheet.Item[] lookMenuItems = new ActionSheet.Item[1];
 
     private PrismStarDto[] stars = Array.Empty<PrismStarDto>();
+    private int[] pickOrder = Array.Empty<int>();
+    private int[] pickFrom = Array.Empty<int>();
     private PrismBallotDto? ratingBallot;
     private int lookIndex;
     private int chosen;
     private float lookSeconds;
+    private bool reviewing;
     private bool heatDone;
     private volatile int ballotOutcome;
     private string previousLookUrl = string.Empty;
+    private string lookMenuId = string.Empty;
     private float turnAge = TurnIdle;
+    private float pickSwapAge = TurnIdle;
     private int turnSign = 1;
     private Spring inspectZoom = new(0f);
     private float inspectHold;
@@ -45,13 +61,14 @@ internal sealed partial class PrismApp
     private Spring scoreFill = new(0f);
     private long heatCoins;
     private CachedText lookCounter;
+    private CachedText rateCaption;
+    private CachedText picksCaption;
     private CachedText heatTitle;
-    private CachedText doneCounter;
     private CachedText coinCounter;
     private CachedText rewardText;
 
     private bool HeatInProgress => store.Ballot is { } ballot && ReferenceEquals(ratingBallot, ballot) &&
-                                   stars.Length > 0 && stars[0] is not null && lookIndex < stars.Length;
+                                   stars.Length > 0 && stars[0] is not null && lookIndex <= stars.Length;
 
     private void StartJudging()
     {
@@ -78,146 +95,150 @@ internal sealed partial class PrismApp
 
         if (store.Ballot is not { } ballot)
         {
-            DrawHeader(drawList, content, string.Empty, string.Empty, true, scale);
-            DrawBallotPending(drawList, content, scale);
+            DrawBallotPending(drawList, content, DrawBackHeader(drawList, content, string.Empty, scale), scale);
             return;
         }
 
         var looks = ballot.Looks ?? Array.Empty<PrismLookDto>();
         if (looks.Length == 0)
         {
-            DrawHeader(drawList, content, string.Empty, string.Empty, true, scale);
-            DrawNotice(drawList, content, Loc.T(L.Prism.NothingLeftTitle), Loc.T(L.Prism.NothingLeftHint), scale);
-            if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Prism.Back), Arrow, false))
-            {
-                Go(PrismScreen.Cover);
-            }
-
+            DrawRunwayNotice(drawList, content, DrawBackHeader(drawList, content, string.Empty, scale),
+                Loc.T(L.Prism.NothingLeftTitle), Loc.T(L.Prism.NothingLeftHint), scale);
             return;
         }
 
         if (!ReferenceEquals(ratingBallot, ballot))
         {
-            ratingBallot = ballot;
-            stars = new PrismStarDto[looks.Length];
-            lookIndex = 0;
-            chosen = 0;
-            lookSeconds = 0f;
-            previousLookUrl = string.Empty;
-            turnAge = TurnIdle;
+            StartHeat(ballot, looks.Length);
         }
 
         if (lookIndex >= looks.Length)
         {
-            DrawHeader(drawList, content, string.Empty, string.Empty, false, scale);
-            DrawCenteredLabel(drawList, content, Loc.T(L.Prism.Submitting));
+            DrawPicks(drawList, content, ballot, looks, scale);
             return;
         }
 
-        DrawLookToRate(drawList, content, ballot, looks, scale);
+        DrawLookToRate(drawList, content, looks, scale);
     }
 
-    private void DrawLookToRate(ImDrawListPtr drawList, Rect content, PrismBallotDto ballot, PrismLookDto[] looks,
-        float scale)
+    private void StartHeat(PrismBallotDto ballot, int count)
     {
+        ratingBallot = ballot;
+        stars = new PrismStarDto[count];
+        pickOrder = new int[count];
+        pickFrom = new int[count];
+        lookIndex = 0;
+        chosen = 0;
+        lookSeconds = 0f;
+        reviewing = false;
+        previousLookUrl = string.Empty;
+        turnAge = TurnIdle;
+    }
+
+    private void DrawLookToRate(ImDrawListPtr drawList, Rect content, PrismLookDto[] looks, float scale)
+    {
+        lookMenu.Gate();
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         lookSeconds += delta;
         turnAge += delta;
-        var turn = PrismMotion.At(turnAge, 0f, Motion.PageSettle);
         var look = looks[lookIndex];
-        var gutter = PrismArt.Gutter(scale);
-        var left = content.Min.X + gutter;
-        var width = content.Width - gutter * 2f;
-        var top = DrawRunwayHeader(drawList, content, ballot, looks.Length, look.Id, scale);
-        var labelPixels = PrismArt.LabelPixels();
-        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
-        var anchorTop = content.Max.Y - PrismArt.BottomMargin(scale) - labelLine;
-        var rowBottom = anchorTop - Metrics.Space.Xs * scale;
-        var row = new Rect(new Vector2(left, rowBottom - ScoreRowUnits * scale), new Vector2(left + width, rowBottom));
-        var submitFailed = store.Failed(PrismAction.Submit);
-        var failure = submitFailed ? store.ActionFailureText : string.Empty;
-        var prompt = submitFailed
-            ? failure.Length > 0 ? failure : Loc.T(L.Common.LoadFailedHint)
-            : Loc.T(L.Prism.RateHint);
-        var pixels = PrismType.Fit(prompt, PrismFace.Headline, width, QuestionUnits * scale,
-            QuestionUnits * scale, 2, out var lines);
-        var questionTop = row.Min.Y - Metrics.Space.Xl * scale -
-                          lines.Length * PrismType.LineHeight(PrismFace.Headline, pixels);
-        var countTop = questionTop - Metrics.Space.Sm * scale - labelLine;
-        var photo = new Rect(new Vector2(content.Min.X, top),
-            new Vector2(content.Max.X, countTop - Metrics.Space.Xl * scale));
-        DrawTurningLook(drawList, photo, look, turn, delta);
-        var counter = LookCounter(lookIndex + 1, looks.Length);
-        PrismType.Draw(drawList, new Vector2(left, countTop), counter, PrismArt.Muted, PrismFace.Label, labelPixels);
-        if (lookIndex > 0 && chosen == 0 && !store.Busy)
+        var left = content.Min.X;
+        var width = content.Width;
+        var captionLine = Typography.LineHeight(PrismType.Caption);
+        var size = MathF.Max(Metrics.Size.TapTarget * scale,
+            MathF.Min(ScoreButtonUnits * scale,
+                (width - Metrics.Space.Sm * scale * (PrismArt.Stars - 1)) / PrismArt.Stars));
+        var question = Loc.T(L.Prism.RateHint);
+        var questionHeight = Typography.MeasureWrappedBlock(question, PrismType.Title, width).Y;
+        var below = Metrics.Space.Lg * scale * 3f + captionLine * 2f + Metrics.Space.Xxs * scale + questionHeight +
+                    size + Metrics.Space.Xs * scale;
+        var full = ScreenOf(content, scale);
+        var photoTop = PhotoTop(full, content);
+        var photo = new Rect(new Vector2(full.Min.X, photoTop), new Vector2(full.Max.X,
+            MathF.Min(photoTop + full.Width / PrismStore.EntryRatio, content.Max.Y - below)));
+        var captionTop = photo.Max.Y + Metrics.Space.Lg * scale;
+        var questionTop = captionTop + captionLine + Metrics.Space.Xxs * scale;
+        var rowTop = questionTop + questionHeight + Metrics.Space.Lg * scale;
+        var row = new Rect(new Vector2(left, rowTop), new Vector2(content.Max.X, rowTop + size));
+        var anchorsTop = row.Max.Y + Metrics.Space.Xs * scale;
+        DrawTurningLook(drawList, photo, look, PrismMotion.At(turnAge, 0f, Motion.PageSettle), delta);
+        DrawRunwayChrome(drawList, photo, PhotoInset(full, content), looks.Length, look.Id, scale);
+        var previous = Loc.T(L.Prism.PreviousGlam);
+        var back = PlainRect(new Vector2(content.Max.X, captionTop + captionLine * 0.5f), previous, width * 0.5f, 1f,
+            scale);
+        var caption = Typography.FitText(RateCaption(lookIndex + 1, looks.Length),
+            MathF.Max(1f, back.Min.X - left), PrismType.Caption);
+        Typography.Draw(drawList, new Vector2(left, captionTop), caption, PrismArt.Muted, PrismType.Caption);
+        if (!reviewing && lookIndex > 0 && chosen == 0 && !store.Busy &&
+            DrawButton(drawList, back, previous, ButtonStyle.Plain, scale))
         {
-            var previous = Loc.T(L.Prism.PreviousGlam);
-            var previousWidth = PrismType.Measure(previous, PrismFace.Label, labelPixels).X;
-            if (PrismArt.Link(drawList, new Vector2(left + width - previousWidth, countTop), previous, PrismArt.Muted,
-                    scale))
-            {
-                StepBack(look);
-            }
-        }
-        else
-        {
-            var aside = lookIndex == 0 && chosen == 0 ? Loc.T(L.Prism.InspectHint) : store.Week?.Title ?? string.Empty;
-            var room = width - PrismType.Measure(counter, PrismFace.Label, labelPixels).X - Metrics.Space.Lg * scale;
-            PrismType.DrawRight(drawList, new Vector2(left + width, countTop),
-                PrismType.FitLabel(aside, labelPixels, room), PrismArt.Muted, PrismFace.Label, labelPixels);
+            StepTo(lookIndex - 1, -1);
         }
 
-        PrismType.DrawLines(drawList, new Vector2(left, questionTop), lines, PrismArt.Fore, PrismFace.Headline,
-            pixels);
+        Typography.DrawWrappedLeft(new Vector2(left, questionTop), question, PrismArt.Fore, PrismType.Title, width);
         var fill = chosen > 0 ? scoreFill.Step(1f, Motion.Release, delta) : 0f;
-        var picked = PrismArt.Score(drawList, row, chosen, fill, !store.Busy, scale);
+        var picked = DrawScoreButtons(drawList, row, chosen, fill, !store.Busy, scale);
         if (picked > 0 && picked != chosen)
         {
             chosen = picked;
             scoreFill.SnapTo(0f);
         }
 
-        PrismType.Draw(drawList, new Vector2(left, anchorTop), Loc.T(L.Prism.ScoreLow), PrismArt.Muted,
-            PrismFace.Label, labelPixels);
-        PrismType.DrawRight(drawList, new Vector2(left + width, anchorTop), Loc.T(L.Prism.ScoreHigh),
-            PrismArt.Muted, PrismFace.Label, labelPixels);
-
+        Typography.Draw(drawList, new Vector2(left, anchorsTop), Loc.T(L.Prism.ScoreLow), PrismArt.Muted,
+            PrismType.Caption);
+        var high = Loc.T(L.Prism.ScoreHigh);
+        Typography.Draw(drawList,
+            new Vector2(content.Max.X - Typography.Measure(high, PrismType.Caption).X, anchorsTop), high,
+            PrismArt.Muted, PrismType.Caption);
+        DrawLookMenu(full);
         if (chosen > 0 && fill >= ScoreDone)
         {
-            Rate(looks, look, chosen);
+            Rate(look, chosen);
         }
     }
 
-    private float DrawRunwayHeader(ImDrawListPtr drawList, Rect content, PrismBallotDto ballot, int total,
-        string lookId, float scale)
+    private void DrawRunwayChrome(ImDrawListPtr drawList, Rect photo, float topInset, int total, string lookId,
+        float scale)
     {
-        var gutter = PrismArt.Gutter(scale);
-        var left = content.Min.X + gutter;
-        var right = content.Max.X - gutter;
-        var top = content.Min.Y + HeaderGapUnits * scale;
-        PrismArt.StoryBars(drawList, left, right, top, total, lookIndex, 1f, scale);
-        var row = top + HeaderGapUnits * scale;
-        var labelPixels = PrismArt.LabelPixels();
-        if (PrismArt.Link(drawList, new Vector2(left, row), Loc.T(L.Prism.Back), PrismArt.Muted, scale))
+        PrismArt.TopFog(drawList, photo, scale);
+        var reach = Metrics.Size.TapTarget * 0.5f * scale;
+        var side = (Metrics.Space.Md + Metrics.Size.GlassButton * 0.5f + Metrics.Space.Xs) * scale + reach;
+        var barsTop = photo.Min.Y + topInset + Metrics.Space.Xs * scale + Metrics.Size.GlassButton * 0.5f * scale;
+        PrismArt.OverPhoto(true);
+        PrismArt.StoryBars(drawList, photo.Min.X + side, photo.Max.X - side, barsTop, total, lookIndex, 1f, scale);
+        PrismArt.OverPhoto(false);
+        if (DrawPhotoButton(drawList, photo, topInset, 0, PhoneIcons.ChevronLeft, Loc.T(L.Prism.Back), scale))
         {
-            Go(PrismScreen.Cover);
+            if (reviewing)
+            {
+                ShowPicks(-1);
+            }
+            else
+            {
+                LeaveScreen();
+            }
         }
 
-        var title = HeatTitle(ballot);
-        if (title.Length > 0)
+        if (DrawPhotoButton(drawList, photo, topInset, 1, PhoneIcons.Dots, Loc.T(L.Prism.ReportGlam), scale))
         {
-            var titleWidth = PrismType.Measure(title, PrismFace.Label, labelPixels).X;
-            PrismType.Draw(drawList, new Vector2(content.Center.X - titleWidth * 0.5f, row), title, PrismArt.Fore,
-                PrismFace.Label, labelPixels);
+            lookMenuId = lookId;
+            lookMenuItems[0] = new ActionSheet.Item(Loc.T(L.Prism.ReportGlam), PhoneIcons.Flag, true);
+            lookMenu.Open();
+        }
+    }
+
+    private void DrawLookMenu(Rect full)
+    {
+        if (!lookMenu.CapturesPointer)
+        {
+            return;
         }
 
-        var moreWidth = PrismType.Measure(MoreGlyph, PrismFace.Label, labelPixels).X;
-        if (PrismArt.Link(drawList, new Vector2(right - moreWidth, row), MoreGlyph, PrismArt.Muted, scale))
+        if (lookMenu.Draw(full, ActionSheetStyle.From(followedTheme!), lookMenuItems, Loc.T(L.Common.Cancel),
+                false) == 0)
         {
-            OpenReport(lookId);
+            OpenReport(lookMenuId);
         }
-
-        return row + PrismType.LineHeight(PrismFace.Label, labelPixels) + HeaderGapUnits * scale;
     }
 
     private void DrawTurningLook(ImDrawListPtr drawList, Rect photo, PrismLookDto look, float turn, float delta)
@@ -226,8 +247,8 @@ internal sealed partial class PrismApp
         drawList.PushClipRect(photo.Min, photo.Max, true);
         if (turn < PrismMotion.Settled && previousLookUrl.Length > 0)
         {
-            DrawLook(drawList, new Rect(photo.Min - shift * turn, photo.Max - shift * turn), previousLookUrl, true,
-                1f - turn);
+            DrawLook(drawList, new Rect(photo.Min - shift * turn, photo.Max - shift * turn), previousLookUrl, false,
+                1f - turn, native: true);
         }
 
         var holding = turn >= PrismMotion.Settled && ImGui.IsMouseDown(ImGuiMouseButton.Left) &&
@@ -240,38 +261,252 @@ internal sealed partial class PrismApp
 
         var inspect = inspectZoom.Step(inspectHold >= InspectHoldSeconds ? 1f : 0f, Motion.PageSettle, delta);
         var incoming = shift * (1f - turn);
-        DrawLook(drawList, new Rect(photo.Min + incoming, photo.Max + incoming), look.ImageUrl, true, turn,
-            1f + (InspectZoom - 1f) * inspect, inspectFocus);
+        DrawLook(drawList, new Rect(photo.Min + incoming, photo.Max + incoming), look.ImageUrl, false, turn,
+            1f + (InspectZoom - 1f) * inspect, inspectFocus, true);
         drawList.PopClipRect();
     }
-    private void Rate(PrismLookDto[] looks, PrismLookDto look, int value)
+
+    private int DrawScoreButtons(ImDrawListPtr drawList, Rect row, int selected, float fill, bool enabled, float scale)
+    {
+        var size = row.Height;
+        var gap = (row.Width - size * PrismArt.Stars) / (PrismArt.Stars - 1);
+        var idle = ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Secondary));
+        var hover = ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Primary));
+        var chosenFill = ImGui.GetColorU32(PrismArt.Fore);
+        var picked = 0;
+        for (var index = 0; index < PrismArt.Stars; index++)
+        {
+            var min = new Vector2(row.Min.X + index * (size + gap), row.Min.Y);
+            var max = new Vector2(min.X + size, row.Max.Y);
+            var center = (min + max) * 0.5f;
+            var hovered = enabled && UiInteract.Hover(min, max);
+            var share = selected == index + 1 ? fill : 0f;
+            drawList.AddCircleFilled(center, size * 0.5f, hovered ? hover : idle);
+            if (share > 0f)
+            {
+                drawList.AddCircleFilled(center, size * 0.5f * share, chosenFill);
+            }
+
+            var digit = Plain[index + 1];
+            Typography.Draw(drawList, center - Typography.Measure(digit, PrismType.Headline) * 0.5f, digit,
+                Vector4.Lerp(PrismArt.Fore, PrismArt.OnFore, share), PrismType.Headline);
+            if (!hovered)
+            {
+                continue;
+            }
+
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            if (UiInteract.Click(min, max, true, (UiSound?)null))
+            {
+                UiFeedback.PlayPitched(UiSound.Tap, ScorePitchLow + ScorePitchStep * index);
+                picked = index + 1;
+            }
+        }
+
+        return picked;
+    }
+
+    private void Rate(PrismLookDto look, int value)
     {
         stars[lookIndex] = new PrismStarDto(look.Id, value, (int)(lookSeconds * 1000f));
-        lookIndex++;
         chosen = 0;
         lookSeconds = 0f;
+        if (reviewing)
+        {
+            SortPicks(true);
+            ShowPicks(-1);
+            return;
+        }
+
         previousLookUrl = look.ImageUrl;
         turnAge = 0f;
         turnSign = 1;
-        if (lookIndex < looks.Length)
+        lookIndex++;
+        if (lookIndex < stars.Length)
         {
             return;
         }
 
-        ballotOutcome = OutcomePending;
-        heatCoins = 0;
-        store.SubmitBallot(stars, ballotSettled);
+        reviewing = true;
+        SortPicks(false);
+        ShowPicks(1);
     }
 
-    private void StepBack(PrismLookDto look)
+    private void StepTo(int index, int direction)
     {
-        previousLookUrl = look.ImageUrl;
-        lookIndex--;
+        previousLookUrl = ratingBallot?.Looks is { } looks && lookIndex < looks.Length
+            ? looks[lookIndex].ImageUrl
+            : string.Empty;
+        lookIndex = index;
         chosen = 0;
         scoreFill.SnapTo(0f);
-        lookSeconds = stars[lookIndex] is { } star ? star.ViewedMs / 1000f : 0f;
-        turnAge = 0f;
-        turnSign = -1;
+        lookSeconds = stars[index] is { } star ? star.ViewedMs / 1000f : 0f;
+        turnAge = previousLookUrl.Length > 0 ? 0f : TurnIdle;
+        turnSign = direction;
+    }
+
+    private void ShowPicks(int direction)
+    {
+        lookIndex = stars.Length;
+        chosen = 0;
+        Go(PrismScreen.Runway, direction);
+    }
+
+    private void SortPicks(bool crossfade)
+    {
+        for (var index = 0; index < pickOrder.Length; index++)
+        {
+            pickFrom[index] = pickOrder[index];
+            pickOrder[index] = index;
+        }
+
+        for (var index = 1; index < pickOrder.Length; index++)
+        {
+            var look = pickOrder[index];
+            var score = StarsOf(look);
+            var slot = index;
+            while (slot > 0 && StarsOf(pickOrder[slot - 1]) < score)
+            {
+                pickOrder[slot] = pickOrder[slot - 1];
+                slot--;
+            }
+
+            pickOrder[slot] = look;
+        }
+
+        if (crossfade)
+        {
+            pickSwapAge = 0f;
+            return;
+        }
+
+        Array.Copy(pickOrder, pickFrom, pickOrder.Length);
+    }
+
+    private int StarsOf(int index) => stars[index]?.Stars ?? 0;
+
+    private void DrawPicks(ImDrawListPtr drawList, Rect content, PrismBallotDto ballot, PrismLookDto[] looks,
+        float scale)
+    {
+        pickSwapAge += MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+        var left = content.Min.X;
+        var width = content.Width;
+        var top = DrawBackHeader(drawList, content, string.Empty, scale) + Metrics.Space.Sm * scale;
+        var caption = PicksCaption(ballot);
+        if (caption.Length > 0)
+        {
+            Typography.Draw(drawList, new Vector2(left, top), Typography.FitText(caption, width, PrismType.Caption),
+                PrismArt.Muted, PrismType.Caption);
+            top += Typography.LineHeight(PrismType.Caption) + Metrics.Space.Xxs * scale;
+        }
+
+        top += PrismType.DrawHero(drawList, new Vector2(left, top), Loc.T(L.Prism.YourPicks), width, PrismArt.Fore) +
+               Metrics.Space.Xs * scale;
+        top += Typography.DrawWrappedLeft(new Vector2(left, top), Loc.T(L.Prism.PicksHint), PrismArt.Muted,
+            PrismType.Caption, width) + Metrics.Space.Xl * scale;
+        var send = ActionRect(content, scale);
+        var gridBottom = send.Min.Y - Metrics.Space.Lg * scale;
+        if (store.Failed(PrismAction.Submit))
+        {
+            var failure = store.ActionFailureText;
+            var error = failure.Length > 0 ? failure : Loc.T(L.Common.LoadFailedHint);
+            var errorTop = gridBottom - Typography.MeasureWrappedBlock(error, PrismType.Caption, width).Y;
+            Typography.DrawWrappedLeft(new Vector2(left, errorTop), error, controls.DangerInk, PrismType.Caption,
+                width);
+            gridBottom = errorTop - Metrics.Space.Md * scale;
+        }
+
+        DrawPickGrid(drawList, new Rect(new Vector2(left, top), new Vector2(content.Max.X, gridBottom)), looks, scale);
+        if (DrawButton(drawList, send, Loc.T(store.Busy ? L.Prism.Submitting : L.Prism.SendPicks), ButtonStyle.Solid,
+                scale, enabled: !store.Busy, id: SendPicksId))
+        {
+            ballotOutcome = OutcomePending;
+            heatCoins = 0;
+            store.SubmitBallot(stars, ballotSettled);
+        }
+    }
+
+    private void DrawPickGrid(ImDrawListPtr drawList, Rect area, PrismLookDto[] looks, float scale)
+    {
+        var count = Math.Min(looks.Length, pickOrder.Length);
+        var rows = (count + PicksColumns - 1) / PicksColumns;
+        var gap = Metrics.Space.Xs * scale;
+        var tileWidth = (area.Width - gap * (PicksColumns - 1)) / PicksColumns;
+        var tileHeight = MathF.Min(tileWidth / PrismStore.EntryRatio,
+            MathF.Max(Metrics.Size.TapTarget * scale, (area.Height - gap * (rows - 1)) / MathF.Max(1, rows)));
+        tileWidth = tileHeight * PrismStore.EntryRatio;
+        var gridLeft = area.Center.X - (tileWidth * PicksColumns + gap * (PicksColumns - 1)) * 0.5f;
+        var rounding = Metrics.Radius.Md * scale;
+        var fade = PrismMotion.At(pickSwapAge, 0f, Motion.Appear);
+        for (var slot = 0; slot < count; slot++)
+        {
+            var min = new Vector2(gridLeft + slot % PicksColumns * (tileWidth + gap),
+                area.Min.Y + slot / PicksColumns * (tileHeight + gap));
+            var tile = new Rect(min, min + new Vector2(tileWidth, tileHeight));
+            var shown = pickOrder[slot];
+            var swapping = fade < PrismMotion.Settled && pickFrom[slot] != shown;
+            if (swapping)
+            {
+                DrawRoundedLook(drawList, tile, looks[pickFrom[slot]].ImageUrl, 1f, rounding);
+            }
+
+            DrawRoundedLook(drawList, tile, looks[shown].ImageUrl, swapping ? fade : 1f, rounding);
+            DrawStarPill(drawList, tile, StarsOf(shown), scale);
+            var hovered = !store.Busy && UiInteract.Hover(tile.Min, tile.Max);
+            if (!hovered)
+            {
+                continue;
+            }
+
+            drawList.AddRectFilled(tile.Min, tile.Max, PickHoverWash, rounding);
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            if (UiInteract.Click(tile.Min, tile.Max, true))
+            {
+                OpenPick(shown);
+            }
+        }
+    }
+
+    private void DrawRoundedLook(ImDrawListPtr drawList, Rect rect, string url, float alpha, float rounding)
+    {
+        var texture = url.Length > 0 ? images.Sized(url, MathF.Max(rect.Width, rect.Height)) : null;
+        if (texture is null)
+        {
+            var fill = Surfaces.Fill(PrismArt.Fore, FillLevel.Tertiary);
+            drawList.AddRectFilled(rect.Min, rect.Max, ImGui.GetColorU32(fill with { W = fill.W * alpha }), rounding);
+            return;
+        }
+
+        var (uv0, uv1) = ImageFit.Cover(texture.Size.X, texture.Size.Y, rect.Width, rect.Height, CoverFocus);
+        drawList.AddImageRounded(texture.Handle, rect.Min, rect.Max, uv0, uv1,
+            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, alpha)), rounding, ImDrawFlags.RoundCornersAll);
+    }
+
+    private static void DrawStarPill(ImDrawListPtr drawList, Rect tile, int value, float scale)
+    {
+        var digit = Plain[Math.Clamp(value, 0, Plain.Length - 1)];
+        var pixels = PrismArt.LabelPixels();
+        var glyph = PickStarUnits * scale;
+        var pad = Metrics.Space.Xs * scale;
+        var height = PickPillUnits * scale;
+        var width = pad * 2f + glyph + Metrics.Space.Xxs * scale + PrismType.Measure(digit, PrismFace.Label, pixels).X;
+        var max = tile.Max - new Vector2(pad, pad);
+        var min = max - new Vector2(width, height);
+        var middle = (min.Y + max.Y) * 0.5f;
+        drawList.AddRectFilled(min, max, PickPillFill, height * 0.5f);
+        PhoneIcon.Draw(drawList, new Vector2(min.X + pad + glyph * 0.5f, middle), PhoneIcons.Star, PrismArt.PhotoFore,
+            glyph);
+        PrismType.Draw(drawList,
+            new Vector2(min.X + pad + glyph + Metrics.Space.Xxs * scale,
+                middle - PrismType.Snap(PrismFace.Label, pixels) * 0.5f), digit, PrismArt.PhotoFore, PrismFace.Label,
+            pixels);
+    }
+
+    private void OpenPick(int index)
+    {
+        store.ClearFailure();
+        StepTo(index, 1);
+        Go(PrismScreen.Runway);
     }
 
     private void SettleBallot(bool succeeded)
@@ -288,19 +523,18 @@ internal sealed partial class PrismApp
         }
 
         ballotOutcome = OutcomePending;
-        if (outcome == OutcomeSent)
+        if (outcome != OutcomeSent)
         {
-            heatCoins = store.LastBallotCoins;
-            heatDone = true;
-            UiFeedback.Play(heatCoins > 0 ? UiSound.Payout : UiSound.Success);
-            Go(PrismScreen.Runway, 0);
             return;
         }
 
-        lookIndex = Math.Max(0, stars.Length - 1);
+        heatCoins = store.LastBallotCoins;
+        heatDone = true;
+        UiFeedback.Play(heatCoins > 0 ? UiSound.Payout : UiSound.Success);
+        Go(PrismScreen.Runway, 0);
     }
 
-    private void DrawBallotPending(ImDrawListPtr drawList, Rect content, float scale)
+    private void DrawBallotPending(ImDrawListPtr drawList, Rect content, float top, float scale)
     {
         if (store.Busy || !store.Failed(PrismAction.Ballot))
         {
@@ -309,53 +543,60 @@ internal sealed partial class PrismApp
         }
 
         var reason = store.ActionFailureText;
-        DrawNotice(drawList, content, Loc.T(L.Common.LoadFailed),
+        DrawRunwayNotice(drawList, content, top, Loc.T(L.Common.LoadFailed),
             reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint), scale);
-        if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Common.Retry), Arrow, true))
+        if (DrawButton(drawList, ActionRect(content, scale), Loc.T(L.Common.Retry), ButtonStyle.Solid, scale))
         {
             store.RequestBallot();
         }
     }
 
+    private void DrawRunwayNotice(ImDrawListPtr drawList, Rect content, float top, string title, string body,
+        float scale)
+    {
+        top += Metrics.Space.Xl * scale;
+        top += PrismType.DrawHero(drawList, new Vector2(content.Min.X, top), title, content.Width, PrismArt.Fore) +
+               Metrics.Space.Sm * scale;
+        Typography.DrawWrappedLeft(new Vector2(content.Min.X, top), body, PrismArt.Muted, PrismType.Body,
+            content.Width);
+    }
+
     private void DrawHeatDone(ImDrawListPtr drawList, Rect content, float scale)
     {
-        var top = DrawHeader(drawList, content, string.Empty, string.Empty, true, scale);
-        var canJudge = store.Week is { } week && PrismPhases.Judgeable(week.Phase);
-        var strips = canJudge ? 2 : 1;
-        var notice = PrismMotion.Mark(drawList);
-        DrawNotice(drawList, content, Loc.T(L.Prism.HeatDoneTitle), Loc.T(L.Prism.HeatDoneHint), scale, strips);
-        PrismMotion.Rise(drawList, notice, PrismMotion.At(screenAge, DoneTextDelay, Motion.PageSettle),
-            PrismMotion.RiseUnits * scale);
-        var gutter = PrismArt.Gutter(scale);
-        var width = content.Width - gutter * 2f;
-        var count = heatCoins > 0 ? CoinCounter(heatCoins) : DoneCounter(stars.Length);
-        var pixels = PrismType.Fit(count, PrismFace.Numerals, width, DoneNumeralUnits * scale,
-            DoneNumeralMinUnits * scale, 1, out _);
-        var reveal = PrismMotion.At(screenAge, 0f, Motion.Sheet);
-        var left = content.Min.X + gutter;
-        DrawWipe(drawList, new Vector2(left, top), count, PrismFace.Numerals, pixels, reveal, PrismArt.Fore);
-        var cursor = top + PrismType.Snap(PrismFace.Numerals, pixels);
+        var left = content.Min.X;
+        var width = content.Width;
+        var top = DrawBackHeader(drawList, content, ratingBallot is { } ballot ? HeatTitle(ballot) : string.Empty,
+            scale) + Metrics.Space.Lg * scale;
+        var text = PrismMotion.Mark(drawList);
+        top = DrawTopPicks(drawList, left, top, width, scale) + Metrics.Space.Xl * scale;
+        top += PrismType.DrawHero(drawList, new Vector2(left, top), Loc.T(L.Prism.HeatDoneTitle), width,
+            PrismArt.Fore) + Metrics.Space.Sm * scale;
+        var hint = PrismType.Sentences(Loc.T(L.Prism.HeatDoneHint), PrismType.Body, width);
+        top += Typography.DrawWrappedLeft(new Vector2(left, top), hint, PrismArt.Muted, PrismType.Body,
+            PrismType.BalancedWidth(hint, PrismType.Body, width)) + Metrics.Space.Lg * scale;
         if (heatCoins > 0)
         {
-            var labelPixels = PrismArt.LabelPixels();
-            DrawWipe(drawList, new Vector2(left, cursor), Loc.T(L.Prism.JudgingCoinLabel), PrismFace.Label,
-                labelPixels, reveal, PrismArt.Muted);
-            cursor += PrismType.LineHeight(PrismFace.Label, labelPixels);
+            var pixels = PrismType.TitleUnits * scale;
+            DrawWipe(drawList, new Vector2(left, top), CoinCounter(heatCoins), PrismFace.Numerals, pixels,
+                PrismMotion.At(screenAge, 0f, Motion.Sheet), PrismArt.Fore);
+            top += PrismType.Snap(PrismFace.Numerals, pixels) + Metrics.Space.Xxs * scale;
+            Typography.Draw(drawList, new Vector2(left, top), Loc.T(L.Prism.JudgingCoinLabel), PrismArt.Muted,
+                PrismType.Caption);
+            top += Typography.LineHeight(PrismType.Caption) + Metrics.Space.Sm * scale;
         }
 
         var reward = RewardLine(store.Week?.JudgeReward);
         if (reward.Length > 0)
         {
-            var rewardMark = PrismMotion.Mark(drawList);
-            Typography.DrawWrappedLeft(new Vector2(left, cursor + Metrics.Space.Sm * scale), reward, PrismArt.Muted,
-                TextStyles.Subheadline, width);
-            PrismMotion.Rise(drawList, rewardMark, PrismMotion.At(screenAge, DoneTextDelay, Motion.PageSettle),
-                PrismMotion.RiseUnits * scale);
+            Typography.DrawWrappedLeft(new Vector2(left, top), reward, PrismArt.Muted, PrismType.Caption, width);
         }
 
-        var strip = PrismMotion.Mark(drawList);
-        if (canJudge && PrismArt.Strip(drawList, StripRect(content, scale, 1), Loc.T(L.Prism.JudgeAnother),
-                Arrow, true))
+        PrismMotion.Rise(drawList, text, PrismMotion.At(screenAge, DoneTextDelay, Motion.PageSettle),
+            PrismMotion.RiseUnits * scale);
+        var buttons = PrismMotion.Mark(drawList);
+        var canJudge = store.Week is { } week && PrismPhases.Judgeable(week.Phase);
+        if (canJudge && DrawButton(drawList, ActionRect(content, scale, 1), Loc.T(L.Prism.JudgeAnother),
+                ButtonStyle.Solid, scale))
         {
             heatDone = false;
             ratingBallot = null;
@@ -364,31 +605,112 @@ internal sealed partial class PrismApp
             Go(PrismScreen.Runway);
         }
 
-        if (PrismArt.Strip(drawList, StripRect(content, scale), Loc.T(L.Prism.Done), string.Empty,
-                strips == 1))
+        var done = Loc.T(L.Prism.Done);
+        var slot = ActionRect(content, scale);
+        if (DrawButton(drawList, canJudge ? PlainRect(slot.Center, done, width, 0.5f, scale) : slot,
+                done, canJudge ? ButtonStyle.Plain : ButtonStyle.Solid, scale))
         {
             Go(PrismScreen.Cover, -1);
         }
 
-        PrismMotion.Rise(drawList, strip, PrismMotion.At(screenAge, DoneTextDelay + PrismMotion.Stagger,
+        PrismMotion.Rise(drawList, buttons, PrismMotion.At(screenAge, DoneTextDelay + PrismMotion.Stagger,
             Motion.PageSettle), PrismMotion.RiseUnits * scale);
     }
 
+    private float DrawTopPicks(ImDrawListPtr drawList, float left, float top, float width, float scale)
+    {
+        var count = Math.Min(PrismArt.PodiumRanks, pickOrder.Length);
+        if (count == 0 || ratingBallot?.Looks is not { } looks || looks.Length < pickOrder.Length)
+        {
+            return top;
+        }
+
+        var gap = Metrics.Space.Sm * scale;
+        var lead = width * PodiumLeadShare;
+        var side = (width - lead - gap * 2f) / 2f;
+        var bottom = top + lead / PrismStore.EntryRatio;
+        var medal = PodiumMedalUnits * scale;
+        var rounding = Metrics.Radius.Md * scale;
+        for (var place = 1; place <= count; place++)
+        {
+            var columnLeft = place switch
+            {
+                1 => left + side + gap,
+                2 => left,
+                _ => left + side + gap + lead + gap,
+            };
+            var columnWidth = place == 1 ? lead : side;
+            var photo = new Rect(new Vector2(columnLeft, bottom - columnWidth / PrismStore.EntryRatio),
+                new Vector2(columnLeft + columnWidth, bottom));
+            DrawRoundedLook(drawList, photo, looks[pickOrder[place - 1]].ImageUrl, 1f, rounding);
+            var center = new Vector2(photo.Center.X, bottom);
+            PrismArt.Medal(drawList, center, medal, place, 0f, scale);
+            var digit = Plain[place];
+            Typography.Draw(drawList, center - Typography.Measure(digit, PrismType.Headline) * 0.5f, digit,
+                PrismArt.Fore, PrismType.Headline);
+        }
+
+        return bottom + medal;
+    }
+
+    private Rect ActionRect(Rect content, float scale, int fromBottom = 0)
+    {
+        var height = Button.LargeHeight * scale;
+        var bottom = content.Max.Y - bottomChrome - Metrics.Space.Lg * scale -
+                     fromBottom * (height + Metrics.Space.Sm * scale);
+        return new Rect(new Vector2(content.Min.X, bottom - height), new Vector2(content.Max.X, bottom));
+    }
+
+    private Rect PlainRect(Vector2 anchor, string label, float cap, float align, float scale)
+    {
+        var width = ButtonWidth([label], cap, scale);
+        var height = Button.LargeHeight * scale;
+        var left = anchor.X - width * align - Metrics.Space.Xl * scale * 0.5f * (1f - align * 2f);
+        return new Rect(new Vector2(left, anchor.Y - height * 0.5f),
+            new Vector2(left + width, anchor.Y + height * 0.5f));
+    }
+
+    private Rect ScreenOf(Rect content, float scale) =>
+        followedTheme is { } theme ? SceneChrome.ScreenFrom(content, theme, scale) : content;
+
     private void DrawCenteredLabel(ImDrawListPtr drawList, Rect content, string text)
     {
-        var upper = text;
         var labelPixels = PrismArt.LabelPixels();
-        var size = PrismType.Measure(upper, PrismFace.Label, labelPixels);
-        PrismType.Draw(drawList, content.Center - size * 0.5f, upper, PrismArt.Muted, PrismFace.Label, labelPixels);
+        var size = PrismType.Measure(text, PrismFace.Label, labelPixels);
+        PrismType.Draw(drawList, content.Center - size * 0.5f, text, PrismArt.Muted, PrismFace.Label, labelPixels);
     }
 
     private string LookCounter(int current, int total)
     {
+        current = Math.Min(current, total);
         var key = HashCode.Combine(current, total, Loc.Current.Code);
         return lookCounter.IsCurrent(key)
             ? lookCounter.Value
             : lookCounter.Store(key, Loc.T(L.Prism.LookCount, Plain[Math.Min(current, Plain.Length - 1)],
                 Plain[Math.Min(total, Plain.Length - 1)]));
+    }
+
+    private string RateCaption(int current, int total)
+    {
+        var key = HashCode.Combine(current, total, Loc.Current.Code);
+        return rateCaption.IsCurrent(key)
+            ? rateCaption.Value
+            : rateCaption.Store(key, Loc.T(L.Prism.WithTrack, LookCounter(current, total), Loc.T(L.Prism.InspectHint)));
+    }
+
+    private string PicksCaption(PrismBallotDto ballot)
+    {
+        var week = store.Week?.Title ?? string.Empty;
+        var key = HashCode.Combine(ballot.Stage, ballot.HeatLabel, week, Loc.Current.Code);
+        if (picksCaption.IsCurrent(key))
+        {
+            return picksCaption.Value;
+        }
+
+        var heat = HeatTitle(ballot);
+        var text = heat.Length > 0 && week.Length > 0 ? Loc.T(L.Prism.WithTrack, heat, week)
+            : heat.Length > 0 ? heat : week;
+        return picksCaption.Store(key, text);
     }
 
     private string CoinCounter(long coins)
@@ -419,13 +741,6 @@ internal sealed partial class PrismApp
             _ => string.Empty,
         };
         return rewardText.Store(key, text);
-    }
-
-    private string DoneCounter(int total)
-    {
-        var key = HashCode.Combine(total);
-        var number = Padded[Math.Min(total, Padded.Length - 1)];
-        return doneCounter.IsCurrent(key) ? doneCounter.Value : doneCounter.Store(key, number + "/" + number);
     }
 
     private string HeatTitle(PrismBallotDto ballot)
