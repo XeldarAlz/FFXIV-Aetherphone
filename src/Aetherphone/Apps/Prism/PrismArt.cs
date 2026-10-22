@@ -549,7 +549,7 @@ internal static class PrismArt
         var reach = MathF.Max(half, Metrics.Size.TapTarget * scale * 0.5f) - half;
         var hit = new Rect(new Vector2(chip.Min.X, chip.Min.Y - reach), new Vector2(chip.Max.X, chip.Max.Y + reach));
         var hovered = UiInteract.HoverOverlay(hit);
-        PhotoPill(drawList, chip, glyph, fitted, selected ? White : hovered ? ChipHover : ChipFill,
+        PaintPill(drawList, chip, glyph, fitted, selected ? White : hovered ? ChipHover : ChipFill,
             selected ? Ink : White, scale);
         if (hovered)
         {
@@ -584,7 +584,7 @@ internal static class PrismArt
         }
 
         var pill = new Rect(momentPill.Min + photo.Center, momentPill.Max + photo.Center);
-        PhotoPill(drawList, pill, glyph, momentFitted, ChipFill with { W = ChipFill.W * show }, White with { W = show },
+        PaintPill(drawList, pill, glyph, momentFitted, ChipFill with { W = ChipFill.W * show }, White with { W = show },
             scale);
     }
 
@@ -600,7 +600,17 @@ internal static class PrismArt
         return new Rect(new Vector2(left, anchor.Y - half), new Vector2(left + width, anchor.Y + half));
     }
 
-    private static void PhotoPill(ImDrawListPtr drawList, Rect pill, string glyph, string label, Vector4 fill,
+    public static void PhotoPill(ImDrawListPtr drawList, Vector2 bottomCorner, float maxWidth, string glyph,
+        string label, bool fromRight, float scale)
+    {
+        var half = ChipUnits * scale * 0.5f;
+        var pill = PillRect(new Vector2(bottomCorner.X, bottomCorner.Y - half), maxWidth, label, false, scale,
+            out var fitted);
+        var shift = new Vector2(fromRight ? pill.Width : 0f, 0f);
+        PaintPill(drawList, new Rect(pill.Min - shift, pill.Max - shift), glyph, fitted, ChipFill, White, scale);
+    }
+
+    private static void PaintPill(ImDrawListPtr drawList, Rect pill, string glyph, string label, Vector4 fill,
         Vector4 ink, float scale)
     {
         var pixels = LabelPixels();
