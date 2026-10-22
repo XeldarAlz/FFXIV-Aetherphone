@@ -12,6 +12,14 @@ internal enum PrismRewardLine : byte
     Spent,
 }
 
+internal enum PrismRewardKind : byte
+{
+    Badge,
+    Frame,
+    Coin,
+    Gil,
+}
+
 internal sealed class PrismPrizeRow
 {
     public readonly int Rank;
@@ -35,15 +43,11 @@ internal sealed class PrismPrizeRow
 
 internal static class PrismRewards
 {
-    public const int BadgeKind = 0;
-    public const int FrameKind = 1;
-    public const int CoinKind = 2;
-    public const int GilKind = 3;
     public const int KindCount = 4;
 
     private static readonly Comparison<PrismPrizeRow> ByRank = (left, right) => left.Rank.CompareTo(right.Rank);
 
-    public static int Offered(PrismPrizesDto? prizes, PrismJudgeRewardDto? judging, int[] into)
+    public static int Offered(PrismPrizesDto? prizes, PrismJudgeRewardDto? judging, PrismRewardKind[] into)
     {
         var badge = false;
         var frame = false;
@@ -67,22 +71,22 @@ internal static class PrismRewards
         var count = 0;
         if (badge)
         {
-            into[count++] = BadgeKind;
+            into[count++] = PrismRewardKind.Badge;
         }
 
         if (frame)
         {
-            into[count++] = FrameKind;
+            into[count++] = PrismRewardKind.Frame;
         }
 
         if (coins)
         {
-            into[count++] = CoinKind;
+            into[count++] = PrismRewardKind.Coin;
         }
 
         if (gil)
         {
-            into[count++] = GilKind;
+            into[count++] = PrismRewardKind.Gil;
         }
 
         return count;

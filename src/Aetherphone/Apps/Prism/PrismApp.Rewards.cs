@@ -43,7 +43,7 @@ internal sealed partial class PrismApp
     };
 
     private readonly List<PrismPrizeRow> rewardRows = new();
-    private readonly int[] rewardKinds = new int[PrismRewards.KindCount];
+    private readonly PrismRewardKind[] rewardKinds = new PrismRewardKind[PrismRewards.KindCount];
     private int rewardKindCount;
     private PrismPrizesDto? rewardsFor;
     private BadgeStyle? rewardBadge;
@@ -166,12 +166,13 @@ internal sealed partial class PrismApp
         return top + radius * 2f + Metrics.Space.Xxl * scale;
     }
 
-    private void DrawRewardArt(ImDrawListPtr drawList, Vector2 center, float radius, int kind, float turn, float scale)
+    private void DrawRewardArt(ImDrawListPtr drawList, Vector2 center, float radius, PrismRewardKind kind, float turn,
+        float scale)
     {
         PrismArt.Medal(drawList, center, radius, rank: 1, turn, scale);
         switch (kind)
         {
-            case 0:
+            case PrismRewardKind.Badge:
                 if (rewardBadge is not null)
                 {
                     BadgeStrip.DrawOne(drawList, center, rewardBadge, images, Palette.Luminance(PrismArt.Back) >= 0.5f,
@@ -183,13 +184,13 @@ internal sealed partial class PrismApp
                 var size = PrismType.Measure(Plain[1], PrismFace.Numerals, pixels);
                 PrismType.Draw(drawList, center - size * 0.5f, Plain[1], PrismArt.Fore, PrismFace.Numerals, pixels);
                 break;
-            case 1:
+            case PrismRewardKind.Frame:
                 DrawRewardAvatar(drawList, center, radius * MedalAvatarShare);
                 break;
-            case 2:
+            case PrismRewardKind.Coin:
                 CurrencyGlyph.Draw(drawList, CurrencyKind.Coins, center, radius * MedalGlyphShare);
                 break;
-            default:
+            case PrismRewardKind.Gil:
                 if (GearItem(GameData.GilItemId, out _, out var iconId))
                 {
                     var half = new Vector2(radius * MedalIconShare, radius * MedalIconShare);
@@ -215,7 +216,8 @@ internal sealed partial class PrismApp
         }
     }
 
-    private float DrawRewardChapter(ImDrawListPtr drawList, float left, float top, float width, int kind, int number,
+    private float DrawRewardChapter(ImDrawListPtr drawList, float left, float top, float width, PrismRewardKind kind,
+        int number,
         float scale)
     {
         var mark = PrismMotion.Mark(drawList);
@@ -232,11 +234,11 @@ internal sealed partial class PrismApp
         PrismType.Draw(drawList, new Vector2(textLeft, cursor), Padded[number + 1], PrismArt.Muted, PrismFace.Label,
             labelPixels);
         cursor += labelLine;
-        var pixels = PrismType.Fit(Loc.T(RewardTitles[kind]), PrismFace.Headline, textWidth, RewardTitleUnits * scale,
+        var pixels = PrismType.Fit(Loc.T(RewardTitles[(int)kind]), PrismFace.Headline, textWidth, RewardTitleUnits * scale,
             RewardTitleUnits * scale * RewardTitleMinShare, RewardTitleLines, out var lines);
         cursor += PrismType.DrawLines(drawList, new Vector2(textLeft, cursor), lines, PrismArt.Fore, PrismFace.Headline,
             pixels) + Metrics.Space.Xs * scale;
-        cursor += Typography.DrawWrappedLeft(new Vector2(textLeft, cursor), Loc.T(RewardBodies[kind]), PrismArt.Muted,
+        cursor += Typography.DrawWrappedLeft(new Vector2(textLeft, cursor), Loc.T(RewardBodies[(int)kind]), PrismArt.Muted,
             TextStyles.Subheadline, textWidth);
         var extra = RewardExtra(kind);
         if (extra.Length > 0)
@@ -256,18 +258,18 @@ internal sealed partial class PrismApp
         return gilText.IsCurrent(key) ? gilText.Value : gilText.Store(key, string.Concat(Loc.T(L.Prism.GilSent), " ", note));
     }
 
-    private string RewardExtra(int kind)
+    private string RewardExtra(PrismRewardKind kind)
     {
         switch (kind)
         {
-            case 1 when rewardFrameDays > 0:
+            case PrismRewardKind.Frame when rewardFrameDays > 0:
                 var key = HashCode.Combine(rewardFrameDays, Loc.Current.Code);
                 return rewardDaysText.IsCurrent(key)
                     ? rewardDaysText.Value
                     : rewardDaysText.Store(key, Loc.Plural(L.Prism.FrameDays, rewardFrameDays));
-            case 2:
+            case PrismRewardKind.Coin:
                 return RewardLine(store.Week?.JudgeReward);
-            case 3:
+            case PrismRewardKind.Gil:
                 return Prizes is { GilNote.Length: > 0 } prizes ? GilLines(prizes.GilNote) : Loc.T(L.Prism.GilSent);
             default:
                 return string.Empty;
