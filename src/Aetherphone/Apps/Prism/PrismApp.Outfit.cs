@@ -51,6 +51,10 @@ internal sealed partial class PrismApp
         if (!VanillaEntry)
         {
             captured = glamour.Capture();
+            if (screen == PrismScreen.Entry)
+            {
+                KeepEntryDrops();
+            }
         }
         else if (screen == PrismScreen.Entry && store.Week?.MyEntry is { } entry)
         {
@@ -63,10 +67,39 @@ internal sealed partial class PrismApp
 
     private void ResetEntryOutfit()
     {
-        droppedMods.Clear();
         captured = VanillaEntry ? Array.Empty<GlamGearDto>() : glamour.Capture();
+        KeepEntryDrops();
         LoadDraftGear(store.Week?.MyEntry?.Outfit);
         gearCatalog.EnsureBuilt();
+    }
+
+    private void KeepEntryDrops()
+    {
+        droppedMods.Clear();
+        if (VanillaEntry || store.Week?.MyEntry is not { } entry || entry.Track != store.Track)
+        {
+            return;
+        }
+
+        var sent = new HashSet<string>(StringComparer.Ordinal);
+        var outfit = entry.Outfit ?? Array.Empty<GlamGearDto>();
+        for (var index = 0; index < outfit.Length; index++)
+        {
+            var mods = outfit[index].Mods ?? Array.Empty<GlamModDto>();
+            for (var modIndex = 0; modIndex < mods.Length; modIndex++)
+            {
+                sent.Add(PostedMods.Key(mods[modIndex]));
+            }
+        }
+
+        SyncCapturedMods();
+        for (var index = 0; index < capturedMods.Length; index++)
+        {
+            if (!sent.Contains(capturedMods[index].Key))
+            {
+                droppedMods.Add(capturedMods[index].Key);
+            }
+        }
     }
 
     private GlamGearDto[]? EntryOutfit() => VanillaEntry ? DraftOutfit() : EntryMods();
