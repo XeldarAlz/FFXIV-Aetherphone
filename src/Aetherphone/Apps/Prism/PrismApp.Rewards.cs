@@ -110,8 +110,8 @@ internal sealed partial class PrismApp
         {
             var enter = new Rect(new Vector2(left, cursor),
                 new Vector2(left + width, cursor + Button.LargeHeight * scale));
-            if (DrawButton(list, enter, Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.Submit), ButtonStyle.Solid,
-                    scale, enabled: !store.Busy, id: "prism.rewards.enter"))
+            if (DrawButton(list, enter, EnterLabel(), ButtonStyle.Solid, scale, enabled: !store.Busy,
+                    id: "prism.rewards.enter"))
             {
                 StartEntry();
             }
