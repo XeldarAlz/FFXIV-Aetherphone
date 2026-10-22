@@ -1,6 +1,6 @@
 # Aetherphone Privacy Policy
 
-**Last updated:** 20 October 2026
+**Last updated:** 16 October 2026
 
 This policy explains how personal data is handled when you use the Aetherphone plugin, the Aetherphone companion app, and Aethernet, the online service behind their social features. Features of the plugin that work offline, such as wallpapers, timers and notes, keep their data on your computer.
 
@@ -25,8 +25,6 @@ For any privacy question or request, write to **privacy@aetherphone.net**. A pos
 **Activity.** When you were last active, when you read a conversation, and your time zone; you can hide these from other players in your settings. Which posts your feeds showed you, whether you opened or shared them, and which stories you viewed. How long you listened to community radio stations or played mini-games, for Aether Coin quests. Your current zone and world while you host or look for nearby MogCast streams and Jams. What you are listening to, if you turn on sharing it with friends. Your calls: who took part, when and for how long. Your Aether Coin and Gamba history, used to run games and detect cheating.
 
 **Gamba tables.** If you host a Gamba table while standing in a housing ward and leave **Pin to this venue** on, the table carries that address (world, housing district, ward, and plot or apartment and room) so that players can find it. If you host a gil table and turn on Gamba's trade sync, each gil trade you make sends the partner's character name and home world, as your in-game trade window shows them, and the gil traded to Aethernet, which records the trade in your table's ledger, as a guest entry under that name when the partner is not one of the people at your table. A guest entry a host records by hand stores the character name the host typed.
-
-**Prism outfits.** Off until you turn on **Share my outfit** in Prism. With it on, the glam you enter carries the items and dyes your character has on at that moment, as they look after glamour, never the gear underneath. Anyone who sees the results can see that list and try the items on. You can stop sharing or update it until entries close.
 
 **Leaderboards and the Hall of Fame.** Both are off until you turn them on, and you can change them in Settings, under Privacy. With **Show me on leaderboards** on, the best scores you set in mini-games are sent to us and shown to other players with your profile name and picture. With **Show me in the Gamba Hall of Fame** on, your weekly Gamba results, such as your biggest win, are shown on the Hall of Fame boards. We keep these weekly results whether or not you appear on the boards.
 
