@@ -444,15 +444,9 @@ internal sealed partial class PrismApp
             }
         }
 
-        var label = Loc.T(L.Prism.Published);
-        var pixels = PrismArt.LabelPixels();
-        var size = PrismType.Measure(label, PrismFace.Label, pixels);
         var pad = Metrics.Space.Md * scale;
-        var max = frame.Max - new Vector2(pad, pad);
-        var min = max - new Vector2(size.X + pad * 2f, ChipHeightUnits * scale);
-        drawList.AddRectFilled(min, max, ImGui.GetColorU32(TileFill), (max.Y - min.Y) * 0.5f);
-        PrismType.Draw(drawList, new Vector2(min.X + pad, (min.Y + max.Y - PrismType.Snap(PrismFace.Label, pixels)) * 0.5f),
-            label, PrismArt.PhotoFore, PrismFace.Label, pixels);
+        PrismArt.PhotoPill(drawList, frame.Max - new Vector2(pad, pad), frame.Width - pad * 2f, PhoneIcons.CircleCheck,
+            Loc.T(L.Prism.Published), true, scale);
     }
 
     private void DrawPhotoLike(ImDrawListPtr drawList, Rect frame, GlamDto glam, float scale)
