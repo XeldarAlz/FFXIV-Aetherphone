@@ -42,7 +42,6 @@ internal sealed partial class PrismApp
     private const int TipSave = 2;
     private const int TipFavourite = 3;
     private const int TipEdit = 4;
-    private const int TipPieceFirst = 24;
 
     private readonly string[] profileTabs = new string[3];
     private readonly int[] profileTabKinds = new int[3];
@@ -719,19 +718,6 @@ internal sealed partial class PrismApp
             ButtonStyle.Plain, tooltip, glyphInk: glyphInk);
         ImGui.PopID();
         return clicked;
-    }
-
-    private static void DrawRowHover(ImDrawListPtr drawList, Rect row, bool hovered, float scale)
-    {
-        if (!hovered)
-        {
-            return;
-        }
-
-        var pad = Metrics.Space.Xs * scale;
-        drawList.AddRectFilled(row.Min - new Vector2(pad, 0f), row.Max + new Vector2(pad, 0f),
-            ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Quaternary)), Metrics.Radius.Md * scale);
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
     }
 
     private float DrawLaneState(ImDrawListPtr drawList, float left, float width, float top, FeedLane<GlamDto> lane,

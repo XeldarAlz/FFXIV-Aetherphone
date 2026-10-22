@@ -23,11 +23,6 @@ internal enum WardrobeAction : byte
     Delete,
 }
 
-internal readonly record struct FitPiece(GlamGearDto Piece, string Name, uint Icon, string Dyes, uint Dye0, uint Dye1,
-    bool Owned);
-
-internal readonly record struct FitMod(GlamModDto Mod, int Slot, string Author, bool Allowed, bool Installed);
-
 internal sealed partial class PrismApp
 {
     private const float BoardDesignUnits = 360f;
@@ -36,10 +31,6 @@ internal sealed partial class PrismApp
     private const float BoardPitchUnits = 68f;
     private const float BoardColumnUnits = 96f;
     private const int BoardWeaponRow = 1;
-    private const float PieceIconUnits = 40f;
-    private const float PieceRowUnits = 56f;
-    private const float OwnedMarkUnits = 4f;
-    private const float DyeDotUnits = 4.5f;
     private const int SheetCapacity = 4;
     private const int CollagePieces = 4;
 
@@ -63,18 +54,9 @@ internal sealed partial class PrismApp
     private readonly ChipRail wardrobeRail = new();
     private readonly string[] wardrobeChips = new string[2];
     private readonly bool[] wardrobeChipActive = new bool[2];
-    private readonly List<FitPiece> fitPieces = new();
-    private readonly List<FitMod> fitMods = new();
-    private readonly HashSet<string> fitModKeys = new(StringComparer.Ordinal);
     private WardrobeOutfit? fitFor;
     private string? fitLanguage;
-    private bool fitStorage;
-    private bool fitMaybe;
     private string fitMeta = string.Empty;
-    private string fitPiecesTitle = string.Empty;
-    private string fitOwnedLine = string.Empty;
-    private string fitModsTitle = string.Empty;
-    private string fitModsLine = string.Empty;
     private string outfitId = string.Empty;
     private bool favouritesOnly;
     private CachedText outfitNameText;
@@ -272,6 +254,7 @@ internal sealed partial class PrismApp
     {
         Push(PrismScreen.WardrobeOutfit);
         outfitId = id;
+        ResetPieces();
         renaming = false;
     }
 
@@ -339,22 +322,9 @@ internal sealed partial class PrismApp
         }
     }
 
-    private void BoardTooltip(Rect tile, GlamGearDto piece)
-    {
-        for (var index = 0; index < fitPieces.Count; index++)
-        {
-            if (ReferenceEquals(fitPieces[index].Piece, piece))
-            {
-                HoverTooltip.Show(tile, fitPieces[index].Name);
-                return;
-            }
-        }
-
-        if (piece.ItemId == 0 && fitModsTitle.Length > 0)
-        {
-            HoverTooltip.Show(tile, fitModsTitle);
-        }
-    }
+    private void BoardTooltip(Rect tile, GlamGearDto piece) =>
+        HoverTooltip.Show(tile,
+            piece.ItemId == 0 ? ModCountLine() : GearItem(piece.ItemId, out var name, out _) ? name : string.Empty);
 
     private void DrawWardrobeOutfit(ImDrawListPtr drawList, Rect content, float scale)
     {
@@ -394,6 +364,14 @@ internal sealed partial class PrismApp
             {
                 PrismArt.TopFog(list, hero, scale);
             }
+
+            if (UiInteract.Click(hero.Min, hero.Max, piecesOpen && UiInteract.Hover(hero.Min, hero.Max)))
+            {
+                piecesOpen = false;
+            }
+
+            DrawPiecesLayer(list, hero, topInset, outfit.Gear, scale);
+            DrawPiecesChip(list, hero, scale);
         }
         else
         {
@@ -431,8 +409,8 @@ internal sealed partial class PrismApp
                 Loc.T(L.Prism.TryOnWithoutGlamourer), PrismArt.Muted, PrismType.Caption, right - left);
         }
 
-        cursor = DrawFitPieces(list, left, right, cursor, scale);
-        cursor = DrawFitMods(list, left, right, cursor, scale);
+        cursor = DrawPieceSection(list, left, right, cursor + Metrics.Space.Xl * scale, outfit.Gear, scale);
+        cursor = DrawModSection(list, left, right, cursor, outfit.Gear, scale);
         ImGui.Dummy(new Vector2(width, cursor - origin.Y + PrismArt.BottomMargin(scale)));
     }
 
@@ -474,220 +452,21 @@ internal sealed partial class PrismApp
         return top + height;
     }
 
-    private float DrawFitPieces(ImDrawListPtr drawList, float left, float right, float top, float scale)
-    {
-        if (fitPieces.Count == 0)
-        {
-            return top;
-        }
-
-        top = DrawSectionTitle(drawList, left, right, top + Metrics.Space.Xl * scale, fitPiecesTitle, fitOwnedLine,
-            scale);
-        if (fitMaybe)
-        {
-            top += Typography.DrawWrappedLeft(new Vector2(left, top + Metrics.Space.Xxs * scale),
-                Loc.T(L.Prism.OpenStorage), PrismArt.Muted, PrismType.Caption, right - left) + Metrics.Space.Xxs * scale;
-        }
-
-        for (var index = 0; index < fitPieces.Count; index++)
-        {
-            ImGui.PushID(index);
-            top = DrawFitPiece(drawList, left, right, top, fitPieces[index], index, scale);
-            ImGui.PopID();
-        }
-
-        return top;
-    }
-
-    private float DrawFitPiece(ImDrawListPtr drawList, float left, float right, float top, in FitPiece piece, int tip,
-        float scale)
-    {
-        var row = new Rect(new Vector2(left, top), new Vector2(right, top + FitRowHeight(scale)));
-        var reach = Metrics.Size.TapTarget * scale;
-        var tryCenter = new Vector2(right - reach * 0.5f, row.Center.Y);
-        var overTry = UiInteract.Hover(tryCenter - new Vector2(reach * 0.5f, reach * 0.5f),
-            tryCenter + new Vector2(reach * 0.5f, reach * 0.5f));
-        var hovered = UiInteract.Hover(row.Min, row.Max) && !overTry;
-        DrawRowHover(drawList, row, hovered, scale);
-        var icon = PieceIconUnits * scale;
-        var iconMin = new Vector2(left, row.Center.Y - icon * 0.5f);
-        GameIconTile.Draw(drawList, textures, piece.Icon, iconMin, iconMin + new Vector2(icon, icon),
-            Metrics.Radius.Sm * scale, scale);
-        var mark = new Vector2(iconMin.X + icon, iconMin.Y + icon);
-        if (piece.Owned)
-        {
-            drawList.AddCircleFilled(mark, (OwnedMarkUnits + Metrics.Stroke.Thin) * scale, ImGui.GetColorU32(PrismArt.Back));
-            drawList.AddCircleFilled(mark, OwnedMarkUnits * scale, ImGui.GetColorU32(PrismArt.Fore));
-        }
-        else if (fitMaybe)
-        {
-            drawList.AddCircleFilled(mark, (OwnedMarkUnits + Metrics.Stroke.Thin) * scale, ImGui.GetColorU32(PrismArt.Back));
-            drawList.AddCircle(mark, OwnedMarkUnits * scale, ImGui.GetColorU32(PrismArt.Fore), 0, Metrics.Stroke.Thin * scale);
-        }
-
-        if (IconButton(drawList, tryCenter, PhoneIcons.Wand, TipPieceFirst + tip, Loc.T(L.Prism.TryOnGlam), scale,
-                PrismArt.Muted))
-        {
-            glamour.TryOnPiece(piece.Piece);
-            StartWearing(string.Empty, piece.Name);
-        }
-
-        var textLeft = iconMin.X + icon + Metrics.Space.Md * scale;
-        var room = MathF.Max(1f, tryCenter.X - reach * 0.5f - Metrics.Space.Sm * scale - textLeft);
-        var nameHeight = Typography.LineHeight(PrismType.Headline);
-        var captionHeight = Typography.LineHeight(PrismType.Caption);
-        var textTop = row.Center.Y - (nameHeight + (piece.Dyes.Length > 0 ? captionHeight : 0f)) * 0.5f;
-        Typography.Draw(drawList, new Vector2(textLeft, textTop), Typography.FitText(piece.Name, room, PrismType.Headline),
-            PrismArt.Fore, PrismType.Headline);
-        if (piece.Dyes.Length > 0)
-        {
-            var dot = DyeDotUnits * scale;
-            var middle = textTop + nameHeight + captionHeight * 0.5f;
-            var x = textLeft + dot;
-            x = DrawDyeDot(drawList, x, middle, dot, piece.Dye0, scale);
-            x = DrawDyeDot(drawList, x, middle, dot, piece.Dye1, scale);
-            var dyeLeft = x - dot + Metrics.Space.Xs * scale;
-            Typography.Draw(drawList, new Vector2(dyeLeft, textTop + nameHeight),
-                Typography.FitText(piece.Dyes, MathF.Max(1f, textLeft + room - dyeLeft), PrismType.Caption),
-                PrismArt.Muted, PrismType.Caption);
-        }
-
-        if (UiInteract.Click(row.Min, row.Max, hovered))
-        {
-            OpenItemGlams(piece.Piece.ItemId);
-        }
-
-        return row.Max.Y;
-    }
-
-    private static float DrawDyeDot(ImDrawListPtr drawList, float x, float middle, float radius, uint rgb, float scale)
-    {
-        if (rgb == 0)
-        {
-            return x;
-        }
-
-        drawList.AddCircleFilled(new Vector2(x, middle), radius, ImGui.GetColorU32(Palette.FromRgb(rgb)));
-        drawList.AddCircle(new Vector2(x, middle), radius, ImGui.GetColorU32(PrismArt.Faint), 0,
-            Metrics.Stroke.Hairline * scale);
-        return x + radius * 2f + Metrics.Space.Xxs * scale;
-    }
-
-    private float DrawFitMods(ImDrawListPtr drawList, float left, float right, float top, float scale)
-    {
-        if (fitMods.Count == 0)
-        {
-            return top;
-        }
-
-        top = DrawSectionTitle(drawList, left, right, top + Metrics.Space.Xl * scale, fitModsTitle, fitModsLine, scale);
-        var icon = PieceIconUnits * scale;
-        var nameHeight = Typography.LineHeight(PrismType.Headline);
-        var captionHeight = Typography.LineHeight(PrismType.Caption);
-        for (var index = 0; index < fitMods.Count; index++)
-        {
-            var mod = fitMods[index];
-            var row = new Rect(new Vector2(left, top), new Vector2(right, top + FitRowHeight(scale)));
-            var hovered = UiInteract.Hover(row.Min, row.Max);
-            DrawRowHover(drawList, row, hovered, scale);
-            var iconMin = new Vector2(left, row.Center.Y - icon * 0.5f);
-            PrismArt.SlotTile(drawList, new Rect(iconMin, iconMin + new Vector2(icon, icon)), mod.Slot, 0, scale);
-            var action = mod.Installed ? Loc.T(L.Prism.Installed) : mod.Allowed ? Loc.T(L.Prism.GetMod) : string.Empty;
-            var actionWidth = Typography.Measure(action, PrismType.Caption).X;
-            Typography.Draw(drawList, new Vector2(right - actionWidth, row.Center.Y - captionHeight * 0.5f), action,
-                PrismArt.Muted, PrismType.Caption);
-            var textLeft = iconMin.X + icon + Metrics.Space.Md * scale;
-            var room = MathF.Max(1f, right - textLeft - (actionWidth > 0f ? actionWidth + Metrics.Space.Md * scale : 0f));
-            var textTop = row.Center.Y - (nameHeight + (mod.Author.Length > 0 ? captionHeight : 0f)) * 0.5f;
-            Typography.Draw(drawList, new Vector2(textLeft, textTop),
-                Typography.FitText(mod.Mod.Name, room, PrismType.Headline), PrismArt.Fore, PrismType.Headline);
-            Typography.Draw(drawList, new Vector2(textLeft, textTop + nameHeight),
-                Typography.FitText(mod.Author, room, PrismType.Caption), PrismArt.Muted, PrismType.Caption);
-            if (UiInteract.Click(row.Min, row.Max, hovered))
-            {
-                if (mod.Allowed)
-                {
-                    UrlActions.AskThenOpen(mod.Mod.Link);
-                }
-                else
-                {
-                    OpenModGlams(mod.Mod);
-                }
-            }
-
-            top = row.Max.Y;
-        }
-
-        return top;
-    }
-
-    private static float FitRowHeight(float scale) => MathF.Max(PieceRowUnits * scale,
-        Typography.LineHeight(PrismType.Headline) + Typography.LineHeight(PrismType.Caption) + Metrics.Space.Sm * scale);
-
     private void SyncFit(WardrobeOutfit outfit)
     {
-        var storage = OwnedItems.StorageLoaded;
-        if (ReferenceEquals(outfit, fitFor) && ReferenceEquals(fitLanguage, Loc.Current.Code) && storage == fitStorage)
+        RefreshPieces(outfit.Id, outfit.Gear);
+        if (ReferenceEquals(outfit, fitFor) && ReferenceEquals(fitLanguage, Loc.Current.Code))
         {
             return;
         }
 
         fitFor = outfit;
         fitLanguage = Loc.Current.Code;
-        fitStorage = storage;
-        fitPieces.Clear();
-        fitMods.Clear();
-        fitModKeys.Clear();
-        var owned = 0;
-        var gear = outfit.Gear;
-        for (var index = 0; index < gear.Length; index++)
-        {
-            var piece = gear[index];
-            if (piece.ItemId != 0 && gameData.TryGetItem(piece.ItemId, out var name, out var icon, out _))
-            {
-                var mine = OwnedItems.Owns(piece.ItemId);
-                owned += mine ? 1 : 0;
-                fitPieces.Add(new FitPiece(piece, name, icon, FitDyes(piece.Stain0, piece.Stain1),
-                    gameData.StainColor(piece.Stain0), gameData.StainColor(piece.Stain1), mine));
-            }
-
-            var mods = piece.Mods ?? Array.Empty<GlamModDto>();
-            for (var modIndex = 0; modIndex < mods.Length; modIndex++)
-            {
-                var mod = mods[modIndex];
-                if (fitModKeys.Add(PostedMods.Key(mod)))
-                {
-                    fitMods.Add(new FitMod(mod, piece.ItemId == 0 ? GearSlots.None : piece.Slot, mod.Author,
-                        ModLinks.IsAllowed(mod.Link), glamour.HasMod(mod)));
-                }
-            }
-        }
-
-        var installed = 0;
-        for (var index = 0; index < fitMods.Count; index++)
-        {
-            installed += fitMods[index].Installed ? 1 : 0;
-        }
-
-        fitMaybe = !storage && owned < fitPieces.Count;
-        fitPiecesTitle = Loc.Plural(L.Prism.PieceCount, fitPieces.Count);
-        fitOwnedLine = Loc.Plural(L.Prism.OwnPieces, fitPieces.Count, owned);
-        fitModsTitle = Loc.Plural(L.Prism.ModCount, fitMods.Count);
-        fitModsLine = glamour.HasPenumbra
-            ? Loc.T(L.Prism.ModsInstalled, installed, fitMods.Count)
-            : Loc.T(L.Prism.ModsNeedPenumbra);
         var saved = Loc.T(L.Prism.SavedOn, TimeText.MonthDay(outfit.CreatedAtUnix));
-        fitMeta = fitPieces.Count == 0 && fitMods.Count == 0 ? saved
-            : fitMods.Count == 0 ? string.Concat(fitPiecesTitle, MetaSeparator, saved)
-            : fitPieces.Count == 0 ? string.Concat(fitModsTitle, MetaSeparator, saved)
-            : string.Concat(fitPiecesTitle, MetaSeparator, fitModsTitle, MetaSeparator, saved);
-    }
-
-    private string FitDyes(byte stain0, byte stain1)
-    {
-        var first = gameData.StainName(stain0);
-        var second = gameData.StainName(stain1);
-        return first.Length == 0 ? second : second.Length == 0 ? first : string.Concat(first, ", ", second);
+        fitMeta = totalPieces == 0 && totalMods == 0 ? saved
+            : totalMods == 0 ? string.Concat(PieceCountLine(), MetaSeparator, saved)
+            : totalPieces == 0 ? string.Concat(ModCountLine(), MetaSeparator, saved)
+            : string.Concat(PieceCountLine(), MetaSeparator, ModCountLine(), MetaSeparator, saved);
     }
 
     private float DrawOutfitName(ImDrawListPtr drawList, float left, float right, float top, WardrobeOutfit outfit,
