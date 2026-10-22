@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Notifications;
@@ -60,6 +61,15 @@ internal static class PrismArt
     private const float FailedGlyphShare = 0.3f;
     private const float TryOnHoldSeconds = 0.9f;
     private const float TryOnDim = 0.25f;
+    private const float IconStrokeUnits = 1.8f;
+    private const int IconMaxPoints = 64;
+    private const int IconCapSegments = 6;
+    private const float ArcStepDegrees = 22.5f;
+    private const float TileIconShare = 0.58f;
+    private const float TileDyeAlpha = 0.22f;
+    private const float TileDotShare = 0.08f;
+    private const float TileDotInsetShare = 0.18f;
+    private const float TileDotRingAlpha = 0.35f;
 
     public static readonly Vector4 Bone = new(0.957f, 0.945f, 0.918f, 1f);
     public static readonly Vector4 Ink = new(0.067f, 0.067f, 0.067f, 1f);
@@ -120,6 +130,7 @@ internal static class PrismArt
 
     private static readonly string[] Digits = { "1", "2", "3", "4", "5" };
 
+    private static readonly IconStroke[][] SlotIcons = BuildSlotIcons();
     private static string momentLabel = string.Empty;
     private static string momentFitted = string.Empty;
     private static float momentRoom;
@@ -611,5 +622,181 @@ internal static class PrismArt
         }
 
         return packed;
+    }
+
+    public static void SlotIcon(ImDrawListPtr drawList, Vector2 center, float size, int slot, Vector4 ink)
+    {
+        var strokes = SlotIcons[(uint)(slot + 1) < (uint)SlotIcons.Length ? slot + 1 : 0];
+        var unit = size / IconUnits;
+        var thickness = IconStrokeUnits * unit;
+        var origin = center - new Vector2(size * 0.5f, size * 0.5f);
+        var color = ImGui.GetColorU32(ink);
+        Span<Vector2> points = stackalloc Vector2[IconMaxPoints];
+        for (var strokeIndex = 0; strokeIndex < strokes.Length; strokeIndex++)
+        {
+            var stroke = strokes[strokeIndex];
+            var count = stroke.Points.Length;
+            for (var pointIndex = 0; pointIndex < count; pointIndex++)
+            {
+                points[pointIndex] = origin + stroke.Points[pointIndex] * unit;
+            }
+
+            drawList.AddPolyline(ref points[0], count, color, stroke.Closed ? ImDrawFlags.Closed : ImDrawFlags.None,
+                thickness);
+            if (!stroke.Closed)
+            {
+                drawList.AddCircleFilled(points[0], thickness * 0.5f, color, IconCapSegments);
+                drawList.AddCircleFilled(points[count - 1], thickness * 0.5f, color, IconCapSegments);
+            }
+        }
+    }
+
+    public static void SlotTile(ImDrawListPtr drawList, Rect tile, int slot, uint dyeRgb, float scale,
+        bool empty = false)
+    {
+        var size = tile.Width;
+        var radius = size * Metrics.Radius.HomeTileFactor;
+        var iconSize = size * TileIconShare;
+        var level = Surfaces.Fill(themeInks.Fore, FillLevel.Primary);
+        if (empty)
+        {
+            drawList.AddRect(tile.Min, tile.Max, ImGui.GetColorU32(level), radius, ImDrawFlags.None,
+                Metrics.Stroke.Thin * scale);
+            SlotIcon(drawList, tile.Center, iconSize, slot, themeInks.Muted);
+            return;
+        }
+
+        var tint = Palette.FromRgb(dyeRgb);
+        drawList.AddRectFilled(tile.Min, tile.Max,
+            ImGui.GetColorU32(dyeRgb == 0 ? level : tint with { W = TileDyeAlpha }), radius);
+        SlotIcon(drawList, tile.Center, iconSize, slot, themeInks.Fore);
+        if (dyeRgb == 0)
+        {
+            return;
+        }
+
+        var dot = size * TileDotShare;
+        var dotCenter = tile.Max - new Vector2(size * TileDotInsetShare, size * TileDotInsetShare);
+        drawList.AddCircleFilled(dotCenter, dot + MathF.Max(1f, Metrics.Stroke.Hairline * scale),
+            ImGui.GetColorU32(themeInks.Fore with { W = TileDotRingAlpha }));
+        drawList.AddCircleFilled(dotCenter, dot, ImGui.GetColorU32(tint));
+    }
+
+    private readonly record struct IconStroke(Vector2[] Points, bool Closed);
+
+    private sealed class IconPen
+    {
+        private readonly List<Vector2> points = new();
+
+        public IconPen Through(params float[] coordinates)
+        {
+            for (var index = 0; index + 1 < coordinates.Length; index += 2)
+            {
+                points.Add(new Vector2(coordinates[index], coordinates[index + 1]));
+            }
+
+            return this;
+        }
+
+        public IconPen Arc(float centerX, float centerY, float radiusX, float radiusY, float fromDegrees,
+            float toDegrees)
+        {
+            var segments = Math.Max(2, (int)MathF.Ceiling(MathF.Abs(toDegrees - fromDegrees) / ArcStepDegrees));
+            for (var index = 0; index <= segments; index++)
+            {
+                var angle = (fromDegrees + (toDegrees - fromDegrees) * index / segments) * MathF.PI / 180f;
+                points.Add(new Vector2(centerX + radiusX * MathF.Cos(angle), centerY + radiusY * MathF.Sin(angle)));
+            }
+
+            return this;
+        }
+
+        public IconStroke Open() => Finish(false);
+
+        public IconStroke Closed() => Finish(true);
+
+        private IconStroke Finish(bool closed)
+        {
+            Debug.Assert(points.Count <= IconMaxPoints, "A slot icon stroke outgrew the draw buffer.");
+            return new IconStroke(points.ToArray(), closed);
+        }
+    }
+
+    private static IconStroke Oval(float centerX, float centerY, float radiusX, float radiusY) =>
+        new IconPen().Arc(centerX, centerY, radiusX, radiusY, 0f, 360f - ArcStepDegrees).Closed();
+
+    private static IconStroke[][] BuildSlotIcons()
+    {
+        IconStroke[] sparkle =
+        [
+            new IconPen().Through(11f, 4f, 12.8f, 8.6f, 17.5f, 10.5f, 12.8f, 12.4f, 11f, 17f, 9.2f, 12.4f, 4.5f, 10.5f,
+                9.2f, 8.6f).Closed(),
+            new IconPen().Through(18f, 14.5f, 18.8f, 16.3f, 20.6f, 17.1f, 18.8f, 17.9f, 18f, 19.7f, 17.2f, 17.9f, 15.4f,
+                17.1f, 17.2f, 16.3f).Closed(),
+        ];
+        IconStroke[] sword =
+        [
+            new IconPen().Through(20f, 4f, 20f, 8.5f, 9.5f, 19f, 5f, 14.5f, 15.5f, 4f).Closed(),
+            new IconPen().Through(6.5f, 11.5f, 12.5f, 17.5f).Open(),
+            new IconPen().Through(4f, 20f, 6.5f, 17.5f).Open(),
+        ];
+        IconStroke[] shield =
+        [
+            new IconPen().Through(12f, 3f, 20f, 6f, 20f, 12f, 19.4f, 15.3f, 17.7f, 17.9f, 15.2f, 19.85f, 12f, 21f, 8.8f,
+                19.85f, 6.3f, 17.9f, 4.6f, 15.3f, 4f, 12f, 4f, 6f).Closed(),
+        ];
+        IconStroke[] hat =
+        [
+            Oval(12f, 16.5f, 9f, 2.8f),
+            new IconPen().Through(7f, 14.3f, 8.6f, 7f, 9.1f, 6.25f, 9.8f, 6f, 14.2f, 6f, 14.9f, 6.25f, 15.4f, 7f, 17f,
+                14.3f).Open(),
+        ];
+        IconStroke[] shirt =
+        [
+            new IconPen().Through(21f, 6f, 21f, 11f, 18f, 11f).Arc(17f, 19f, 1f, 1f, 0f, 90f)
+                .Arc(7f, 19f, 1f, 1f, 90f, 180f).Through(6f, 11f, 3f, 11f, 3f, 6f).Arc(12f, 4f, 3f, 3f, 180f, 0f)
+                .Closed(),
+        ];
+        IconStroke[] glove =
+        [
+            new IconPen().Through(8f, 20f).Arc(14.5f, 16.5f, 3.5f, 3.5f, 90f, 0f).Arc(16.5f, 10f, 1.5f, 1.5f, 0f, -180f)
+                .Arc(13.5f, 5.5f, 1.5f, 1.5f, 0f, -180f).Through(12f, 10f).Arc(10.5f, 4.5f, 1.5f, 1.5f, 0f, -180f)
+                .Through(9f, 10f).Arc(7.5f, 6.5f, 1.5f, 1.5f, 0f, -180f).Through(6f, 14.5f)
+                .Arc(3.1f, 13.75f, 1.52f, 1.52f, -43.7f, -223.7f).Closed(),
+        ];
+        IconStroke[] trousers =
+        [
+            new IconPen().Through(7f, 3f, 17f, 3f, 18.5f, 21f, 14.3f, 21f, 12f, 10.5f, 9.7f, 21f, 5.5f, 21f).Closed(),
+            new IconPen().Through(7.2f, 6.5f, 16.8f, 6.5f).Open(),
+        ];
+        IconStroke[] boot =
+        [
+            new IconPen().Through(8f, 3f, 13f, 3f, 13f, 12f, 17.6f, 14.2f, 18.6f, 15f, 19f, 16.4f, 19f, 19f, 5f,
+                19f, 5f, 12.5f).Closed(),
+            new IconPen().Through(5f, 16f, 19f, 16f).Open(),
+        ];
+        IconStroke[] earring =
+        [
+            Oval(12f, 5f, 1.8f, 1.8f),
+            new IconPen().Through(12f, 6.8f, 12f, 10f, 15f, 13.5f, 12f, 19.5f, 9f, 13.5f, 12f, 10f).Open(),
+        ];
+        IconStroke[] necklace =
+        [
+            new IconPen().Through(5f, 4f, 5.53f, 7.44f, 7f, 10.13f, 9.22f, 11.87f, 12f, 12.5f, 14.78f, 11.87f, 17f,
+                10.13f, 18.47f, 7.44f, 19f, 4f).Open(),
+            new IconPen().Through(9.5f, 16f, 12f, 12.5f, 14.5f, 16f, 12f, 20f).Closed(),
+        ];
+        IconStroke[] bracelet =
+        [
+            Oval(12f, 11f, 8f, 4f),
+            new IconPen().Through(4f, 11f).Arc(12f, 13.5f, 8f, 4f, 180f, 0f).Through(20f, 11f).Open(),
+        ];
+        IconStroke[] ring =
+        [
+            Oval(12f, 14.5f, 5f, 5f),
+            new IconPen().Through(9.5f, 6.5f, 12f, 3.5f, 14.5f, 6.5f, 12f, 9.5f).Closed(),
+        ];
+        return [sparkle, sword, shield, hat, shirt, glove, sparkle, trousers, boot, earring, necklace, bracelet, ring,
+            ring];
     }
 }
