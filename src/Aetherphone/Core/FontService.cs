@@ -46,6 +46,12 @@ internal sealed class FontService : IDisposable
         0.60f, 1.00f, 1.60f, 2.60f, 4.20f, 6.00f,
     };
 
+    private static readonly float[] TitleMultipliers = { 2.50f, 3.00f };
+    private static readonly float[] NumeralMultipliers = { 3.00f, 4.00f, 7.50f, 12.50f };
+    private static readonly ushort[] TitleRanges = { 0x0020, 0x017E, 0x0400, 0x045F, 0x2018, 0x2026, 0x0000 };
+    private static readonly ushort[] NumeralRanges = { 0x002B, 0x0039, 0x0000 };
+    private const float NumeralTracking = -0.05f;
+
     private static readonly Dalamud.DalamudAsset[] SharedAssets =
     {
         Dalamud.DalamudAsset.NotoSansCjkRegular, Dalamud.DalamudAsset.NotoSansCjkMedium,
@@ -89,6 +95,8 @@ internal sealed class FontService : IDisposable
     private IFontHandle[,] textHandles;
     private IFontHandle[] sharedHandles;
     private IFontHandle[] iconHandles;
+    private IFontHandle[] titleHandles = Array.Empty<IFontHandle>();
+    private IFontHandle[] numeralHandles = Array.Empty<IFontHandle>();
     private float zoom;
     private float phoneZoom;
     private float renderScale;
@@ -107,7 +115,7 @@ internal sealed class FontService : IDisposable
         atlas = pluginInterface.UiBuilder.FontAtlas;
         dalamudIconHandle = pluginInterface.UiBuilder.IconFontHandle;
         fontDirectory = Path.Combine(pluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Fonts");
-        baseSize = UiBuilder.DefaultFontSizePx;
+        baseSize = pluginInterface.UiBuilder.FontDefaultSizePx;
         sharedSize = baseSize * SizeMultipliers[SizeMultipliers.Length - 1] * MaxZoom;
         this.zoom = zoom;
         this.phoneZoom = phoneZoom;
@@ -128,6 +136,8 @@ internal sealed class FontService : IDisposable
     }
 
     public float Zoom => zoom;
+
+    public float BaseSize => baseSize;
 
     public bool DisplayReady => displayHandle is { Available: true };
 
@@ -239,6 +249,71 @@ internal sealed class FontService : IDisposable
 
     public float NearestScale(float scale) => SizeMultipliers[NearestSize(scale)];
 
+    public static float SmallestTextScale => SizeMultipliers[0];
+
+    public static float TextScaleAtMost(float scale) => AtMost(SizeMultipliers, scale);
+
+    public static float TitleScaleAtMost(float scale) => MathF.Max(AtMost(SizeMultipliers, scale),
+        AtMost(TitleMultipliers, scale));
+
+    public static float NumeralScaleAtMost(float scale) => MathF.Max(AtMost(SizeMultipliers, scale),
+        AtMost(NumeralMultipliers, scale));
+
+    public FontToken PushTitle(float scale, ReadOnlySpan<char> text) =>
+        PushLarge(titleHandles, TitleMultipliers, TitleRanges, FontWeight.Bold, scale, text);
+
+    public FontToken PushNumerals(float scale, ReadOnlySpan<char> text) =>
+        PushLarge(numeralHandles, NumeralMultipliers, NumeralRanges, FontWeight.Regular, scale, text);
+
+    private FontToken PushLarge(IFontHandle[] handles, float[] multipliers, ushort[] ranges, FontWeight weight,
+        float scale, ReadOnlySpan<char> text)
+    {
+        var index = Array.IndexOf(multipliers, scale);
+        if (index >= 0 && index < handles.Length && handles[index].Available && Covers(ranges, text))
+        {
+            return new FontToken(handles[index].Push());
+        }
+
+        return Push(MathF.Min(scale, SizeMultipliers[^1]), weight);
+    }
+
+    private static float AtMost(float[] tiers, float scale)
+    {
+        var best = 0f;
+        for (var index = 0; index < tiers.Length; index++)
+        {
+            if (tiers[index] <= scale + 0.001f && tiers[index] > best)
+            {
+                best = tiers[index];
+            }
+        }
+
+        return best;
+    }
+
+    private static bool Covers(ushort[] ranges, ReadOnlySpan<char> text)
+    {
+        for (var index = 0; index < text.Length; index++)
+        {
+            var covered = false;
+            for (var range = 0; range + 1 < ranges.Length; range += 2)
+            {
+                if (text[index] >= ranges[range] && text[index] <= ranges[range + 1])
+                {
+                    covered = true;
+                    break;
+                }
+            }
+
+            if (!covered)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public FontToken PushIcon(float pixelHeight, string glyph)
     {
         NoticeBuildLanded();
@@ -262,6 +337,17 @@ internal sealed class FontService : IDisposable
         return new FontToken(dalamudIconHandle.Push());
     }
 
+    public FontToken PushDalamudIcon() => new(dalamudIconHandle.Push());
+
+    public ImFontPtr DalamudIconFont
+    {
+        get
+        {
+            using var locked = dalamudIconHandle.Lock();
+            return locked.ImFont;
+        }
+    }
+
     private static void MeasureCrests(IFontAtlasBuildToolkit toolkit)
     {
         if (toolkit.BuildStep == FontAtlasBuildStep.PostBuild)
@@ -276,11 +362,11 @@ internal sealed class FontService : IDisposable
         return !found.IsNull;
     }
 
-    private static int NearestIconSize(float pixelHeight)
+    private int NearestIconSize(float pixelHeight)
     {
         for (var index = 0; index < IconSizeMultipliers.Length - 1; index++)
         {
-            if (UiBuilder.DefaultFontSizePx * IconSizeMultipliers[index] >= pixelHeight)
+            if (baseSize * IconSizeMultipliers[index] >= pixelHeight)
             {
                 return index;
             }
@@ -443,6 +529,14 @@ internal sealed class FontService : IDisposable
             textHandles = text;
             sharedHandles = shared;
             iconHandles = icons;
+            if (titleHandles.Length == 0)
+            {
+                titleHandles = BuildLargeHandles(WeightFiles[(int)FontWeight.Bold], TitleMultipliers, TitleRanges,
+                    TrackingRatio);
+                numeralHandles = BuildLargeHandles(WeightFiles[(int)FontWeight.Regular], NumeralMultipliers,
+                    NumeralRanges, NumeralTracking);
+            }
+
             displayHandle ??= SeasonalTheme.ResolveHalloween(configuration, DateTime.Now) ? BuildDisplayHandle() : null;
             buildLanded = false;
         }
@@ -450,7 +544,7 @@ internal sealed class FontService : IDisposable
 
     private IFontHandle BuildIconHandle(int sizeIndex)
     {
-        var pixels = UiBuilder.DefaultFontSizePx * IconSizeMultipliers[sizeIndex];
+        var pixels = baseSize * IconSizeMultipliers[sizeIndex];
         var tablerPath = Path.Combine(fontDirectory, TablerIconFile);
         return atlas.NewDelegateFontHandle(e => e.OnPreBuild(tk =>
         {
@@ -505,6 +599,33 @@ internal sealed class FontService : IDisposable
 
             tk.AddFontFromFile(path, config);
         }));
+    }
+
+    private IFontHandle[] BuildLargeHandles(string file, float[] multipliers, ushort[] ranges, float tracking)
+    {
+        var path = Path.Combine(fontDirectory, file);
+        var handles = new IFontHandle[multipliers.Length];
+        for (var index = 0; index < multipliers.Length; index++)
+        {
+            var pixels = baseSize * multipliers[index] * MaxZoom;
+            var font = default(ImFontPtr);
+            handles[index] = atlas.NewDelegateFontHandle(e =>
+            {
+                e.OnPreBuild(tk =>
+                {
+                    var config = new SafeFontConfig
+                    {
+                        SizePx = pixels, GlyphRanges = ranges, GlyphExtraSpacing = new Vector2(pixels * tracking, 0f),
+                    };
+                    font = File.Exists(path)
+                        ? tk.AddFontFromFile(path, config)
+                        : tk.AddDalamudAssetFont(Dalamud.DalamudAsset.NotoSansCjkRegular, config);
+                });
+                e.OnPostBuild(_ => font.Scale = renderScale);
+            });
+        }
+
+        return handles;
     }
 
     private IFontHandle BuildTextHandle(string path, int weightIndex, int sizeIndex)
@@ -608,6 +729,23 @@ internal sealed class FontService : IDisposable
                 using var locked = handle.Lock();
                 locked.ImFont.Scale = renderScale;
             }
+        }
+
+        ScaleHandles(titleHandles);
+        ScaleHandles(numeralHandles);
+    }
+
+    private void ScaleHandles(IFontHandle[] handles)
+    {
+        for (var index = 0; index < handles.Length; index++)
+        {
+            if (!handles[index].Available)
+            {
+                continue;
+            }
+
+            using var locked = handles[index].Lock();
+            locked.ImFont.Scale = renderScale;
         }
     }
 
@@ -782,7 +920,17 @@ internal sealed class FontService : IDisposable
     {
         atlas.BuildStepChange -= MeasureCrests;
         DisposeHandles(textHandles, sharedHandles, iconHandles);
+        DisposeHandles(titleHandles);
+        DisposeHandles(numeralHandles);
         displayHandle?.Dispose();
+    }
+
+    private static void DisposeHandles(IFontHandle[] handles)
+    {
+        for (var index = 0; index < handles.Length; index++)
+        {
+            handles[index].Dispose();
+        }
     }
 
     private static void DisposeHandles(IFontHandle[,] text, IFontHandle[] shared, IFontHandle[] icons)

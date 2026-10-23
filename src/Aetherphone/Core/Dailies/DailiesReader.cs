@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using Lumina.Excel;
@@ -12,6 +13,11 @@ internal static unsafe class DailiesReader
 
     public static DailyAutoStatus Read(DailyTracking tracking, int goal)
     {
+        if (!GameMemory.Attached)
+        {
+            return GameMemory.Simulated is { } simulated ? ReadSimulated(simulated.Dailies, tracking, goal) : default;
+        }
+
         switch (tracking)
         {
             case DailyTracking.BeastTribeAllowances:
@@ -41,6 +47,18 @@ internal static unsafe class DailiesReader
         }
     }
 
+    private static DailyAutoStatus ReadSimulated(SimulatedDailies dailies, DailyTracking tracking, int goal) =>
+        tracking switch
+        {
+            DailyTracking.BeastTribeAllowances => Allowance(dailies.BeastTribeAllowances, goal),
+            DailyTracking.CustomDeliveries => Allowance(dailies.CustomDeliveryAllowances, goal),
+            DailyTracking.WondrousTails => WondrousTails(dailies.WondrousTailsExpired, dailies.WondrousTailsStickers,
+                goal),
+            DailyTracking.DomanEnclave => DomanEnclave(dailies.DomanDonated, dailies.DomanAllowance),
+            DailyTracking.Levequests => Levequests(dailies.LeveAllowances, goal),
+            _ => DailyAutoStatus.Unavailable,
+        };
+
     private static DailyAutoStatus ReadBeastTribe(int goal)
     {
         var quests = QuestManager.Instance();
@@ -49,9 +67,7 @@ internal static unsafe class DailiesReader
             return DailyAutoStatus.Unavailable;
         }
 
-        var remaining = (int)quests->GetBeastTribeAllowance();
-        var clamped = Math.Clamp(remaining, 0, goal);
-        return new DailyAutoStatus(true, clamped == 0, clamped, goal);
+        return Allowance((int)quests->GetBeastTribeAllowance(), goal);
     }
 
     private static DailyAutoStatus ReadCustomDeliveries(int goal)
@@ -68,6 +84,11 @@ internal static unsafe class DailiesReader
             return DailyAutoStatus.Unavailable;
         }
 
+        return Allowance(remaining, goal);
+    }
+
+    private static DailyAutoStatus Allowance(int remaining, int goal)
+    {
         var clamped = Math.Clamp(remaining, 0, goal);
         return new DailyAutoStatus(true, clamped == 0, clamped, goal);
     }
@@ -82,7 +103,7 @@ internal static unsafe class DailiesReader
 
         if (player->IsWeeklyBingoExpired())
         {
-            return new DailyAutoStatus(true, false, goal, goal);
+            return WondrousTails(true, 0, goal);
         }
 
         var placed = 0;
@@ -92,6 +113,16 @@ internal static unsafe class DailiesReader
             {
                 placed++;
             }
+        }
+
+        return WondrousTails(false, placed, goal);
+    }
+
+    private static DailyAutoStatus WondrousTails(bool expired, int placed, int goal)
+    {
+        if (expired)
+        {
+            return new DailyAutoStatus(true, false, goal, goal);
         }
 
         var clampedPlaced = Math.Clamp(placed, 0, goal);
@@ -108,15 +139,17 @@ internal static unsafe class DailiesReader
         }
 
         var state = manager->State;
-        var donated = (int)state.Donated;
-        var allowance = (int)state.Allowance;
-        var remaining = allowance - donated;
+        return DomanEnclave((int)state.Donated, (int)state.Allowance);
+    }
 
+    private static DailyAutoStatus DomanEnclave(int donated, int allowance)
+    {
         if (allowance == 0)
         {
             return DailyAutoStatus.Unavailable;
         }
 
+        var remaining = allowance - donated;
         return new DailyAutoStatus(true, remaining == 0, remaining, allowance);
     }
 
@@ -128,12 +161,21 @@ internal static unsafe class DailiesReader
             return DailyAutoStatus.Unavailable;
         }
 
-        var current = Math.Clamp((int)quests->NumLeveAllowances, 0, goal);
-        return new DailyAutoStatus(true, true, current, goal);
+        return Levequests((int)quests->NumLeveAllowances, goal);
     }
+
+    private static DailyAutoStatus Levequests(int allowances, int goal) =>
+        new(true, true, Math.Clamp(allowances, 0, goal), goal);
 
     public static DailyAutoStatus ReadDutyRoulettes(IReadOnlyList<byte> rouletteRowIds)
     {
+        if (!GameMemory.Attached)
+        {
+            return GameMemory.Simulated is { } simulated && rouletteRowIds.Count > 0
+                ? Roulette(simulated.Dailies.DutyRouletteComplete)
+                : default;
+        }
+
         var content = InstanceContent.Instance();
         if (content is null || rouletteRowIds.Count == 0)
         {
@@ -149,13 +191,22 @@ internal static unsafe class DailiesReader
             }
         }
 
-        var complete = claimed > 0;
-        return new DailyAutoStatus(true, complete, complete ? 0 : 1, 1);
+        return Roulette(claimed > 0);
     }
+
+    private static DailyAutoStatus Roulette(bool complete) => new(true, complete, complete ? 0 : 1, 1);
 
     public static DailyAutoStatus ReadHuntBills(IReadOnlyList<byte> weeklyIndices,
         ExcelSheet<MobHuntOrderType> orderTypes, SubrowExcelSheet<MobHuntOrder> orders)
     {
+        if (!GameMemory.Attached)
+        {
+            return GameMemory.Simulated is { } simulated && weeklyIndices.Count > 0
+                ? HuntBills(Math.Min(simulated.Dailies.HuntBillsUnlocked, weeklyIndices.Count),
+                    simulated.Dailies.HuntBillsComplete)
+                : default;
+        }
+
         var hunt = MobHunt.Instance();
         if (hunt is null || weeklyIndices.Count == 0)
         {
@@ -179,12 +230,18 @@ internal static unsafe class DailiesReader
             }
         }
 
+        return HuntBills(unlocked, done);
+    }
+
+    private static DailyAutoStatus HuntBills(int unlocked, int done)
+    {
         if (unlocked == 0)
         {
             return DailyAutoStatus.Unavailable;
         }
 
-        return new DailyAutoStatus(true, done >= unlocked, unlocked - done, unlocked);
+        var clampedDone = Math.Min(done, unlocked);
+        return new DailyAutoStatus(true, clampedDone >= unlocked, unlocked - clampedDone, unlocked);
     }
 
     private static bool IsWeeklyBillComplete(MobHunt* hunt, byte billIndex,

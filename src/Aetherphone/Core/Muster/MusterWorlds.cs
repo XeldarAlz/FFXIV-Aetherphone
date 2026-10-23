@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Maps;
 using Lumina.Excel.Sheets;
 
@@ -11,6 +12,11 @@ internal static class MusterWorlds
 
     public static int DataCenterIdForWorld(uint worldId)
     {
+        if (!GameSheets.Available)
+        {
+            return 0;
+        }
+
         if (worldId == 0 || !Plugin.DataManager.GetExcelSheet<World>().TryGetRow(worldId, out var world))
         {
             return 0;
@@ -46,6 +52,11 @@ internal static class MusterWorlds
 
     private static Dictionary<string, (ushort WorldId, int DataCenterId)> BuildLookup()
     {
+        if (!GameSheets.Available)
+        {
+            return new Dictionary<string, (ushort WorldId, int DataCenterId)>();
+        }
+
         var lookup = new Dictionary<string, (ushort, int)>(StringComparer.OrdinalIgnoreCase);
         foreach (var world in Plugin.DataManager.GetExcelSheet<World>())
         {

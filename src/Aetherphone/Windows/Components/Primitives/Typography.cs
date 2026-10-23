@@ -629,7 +629,7 @@ internal static partial class Typography
         return lines.ToArray();
     }
 
-    private static bool IsCjk(char value)
+    public static bool IsCjk(char value)
     {
         return value >= '⺀' && value <= '鿿'
             || value >= '豈' && value <= '﫿'

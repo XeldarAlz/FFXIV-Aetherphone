@@ -28,6 +28,11 @@ internal static class CameraChrome
     private const float ReticleStroke = 1.6f;
     private const float CountdownShadowDrop = 3f;
     private const float FlashPeakAlpha = 0.85f;
+    private const float CornerLength = 28f;
+    private const float CornerInset = 14f;
+    private const float CornerStroke = 2f;
+    private const float GripStroke = 3f;
+    private const float NoteWidthShare = 0.78f;
 
     public static readonly Vector4 Yellow = new(0.98f, 0.79f, 0.20f, 1f);
     public static readonly Vector4 Dark = new(0.08f, 0.07f, 0.04f, 1f);
@@ -42,6 +47,11 @@ internal static class CameraChrome
     private static readonly Vector4 WellEmpty = new(0.16f, 0.17f, 0.20f, 1f);
     private static readonly Vector4 WellStroke = new(1f, 1f, 1f, 0.22f);
     private static readonly Vector4 Shadow = new(0f, 0f, 0f, 0.5f);
+    private static readonly Vector4 NoteBody = new(1f, 1f, 1f, 0.75f);
+    private static readonly Vector4 FrameInk = new(1f, 1f, 1f, 0.8f);
+    private static readonly Vector4 YellowHover = new(1f, 0.86f, 0.38f, 1f);
+    private static readonly Vector4 ActionFill = new(0.07f, 0.07f, 0.09f, 0.88f);
+    private static readonly Vector4 ActionHover = new(0.15f, 0.15f, 0.17f, 0.88f);
 
     public static void Band(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding, ImDrawFlags corners,
         bool tray) =>
@@ -50,23 +60,93 @@ internal static class CameraChrome
     public static void Viewfinder(ImDrawListPtr drawList, Rect viewfinder, Rect captureRect, bool gridEnabled,
         float scale)
     {
-        var crop = ImGui.GetColorU32(Crop);
-        if (captureRect.Min.Y > viewfinder.Min.Y + 0.5f)
-        {
-            drawList.AddRectFilled(viewfinder.Min, new Vector2(viewfinder.Max.X, captureRect.Min.Y), crop);
-            drawList.AddRectFilled(new Vector2(viewfinder.Min.X, captureRect.Max.Y), viewfinder.Max, crop);
-        }
-
-        if (captureRect.Min.X > viewfinder.Min.X + 0.5f)
-        {
-            drawList.AddRectFilled(viewfinder.Min, new Vector2(captureRect.Min.X, viewfinder.Max.Y), crop);
-            drawList.AddRectFilled(new Vector2(captureRect.Max.X, viewfinder.Min.Y), viewfinder.Max, crop);
-        }
-
+        Shade(drawList, viewfinder, captureRect, ImGui.GetColorU32(Crop));
         if (gridEnabled)
         {
             DrawThirds(drawList, captureRect, ImGui.GetColorU32(GridInk), Metrics.Stroke.Hairline * scale);
         }
+    }
+
+    public static void CropFrame(ImDrawListPtr drawList, Rect screen, Rect box, bool gridEnabled, float scale)
+    {
+        Shade(drawList, screen, box, ImGui.GetColorU32(BarTint));
+        if (gridEnabled)
+        {
+            DrawThirds(drawList, box, ImGui.GetColorU32(GridInk), Metrics.Stroke.Hairline * scale);
+        }
+
+        drawList.AddRect(box.Min, box.Max, ImGui.GetColorU32(FrameInk), 0f, ImDrawFlags.None,
+            Metrics.Stroke.Hairline * scale);
+        var length = MathF.Min(CornerLength * scale, MathF.Min(box.Width, box.Height) * 0.5f);
+        Corners(drawList, box.Min, box.Max, length, ImGui.GetColorU32(White), GripStroke * scale);
+    }
+
+    public static void CropAction(ImDrawListPtr drawList, Rect pill, string label, bool primary, bool hovered)
+    {
+        var fill = primary ? hovered ? YellowHover : Yellow : hovered ? ActionHover : ActionFill;
+        Squircle.Fill(drawList, pill.Min, pill.Max, pill.Height * 0.5f, ImGui.GetColorU32(fill));
+        Typography.DrawCentered(drawList, pill.Center, label, primary ? Dark : White,
+            TextStyles.SubheadlineEmphasized);
+    }
+
+    private static void Shade(ImDrawListPtr drawList, Rect frame, Rect hole, uint color)
+    {
+        if (hole.Min.Y > frame.Min.Y + 0.5f)
+        {
+            drawList.AddRectFilled(frame.Min, new Vector2(frame.Max.X, hole.Min.Y), color);
+        }
+
+        if (hole.Max.Y < frame.Max.Y - 0.5f)
+        {
+            drawList.AddRectFilled(new Vector2(frame.Min.X, hole.Max.Y), frame.Max, color);
+        }
+
+        if (hole.Min.X > frame.Min.X + 0.5f)
+        {
+            drawList.AddRectFilled(new Vector2(frame.Min.X, hole.Min.Y), new Vector2(hole.Min.X, hole.Max.Y), color);
+        }
+
+        if (hole.Max.X < frame.Max.X - 0.5f)
+        {
+            drawList.AddRectFilled(new Vector2(hole.Max.X, hole.Min.Y), new Vector2(frame.Max.X, hole.Max.Y), color);
+        }
+    }
+
+    public static void ScreenNote(ImDrawListPtr drawList, Rect viewfinder, string title, string body, float scale)
+    {
+        drawList.AddRectFilled(viewfinder.Min, viewfinder.Max, ImGui.GetColorU32(BarTint));
+        var width = viewfinder.Width * NoteWidthShare;
+        var titleHeight = Typography.MeasureWrappedBlock(title, TextStyles.Headline, width).Y;
+        var bodyHeight = Typography.MeasureWrappedBlock(body, TextStyles.Subheadline, width).Y;
+        var gap = Metrics.Space.Sm * scale;
+        var top = viewfinder.Center.Y - (titleHeight + gap + bodyHeight) * 0.5f;
+        Typography.DrawWrappedCentered(drawList, title, TextStyles.Headline, White,
+            new Vector2(viewfinder.Center.X, top), width);
+        Typography.DrawWrappedCentered(drawList, body, TextStyles.Subheadline, NoteBody,
+            new Vector2(viewfinder.Center.X, top + titleHeight + gap), width);
+    }
+
+    public static void ScreenCorners(ImDrawListPtr drawList, Rect screen, float scale)
+    {
+        var inset = new Vector2(CornerInset * scale, CornerInset * scale);
+        Corners(drawList, screen.Min + inset, screen.Max - inset, CornerLength * scale, ImGui.GetColorU32(White),
+            CornerStroke * scale);
+    }
+
+    private static void Corners(ImDrawListPtr drawList, Vector2 min, Vector2 max, float length, uint color,
+        float stroke)
+    {
+        Corner(drawList, min, new Vector2(1f, 1f), length, color, stroke);
+        Corner(drawList, new Vector2(max.X, min.Y), new Vector2(-1f, 1f), length, color, stroke);
+        Corner(drawList, new Vector2(min.X, max.Y), new Vector2(1f, -1f), length, color, stroke);
+        Corner(drawList, max, new Vector2(-1f, -1f), length, color, stroke);
+    }
+
+    private static void Corner(ImDrawListPtr drawList, Vector2 point, Vector2 direction, float length, uint color,
+        float stroke)
+    {
+        drawList.AddLine(point, point + new Vector2(direction.X * length, 0f), color, stroke);
+        drawList.AddLine(point, point + new Vector2(0f, direction.Y * length), color, stroke);
     }
 
     public static void Reticle(ImDrawListPtr drawList, float age, float duration, Vector2 position, float scale)

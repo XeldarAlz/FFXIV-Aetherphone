@@ -38,6 +38,14 @@ internal static class IslandActivities
     public const float ModeStrideUnits = TransportStrideUnits * 2f;
     public const float SideControlRadiusUnits = 15f;
     public const float ModeRadiusUnits = SideControlRadiusUnits;
+    public const float SwipeDismissUnits = 48f;
+    public const float SwipeDismissVelocityUnits = 700f;
+
+    public static bool Swipeable(IslandActivity activity, bool playing) =>
+        !playing && activity is IslandActivity.Playback or IslandActivity.PcMedia;
+
+    public static bool SwipeDismisses(float offset, float velocity, float scale) =>
+        offset >= SwipeDismissUnits * scale || (offset > 0f && velocity >= SwipeDismissVelocityUnits * scale);
 
     public static float ExpandedHeightUnits(IslandActivity activity) =>
         activity is IslandActivity.Playback or IslandActivity.PcMedia or IslandActivity.Session

@@ -46,6 +46,12 @@ internal static class AudioOutputFactory
         }
     }
 
+    public static IWavePlayer CreateWaveOut(int desiredLatencyMs, int deviceNumber)
+    {
+        return new RealtimeWavePlayer(new WaveOutEvent { DeviceNumber = deviceNumber, DesiredLatency = desiredLatencyMs },
+            desiredLatencyMs);
+    }
+
     [DllImport("winmm.dll")]
     private static extern int waveOutGetNumDevs();
 }

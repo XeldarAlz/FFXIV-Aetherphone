@@ -25,6 +25,7 @@ internal sealed class SocialNotificationService : IDisposable
         SocialActivity.YellowPagesApp,
         SocialActivity.MessageApp,
         SocialActivity.MusicApp,
+        SocialActivity.PrismApp,
     };
 
     private readonly AethernetSession session;
@@ -461,7 +462,7 @@ internal sealed class SocialNotificationService : IDisposable
             return;
         }
 
-        var title = AdTitle(item) ?? SocialActivity.ActorLabel(item);
+        var title = FixedTitle(item) ?? SocialActivity.ActorLabel(item);
         notifications.Notify(new PhoneNotification(item.App, title, body, DateTime.Now,
             AccentFor(item.App), GroupKeyFor(item))
         {
@@ -493,7 +494,7 @@ internal sealed class SocialNotificationService : IDisposable
         return item.App + ":" + item.Type + ":" + item.ActorId;
     }
 
-    private static string? AdTitle(NotificationDto item)
+    private static string? FixedTitle(NotificationDto item)
     {
         return item.Type switch
         {
@@ -501,6 +502,7 @@ internal sealed class SocialNotificationService : IDisposable
             SocialActivity.TypeAdHidden => Loc.T(L.YellowPages.NotifHiddenTitle),
             SocialActivity.TypeAdOpened => Loc.T(L.YellowPages.NotifOpenedTitle),
             SocialActivity.TypeAdInquiry => Loc.T(L.YellowPages.NotifInquiryTitle),
+            SocialActivity.TypePlacing => Loc.T(L.Prism.ActivityResults),
             _ => null,
         };
     }
@@ -514,6 +516,7 @@ internal sealed class SocialNotificationService : IDisposable
             SocialActivity.YellowPagesApp => AppAccents.For(SocialActivity.YellowPagesApp),
             SocialActivity.MessageApp => AppAccents.For(SocialActivity.MessageApp),
             SocialActivity.MusicApp => AppAccents.For(SocialActivity.MusicApp),
+            SocialActivity.PrismApp => AppAccents.For(SocialActivity.PrismApp),
             _ => AppAccents.For(SocialActivity.ChirperApp),
         };
     }

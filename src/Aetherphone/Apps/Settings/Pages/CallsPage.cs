@@ -16,6 +16,8 @@ internal sealed class CallsPage : ISettingsPage
         new(L.Phone.CallVolume),
         new(L.Phone.MicVolume),
         new(L.Phone.AutoGain),
+        new(L.Phone.MicThreshold),
+        new(L.Phone.TestMicrophone),
         new(L.Phone.Microphone),
         new(L.Phone.Speaker),
     };

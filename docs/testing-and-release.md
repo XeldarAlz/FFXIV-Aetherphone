@@ -8,6 +8,9 @@ How Aetherphone is checked and shipped: the unit tests, the CI workflow and its 
 | --- | --- |
 | src/Aetherphone.Tests/ | The xUnit test project |
 | .github/workflows/ci.yml | Guards, Release build, tests, plugin artifact |
+| tools/guards/check | Every guard, run by CI and locally |
+| tools/guards/hooks/pre-commit | Runs the guards over staged files before each commit |
+| .claude/settings.json | Runs the guards over each file a Claude Code session edits |
 | Directory.Build.props | The plugin version; warnings become errors on CI |
 | repo.json | This plugin's Dalamud manifest entry |
 | .github/workflows/release.yml | Publishes a release from a version tag |
@@ -48,7 +51,7 @@ Two kinds of test pin values on purpose. TourRegistryTests lists every app tour 
 
 ### Guards
 
-Guards are grep checks that need no compiler, so a mistake fails in seconds. This is the complete list; [Conventions](conventions.md) explains each rule.
+Guards are grep checks that need no compiler, so a mistake fails in seconds. They all live in tools/guards/check, and CI calls that same script, so a local run and CI always agree. This is the complete list; [Conventions](conventions.md) explains each rule.
 
 | Guard | Fails on | Scope |
 | --- | --- | --- |
@@ -63,7 +66,19 @@ Guards are grep checks that need no compiler, so a mistake fails in seconds. Thi
 | No byte order mark | A .cs file saved with a UTF-8 BOM | src/Aetherphone, src/Aetherphone.Tests |
 | Namespace matches folder | A missing file-scoped namespace, or one that differs from its folder path; all of Windows/Components uses Aetherphone.Windows.Components | src, except src/ManagedDoom |
 
-System.Linq is not an implicit using in the plugin, so the using line is the whole LINQ surface. To use LINQ on a cold path, add the file to the guard's allowlist and say why in the pull request.
+System.Linq is not an implicit using in the plugin, so the using line is the whole LINQ surface. To use LINQ on a cold path, add the file to the allowlist in tools/guards/check and say why in the pull request.
+
+#### Running the guards locally
+
+The script runs in bash on macOS, Linux and Windows (Git Bash, which comes with Git for Windows; `tools\guards\check.cmd` starts it from PowerShell or cmd).
+
+```bash
+tools/guards/check                 # every guard over the whole tree
+tools/guards/check em-dash linq    # only the named guards
+tools/guards/check --files a.cs    # every guard over just these files
+```
+
+`git config core.hooksPath tools/guards/hooks` turns on the pre-commit hook, which checks the staged files and refuses the commit on a failure. Claude Code sessions need no setup: .claude/settings.json runs the guards over every file the agent edits and hands any failure straight back to it.
 
 ### Build (Windows)
 

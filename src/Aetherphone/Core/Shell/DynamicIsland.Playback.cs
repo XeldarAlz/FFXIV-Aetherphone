@@ -16,6 +16,7 @@ internal sealed partial class DynamicIsland
     private const float PlaybackTimeAlpha = 0.72f;
     private const float PlaybackDisabledAlpha = 0.4f;
     private const float ModeGlyphFraction = 0.42f;
+    private const float StopGlyphFraction = 0.32f;
     private const float ModeIdleAlpha = 0.7f;
     private const float ModeHoverAlpha = 0.2f;
     private const float ModeDotRadius = 1.6f;
@@ -36,6 +37,14 @@ internal sealed partial class DynamicIsland
         Next,
         Shuffle,
         Repeat,
+        Stop,
+    }
+
+    private enum ModeGlyph : byte
+    {
+        Shuffle,
+        Repeat,
+        Stop,
     }
 
     private bool DrawPlaybackExpanded(ImDrawListPtr drawList, Rect bounds, float scale, Vector4 accent, float alpha,
@@ -210,7 +219,7 @@ internal sealed partial class DynamicIsland
         var over = false;
         if (media.Has(IslandMediaControls.Shuffle))
         {
-            if (DrawPlaybackMode(drawList, center - offset, radius, false,
+            if (DrawPlaybackMode(drawList, center - offset, radius, ModeGlyph.Shuffle,
                     media.Has(IslandMediaControls.ShuffleActive), false, scale, accent, alpha, active,
                     out var shuffleHovered))
             {
@@ -222,20 +231,31 @@ internal sealed partial class DynamicIsland
 
         if (media.Has(IslandMediaControls.Repeat))
         {
-            if (DrawPlaybackMode(drawList, center + offset, radius, true, media.Has(IslandMediaControls.RepeatActive),
-                    media.Has(IslandMediaControls.RepeatOne), scale, accent, alpha, active, out var repeatHovered))
+            if (DrawPlaybackMode(drawList, center + offset, radius, ModeGlyph.Repeat,
+                    media.Has(IslandMediaControls.RepeatActive), media.Has(IslandMediaControls.RepeatOne), scale,
+                    accent, alpha, active, out var repeatHovered))
             {
                 RunMedia(MediaCommand.Repeat, source);
             }
 
             over |= repeatHovered;
         }
+        else if (media.Has(IslandMediaControls.Stop))
+        {
+            if (DrawPlaybackMode(drawList, center + offset, radius, ModeGlyph.Stop, false, false, scale, accent,
+                    alpha, active, out var stopHovered))
+            {
+                RunMedia(MediaCommand.Stop, source);
+            }
+
+            over |= stopHovered;
+        }
 
         return over;
     }
 
-    private static bool DrawPlaybackMode(ImDrawListPtr drawList, Vector2 center, float radius, bool repeat, bool on,
-        bool one, float scale, Vector4 accent, float alpha, bool active, out bool hovered)
+    private static bool DrawPlaybackMode(ImDrawListPtr drawList, Vector2 center, float radius, ModeGlyph glyph,
+        bool on, bool one, float scale, Vector4 accent, float alpha, bool active, out bool hovered)
     {
         var reach = new Vector2(radius, radius);
         hovered = active && UiInteract.Hover(center - reach, center + reach);
@@ -250,13 +270,17 @@ internal sealed partial class DynamicIsland
         var ink = Palette.WithAlpha(tint, tint.W * alpha);
         var color = ImGui.GetColorU32(ink);
         var size = radius * ModeGlyphFraction;
-        if (repeat)
+        switch (glyph)
         {
-            MediaGlyph.Repeat(drawList, center, size, color);
-        }
-        else
-        {
-            MediaGlyph.Shuffle(drawList, center, size, color);
+            case ModeGlyph.Repeat:
+                MediaGlyph.Repeat(drawList, center, size, color);
+                break;
+            case ModeGlyph.Stop:
+                MediaGlyph.Stop(drawList, center, radius * StopGlyphFraction, color);
+                break;
+            default:
+                MediaGlyph.Shuffle(drawList, center, size, color);
+                break;
         }
 
         if (one)
@@ -317,6 +341,9 @@ internal sealed partial class DynamicIsland
                 break;
             case MediaCommand.Repeat:
                 playback.ToggleRepeat();
+                break;
+            case MediaCommand.Stop:
+                playback.Stop();
                 break;
         }
     }

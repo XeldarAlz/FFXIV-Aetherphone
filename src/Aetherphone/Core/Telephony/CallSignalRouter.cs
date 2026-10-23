@@ -14,6 +14,7 @@ internal sealed class CallSignalRouter : IDisposable
         connection = new RealtimeConnection(session);
         connection.ControlReceived += OnControl;
         connection.ConnectedChanged += OnConnected;
+        connection.ClosedForRestart += signals.PublishServerRestarting;
         signals.BindSender(Send);
     }
 
@@ -103,11 +104,20 @@ internal sealed class CallSignalRouter : IDisposable
             case SignalType.AnnouncePing:
                 signals.PublishAnnouncements();
                 return;
+            case SignalType.CampaignPing:
+                signals.PublishCampaign();
+                return;
             case SignalType.PollPing:
                 signals.PublishPolls();
                 return;
             case SignalType.FeedbackPing:
                 signals.PublishFeedback();
+                return;
+            case SignalType.ServerRestarting:
+                signals.PublishServerRestarting();
+                return;
+            case SignalType.FlagsChanged:
+                signals.PublishFlagsChanged();
                 return;
             case SignalType.ContentRemoved:
                 if (message.ContentId is { Length: > 0 } removedContentId)
@@ -154,6 +164,7 @@ internal sealed class CallSignalRouter : IDisposable
         signals.BindSender(null);
         connection.ControlReceived -= OnControl;
         connection.ConnectedChanged -= OnConnected;
+        connection.ClosedForRestart -= signals.PublishServerRestarting;
         connection.Dispose();
     }
 }

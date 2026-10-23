@@ -165,8 +165,8 @@ internal sealed class StageIntro
         {
             var pop = 0.85f + 0.15f * GameJuice.PopIn(playPhase);
             var size = layout.Play.Size * pop;
-            if (GameHud.Button(Lifted(layout.Play.Center, playPhase, scale), size, Loc.T(L.Games.Play), accent, theme) &&
-                playPhase > 0.6f)
+            if (GameHud.Button(Lifted(layout.Play.Center, playPhase, scale), size, Loc.T(L.Games.Play), accent, theme,
+                    layout.Play) && playPhase > 0.6f)
             {
                 action = IntroAction.Play;
             }
@@ -206,7 +206,7 @@ internal sealed class StageIntro
         var center = Lifted(rect.Center, phase, scale);
         var half = rect.Size * 0.5f;
         var firstVertex = drawList.VtxBuffer.Size;
-        GameIconArt.Draw(drawList, gameId, accent, center - half, center + half, IconAppearance.Default, true);
+        GameIconArt.Draw(drawList, gameId, accent, center - half, center + half, true);
         LayerCompositor.Fade(drawList, firstVertex, phase);
     }
 

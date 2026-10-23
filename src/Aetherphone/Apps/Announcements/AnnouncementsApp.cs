@@ -6,6 +6,7 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Announcements;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Media;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Runtime;
@@ -30,6 +31,8 @@ internal sealed partial class AnnouncementsApp : IResumableApp
     public bool WantsSystemTheme => true;
 
     private readonly AnnouncementsStore store;
+    private readonly RemoteImageCache images;
+    private readonly PhotoViewerOverlay photoViewer = new();
     private readonly FailureSlot listFailure = new();
     private readonly AnnouncementsLauncher launcher;
     private readonly AppSkin ui = new(AppPalettes.Announcements(PhoneTheme.Default));
@@ -57,10 +60,11 @@ internal sealed partial class AnnouncementsApp : IResumableApp
 
     public AnnouncementsApp(AethernetSession session, AnnouncementsClient client, NotificationService notifications,
         Configuration configuration, AnnouncementsLauncher launcher, PhoneVisibility visibility,
-        RealtimeSignalBus signals)
+        RealtimeSignalBus signals, RemoteImageCache images)
     {
         store = new AnnouncementsStore(session, client, notifications, configuration, visibility, signals);
         this.launcher = launcher;
+        this.images = images;
         router = new ViewRouter<AnnouncementsRoute>(AnnouncementsRoute.List);
         drawView = DrawView;
         back = () => router.Pop();
@@ -68,6 +72,7 @@ internal sealed partial class AnnouncementsApp : IResumableApp
 
     public void OnOpened()
     {
+        photoViewer.Close();
         router.Reset();
         resetScroll = true;
         readingId = null;
@@ -88,6 +93,7 @@ internal sealed partial class AnnouncementsApp : IResumableApp
 
     public void OnClosed()
     {
+        photoViewer.Close();
         if (readingId is not null)
         {
             store.MarkRead(readingId);
@@ -110,6 +116,7 @@ internal sealed partial class AnnouncementsApp : IResumableApp
             return;
         }
 
+        photoViewer.Close();
         router.Reset();
         pendingSwapId = null;
         router.Push(target, false);
@@ -129,6 +136,12 @@ internal sealed partial class AnnouncementsApp : IResumableApp
         var scale = UiScale.Current;
         var screen = SceneChrome.ScreenFrom(context.Content, theme, scale);
         ui.Backdrop(screen);
+
+        if (photoViewer.Active)
+        {
+            photoViewer.Draw(screen, theme);
+            return;
+        }
 
         if (!store.IsSignedIn)
         {

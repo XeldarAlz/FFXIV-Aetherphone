@@ -80,7 +80,7 @@ internal static class GameTileView
         var dim = PressDim * (1f - press) / (1f - PressedScale);
         var firstVertex = drawList.VtxBuffer.Size;
         Material.PointerHalo(drawList, min, max, radius, hover, scale);
-        GameIconArt.Draw(drawList, library.IconIds[entryIndex], library.Accent(entryIndex), min, max, null, true);
+        GameIconArt.Draw(drawList, library.IconIds[entryIndex], library.Accent(entryIndex), min, max, true);
         Material.PointerSpecular(drawList, min, max, radius, tilt, hover, scale);
         if (dim > DimFloor)
         {

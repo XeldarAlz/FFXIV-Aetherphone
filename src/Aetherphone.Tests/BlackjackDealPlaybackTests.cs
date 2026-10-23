@@ -112,22 +112,114 @@ public sealed class BlackjackDealPlaybackTests
         Assert.Equal(1f, playback.HoleReveal());
     }
 
+    [Fact]
+    public void AnotherSeatsHandFlipsOnceWhenItTurnsOver()
+    {
+        var playback = Primed();
+        playback.Update(Board(Hand, BlackjackPhases.Dealing, new[] { 4, -1 }, new[] { -1, -1 }), 0f);
+        playback.Update(Board(Hand, BlackjackPhases.PlayerTurns, new[] { 4, -1 }, new[] { -1, -1 }), 5f);
+        Assert.False(playback.HandRevealing(SeatSlot));
+        Assert.Equal(1f, playback.HandReveal(SeatSlot));
+
+        playback.Update(Board(Hand, BlackjackPhases.PlayerTurns, new[] { 4, -1 }, new[] { 8, 21 }), 0.1f);
+        Assert.True(playback.HandRevealing(SeatSlot));
+        Assert.Equal(0f, playback.HandReveal(SeatSlot));
+
+        playback.Update(Board(Hand, BlackjackPhases.PlayerTurns, new[] { 4, -1 }, new[] { 8, 21 }),
+            BlackjackDealChoreography.RevealSeconds);
+        Assert.Equal(1f, playback.HandReveal(SeatSlot));
+        Assert.False(playback.HandRevealing(SeatSlot));
+
+        playback.Update(Board(Hand, BlackjackPhases.PlayerTurns, new[] { 4, -1 }, new[] { 8, 21 }), 0.1f);
+        Assert.False(playback.HandRevealing(SeatSlot));
+    }
+
+    [Fact]
+    public void YourOwnSeatNeverFlipsWhenItsHandTurnsOver()
+    {
+        var playback = Primed();
+        playback.Update(Board(Hand, BlackjackPhases.Dealing, new[] { 4, -1 }, new[] { -1, -1 }), 0f, 0);
+        playback.Update(Board(Hand, BlackjackPhases.PlayerTurns, new[] { 4, -1 }, new[] { -1, -1 }), 5f, 0);
+        playback.Update(Board(Hand, BlackjackPhases.PlayerTurns, new[] { 4, -1 }, new[] { 8, 21 }), 0.1f, 0);
+
+        Assert.False(playback.HandRevealing(SeatSlot));
+        Assert.Equal(1f, playback.HandReveal(SeatSlot));
+    }
+
+    [Fact]
+    public void AHandDealtFaceUpNeverFlips()
+    {
+        var playback = Primed();
+        playback.Update(Board(Hand, BlackjackPhases.Dealing, new[] { 4, -1 }, new[] { 8, 21 }), 0f);
+        playback.Update(Board(Hand, BlackjackPhases.PlayerTurns, new[] { 4, -1 }, new[] { 8, 21 }), 5f);
+
+        Assert.False(playback.HandRevealing(SeatSlot));
+    }
+
+    [Fact]
+    public void ASpectatorJoiningAfterAHandTurnedOverNeverSeesItFlip()
+    {
+        var playback = new BlackjackDealPlayback();
+        playback.Update(Board(Hand, BlackjackPhases.PlayerTurns, new[] { 4, -1 }, new[] { 8, 21 }), 0f);
+
+        Assert.False(playback.HandRevealing(SeatSlot));
+        Assert.Equal(1f, playback.HandReveal(SeatSlot));
+    }
+
+    [Fact]
+    public void ASplitFlipsOnlyTheHandThatTurnedOver()
+    {
+        var closed = new[] { -1, -1 };
+        var playback = Primed();
+        playback.Update(Board(Hand, BlackjackPhases.Dealing, new[] { 4, -1 }, new[] { closed, closed }), 0f);
+        playback.Update(Board(Hand, BlackjackPhases.PlayerTurns, new[] { 4, -1 }, new[] { closed, closed }), 5f);
+        playback.Update(Board(Hand, BlackjackPhases.PlayerTurns, new[] { 4, -1 }, new[] { new[] { 8, 21 }, closed }),
+            0.1f);
+
+        Assert.True(playback.HandRevealing(BlackjackDealPlayback.SlotOf(0, 0)));
+        Assert.False(playback.HandRevealing(BlackjackDealPlayback.SlotOf(0, 1)));
+    }
+
+    [Fact]
+    public void TheNextHandForgetsWhichHandsTurnedOver()
+    {
+        var playback = Primed();
+        playback.Update(Board(Hand, BlackjackPhases.Dealing, new[] { 4, -1 }, new[] { -1, -1 }), 0f);
+        playback.Update(Board(Hand, BlackjackPhases.PlayerTurns, new[] { 4, -1 }, new[] { 8, 21 }), 5f);
+        playback.Update(Board(NextHand, BlackjackPhases.Dealing, new[] { 9, -1 }, new[] { 10, 11 }), 1f);
+
+        Assert.False(playback.HandRevealing(SeatSlot));
+        Assert.Equal(1f, playback.HandReveal(SeatSlot));
+    }
+
     private static BlackjackDealPlayback Primed()
     {
         var playback = new BlackjackDealPlayback();
-        playback.Update(Board(Hand, BlackjackPhases.Betting, null, null), 0f);
+        playback.Update(Board(Hand, BlackjackPhases.Betting, null, (int[]?)null), 0f);
         return playback;
     }
 
     private static CasinoBlackjackRoomStateDto Board(string handId, int phase, int[]? dealerCards, int[]? seatCards)
     {
+        return Board(handId, phase, dealerCards, seatCards is null ? null : new[] { seatCards });
+    }
+
+    private static CasinoBlackjackRoomStateDto Board(string handId, int phase, int[]? dealerCards,
+        int[][]? seatHands)
+    {
         CasinoBlackjackSeatDto[]? seats = null;
-        if (seatCards is not null)
+        if (seatHands is not null)
         {
+            var hands = new CasinoBlackjackHandDto[seatHands.Length];
+            for (var handIndex = 0; handIndex < seatHands.Length; handIndex++)
+            {
+                hands[handIndex] = new CasinoBlackjackHandDto(Cards: seatHands[handIndex]);
+            }
+
             seats = new[]
             {
                 new CasinoBlackjackSeatDto(SeatIndex: 0, UserId: "user-0", State: BlackjackSeatStates.Seated,
-                    Hands: new[] { new CasinoBlackjackHandDto(Cards: seatCards) }),
+                    Hands: hands),
             };
         }
 

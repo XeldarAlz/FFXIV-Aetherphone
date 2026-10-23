@@ -56,6 +56,7 @@ Pick the line that fits you.
 | [Networking](networking.md) | How the plugin talks to Aethernet: requests, errors, sign-in, the live connection, calls, encryption, uploads |
 | [Messaging and chat](messaging-and-chat.md) | The shared chat screens and stores behind ChocoChat, Velvet, Aethergram messages, and Yellow Pages |
 | [Linkpearl](linkpearl.md) | The in-game chat app and its pop-out windows |
+| [Prism](prism.md) | The glam library, the weekly contest and the wardrobe: how gear and mods are captured, try on, and the server contract |
 | [Media and video](media-and-video.md) | Video, watch-along parties, Music and Jam, Community Radio, and the players the plugin downloads |
 | [Assets and media files](assets-and-media.md) | Every asset pipeline for engineers: fonts, emoji, icons, images, sounds, wallpapers, cases |
 
@@ -72,6 +73,7 @@ Pick the line that fits you.
 | Doc | What it covers |
 | --- | --- |
 | [Testing, CI, and releases](testing-and-release.md) | Running the tests, what CI checks, the release pipeline, the changelog, and the repo's automation |
+| [Headless preview harness](harness.md) | Render and drive the phone without the game or Dalamud: setup, the driver commands, what is faked, what is switched off |
 
 ### For artists, translators, and everyone
 

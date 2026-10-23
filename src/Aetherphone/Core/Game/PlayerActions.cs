@@ -21,6 +21,11 @@ internal static unsafe class PlayerActions
 
     public static PlayerActionAvailability Resolve(string name, string world)
     {
+        if (!GameMemory.Attached)
+        {
+            return ResolveSimulated(name, world);
+        }
+
         if (!PlayerTarget.TrySplit(name, world, out var playerName, out var worldName))
         {
             return PlayerActionAvailability.None;
@@ -55,8 +60,26 @@ internal static unsafe class PlayerActions
         }
     }
 
+    private static PlayerActionAvailability ResolveSimulated(string name, string world)
+    {
+        if (GameMemory.Simulated is null || !PlayerTarget.TrySplit(name, world, out var playerName, out var worldName))
+        {
+            return PlayerActionAvailability.None;
+        }
+
+        MusterWorlds.TryResolve(worldName, out var worldId, out _);
+        return IsLocalPlayer(playerName, worldId)
+            ? PlayerActionAvailability.None
+            : new PlayerActionAvailability(true, true, true, true, true);
+    }
+
     public static bool InviteToParty(string name, string world)
     {
+        if (!GameMemory.Attached)
+        {
+            return GameMemory.SimulateAction($"invite {name}@{world} to the party");
+        }
+
         if (!PlayerTarget.TrySplit(name, world, out var playerName, out var worldName))
         {
             return false;
@@ -82,16 +105,31 @@ internal static unsafe class PlayerActions
 
     public static bool SendFriendRequest(string name, string world)
     {
+        if (!GameMemory.Attached)
+        {
+            return GameMemory.SimulateAction($"send a friend request to {name}@{world}");
+        }
+
         return SendTargetedCommand(FriendRequestCommand, name, world, "[PlayerActions] friend request failed");
     }
 
     public static bool AddToBlacklist(string name, string world)
     {
+        if (!GameMemory.Attached)
+        {
+            return GameMemory.SimulateAction($"blacklist {name}@{world}");
+        }
+
         return SendTargetedCommand(BlacklistCommand, name, world, "[PlayerActions] blacklist failed");
     }
 
     public static bool OpenAdventurerPlate(string name, string world)
     {
+        if (!GameMemory.Attached)
+        {
+            return GameMemory.SimulateAction($"open the adventurer plate of {name}@{world}");
+        }
+
         if (!PlayerTarget.TrySplit(name, world, out var playerName, out var worldName))
         {
             return false;
@@ -131,6 +169,11 @@ internal static unsafe class PlayerActions
 
     public static bool TargetPlayer(string name, string world)
     {
+        if (!GameMemory.Attached)
+        {
+            return GameMemory.SimulateAction($"target {name}@{world}");
+        }
+
         if (!PlayerTarget.TrySplit(name, world, out var playerName, out var worldName))
         {
             return false;

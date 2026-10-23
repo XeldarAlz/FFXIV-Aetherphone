@@ -74,6 +74,13 @@ internal sealed class PlaybackHub : IDisposable
             : radio.State == RadioPlaybackState.Playing;
 
     public bool IsPaused => SongActive ? songs.IsPaused : radio.State == RadioPlaybackState.Paused;
+
+    public bool RadioSilent => !SongActive &&
+                               radio.State is RadioPlaybackState.Buffering or RadioPlaybackState.Reconnecting
+                                   or RadioPlaybackState.Failed;
+
+    public bool OffersStop => IsPaused || RadioSilent;
+
     public bool IsBuffering => SongActive
         ? songs.State is SongPlaybackState.Resolving or SongPlaybackState.Buffering
         : radio.State is RadioPlaybackState.Buffering or RadioPlaybackState.Reconnecting;
@@ -364,7 +371,7 @@ internal sealed class PlaybackHub : IDisposable
             return;
         }
 
-        if (radio.State == RadioPlaybackState.Paused)
+        if (radio.State is RadioPlaybackState.Paused or RadioPlaybackState.Failed)
         {
             radio.Resume();
             return;
@@ -442,6 +449,11 @@ internal sealed class PlaybackHub : IDisposable
         }
 
         RequestAutoplayIfNeeded();
+        if (radio.OutageExpired(Environment.TickCount64))
+        {
+            radio.Stop();
+        }
+
         if (sleepDeadline > 0 && Environment.TickCount64 >= sleepDeadline)
         {
             sleepDeadline = 0;

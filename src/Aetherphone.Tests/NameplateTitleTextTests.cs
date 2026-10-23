@@ -42,6 +42,26 @@ public sealed class NameplateTitleTextTests
     }
 
     [Fact]
+    public void StationNameFillsTheRadioTemplate()
+    {
+        var values = NameplateValues.Empty with { Station = "Gridania FM" };
+
+        Assert.Equal("On air · Gridania FM", NameplateTitleText.RenderFitted("On air · [station]", values));
+    }
+
+    [Fact]
+    public void LongStationNameIsCutToTheTitleLimit()
+    {
+        var values = NameplateValues.Empty with { Station = "The Gold Saucer Midnight Request Hour" };
+
+        var fitted = NameplateTitleText.RenderFitted("On air · [station]", values);
+
+        Assert.Equal(NameplateTitleText.MaxLength, fitted.Length);
+        Assert.StartsWith("On air · The Gold Saucer", fitted);
+        Assert.EndsWith("…", fitted);
+    }
+
+    [Fact]
     public void UnknownPlaceholdersStayAsWritten()
     {
         Assert.Equal("Hi [there]", NameplateTitleText.Render("Hi [there]", NameplateValues.Empty));

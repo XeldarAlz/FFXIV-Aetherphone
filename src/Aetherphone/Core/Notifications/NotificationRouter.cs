@@ -1,5 +1,6 @@
 using Aetherphone.Core.Announcements;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Campaigns;
 using Aetherphone.Core.Casino;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Feedback;
@@ -24,6 +25,7 @@ internal sealed class NotificationRouter
     private const string MusterAppId = "muster";
     private const string YellowPagesAppId = "yellowpages";
     private const string AnnouncementsAppId = "announcements";
+    private const string LoveIslandAppId = "loveisland";
     private const string SettingsAppId = "settings";
     private const string MusicAppId = "music";
     private const string CasinoAppId = "casino";
@@ -31,6 +33,7 @@ internal sealed class NotificationRouter
     private const string AetherStreamAppId = "aetherstream";
     private const string HuntsAppId = "hunts";
     private const string FeedbackAppId = "feedback";
+    private const string PrismAppId = "prism";
     private const int TypeLike = 0;
     private const int TypeComment = 1;
     private const int TypeFollow = 2;
@@ -47,6 +50,7 @@ internal sealed class NotificationRouter
     private const int TypeAdInquiry = 19;
     private const int TypeMissedCall = 20;
     private const int TypeRadioLive = 21;
+    private const int TypePlacing = 23;
     private const string CallGroupPrefix = "call:";
     private readonly INavigator navigation;
     private readonly NotificationService notifications;
@@ -67,6 +71,7 @@ internal sealed class NotificationRouter
     private readonly HuntsLauncher huntsLauncher;
     private readonly JamLauncher jamLauncher;
     private readonly FeedbackLauncher feedbackLauncher;
+    private readonly CampaignLauncher campaignLauncher;
 
     public NotificationRouter(INavigator navigation, NotificationService notifications,
         SocialNotificationService socialNotifications, LinkpearlLauncher linkpearlLauncher,
@@ -75,10 +80,11 @@ internal sealed class NotificationRouter
         AnnouncementsLauncher announcementsLauncher, SafetyLauncher safetyLauncher,
         EncryptionSetupLauncher encryptionSetupLauncher, RadioLauncher radioLauncher,
         CasinoLauncher casinoLauncher, AetherStreamLauncher aetherStreamLauncher, HuntsLauncher huntsLauncher,
-        JamLauncher jamLauncher, FeedbackLauncher feedbackLauncher)
+        JamLauncher jamLauncher, FeedbackLauncher feedbackLauncher, CampaignLauncher campaignLauncher)
     {
         this.jamLauncher = jamLauncher;
         this.feedbackLauncher = feedbackLauncher;
+        this.campaignLauncher = campaignLauncher;
         this.radioLauncher = radioLauncher;
         this.casinoLauncher = casinoLauncher;
         this.aetherStreamLauncher = aetherStreamLauncher;
@@ -166,6 +172,10 @@ internal sealed class NotificationRouter
         {
             announcementsLauncher.RequestDetail(notification.GroupKey);
         }
+        else if (notification.AppId == LoveIslandAppId && !string.IsNullOrEmpty(notification.GroupKey))
+        {
+            campaignLauncher.Request(notification.GroupKey);
+        }
         else if (notification.AppId == MusicAppId && JamInviteNotification.TryParseCode(notification.GroupKey, out var jamCode))
         {
             jamLauncher.RequestLobby(jamCode);
@@ -213,7 +223,7 @@ internal sealed class NotificationRouter
 
     private static SocialDeepLink? SocialLinkFor(PhoneNotification notification)
     {
-        if (notification.AppId is not (ChirperAppId or AethergramAppId or VelvetAppId))
+        if (notification.AppId is not (ChirperAppId or AethergramAppId or VelvetAppId or PrismAppId))
         {
             return null;
         }
@@ -221,7 +231,7 @@ internal sealed class NotificationRouter
         return notification.SocialType switch
         {
             TypeLike or TypeComment or TypeCommentLike or TypeMention or TypeCommentMention or TypePhotoTag
-                or TypeRepost or TypeQuote
+                or TypeRepost or TypeQuote or TypePlacing
                 when !string.IsNullOrEmpty(notification.PostId)
                 => new SocialDeepLink(SocialLinkKind.Post, notification.PostId!),
             TypeFollow or TypeConnectRequest or TypeConnectAccept or TypeFollowAccept

@@ -24,6 +24,8 @@ internal sealed class SocialActivityFeed
 
     public NotificationDto[] Items => items;
 
+    public bool Loaded => loaded;
+
     public void Invalidate()
     {
         loaded = false;
@@ -100,6 +102,7 @@ internal sealed class SocialActivityFeed
             }
             finally
             {
+                loaded = true;
                 loading = false;
             }
         });

@@ -90,7 +90,8 @@ internal sealed class PhoneShell : IDisposable
             services.LinkpearlLauncher, services.VelvetLauncher, services.DmLauncher, services.GramDmLauncher,
             services.SocialLauncher, services.MusterLauncher, services.YellowPagesLauncher,
             services.AnnouncementsLauncher, services.SafetyLauncher, services.EncryptionSetup, services.RadioLauncher,
-            services.CasinoLauncher, services.AetherStreamLauncher, services.HuntsLauncher, services.JamLauncher, services.FeedbackLauncher);
+            services.CasinoLauncher, services.AetherStreamLauncher, services.HuntsLauncher, services.JamLauncher, services.FeedbackLauncher,
+            services.CampaignLauncher);
         MusterChatBridge.Bind(services.Musters, services.MusterLauncher, navigation);
         AdChatBridge.Bind(services.YellowPages, services.YellowPagesLauncher, navigation);
         banner = new NotificationBanner(notifications, VisibleAppId, PhoneVisible, router);
@@ -182,6 +183,12 @@ internal sealed class PhoneShell : IDisposable
     public bool MinimizedResting => minimize.MinimizedResting;
 
     public IPhoneApp? ForegroundApp => minimize.Phase == MinimizePhase.None && PhoneVisible() ? navigation.Current : null;
+
+    public string? CurrentAppId => navigation.Current?.Id;
+
+    public IReadOnlyList<IPhoneApp> Apps => apps;
+
+    public void GoHome() => navigation.GoHome();
 
     private static bool BezelDoubleClicked(Rect device, in ChassisGeometry chassis)
     {
@@ -321,7 +328,7 @@ internal sealed class PhoneShell : IDisposable
         if (!navigation.IsTransitioning)
         {
             transition.ResetPrepared();
-            if (navigation.Current is { } blockedApp && suspensions.Blocks(blockedApp.Id))
+            if (navigation.Current is { } blockedApp && (suspensions.Blocks(blockedApp.Id) || !blockedApp.IsAvailable))
             {
                 navigation.GoHome();
             }
@@ -398,13 +405,14 @@ internal sealed class PhoneShell : IDisposable
         UiAnchors.Report("chrome.minimize", sideButtonRect);
         UiAnchors.Report("chrome.controlcenter",
             new Rect(screen.Min, new Vector2(screen.Max.X, screen.Min.Y + 44f * UiScale.Current)));
+        var homeEditing = HomeEditing;
         using (InputShield.Engage(state.ShieldBase || director.ShieldsPointer))
         {
             DrawContent(chassis, theme);
             DrawChrome(chassis, theme);
         }
 
-        overlays.DrawOverlays(chassis, theme, delta, state, !turn.Turning);
+        overlays.DrawOverlays(chassis, theme, delta, state, !turn.Turning, homeEditing);
         if (!turn.Turning)
         {
             DeviceChrome.DrawLiveBand(ImGui.GetForegroundDrawList(), chassis, UiScale.Current);
@@ -476,7 +484,8 @@ internal sealed class PhoneShell : IDisposable
         {
             DeviceChrome.MaskScreenCorners(ImGui.GetWindowDrawList(), chassis, theme, UiScale.Current);
             var ink = painter.SurfaceTheme(theme);
-            var statusAlpha = navigation.IsTransitioning && !appSwitcher.Overtakes ? transition.StatusBarAlpha : 1f;
+            var statusAlpha = navigation.IsTransitioning && !appSwitcher.Overtakes ? transition.StatusBarAlpha
+                : navigation.Current is null ? 1f - home.EditPresence : 1f;
             StatusBar.Draw(screen, ink, screen.IsLandscape(), statusAlpha);
             DrawHomeIndicator(screen, ink);
             if (turn.Turning)

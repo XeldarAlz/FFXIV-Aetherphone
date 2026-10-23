@@ -607,11 +607,7 @@ internal sealed partial class ChirperApp
 
         if (UiInteract.Click(replyMin, replyMax, replyHovered))
         {
-            if (commentDraft.Length == 0 && comment.AuthorHandle.Length > 0)
-            {
-                commentDraft = "@" + comment.AuthorHandle + " ";
-            }
-
+            commentDraft = ReplyMention.Prefill(commentDraft, comment.AuthorHandle, MaxCommentLength);
             replyFocusPending = true;
         }
 

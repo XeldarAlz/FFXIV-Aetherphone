@@ -8,6 +8,8 @@ namespace Aetherphone.Tests;
 public sealed class RadioRoomSessionTests
 {
     private const string Station = "st_01";
+    private const string StationName = "Gridania FM";
+    private const string OtherStationName = "Limsa Waves";
     private const string Me = "u_me";
     private const long UnixNow = 1_759_500_000_000;
 
@@ -40,7 +42,7 @@ public sealed class RadioRoomSessionTests
 
         public void Enter(bool isDj = false, bool isModerator = false, long? mutedUntil = null)
         {
-            Session.Attach(Station);
+            Session.Attach(Station, StationName);
             Receive(RadioRoomSamples.Room(Station, isDj, isModerator, mutedUntil));
         }
     }
@@ -50,8 +52,8 @@ public sealed class RadioRoomSessionTests
     {
         var harness = new Harness();
 
-        harness.Session.Attach(Station);
-        harness.Session.Attach(Station);
+        harness.Session.Attach(Station, StationName);
+        harness.Session.Attach(Station, StationName);
 
         Assert.Single(harness.Sent);
         Assert.Equal(SignalType.RadioAttach, harness.Sent[0].Type);
@@ -148,7 +150,7 @@ public sealed class RadioRoomSessionTests
     {
         var harness = new Harness();
         var version = harness.Session.Version;
-        harness.Session.Attach(Station);
+        harness.Session.Attach(Station, StationName);
         Assert.True(harness.Session.Version > version);
 
         string[] signals =
@@ -299,7 +301,7 @@ public sealed class RadioRoomSessionTests
     public void AttachRefusalMarksUnavailableAndCooldownRetries()
     {
         var harness = new Harness();
-        harness.Session.Attach(Station);
+        harness.Session.Attach(Station, StationName);
 
         harness.Receive($"{{\"type\":\"radio.refused\",\"stationId\":\"{Station}\",\"action\":\"radio.attach\",\"reason\":\"cooldown\"}}");
         Assert.False(harness.Session.HasRefusal);
@@ -320,9 +322,9 @@ public sealed class RadioRoomSessionTests
     public void ALateSnapshotAfterAQuickRevisitHealsWhenTheServerSaysNotInRoom()
     {
         var harness = new Harness();
-        harness.Session.Attach(Station);
+        harness.Session.Attach(Station, StationName);
         harness.Session.Detach();
-        harness.Session.Attach(Station);
+        harness.Session.Attach(Station, StationName);
         Assert.Equal(2, harness.Sent.Count);
         Assert.Equal(SignalType.RadioDetach, harness.Sent[1].Type);
 
@@ -344,8 +346,8 @@ public sealed class RadioRoomSessionTests
     public void SwitchingStationsQuicklyDefersTheSecondAttach()
     {
         var harness = new Harness();
-        harness.Session.Attach(Station);
-        harness.Session.Attach("st_02");
+        harness.Session.Attach(Station, StationName);
+        harness.Session.Attach("st_02", OtherStationName);
 
         Assert.Single(harness.Sent);
         harness.Tick += RadioRoomPacing.AttachMilliseconds;
@@ -353,6 +355,32 @@ public sealed class RadioRoomSessionTests
 
         Assert.Equal(2, harness.Sent.Count);
         Assert.Equal("st_02", harness.Sent[1].StationId);
+    }
+
+    [Fact]
+    public void TheRoomRemembersTheStationNameUntilItLeaves()
+    {
+        var harness = new Harness();
+        harness.Enter(isDj: true);
+        Assert.Equal(StationName, harness.Session.StationName);
+
+        harness.Session.Attach(Station, OtherStationName);
+        Assert.Equal(OtherStationName, harness.Session.StationName);
+        Assert.Single(harness.Sent);
+
+        harness.Session.Detach();
+        Assert.Equal(string.Empty, harness.Session.StationName);
+    }
+
+    [Fact]
+    public void SwitchingStationsTakesTheNewStationName()
+    {
+        var harness = new Harness();
+        harness.Session.Attach(Station, StationName);
+        harness.Session.Attach("st_02", OtherStationName);
+
+        Assert.Equal("st_02", harness.Session.StationId);
+        Assert.Equal(OtherStationName, harness.Session.StationName);
     }
 
     [Fact]
@@ -383,7 +411,7 @@ public sealed class RadioRoomSessionTests
         var bus = new RealtimeSignalBus();
         var harness = new Harness();
         using var router = new RadioRoomRouter(bus, harness.Session, null);
-        harness.Session.Attach(Station);
+        harness.Session.Attach(Station, StationName);
 
         bus.PublishRadio(RadioRoomWireTests.Parse(RadioRoomSamples.Room(Station)));
         Assert.False(harness.Session.IsAttached);

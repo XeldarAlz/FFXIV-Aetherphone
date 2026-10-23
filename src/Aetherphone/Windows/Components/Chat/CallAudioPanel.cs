@@ -5,6 +5,7 @@ using Aetherphone.Core.Telephony.Audio;
 using Aetherphone.Core.Telephony.Contracts;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 
 namespace Aetherphone.Windows.Components;
 
@@ -12,7 +13,6 @@ internal sealed class CallAudioPanel
 {
     private const float MeterRowHeight = 20f;
     private const float MeterThickness = 4f;
-    private const float MeterRange = 6f;
     private const float ThresholdMarkWidth = 2f;
     private const float ThresholdMarkHeight = 10f;
     private static readonly Vector4 MeterInk = new(0.20f, 0.78f, 0.35f, 1f);
@@ -44,7 +44,8 @@ internal sealed class CallAudioPanel
             dragging |= DrawPeer(theme, participant);
         }
 
-        dragging |= DrawMicrophoneVolume(theme, view);
+        dragging |= DrawMicrophoneVolume(theme);
+        dragging |= DrawMicrophoneThreshold(theme, view);
         SettingsSection.Header(Loc.T(L.Phone.Speaker), theme);
         DrawOutputDevices(theme);
         SettingsSection.Header(Loc.T(L.Phone.Microphone), theme);
@@ -102,31 +103,90 @@ internal sealed class CallAudioPanel
         return result.Dragging;
     }
 
-    private bool DrawMicrophoneVolume(PhoneTheme theme, in CallView view)
+    private bool DrawMicrophoneVolume(PhoneTheme theme)
     {
         SettingsSection.Header(Loc.T(L.Phone.MicVolume), theme);
-        var live = view.InCall;
-        var card = GroupCard.Begin(theme, GroupCard.DefaultRowHeight * 2f + (live ? MeterRowHeight : 0f));
         var autoGain = calls.AutoGain;
-        var autoGainNext = SettingsRow.Bool(card.NextRow(GroupCard.DefaultRowHeight), Loc.T(L.Phone.AutoGain), autoGain,
-            theme, "call.autoGain");
-        var result = VolumeSlider.Draw("##call.micGain", card.NextRow(GroupCard.DefaultRowHeight), calls.InputGain,
-            theme, AudioCapture.MaximumGain);
-        if (live)
+        var card = GroupCard.Begin(theme, autoGain ? 1 : 2);
+        var autoGainNext = SettingsRow.Bool(card.NextRow(), Loc.T(L.Phone.AutoGain), autoGain, theme, "call.autoGain",
+            Loc.T(L.Phone.AutoGainHint));
+        var dragging = false;
+        if (!autoGain)
         {
-            DrawMeter(card.NextRow(MeterRowHeight), view.Muted ? 0f : view.MicLevel, theme);
+            var result = VolumeSlider.Draw("##call.micGain", card.NextRow(), calls.InputGain, theme,
+                AudioCapture.MaximumGain);
+            if (result.Dragging || result.Released)
+            {
+                calls.SetInputGain(result.Value);
+            }
+
+            if (result.Released)
+            {
+                calls.SaveAudioSettings();
+            }
+
+            dragging = result.Dragging;
         }
 
         card.End();
-        SettingsSection.Hint(Loc.T(L.Phone.AutoGainHint), theme);
+        SettingsSection.Hint(Loc.T(autoGain ? L.Phone.AutoGainVolumeHint : L.Phone.MicVolumeHint), theme);
         if (autoGainNext != autoGain)
         {
             calls.SetAutoGain(autoGainNext);
         }
 
+        return dragging;
+    }
+
+    private bool DrawMicrophoneThreshold(PhoneTheme theme, in CallView view)
+    {
+        SettingsSection.Header(Loc.T(L.Phone.MicThreshold), theme);
+        var live = view.InCall;
+        if (live && calls.MicTestActive)
+        {
+            calls.SetMicTest(false);
+        }
+
+        var testing = !live && calls.MicTestActive;
+        if (testing)
+        {
+            calls.KeepMicTestAlive();
+        }
+
+        var metering = live || testing;
+        var card = GroupCard.Begin(theme, GroupCard.DefaultRowHeight + (metering ? MeterRowHeight : 0f)
+            + (live ? 0f : GroupCard.DefaultRowHeight));
+        var result = VolumeSlider.DrawStepped("##call.micThreshold", card.NextRow(GroupCard.DefaultRowHeight),
+            calls.InputThreshold, theme, FontAwesomeIcon.Microphone, MicThreshold.Readouts);
+        var clipping = metering && calls.MicClipping;
+        if (metering)
+        {
+            var level = live ? (view.Muted ? 0f : view.MicLevel) : calls.MicTestLevel;
+            DrawMeter(card.NextRow(MeterRowHeight), result.Track, level, result.Value, clipping, theme);
+        }
+
+        var testNext = testing;
+        if (!live)
+        {
+            testNext = SettingsRow.Bool(card.NextRow(GroupCard.DefaultRowHeight), Loc.T(L.Phone.TestMicrophone),
+                testing, theme, "call.micTest");
+        }
+
+        card.End();
+        SettingsSection.Hint(Loc.T(L.Phone.MicThresholdHint), theme);
+        if (clipping)
+        {
+            SettingsSection.Hint(Loc.T(L.Phone.MicClipping), theme.Danger);
+        }
+
+        if (testNext != testing)
+        {
+            calls.SetMicTest(testNext);
+        }
+
         if (result.Dragging || result.Released)
         {
-            calls.SetInputGain(result.Value);
+            calls.SetInputThreshold(result.Value);
         }
 
         if (result.Released)
@@ -137,28 +197,39 @@ internal sealed class CallAudioPanel
         return result.Dragging;
     }
 
-    private static void DrawMeter(Rect row, float level, PhoneTheme theme)
+    private static void DrawMeter(Rect row, Rect track, float level, float threshold, bool clipping,
+        PhoneTheme theme)
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var top = row.Min.Y + Metrics.Space.Xs * scale;
-        var min = new Vector2(row.Min.X, top);
-        var max = new Vector2(row.Max.X, top + MeterThickness * scale);
+        var min = new Vector2(track.Min.X, top);
+        var max = new Vector2(track.Max.X, top + MeterThickness * scale);
         var radius = MeterThickness * 0.5f * scale;
         drawList.AddRectFilled(min, max, ImGui.GetColorU32(theme.ToggleOff), radius);
-        var fill = Math.Clamp(level * MeterRange, 0f, 1f);
+        var fill = MicThreshold.MeterFill(level);
         if (fill > 0f)
         {
             drawList.AddRectFilled(min, new Vector2(min.X + (max.X - min.X) * fill, max.Y),
-                ImGui.GetColorU32(MeterInk), radius);
+                ImGui.GetColorU32(MeterColor(level, threshold, clipping, theme)), radius);
         }
 
-        var thresholdX = min.X + (max.X - min.X) * Math.Clamp(AudioCapture.GateOpenRms * MeterRange, 0f, 1f);
+        var thresholdX = min.X + (max.X - min.X) * Math.Clamp(threshold, 0f, 1f);
         var markCenterY = (min.Y + max.Y) * 0.5f;
         var markHalf = ThresholdMarkHeight * 0.5f * scale;
-        drawList.AddRectFilled(new Vector2(thresholdX, markCenterY - markHalf),
-            new Vector2(thresholdX + ThresholdMarkWidth * scale, markCenterY + markHalf),
-            ImGui.GetColorU32(theme.TextMuted));
+        drawList.AddRectFilled(new Vector2(thresholdX - ThresholdMarkWidth * 0.5f * scale, markCenterY - markHalf),
+            new Vector2(thresholdX + ThresholdMarkWidth * 0.5f * scale, markCenterY + markHalf),
+            ImGui.GetColorU32(theme.TextStrong));
+    }
+
+    private static Vector4 MeterColor(float level, float threshold, bool clipping, PhoneTheme theme)
+    {
+        if (clipping)
+        {
+            return theme.Danger;
+        }
+
+        return MicThreshold.Opens(level, threshold) ? MeterInk : theme.TextMuted;
     }
 
     private void DrawOutputDevices(PhoneTheme theme)

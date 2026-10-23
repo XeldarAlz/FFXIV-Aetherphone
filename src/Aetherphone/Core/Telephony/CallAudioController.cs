@@ -26,7 +26,9 @@ internal sealed class CallAudioController
     public float VolumeLocked => configuration.CallOutputVolume;
     public float InputGainLocked => configuration.CallInputGain;
     public bool AutoGainLocked => configuration.CallAutoGain;
+    public float InputThresholdLocked => configuration.CallInputThreshold;
     public float MicLevelLocked => session?.MicLevel ?? 0f;
+    public bool MicClippingLocked => session?.MicClipping ?? false;
 
     public float PeakMicLevelLocked
     {
@@ -62,7 +64,8 @@ internal sealed class CallAudioController
 
         var input = AudioDevices.ResolveInput(configuration.CallInputDevice);
         var created = new CallSession(callId, connection, input, configuration.CallOutputDevice,
-            configuration.CallOutputVolume, configuration.CallInputGain, configuration.CallAutoGain) { Muted = muted, };
+            configuration.CallOutputVolume, configuration.CallInputGain, configuration.CallAutoGain,
+            configuration.CallInputThreshold) { Muted = muted, };
         if (localSlot >= 0)
         {
             created.SetLocalSlot(localSlot);
@@ -161,6 +164,16 @@ internal sealed class CallAudioController
         if (session is not null)
         {
             session.InputGain = gain;
+        }
+    }
+
+    public void SetInputThresholdLocked(float value)
+    {
+        var threshold = Math.Clamp(value, 0f, 1f);
+        configuration.CallInputThreshold = threshold;
+        if (session is not null)
+        {
+            session.InputThreshold = threshold;
         }
     }
 

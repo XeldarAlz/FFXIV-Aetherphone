@@ -62,6 +62,7 @@ internal sealed partial class VelvetShell
 
         var cellGap = ProfileGridGap * scale;
         var cell = (width - cellGap * (ProfileColumns - 1)) / ProfileColumns;
+        var cellHeight = cell * ProfileTileAspect;
         var rows = (posts.Length + ProfileColumns - 1) / ProfileColumns;
         var origin = ImGui.GetCursorScreenPos();
         var drawList = ImGui.GetWindowDrawList();
@@ -70,8 +71,8 @@ internal sealed partial class VelvetShell
             var post = posts[index];
             var row = index / ProfileColumns;
             var column = index % ProfileColumns;
-            var min = new Vector2(origin.X + column * (cell + cellGap), origin.Y + row * (cell + cellGap));
-            var max = new Vector2(min.X + cell, min.Y + cell);
+            var min = new Vector2(origin.X + column * (cell + cellGap), origin.Y + row * (cellHeight + cellGap));
+            var max = new Vector2(min.X + cell, min.Y + cellHeight);
             if (!ImGui.IsRectVisible(min, max))
             {
                 continue;
@@ -100,7 +101,7 @@ internal sealed partial class VelvetShell
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, rows * cell + (rows - 1) * cellGap));
+        ImGui.Dummy(new Vector2(width, rows * cellHeight + (rows - 1) * cellGap));
         if (store.UserPostsLoadingMore)
         {
             InfiniteScroll.DrawLoadingRow(origin.X + width * 0.5f, VelvetTheme.MutedInk);
@@ -128,17 +129,18 @@ internal sealed partial class VelvetShell
         var scale = UiScale.Current;
         var cellGap = ProfileGridGap * scale;
         var cell = (width - cellGap * (ProfileColumns - 1)) / ProfileColumns;
+        var cellHeight = cell * ProfileTileAspect;
         var origin = ImGui.GetCursorScreenPos();
         var drawList = ImGui.GetWindowDrawList();
         for (var column = 0; column < ProfileColumns; column++)
         {
             var min = new Vector2(origin.X + column * (cell + cellGap), origin.Y);
-            var max = new Vector2(min.X + cell, min.Y + cell);
+            var max = new Vector2(min.X + cell, min.Y + cellHeight);
             VMediaTile.Conceal(drawList, min, max, 0f, string.Empty, 0f);
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, cell));
+        ImGui.Dummy(new Vector2(width, cellHeight));
         Gap(GridTeaserGap);
         var teaser = totalCount > 0
             ? Loc.Plural(L.Velvet.ConnectToUnlockPosts, totalCount)

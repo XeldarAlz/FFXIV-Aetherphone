@@ -29,4 +29,26 @@ internal readonly record struct AnnouncementText(string Title, string Body)
 
         return new AnnouncementText(announcement.Title, announcement.Body);
     }
+
+    public static string For(AnnouncementBlockDto block)
+    {
+        var fallback = block.Text ?? string.Empty;
+        var translations = block.Translations;
+        if (translations is null)
+        {
+            return fallback;
+        }
+
+        var code = Loc.Current.Code;
+        for (var index = 0; index < translations.Length; index++)
+        {
+            var translation = translations[index];
+            if (translation.Lang == code)
+            {
+                return string.IsNullOrEmpty(translation.Text) ? fallback : translation.Text;
+            }
+        }
+
+        return fallback;
+    }
 }

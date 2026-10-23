@@ -128,7 +128,7 @@ internal sealed class FeedFilterSheet
         Squircle.Fill(drawList, panelMin, panelMax, rounding, ImGui.GetColorU32(panelFill));
         Squircle.Stroke(drawList, panelMin, panelMax, rounding,
             ImGui.GetColorU32(Palette.WithAlpha(PanelStroke, PanelStroke.W * opacity)), 1f);
-        var interactive = open && opacity > 0.5f;
+        var interactive = open && reveal.Arrive(1f);
         var picked = -1;
 
         var grabberMin = new Vector2(screen.Center.X - GrabberWidth * scale * 0.5f, panelTop + 8f * scale);
@@ -184,10 +184,9 @@ internal sealed class FeedFilterSheet
             }
 
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            if (UiInteract.Click(chipMin, chipMax, hovered))
             {
                 picked = toggleCount + regionIndex;
-                UiFeedback.Play(UiSound.Tap);
             }
         }
 
@@ -201,11 +200,11 @@ internal sealed class FeedFilterSheet
         if (doneHovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-            {
-                UiFeedback.Play(UiSound.Tap);
-                Close();
-            }
+        }
+
+        if (UiInteract.Click(doneMin, doneMax, doneHovered))
+        {
+            Close();
         }
 
         drawList.PopClipRect();
@@ -251,12 +250,6 @@ internal sealed class FeedFilterSheet
         }
 
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        if (!ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-        {
-            return false;
-        }
-
-        UiFeedback.Play(value ? UiSound.ToggleOff : UiSound.ToggleOn);
-        return true;
+        return UiInteract.Click(rowMin, rowMax, hovered, value ? UiSound.ToggleOff : UiSound.ToggleOn);
     }
 }

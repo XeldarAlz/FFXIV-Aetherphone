@@ -8,6 +8,11 @@ internal static unsafe class FriendListReader
 {
     public static bool RequestServerData()
     {
+        if (!GameMemory.Attached)
+        {
+            return GameMemory.Simulated is not null;
+        }
+
         var gameMain = GameMain.Instance();
         if (gameMain == null || gameMain->CurrentContentFinderConditionId != 0)
         {
@@ -25,6 +30,12 @@ internal static unsafe class FriendListReader
 
     public static void Read(List<FriendEntry> into, GameData gameData)
     {
+        if (!GameMemory.Attached)
+        {
+            ReadSimulated(into, gameData);
+            return;
+        }
+
         into.Clear();
         var proxy = InfoProxyFriendList.Instance();
         if (proxy == null)
@@ -42,11 +53,31 @@ internal static unsafe class FriendListReader
             }
 
             var online = entry->State.HasFlag(InfoProxyCommonList.CharacterData.OnlineStatus.Online);
-            into.Add(new FriendEntry(entry->ContentId, entry->NameString, gameData.WorldName(entry->HomeWorld),
-                entry->FCTagString, online ? gameData.JobAbbreviation(entry->Job) : string.Empty,
-                online ? gameData.JobName(entry->Job) : string.Empty,
-                online ? gameData.TerritoryName(entry->Location) : string.Empty, online, entry->HomeWorld,
-                entry->CurrentWorld));
+            into.Add(Entry(gameData, entry->ContentId, entry->NameString, entry->FCTagString, entry->Job,
+                entry->Location, online, entry->HomeWorld, entry->CurrentWorld));
         }
     }
+
+    private static void ReadSimulated(List<FriendEntry> into, GameData gameData)
+    {
+        if (GameMemory.Simulated is not { } simulated)
+        {
+            return;
+        }
+
+        into.Clear();
+        for (var index = 0; index < simulated.Friends.Length; index++)
+        {
+            var friend = simulated.Friends[index];
+            into.Add(Entry(gameData, friend.ContentId, friend.Name, friend.FreeCompanyTag, friend.ClassJobId,
+                friend.TerritoryId, friend.Online, friend.HomeWorldId, friend.CurrentWorldId));
+        }
+    }
+
+    private static FriendEntry Entry(GameData gameData, ulong contentId, string name, string freeCompanyTag,
+        byte classJobId, ushort territoryId, bool online, ushort homeWorldId, ushort currentWorldId) =>
+        new(contentId, name, gameData.WorldName(homeWorldId), freeCompanyTag,
+            online ? gameData.JobAbbreviation(classJobId) : string.Empty,
+            online ? gameData.JobName(classJobId) : string.Empty,
+            online ? gameData.TerritoryName(territoryId) : string.Empty, online, homeWorldId, currentWorldId);
 }

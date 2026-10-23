@@ -22,6 +22,7 @@ internal sealed partial class AethergramApp
     private const float CommentTextGap = 3f;
     private const float CommentMetaGap = 8f;
     private const float CommentMediaGap = 6f;
+    private const float CommentReplyGap = 4f;
     private const float CommentHeartColumn = 40f;
     private const float CommentHeartSize = 16f;
     private const float CommentHeartHitRadius = 14f;
@@ -35,6 +36,7 @@ internal sealed partial class AethergramApp
     private static readonly TextStyle CommentNameStyle = TextStyles.Headline;
     private static readonly TextStyle CommentBodyStyle = TextStyles.Callout;
     private static readonly TextStyle CommentMetaStyle = TextStyles.Footnote;
+    private static readonly TextStyle CommentReplyStyle = TextStyles.FootnoteEmphasized;
     private static readonly TextStyle CommentCountStyle = TextStyles.Caption1;
     private static readonly TextStyle EarlierCommentsStyle = TextStyles.SubheadlineEmphasized;
 
@@ -176,7 +178,11 @@ internal sealed partial class AethergramApp
         var mediaHidden = CommentMediaHidden(comment.MediaUrl);
         var mediaHeight = mediaHidden ? 0f : CommentMedia.MeasureHeight(comment, textWidth, scale);
         var mediaGap = mediaHeight > 0f && (textHeight > 0f || linkHeight > 0f) ? CommentMediaGap * scale : 0f;
-        var contentHeight = nameHeight + textGap + textHeight + linkHeight + mediaGap + mediaHeight;
+        var canReply = !mine && comment.AuthorHandle.Length > 0;
+        var replyGap = canReply ? CommentReplyGap * scale : 0f;
+        var replyHeight = canReply ? ReplyMention.Height(CommentReplyStyle) : 0f;
+        var contentHeight = nameHeight + textGap + textHeight + linkHeight + mediaGap + mediaHeight + replyGap
+            + replyHeight;
         var rowHeight = padY * 2f + MathF.Max(contentHeight, radius * 2f);
         var rowMax = new Vector2(origin.X + width, origin.Y + rowHeight);
 
@@ -234,6 +240,14 @@ internal sealed partial class AethergramApp
             {
                 photoViewer.Open(this, () => GifMedia.Texture(images, commentMediaUrl, ImGui.GetTime()));
             }
+        }
+
+        if (canReply && ReplyMention.DrawLink(drawList,
+                new Vector2(textLeft, textTop + textHeight + linkHeight + mediaGap + mediaHeight + replyGap),
+                Loc.T(L.Aethergram.ReplyToComment), textWidth, CommentReplyStyle, Ink.MutedInk, Ink.TitleInk))
+        {
+            commentDraft = ReplyMention.Prefill(commentDraft, comment.AuthorHandle, MaxCommentLength);
+            commentFocusPending = true;
         }
 
         var avatarExtent = new Vector2(radius, radius);

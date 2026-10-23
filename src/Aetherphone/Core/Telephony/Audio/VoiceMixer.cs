@@ -113,11 +113,14 @@ internal sealed class VoiceMixer : ISampleProvider, IDisposable
 
     private void Open(string deviceName)
     {
-        var endpoint = AudioDevices.FindOutput(deviceName);
+        var target = AudioDevices.ResolveOutput(deviceName);
+        var endpoint = target.Endpoint;
         IWavePlayer device;
         try
         {
-            device = AudioOutputFactory.Create(OutputLatencyMilliseconds, endpoint);
+            device = target.WaveOutDevice >= 0
+                ? AudioOutputFactory.CreateWaveOut(OutputLatencyMilliseconds, target.WaveOutDevice)
+                : AudioOutputFactory.Create(OutputLatencyMilliseconds, endpoint);
             device.Init(this.ToWaveProvider16());
             device.Play();
         }

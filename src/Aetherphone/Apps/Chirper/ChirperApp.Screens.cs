@@ -26,6 +26,7 @@ internal sealed partial class ChirperApp
     private const float TagGlyphSize = 38f;
     private const float EditAvatarRadius = 46f;
     private const float EditFieldHeight = SearchBar.HeightUnits;
+    private const float UserListSearchPadY = 6f;
     private const float EditBioMinHeight = 64f;
 
     private static readonly TextStyle ScreenTitleStyle = TextStyles.Title3;
@@ -52,6 +53,7 @@ internal sealed partial class ChirperApp
 
     private static Vector4 UnreadTint => SeasonalTheme.Halloween ? MoonlitUnreadTint : StandardUnreadTint;
 
+    private readonly UserListSearch userListSearch = new();
     private bool mentionsOnly;
     private Spring activitySegment;
     private string editDisplay = string.Empty;
@@ -273,15 +275,38 @@ internal sealed partial class ChirperApp
             top = rail.Max.Y;
         }
 
+        var searchable = UserListSearch.Supports(kind);
+        if (searchable)
+        {
+            var fieldHeight = SearchBar.HeightUnits * scale;
+            var fieldTop = top + UserListSearchPadY * scale;
+            var field = new Rect(new Vector2(area.Min.X + 14f * scale, fieldTop),
+                new Vector2(area.Max.X - 14f * scale, fieldTop + fieldHeight));
+            SearchBar.Draw(field, "##chirperUserListSearch", Loc.T(L.Social.ListSearchHint), ref userListSearch.Draft,
+                ui.Ink, UserListSearch.MaxLength);
+            userListSearch.Update(store, sourceId, kind, ImGui.GetTime());
+            top = field.Max.Y + UserListSearchPadY * scale;
+        }
+
         var listRect = new Rect(new Vector2(area.Min.X, top), area.Max);
+        if (searchable && userListSearch.Active)
+        {
+            DrawUserListMatches(listRect);
+            return;
+        }
+
         var snapshot = store.UserListResults;
         using (AppSurface.BeginEdgeToEdge(listRect))
         {
             if (snapshot.Length == 0)
             {
-                var message = store.UserListLoading ? Loc.T(L.Common.Loading)
-                    : store.UserListFailed ? Loc.T(L.Chirper.ProfileError)
-                    : Loc.T(L.Social.ListEmpty);
+                if (store.UserListFailed)
+                {
+                    UserListSearch.DrawFailure(listRect, store, ui);
+                    return;
+                }
+
+                var message = store.UserListLoading ? Loc.T(L.Common.Loading) : Loc.T(L.Social.ListEmpty);
                 Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 60f * scale), message,
                     ChirperInk.MutedInk, MetaStyle);
                 return;
@@ -290,6 +315,11 @@ internal sealed partial class ChirperApp
             ImGui.Dummy(new Vector2(0f, 4f * scale));
             for (var index = 0; index < snapshot.Length; index++)
             {
+                if (SocialUserRow.SkipHidden(UserRowStyle))
+                {
+                    continue;
+                }
+
                 DrawUserRow(snapshot[index]);
             }
 
@@ -300,6 +330,52 @@ internal sealed partial class ChirperApp
             else if (store.HasMoreUserList && InfiniteScroll.ReachedBottom())
             {
                 store.LoadMoreUserList();
+            }
+
+            ImGui.Dummy(new Vector2(0f, 12f * scale));
+        }
+    }
+
+    private void DrawUserListMatches(Rect listRect)
+    {
+        var scale = UiScale.Current;
+        var matches = userListSearch.Matches;
+        using (AppSurface.BeginEdgeToEdge(listRect))
+        {
+            if (matches.Count == 0)
+            {
+                if (UserListSearch.Failed(store))
+                {
+                    UserListSearch.DrawFailure(listRect, store, ui);
+                    return;
+                }
+
+                Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 60f * scale),
+                    UserListSearch.EmptyMessage(store), ChirperInk.MutedInk, MetaStyle);
+                return;
+            }
+
+            ImGui.Dummy(new Vector2(0f, 4f * scale));
+            for (var index = 0; index < matches.Count; index++)
+            {
+                if (SocialUserRow.SkipHidden(UserRowStyle))
+                {
+                    continue;
+                }
+
+                DrawUserRow(matches[index]);
+            }
+
+            if (store.UserListSearchFilling)
+            {
+                InfiniteScroll.DrawLoadingRow(listRect.Center.X, ChirperInk.MutedInk);
+            }
+
+            UserListSearch.DrawStalledFooter(store, ui, ChirperInk.MutedInk);
+            var cappedNote = userListSearch.CappedNote(store);
+            if (cappedNote.Length > 0)
+            {
+                UserListSearch.DrawNote(cappedNote, ChirperInk.MutedInk);
             }
 
             ImGui.Dummy(new Vector2(0f, 12f * scale));

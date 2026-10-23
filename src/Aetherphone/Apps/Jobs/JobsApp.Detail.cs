@@ -252,7 +252,7 @@ internal sealed partial class JobsApp
             new Vector2(contentRect.Max.X + Metrics.Space.Lg * scale, contentRect.Max.Y));
         var menuRadius = GearsetMenuRadius * scale;
         var menuCenter = new Vector2(contentRect.Max.X - menuRadius, contentRect.Center.Y);
-        var menuHalf = new Vector2(menuRadius, menuRadius);
+        var menuHalf = new Vector2(MathF.Max(menuRadius, Metrics.Size.TapTarget * 0.5f * scale));
         var menuRect = new Rect(menuCenter - menuHalf, menuCenter + menuHalf);
         if (!gearsetAnchorTaken)
         {
@@ -310,7 +310,7 @@ internal sealed partial class JobsApp
                     TextStyles.Footnote), theme.Danger, TextStyles.Footnote);
         }
 
-        if (ui.IconButton(menuCenter, menuRadius, IconGlyph.Of(FontAwesomeIcon.EllipsisH), ui.MutedInk, default, 0.5f))
+        if (ui.IconButton(menuCenter, menuHalf.X, IconGlyph.Of(FontAwesomeIcon.EllipsisH), ui.MutedInk, default, 0.5f))
         {
             UiFeedback.Play(UiSound.Tap);
             menuGearsetId = gearset.Id;

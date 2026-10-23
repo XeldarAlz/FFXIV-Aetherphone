@@ -24,6 +24,7 @@ internal sealed class GeneralPage : ISettingsPage
         new(L.Settings.ShowSensitive),
         new(L.Settings.MarketContextMenu),
         new(L.Settings.LinkpearlContextMenu),
+        new(L.Settings.NetworkStatusInChat),
         new(L.Settings.ArrowKeysStepPosts),
         new(L.Settings.AutoAdvancePosts),
         new(L.Settings.AutoTranslate),
@@ -76,7 +77,7 @@ internal sealed class GeneralPage : ISettingsPage
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
             var translationRow = translation.Enabled ? 1 : 0;
             var autoAdvanceRow = configuration.FeedAutoAdvance ? 1 : 0;
-            var card = GroupCard.Begin(theme, 10 + translationRow + autoAdvanceRow);
+            var card = GroupCard.Begin(theme, 11 + translationRow + autoAdvanceRow);
             var showInGpose = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.ShowInGpose),
                 configuration.ShowInGpose, theme, null, Loc.T(L.Settings.ShowInGposeHint));
             var showInCutscenes = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.ShowInCutscenes),
@@ -94,6 +95,8 @@ internal sealed class GeneralPage : ISettingsPage
                 configuration.MarketContextMenu, theme, null, Loc.T(L.Settings.MarketContextMenuHint));
             var linkpearlContextMenu = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.LinkpearlContextMenu),
                 configuration.LinkpearlContextMenu, theme, null, Loc.T(L.Settings.LinkpearlContextMenuHint));
+            var networkStatusInChat = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.NetworkStatusInChat),
+                configuration.NetworkStatusInChat, theme, null, Loc.T(L.Settings.NetworkStatusInChatHint));
             var arrowKeysStepPosts = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.ArrowKeysStepPosts),
                 configuration.ArrowKeysStepPosts, theme, null, Loc.T(L.Settings.ArrowKeysStepPostsHint));
             var autoAdvance = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.AutoAdvancePosts),
@@ -165,6 +168,12 @@ internal sealed class GeneralPage : ISettingsPage
             if (linkpearlContextMenu != configuration.LinkpearlContextMenu)
             {
                 configuration.LinkpearlContextMenu = linkpearlContextMenu;
+                configuration.Save();
+            }
+
+            if (networkStatusInChat != configuration.NetworkStatusInChat)
+            {
+                configuration.NetworkStatusInChat = networkStatusInChat;
                 configuration.Save();
             }
 

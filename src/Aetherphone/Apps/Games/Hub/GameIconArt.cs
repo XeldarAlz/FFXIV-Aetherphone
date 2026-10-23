@@ -13,15 +13,13 @@ internal static class GameIconArt
     public static float Radius(float side) => side * HubMetrics.IconRadiusFactor;
 
     public static bool Draw(ImDrawListPtr drawList, string iconId, Vector4 accent, Vector2 min, Vector2 max,
-        IconAppearance? appearance, bool elevated)
+        bool elevated)
     {
         var scale = UiScale.Current;
         var side = MathF.Max(max.X - min.X, max.Y - min.Y);
         var radius = Radius(side);
-        var painted = appearance.HasValue
-            ? AppIconTile.TryDraw(drawList, iconId, accent, min, max, radius, 1f, appearance.Value, elevated, scale)
-            : AppIconTile.TryDraw(drawList, iconId, accent, min, max, radius, 1f, elevated, scale);
-        if (painted)
+        if (AppIconTile.TryDraw(drawList, iconId, accent, min, max, radius, 1f, IconAppearance.Default, elevated,
+                scale))
         {
             return true;
         }

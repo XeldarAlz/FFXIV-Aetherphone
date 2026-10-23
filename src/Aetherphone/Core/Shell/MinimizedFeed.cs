@@ -13,7 +13,6 @@ internal sealed class MinimizedFeed
     private const float GilIntervalSeconds = 1f;
     private const float VentureIntervalSeconds = 5f;
     private const int ForecastWindows = 1;
-    private const uint GilItemId = 1;
 
     private readonly WeatherService weather;
     private readonly CoinStore coins;
@@ -94,7 +93,7 @@ internal sealed class MinimizedFeed
             return gilIconId;
         }
 
-        gilIconResolved = gameData.TryGetItem(GilItemId, out _, out var iconId, out _);
+        gilIconResolved = gameData.TryGetItem(GameData.GilItemId, out _, out var iconId, out _);
         gilIconId = gilIconResolved ? iconId : 0u;
         return gilIconId;
     }

@@ -201,9 +201,12 @@ internal sealed class ChatsWidget : IHomeWidget
         for (var index = 0; index < rowCount; index++)
         {
             var item = sorted[index];
-            var preview = item.LastMessagePreview.Length > 0 ? ChatText.ListPreview(item.LastMessagePreview) : string.Empty;
+            var hidden = store.HidesLastMessage(item);
+            var preview = hidden
+                ? Loc.T(L.Message.BlockedBody)
+                : item.LastMessagePreview.Length > 0 ? ChatText.ListPreview(item.LastMessagePreview) : string.Empty;
             var time = item.LastMessageAtUnix > 0 ? TimeText.Short(item.LastMessageAtUnix) : string.Empty;
-            rows[index] = new ChatRow(store.DisplayTitle(item), preview, item.LastMessageKind, time,
+            rows[index] = new ChatRow(store.DisplayTitle(item), preview, hidden ? 0 : item.LastMessageKind, time,
                 PeopleWidgetChrome.CountLabel(item.UnreadCount), item.Muted, item.IsGroup,
                 item.IsGroup ? item.AvatarUrl : item.OtherAvatarUrl,
                 WidgetRoute.To(MessageAppId, WidgetRouteKind.Conversation, item.Id));

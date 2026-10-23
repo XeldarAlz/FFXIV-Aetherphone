@@ -24,8 +24,9 @@ internal sealed partial class MusicApp
     private const float ReactionLaneSpacing = 12f;
     private const float ReactionSwayWidth = 14f;
     private const float ReactionMineScale = 1.15f;
-    private const float ReactionTraySlot = 38f;
-    private const float ReactionTrayHeight = 46f;
+    private const float ReactionTraySlot = 34f;
+    private const float ReactionTrayHeight = 42f;
+    private const float ReactionTrayEmojiSize = 20f;
     private const float PinnedTintAlpha = 0.14f;
 
     private static readonly TextStyle ChatBodyStyle = LiveChatTranscript.BodyStyle;
@@ -259,14 +260,14 @@ internal sealed partial class MusicApp
         {
             DrawComposerLock(drawList, new Rect(new Vector2(fieldLeft, bar.Min.Y + ComposerFieldInsetY * scale),
                 new Vector2(bar.Max.X - inset, bar.Max.Y - ComposerFieldInsetY * scale)), lockState, scale);
-            DrawReactionTray(bar, reactCenter, overReactionToggle, scale);
+            DrawReactionTray(bar, overReactionToggle, scale);
             return;
         }
 
         var send = LiveChatTranscript.DrawComposerField(ui, bar, fieldLeft, "##radioChatComposer",
             Loc.T(L.Music.Live.ChatHint), chatEditor, RadioRoomSession.MaxChatLength, room.CanSendChat(), counterLabel,
             scale);
-        DrawReactionTray(bar, reactCenter, overReactionToggle, scale);
+        DrawReactionTray(bar, overReactionToggle, scale);
         if (send && room.SendChat(chatEditor.Text))
         {
             chatEditor.Adopt(string.Empty);
@@ -321,7 +322,7 @@ internal sealed partial class MusicApp
         return muteText;
     }
 
-    private void DrawReactionTray(Rect bar, Vector2 toggleCenter, bool overToggle, float scale)
+    private void DrawReactionTray(Rect bar, bool overToggle, float scale)
     {
         if (!reactionTrayOpen)
         {
@@ -329,13 +330,15 @@ internal sealed partial class MusicApp
         }
 
         EnsureReactionFiles();
-        var slot = ReactionTraySlot * scale;
-        var height = ReactionTrayHeight * scale;
-        var width = slot * RadioRoomSession.ReactionKinds + Metrics.Space.Sm * 2f * scale;
-        var left = MathF.Max(bar.Min.X + Metrics.Space.Sm * scale, toggleCenter.X - ComposerButtonRadius * scale);
-        left = MathF.Min(left, bar.Max.X - Metrics.Space.Sm * scale - width);
-        var min = new Vector2(left, bar.Min.Y - height - Metrics.Space.Xs * scale);
-        var max = new Vector2(left + width, min.Y + height);
+        var padding = Metrics.Space.Sm * scale;
+        var preferredSlot = ReactionTraySlot * scale;
+        var fit = RadioReactionTrayLayout.Fit(bar.Min.X, bar.Max.X, padding, padding,
+            RadioRoomSession.ReactionKinds, preferredSlot);
+        var slot = fit.Slot;
+        var shrink = slot / preferredSlot;
+        var height = ReactionTrayHeight * scale * shrink;
+        var min = new Vector2(fit.Left, bar.Min.Y - height - Metrics.Space.Xs * scale);
+        var max = new Vector2(fit.Left + fit.Width, min.Y + height);
         var drawList = ImGui.GetWindowDrawList();
         var radius = height * 0.5f;
         Elevation.Floating(drawList, min, max, radius, scale);
@@ -345,10 +348,10 @@ internal sealed partial class MusicApp
         var overTray = UiInteract.Hover(min, max);
         for (var index = 0; index < RadioRoomSession.ReactionKinds; index++)
         {
-            var slotMin = new Vector2(min.X + Metrics.Space.Sm * scale + index * slot, min.Y);
+            var slotMin = new Vector2(min.X + padding + index * slot, min.Y);
             var slotMax = new Vector2(slotMin.X + slot, max.Y);
             var hovered = UiInteract.Hover(slotMin, slotMax);
-            var fontSize = ReactionSize * scale * (hovered ? 1.15f : 1f);
+            var fontSize = ReactionTrayEmojiSize * scale * shrink * (hovered ? 1.15f : 1f);
             var side = EmojiRender.LineHeight(fontSize);
             var center = (slotMin + slotMax) * 0.5f;
             var file = reactionFiles[index];

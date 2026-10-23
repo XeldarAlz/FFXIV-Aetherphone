@@ -17,6 +17,7 @@ internal enum IslandMediaControls : ushort
     Repeat = 1 << 7,
     RepeatActive = 1 << 8,
     RepeatOne = 1 << 9,
+    Stop = 1 << 10,
 }
 
 internal enum IslandMediaSource : byte
@@ -45,6 +46,10 @@ internal readonly record struct IslandMedia(string Title, string Subtitle, float
                         When(shuffleActive, IslandMediaControls.ShuffleActive) |
                         When(repeat != SongRepeatMode.Off, IslandMediaControls.RepeatActive) |
                         When(repeat == SongRepeatMode.One, IslandMediaControls.RepeatOne);
+        }
+        else
+        {
+            controls |= IslandMediaControls.Stop;
         }
 
         return song

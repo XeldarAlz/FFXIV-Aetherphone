@@ -485,7 +485,7 @@ internal sealed partial class GamesApp
 
         var icon = LeaderboardIdentityIcon * scale;
         var iconRect = new Rect(new Vector2(left, top), new Vector2(left + icon, top + icon));
-        GameIconArt.Draw(drawList, game.Id, game.Accent, iconRect.Min, iconRect.Max, null, true);
+        GameIconArt.Draw(drawList, game.Id, game.Accent, iconRect.Min, iconRect.Max, true);
         var playLabel = Loc.T(L.Games.Play);
         var showPlay = currentGame is null;
         var buttonWidth = showPlay ? Button.WidthFor(playLabel, ButtonSize.Small) : 0f;

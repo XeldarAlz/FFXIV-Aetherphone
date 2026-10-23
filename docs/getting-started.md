@@ -22,7 +22,7 @@ This page takes you from `git clone` to a development build of Aetherphone runni
 
 You do not need to run the backend. The build talks to an existing server, and the offline apps work without signing in.
 
-**Dalamud** is the plugin framework XIVLauncher loads into the game. It gives plugins a C# API over chat, game data, the object table, textures, and rendering. Aetherphone's `Plugin` class implements `IDalamudPlugin`, and Dalamud fills its `[PluginService]` properties with game services. The project builds on the `Dalamud.NET.Sdk`, which references the Dalamud assemblies from your local install and packages the output.
+**Dalamud** is the plugin framework XIVLauncher loads into the game. It gives plugins a C# API over chat, game data, the object table, textures, and rendering. Aetherphone's `Plugin` class implements `IDalamudPlugin`, and Dalamud fills its `[PluginService]` properties with game services. The project builds on the `Dalamud.NET.Sdk`, which references the Dalamud assemblies from your local install and packages the output. On a machine without Dalamud, run the [harness bootstrap](harness.md) once and the build uses the Dalamud copy it caches.
 
 **Dear ImGui** is an immediate mode UI library: nothing is kept between frames, and the plugin declares the whole phone again every frame. Widgets are methods you call each frame, not objects you keep, and draw code must not allocate per frame (see [Conventions](conventions.md)).
 

@@ -319,7 +319,7 @@ internal sealed class FishingAlerts : IDisposable
         }
 
         lastCaughtRefresh = now;
-        var playerState = clientState.IsLoggedIn ? PlayerState.Instance() : null;
+        var playerState = clientState.IsLoggedIn && GameMemory.Attached ? PlayerState.Instance() : null;
         if (playerState == null || !playerState->IsLoaded)
         {
             catalogTracked = false;

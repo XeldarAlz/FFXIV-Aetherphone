@@ -146,7 +146,7 @@ internal sealed partial class DynamicIsland
             return false;
         }
 
-        if (lastExpanded)
+        if (lastExpanded || swiping)
         {
             return true;
         }
@@ -187,6 +187,7 @@ internal sealed partial class DynamicIsland
         if (primary == IslandActivity.None && presenceValue < 0.02f && pulseValue < 0.01f)
         {
             expand.SnapTo(0f);
+            ResetSwipe();
             lastExpanded = false;
             lastBounds = StatusBar.BaseIsland(screen);
             lastBubbleVisible = false;
@@ -243,13 +244,16 @@ internal sealed partial class DynamicIsland
         }
 
         expand.Step(expanded ? 1f : 0f, Motion.Island, delta);
+        StepSwipe(delta, scale);
         var expandAmount = Math.Clamp(expand.Value, 0f, 1f);
-        var bounds = Swell(LerpRect(morphed, card, expandAmount), pulseValue * (1f - expandAmount));
+        var bounds = Shift(Swell(LerpRect(morphed, card, expandAmount), pulseValue * (1f - expandAmount)),
+            swipeOffset);
+        var swipeFade = SwipeFade(scale);
         lastBounds = bounds;
         lastExpanded = expandAmount > 0.5f;
         var hovered = UiInteract.Hover(bounds.Min, bounds.Max);
         var accent = AccentFor(shownKind);
-        var compactAlpha = Math.Clamp(presenceValue * 1.6f - 0.6f, 0f, 1f) * (1f - expandAmount);
+        var compactAlpha = Math.Clamp(presenceValue * 1.6f - 0.6f, 0f, 1f) * (1f - expandAmount) * swipeFade;
         var drawList = ImGui.GetWindowDrawList();
         DrawBubble(drawList, theme, navigation, bounds, scale, expandAmount);
         var rounding = IslandActivities.CornerRadius(bounds.Height, scale);
@@ -259,7 +263,8 @@ internal sealed partial class DynamicIsland
                 0.24f * expandAmount);
         }
 
-        Squircle.Fill(drawList, bounds.Min, bounds.Max, rounding, ImGui.GetColorU32(theme.Glass));
+        Squircle.Fill(drawList, bounds.Min, bounds.Max, rounding,
+            ImGui.GetColorU32(Palette.WithAlpha(theme.Glass, theme.Glass.W * swipeFade)));
         if (expandAmount > 0.01f)
         {
             Material.LiquidGlass(drawList, bounds.Min, bounds.Max, rounding, scale, GlassTone.Dark, 0f, expandAmount);
@@ -273,15 +278,21 @@ internal sealed partial class DynamicIsland
 
         DrawCompact(drawList, bounds, scale, view, accent, compactAlpha);
         var overControl = DrawExpanded(drawList, bounds, scale, theme, navigation, view, accent, expandAmount);
-        HandleTap(navigation, bounds, hovered, overControl, expandAmount, presenceValue, suppress);
+        HandleTap(navigation, bounds, hovered, overControl, expandAmount, presenceValue, suppress, scale);
     }
 
     private void HandleTap(INavigator navigation, Rect bounds, bool hovered, bool overControl, float expandAmount,
-        float presenceValue, bool suppress)
+        float presenceValue, bool suppress, float scale)
     {
         if (expandAmount < 0.5f)
         {
-            if (suppress || shownKind == IslandActivity.Notice || !hovered || presenceValue < ControlThreshold)
+            if (suppress || shownKind == IslandActivity.Notice || presenceValue < ControlThreshold)
+            {
+                swiping = false;
+                return;
+            }
+
+            if (HandleSwipe(hovered, scale) || !hovered)
             {
                 return;
             }
@@ -619,7 +630,7 @@ internal sealed partial class DynamicIsland
         var controlCenter = new Vector2(bounds.Max.X - CardPadX * scale - controlRadius, centerY);
         var textLeft = iconCenter.X + iconRadius + CardTextGap * scale;
         var textWidth = MathF.Max(1f, controlCenter.X - controlRadius - CardTextGap * scale - textLeft);
-        var active = alpha > ControlThreshold;
+        var active = alpha > ControlThreshold && expanded && expand.Arrive(1f);
         var controlExtent = new Vector2(controlRadius, controlRadius);
         var overControl = active && UiInteract.Hover(controlCenter - controlExtent, controlCenter + controlExtent);
         var controlFill = Palette.WithAlpha(Ink, ControlFillAlpha);
@@ -792,11 +803,11 @@ internal sealed partial class DynamicIsland
     private static bool RoundButton(ImDrawListPtr drawList, Vector2 center, float radius, FontAwesomeIcon icon,
         Vector4 fill, Vector4 ink, float alpha, bool active)
     {
-        var hovered = active &&
-                      UiInteract.Hover(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        var extent = new Vector2(radius, radius);
+        var hovered = active && UiInteract.Hover(center - extent, center + extent);
         var color = hovered ? Palette.Mix(fill, Ink, 0.14f) : fill;
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(color, alpha * color.W)), 28);
-        using (ImRaii.PushFont(UiBuilder.IconFont))
+        using (Plugin.Fonts.PushDalamudIcon())
         {
             var glyph = IconGlyph.Of(icon);
             var size = ImGui.CalcTextSize(glyph);
@@ -812,7 +823,7 @@ internal sealed partial class DynamicIsland
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(center - extent, center + extent, hovered);
     }
 
     private static Rect CompactBounds(Rect rest, float scale)

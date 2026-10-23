@@ -5,6 +5,7 @@ using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Playback;
+using Aetherphone.Core.Telephony.Audio;
 using Aetherphone.Core.Telephony.Contracts;
 
 namespace Aetherphone.Core.Telephony;
@@ -25,6 +26,7 @@ internal sealed class CallHub : IDisposable
     private readonly ConfirmService confirm;
     private readonly AppGate installed;
     private readonly ContactBook contacts;
+    private readonly MicLevelMonitor micTest = new();
     private readonly object gate = new();
     private CallState state = CallState.Idle;
     private CallView snapshotView;
@@ -389,7 +391,56 @@ internal sealed class CallHub : IDisposable
         {
             audio.SwitchInputLocked();
         }
+
+        micTest.Restart(name);
     }
+
+    public float InputThreshold
+    {
+        get
+        {
+            lock (gate)
+            {
+                return audio.InputThresholdLocked;
+            }
+        }
+    }
+
+    public void SetInputThreshold(float value)
+    {
+        lock (gate)
+        {
+            audio.SetInputThresholdLocked(value);
+        }
+    }
+
+    public bool MicClipping
+    {
+        get
+        {
+            lock (gate)
+            {
+                return audio.HasSessionLocked ? audio.MicClippingLocked : micTest.Clipping;
+            }
+        }
+    }
+
+    public bool MicTestActive => micTest.Active;
+
+    public float MicTestLevel => micTest.Level;
+
+    public void SetMicTest(bool value)
+    {
+        if (value)
+        {
+            micTest.Start(configuration.CallInputDevice);
+            return;
+        }
+
+        micTest.Stop();
+    }
+
+    public void KeepMicTestAlive() => micTest.Touch();
 
     public void SelectOutputDevice(string name)
     {
@@ -584,6 +635,7 @@ internal sealed class CallHub : IDisposable
         sessionToDispose?.Dispose();
         if (becameActive)
         {
+            micTest.Stop();
             sound.StopCallRing();
             UiFeedback.Play(UiSound.CallConnect);
         }
@@ -925,6 +977,7 @@ internal sealed class CallHub : IDisposable
         }
 
         toDispose?.Dispose();
+        micTest.Dispose();
         router.Dispose();
     }
 }

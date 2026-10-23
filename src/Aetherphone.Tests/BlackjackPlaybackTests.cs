@@ -173,6 +173,20 @@ public sealed class BlackjackPlaybackTests
             BlackjackSeatStates.Seated, true, Hands: hands);
     }
 
+    [Fact]
+    public void TheRailBetPlateGivesWayToTheSettledResultOnlyOnceAHandIsDecided()
+    {
+        var pending = new[] { Hand(1_000, BlackjackOutcomes.Pending, 0) };
+        var won = new[] { Hand(1_000, BlackjackOutcomes.Win, 1_500) };
+        var split = new[] { Hand(1_000, BlackjackOutcomes.Pending, 0), Hand(1_000, BlackjackOutcomes.Lose, -1_000) };
+
+        Assert.False(BlackjackTable.SettledBadgeShows(pending, 1f));
+        Assert.False(BlackjackTable.SettledBadgeShows(Array.Empty<CasinoBlackjackHandDto>(), 1f));
+        Assert.False(BlackjackTable.SettledBadgeShows(won, 0f));
+        Assert.True(BlackjackTable.SettledBadgeShows(won, 0.2f));
+        Assert.True(BlackjackTable.SettledBadgeShows(split, 1f));
+    }
+
     private static CasinoBlackjackHandDto Hand(long bet, int outcome, long delta)
     {
         return new CasinoBlackjackHandDto(new[] { 9, 5 }, bet, 15, Outcome: outcome, Delta: delta);

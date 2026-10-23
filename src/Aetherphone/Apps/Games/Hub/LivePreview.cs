@@ -170,6 +170,6 @@ internal sealed class LivePreview
 
         var half = new Vector2(side * 0.5f);
         var center = art.Center;
-        GameIconArt.Draw(drawList, game.Id, accent, center - half, center + half, IconAppearance.Default, true);
+        GameIconArt.Draw(drawList, game.Id, accent, center - half, center + half, true);
     }
 }

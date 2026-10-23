@@ -248,7 +248,7 @@ internal sealed class StreakCalendar
         var height = FooterHeight(scale);
         var icon = FooterIcon * scale;
         var iconMin = new Vector2(left, top + (height - icon) * 0.5f);
-        GameIconArt.Draw(drawList, daily.Id, daily.Accent, iconMin, iconMin + new Vector2(icon, icon), null, true);
+        GameIconArt.Draw(drawList, daily.Id, daily.Accent, iconMin, iconMin + new Vector2(icon, icon), true);
         var done = stats.DailyDone;
         var playLabel = Loc.T(L.Games.Play);
         var trailing = done ? CheckSize * scale : Button.WidthFor(playLabel, ButtonSize.Small);

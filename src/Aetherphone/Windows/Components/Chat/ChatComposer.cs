@@ -127,6 +127,8 @@ internal sealed class ChatComposer : IDisposable
 
     private bool ReadyToSend => editor.HasContent || pendingImage is not null;
 
+    private bool CanAttachImage(in ChatComposerModel model) => model.CanImage && editTargetId is null;
+
     private static float Height(ChatComposerStyle style) => style switch
     {
         ChatComposerStyle.Pill => PillComposerHeight * UiScale.Current,
@@ -155,6 +157,7 @@ internal sealed class ChatComposer : IDisposable
     {
         ClearReply();
         pendingImage = null;
+        intake.Discard();
         editTargetId = messageId;
         editBarPreview = ChatText.QuotePreview(body, TextKind);
         editor.Adopt(body);
@@ -194,8 +197,15 @@ internal sealed class ChatComposer : IDisposable
 
     public void PasteImage(PhotoLibrary library) => intake.Paste(library);
 
-    public void AcceptImageDrop(Rect area, PhotoLibrary library, Vector4 highlight) =>
+    public void AcceptImageDrop(Rect area, PhotoLibrary library, Vector4 highlight)
+    {
+        if (editTargetId is not null)
+        {
+            return;
+        }
+
         intake.AcceptDrop(area, library, highlight);
+    }
 
     public void AttachImage(string path)
     {
@@ -334,7 +344,7 @@ internal sealed class ChatComposer : IDisposable
 
         typing = EmojiSuggestions.FieldTyping();
 
-        if (model.CanImage && editTargetId is null && model.Library is { } library && ImGui.IsItemActive()
+        if (CanAttachImage(model) && model.Library is { } library && ImGui.IsItemActive()
             && ImageIntake.PasteRequested())
         {
             intake.Paste(library);
@@ -359,7 +369,7 @@ internal sealed class ChatComposer : IDisposable
         var drawList = ImGui.GetWindowDrawList();
         var edgePad = PlusEdgePad * scale;
         var centerY = area.Max.Y - PlusComposerHeight * scale * 0.5f;
-        var showAttach = model.CanImage || model.CanLocation;
+        var showAttach = CanAttachImage(model) || model.CanLocation;
         var pillLeft = area.Min.X + edgePad;
         if (showAttach)
         {
@@ -480,7 +490,8 @@ internal sealed class ChatComposer : IDisposable
         }
 
         var count = 0;
-        if (model.CanImage)
+        var canImage = CanAttachImage(model);
+        if (canImage)
         {
             attachItems[count++] = new DropdownMenu.Item(Loc.T(L.Common.SendPhoto), PhoneIcons.Photo);
         }
@@ -496,7 +507,7 @@ internal sealed class ChatComposer : IDisposable
             return;
         }
 
-        if (model.CanImage && picked == 0)
+        if (canImage && picked == 0)
         {
             model.OnPickImage(model.ConversationId);
             return;
@@ -596,7 +607,7 @@ internal sealed class ChatComposer : IDisposable
 
         var textRight = pillMax.X - 14f * scale;
         var trailingIconX = pillMax.X - iconRadius - 5f * scale;
-        if (model.CanImage)
+        if (CanAttachImage(model))
         {
             var pictureCenter = new Vector2(trailingIconX, centerY);
             var pictureMin = pictureCenter - new Vector2(iconRadius, iconRadius);
@@ -703,7 +714,7 @@ internal sealed class ChatComposer : IDisposable
         var rowTop = pill.Max.Y - rowHeight;
         var centerY = pill.Max.Y - rowHeight * 0.5f;
         var textLeft = pill.Min.X + PillTextGap * scale;
-        if (model.CanImage)
+        if (CanAttachImage(model))
         {
             var cameraRadius = rowHeight * 0.5f - PillCameraInset * scale;
             var cameraCenter = new Vector2(pill.Min.X + PillCameraInset * scale + cameraRadius, centerY);

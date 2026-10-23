@@ -2,6 +2,8 @@ namespace Aetherphone.Core.Animation;
 
 internal struct Spring
 {
+    private const float ArrivalDistance = 0.01f;
+
     public float Value;
     public float Velocity;
 
@@ -48,6 +50,17 @@ internal struct Spring
     public readonly bool IsResting(float target, float positionEpsilon, float velocityEpsilon)
     {
         return MathF.Abs(Value - target) <= positionEpsilon && MathF.Abs(Velocity) <= velocityEpsilon;
+    }
+
+    public bool Arrive(float target)
+    {
+        if (MathF.Abs(Value - target) > ArrivalDistance)
+        {
+            return false;
+        }
+
+        SnapTo(target);
+        return true;
     }
 
     public void SnapTo(float value)

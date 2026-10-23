@@ -303,7 +303,7 @@ internal sealed partial class BlackjackTable : ICabinetIdle
             motionsPrimed = false;
         }
 
-        playback.Update(board, delta);
+        playback.Update(board, delta, mySeat);
         dealer.Update(delta);
         UpdateAnnouncements(delta);
         var unreachable = room.Unreachable(nowTick);

@@ -298,6 +298,12 @@ internal sealed unsafe class JobWidget : IHomeWidget
 
     private void Refresh()
     {
+        if (!GameMemory.Attached)
+        {
+            RefreshSimulated();
+            return;
+        }
+
         var player = gameData.LocalPlayer;
         var playerState = PlayerState.Instance();
         if (player is null || playerState is null)
@@ -312,10 +318,43 @@ internal sealed unsafe class JobWidget : IHomeWidget
         maxLevel = playerState->MaxLevel > 0 && level >= JobsRoster.CapFor(classJobId, playerState->MaxLevel);
         var needed = maxLevel ? 0L : (long)playerState->GetCurrentClassJobNeededExp();
         var current = maxLevel ? 0L : (long)playerState->GetCurrentClassJobExp();
-        experience = needed > 0 ? Math.Clamp(current / (float)needed, 0f, 1f) : maxLevel ? 1f : 0f;
+        experience = Progress(current, needed, maxLevel);
         hasJob = classJobId != 0;
         ReadGearsets();
     }
+
+    private void RefreshSimulated()
+    {
+        var player = gameData.LocalPlayer;
+        if (player is null || GameMemory.Simulated is not { } simulated)
+        {
+            return;
+        }
+
+        classJobId = player.ClassJob.RowId;
+        var expArrayIndex = gameData.JobExpArrayIndex(classJobId);
+        var levels = simulated.ClassJobLevels;
+        var experiences = simulated.ClassJobExperience;
+        level = expArrayIndex >= 0 && expArrayIndex < levels.Length ? levels[expArrayIndex] : 0;
+        maxLevel = simulated.MaxLevel > 0 && level >= simulated.MaxLevel;
+        var needed = maxLevel || level <= 0 ? 0L : gameData.ExpToNextLevel(level);
+        var current = maxLevel || expArrayIndex < 0 || expArrayIndex >= experiences.Length
+            ? 0L
+            : experiences[expArrayIndex];
+        experience = Progress(current, needed, maxLevel);
+        hasJob = classJobId != 0;
+        gearsetCount = 0;
+        activeGearsetId = simulated.ActiveGearsetId;
+        itemLevel = -1;
+        for (var index = 0; index < simulated.Gearsets.Length && gearsetCount < GearsetCapacity; index++)
+        {
+            var gearset = simulated.Gearsets[index];
+            AddGearset(gearset.Id, gearset.ClassJobId, gearset.ItemLevel);
+        }
+    }
+
+    private static float Progress(long current, long needed, bool capped) =>
+        needed > 0 ? Math.Clamp(current / (float)needed, 0f, 1f) : capped ? 1f : 0f;
 
     private void ReadGearsets()
     {
@@ -338,15 +377,19 @@ internal sealed unsafe class JobWidget : IHomeWidget
                 continue;
             }
 
-            var jobId = (uint)entry.ClassJob;
-            gearsetIds[gearsetCount] = entry.Id;
-            gearsetJobs[gearsetCount] = jobId;
-            gearsetIcons[gearsetCount] = RoleIcon(jobId);
-            gearsetCount++;
-            if (entry.Id == activeGearsetId)
-            {
-                itemLevel = entry.ItemLevel;
-            }
+            AddGearset(entry.Id, (uint)entry.ClassJob, entry.ItemLevel);
+        }
+    }
+
+    private void AddGearset(int gearsetId, uint jobId, int gearsetItemLevel)
+    {
+        gearsetIds[gearsetCount] = gearsetId;
+        gearsetJobs[gearsetCount] = jobId;
+        gearsetIcons[gearsetCount] = RoleIcon(jobId);
+        gearsetCount++;
+        if (gearsetId == activeGearsetId)
+        {
+            itemLevel = gearsetItemLevel;
         }
     }
 
