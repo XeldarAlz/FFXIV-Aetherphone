@@ -88,6 +88,7 @@ internal sealed class FontService : IDisposable
     private readonly GlyphCoverage iconCoverage = new();
     private readonly ImFontPtr[,] textFonts = new ImFontPtr[WeightFiles.Length, SizeMultipliers.Length];
     private readonly IconInk?[] iconInk = new IconInk?[IconSizeMultipliers.Length];
+    private readonly IconInk?[] retiredIconInk = new IconInk?[IconSizeMultipliers.Length];
     private readonly IFontHandle dalamudIconHandle;
     private IFontHandle? displayHandle;
     private ushort[] nativeRanges;
@@ -340,19 +341,34 @@ internal sealed class FontService : IDisposable
 
     public FontToken PushDalamudIcon() => new(dalamudIconHandle.Push());
 
-    public IconInkMark InkMark(ImFontPtr font, char codepoint)
+    public IconInkMark InkMark(ImFontPtr font, char codepoint) =>
+        TryInkMark(iconInk, font, codepoint, out var mark) || TryInkMark(retiredIconInk, font, codepoint, out mark)
+            ? mark
+            : IconInk.Unmeasured;
+
+    private static bool TryInkMark(IconInk?[] generation, ImFontPtr font, char codepoint, out IconInkMark mark)
     {
-        for (var sizeIndex = 0; sizeIndex < iconInk.Length; sizeIndex++)
+        for (var sizeIndex = 0; sizeIndex < generation.Length; sizeIndex++)
         {
-            var ink = Volatile.Read(ref iconInk[sizeIndex]);
-            if (ink is not null && ink.Describes(font))
+            var ink = Volatile.Read(ref generation[sizeIndex]);
+            if (ink is null || !ink.Describes(font))
             {
-                var largest = Volatile.Read(ref iconInk[^1]) ?? ink;
-                return ink.Mark(codepoint) with { Scale = largest.Mark(codepoint).Scale };
+                continue;
             }
+
+            var largest = Volatile.Read(ref generation[^1]) ?? ink;
+            mark = ink.Mark(codepoint) with { Scale = largest.Mark(codepoint).Scale };
+            return true;
         }
 
-        return IconInk.Unmeasured;
+        mark = IconInk.Unmeasured;
+        return false;
+    }
+
+    private void PublishInk(int sizeIndex, IconInk measured)
+    {
+        Volatile.Write(ref retiredIconInk[sizeIndex], Volatile.Read(ref iconInk[sizeIndex]));
+        Volatile.Write(ref iconInk[sizeIndex], measured);
     }
 
     public ImFontPtr DalamudIconFont
@@ -584,7 +600,7 @@ internal sealed class FontService : IDisposable
                     AepLog.Warning(exception, $"[Fonts] skipped merging '{TablerIconFile}' at {pixels}px.");
                 }
             });
-            e.OnPostBuild(tk => Volatile.Write(ref iconInk[sizeIndex], IconInk.Measure(tk, primary)));
+            e.OnPostBuild(tk => PublishInk(sizeIndex, IconInk.Measure(tk, primary)));
         });
     }
 
