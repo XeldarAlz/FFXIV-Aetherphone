@@ -10903,9 +10903,11 @@ internal static class L
         public static readonly LocString TabMe = new("prism.tabMe", "Me");
         public static readonly LocString ScopeNew = new("prism.scopeNew", "New");
         public static readonly LocString ScopePopular = new("prism.scopePopular", "Popular");
-        public static readonly LocString SearchHint = new("prism.searchHint", "Search items or #tags");
+        public static readonly LocString SearchHint = new("prism.searchHint", "People, items, #tags");
         public static readonly LocString GlamsTagged = new("prism.glamsTagged", "Glams tagged {0}");
         public static readonly LocString NoMatches = new("prism.noMatches", "No matches found");
+        public static readonly LocString PeopleHeading = new("prism.peopleHeading", "People");
+        public static readonly LocString NoPeople = new("prism.noPeople", "No one found");
         public static readonly LocString ScopeFollowing = new("prism.scopeFollowing", "Following");
         public static readonly LocString FilterAll = new("prism.filterAll", "All");
         public static readonly LocString FilterModded = new("prism.filterModded", "Modded");
