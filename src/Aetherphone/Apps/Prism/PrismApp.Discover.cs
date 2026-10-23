@@ -11,6 +11,7 @@ namespace Aetherphone.Apps.Prism;
 internal sealed partial class PrismApp
 {
     private const int GridColumns = 2;
+    private const int ExploreColumns = 3;
     private const int PlaceholderRows = 2;
     private const float TileShadeShare = 0.4f;
     private const float HeaderDotShare = 0.32f;
@@ -419,55 +420,51 @@ internal sealed partial class PrismApp
         var shown = Math.Max(0, items.Length - first);
         for (var index = 0; index < shown; index++)
         {
-            var photo = GridCell(left, top, width, index, scale);
+            var photo = GridCell(left, top, width, index, scale, ExploreColumns);
             if (!ImGui.IsRectVisible(photo.Min, photo.Max))
             {
                 continue;
             }
 
             var glam = items[first + index];
-            var count = glam.Likes > 0 ? NumberText.Compact(glam.Likes) : string.Empty;
-            if (DrawGridTile(drawList, photo, Cover(glam), AuthorLine(glam.Author), PhoneIcons.Heart, count, scale))
+            if (DrawGridTile(drawList, photo, Cover(glam), string.Empty, PhoneIcons.HeartFilled,
+                    NumberText.Compact(glam.Likes), scale))
             {
                 OpenGlam(glam);
             }
-
-            var countWidth = count.Length > 0
-                ? Typography.Measure(count, PrismType.Caption).X + (GridGlyphUnits + Metrics.Space.Sm) * scale
-                : 0f;
-            var band = GridBand(photo, scale);
-            ClickProfile(new Rect(band.Min, new Vector2(band.Max.X - countWidth, photo.Max.Y)), glam.Author);
         }
 
-        return top + GridHeight(width, shown, scale);
+        return top + GridHeight(width, shown, scale, ExploreColumns);
     }
 
-    private static Rect GridCell(float left, float top, float width, int index, float scale)
+    private static Rect GridCell(float left, float top, float width, int index, float scale,
+        int columns = GridColumns)
     {
         var gap = Metrics.Space.Xxs * scale;
-        var column = (width - gap * (GridColumns - 1)) / GridColumns;
-        var min = new Vector2(left + index % GridColumns * (column + gap),
-            top + index / GridColumns * GridPitch(width, scale));
+        var column = (width - gap * (columns - 1)) / columns;
+        var min = new Vector2(left + index % columns * (column + gap),
+            top + index / columns * GridPitch(width, scale, columns));
         return new Rect(min, min + new Vector2(column, column / GlamStore.PhotoRatio));
     }
 
-    private static float GridHeight(float width, int count, float scale) =>
-        (count + GridColumns - 1) / GridColumns * GridPitch(width, scale);
+    private static float GridHeight(float width, int count, float scale, int columns = GridColumns) =>
+        (count + columns - 1) / columns * GridPitch(width, scale, columns);
 
-    private static float GridPitch(float width, float scale)
+    private static float GridPitch(float width, float scale, int columns)
     {
         var gap = Metrics.Space.Xxs * scale;
-        return (width - gap * (GridColumns - 1)) / GridColumns / GlamStore.PhotoRatio + gap;
+        return (width - gap * (columns - 1)) / columns / GlamStore.PhotoRatio + gap;
     }
 
     private float DrawGridPlaceholders(ImDrawListPtr drawList, float left, float top, float width, float scale)
     {
-        for (var index = 0; index < PlaceholderRows * GridColumns; index++)
+        for (var index = 0; index < PlaceholderRows * ExploreColumns; index++)
         {
-            PrismArt.Placeholder(drawList, GridCell(left, top, width, index, scale), false, scale);
+            PrismArt.Placeholder(drawList, GridCell(left, top, width, index, scale, ExploreColumns), false, scale);
         }
 
-        return top + GridHeight(width, PlaceholderRows * GridColumns, scale) + PrismArt.BottomMargin(scale);
+        return top + GridHeight(width, PlaceholderRows * ExploreColumns, scale, ExploreColumns) +
+               PrismArt.BottomMargin(scale);
     }
 
     private string LaneAction()

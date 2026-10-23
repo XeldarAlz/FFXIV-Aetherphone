@@ -590,12 +590,16 @@ internal sealed partial class PrismApp : IResumableApp
 
         DrawLook(drawList, photo, url, false);
         var hovered = HoverWash(drawList, photo);
-        if (label.Length > 0 || count.Length > 0)
+        if (label.Length > 0)
         {
             var band = GridBand(photo, scale);
             PrismArt.Scrim(drawList, photo, band.Height, scale);
             DrawCountByline(drawList, band.Min.X, band.Max.X, band.Center.Y, label, glyph, count, PrismArt.PhotoFore,
                 PrismArt.PhotoFore, scale);
+        }
+        else if (count.Length > 0)
+        {
+            DrawTileCount(drawList, photo, glyph, count, scale);
         }
 
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left) && !DragScrollHost.AnyDragging;
@@ -611,6 +615,19 @@ internal sealed partial class PrismApp : IResumableApp
         }
 
         return UiInteract.Click(photo.Min, photo.Max, hovered);
+    }
+
+    private static void DrawTileCount(ImDrawListPtr drawList, Rect photo, string glyph, string count, float scale)
+    {
+        var line = Typography.LineHeight(PrismType.Caption);
+        var inset = Metrics.Space.Sm * scale;
+        PrismArt.Scrim(drawList, photo, line + inset, scale);
+        var glyphSize = GridGlyphUnits * scale;
+        var middle = photo.Max.Y - inset - line * 0.5f;
+        PhoneIcon.Draw(drawList, new Vector2(photo.Min.X + inset + glyphSize * 0.5f, middle), glyph, PrismArt.PhotoFore,
+            glyphSize);
+        Typography.Draw(drawList, new Vector2(photo.Min.X + inset + glyphSize + Metrics.Space.Xxs * scale,
+            middle - line * 0.5f), count, PrismArt.PhotoFore, PrismType.Caption);
     }
 
     private float DrawCountByline(ImDrawListPtr drawList, float left, float right, float middle, string label,
