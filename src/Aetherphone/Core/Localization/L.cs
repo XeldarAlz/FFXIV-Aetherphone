@@ -11034,6 +11034,10 @@ internal static class L
         public static readonly LocString NoModsFound = new("prism.noModsFound", "No mods found on your character.");
         public static readonly LocString AddPiece = new("prism.addPiece", "Add a piece");
         public static readonly LocString RemovePiece = new("prism.removePiece", "Remove");
+        public static readonly LocString GlamGearNote = new("prism.glamGearNote",
+            "Add each piece in your photo and pick its dyes, so people can try the glam on.");
+        public static readonly LocString ModHint = new("prism.modHint", "Name a mod you used");
+        public static readonly LocString AddMod = new("prism.addMod", "Add");
         public static readonly LocString AddDye = new("prism.addDye", "Add dye");
         public static readonly LocString NoDye = new("prism.noDye", "No dye");
         public static readonly LocString DyeChannel = new("prism.dyeChannel", "Dye {0}");
