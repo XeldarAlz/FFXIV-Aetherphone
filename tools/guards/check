@@ -37,6 +37,11 @@ existing() {
   done
 }
 
+# The Glasswork submodule under external/ keeps its own conventions and its own CI.
+owned() {
+  grep -vE '^external/' || true
+}
+
 pick() {
   printf '%s\n' "$files" | grep -E "$1" | grep -vE "${2:-^$}" || true
 }
@@ -229,20 +234,20 @@ case "${1:-}" in
   --files)
     shift
     scoped=1
-    files=$(printf '%s\n' "$@" | relative | existing)
+    files=$(printf '%s\n' "$@" | relative | owned | existing)
     ;;
   --staged)
     scoped=1
-    files=$(git diff --cached --name-only --diff-filter=ACMR | existing)
+    files=$(git diff --cached --name-only --diff-filter=ACMR | owned | existing)
     ;;
   --hook)
     scoped=1
-    files=$(hook_path | relative | existing)
+    files=$(hook_path | relative | owned | existing)
     failure_code=2
     exec 1>&2
     ;;
   *)
-    files=$(git ls-files --cached --others --exclude-standard | sort -u | existing)
+    files=$(git ls-files --cached --others --exclude-standard | sort -u | owned | existing)
     if [ $# -gt 0 ]; then
       guards="$*"
     fi

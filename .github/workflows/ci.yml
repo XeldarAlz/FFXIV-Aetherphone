@@ -83,8 +83,12 @@ jobs:
     runs-on: windows-latest
 
     steps:
+      # Glasswork (the GPU glass) is a submodule under external/, so the build
+      # checkout needs it; the guards above scan only this repository's files.
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          submodules: recursive
 
       # Defender scans every file the compiler, the package cache and the
       # Dalamud download write on this runner. All of it is throwaway, so the
@@ -119,6 +123,9 @@ jobs:
             src/Aetherphone/packages.lock.json
             src/ManagedDoom/packages.lock.json
             src/Aetherphone.Tests/Aetherphone.Tests.csproj
+            external/glasswork/src/Glasswork/packages.lock.json
+            external/glasswork/src/Glasswork.Glass/packages.lock.json
+            external/glasswork/src/Glasswork.Backend/packages.lock.json
 
       - name: Download Dalamud
         shell: pwsh

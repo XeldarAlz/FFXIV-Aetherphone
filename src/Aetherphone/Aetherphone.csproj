@@ -107,5 +107,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ManagedDoom\ManagedDoom.csproj" />
+    <ProjectReference Include="..\..\external\glasswork\src\Glasswork.Backend\Glasswork.Backend.csproj" />
   </ItemGroup>
 </Project>

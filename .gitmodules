@@ -1,0 +1,3 @@
+[submodule "external/glasswork"]
+	path = external/glasswork
+	url = https://github.com/XeldarAlz/FFXIV-Glasswork.git
