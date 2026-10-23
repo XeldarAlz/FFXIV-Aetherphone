@@ -220,9 +220,10 @@ internal sealed partial class PrismApp
         {
             var min = new Vector2(right - tile, top + pitch * index);
             var rect = new Rect(min, min + new Vector2(tile, tile));
-            DrawPieceTile(drawList, rect, pieceTiles[index], gear, index == cardTile, scale);
             var hit = new Rect(rect.Min - new Vector2(reach, reach), rect.Max + new Vector2(reach, reach));
             var over = hovered && ImGui.IsMouseHoveringRect(hit.Min, hit.Max);
+            var tileMark = PrismMotion.Mark(drawList);
+            DrawPieceTile(drawList, rect, pieceTiles[index], gear, index == cardTile, scale);
             if (over)
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -231,6 +232,8 @@ internal sealed partial class PrismApp
                 named = index;
             }
 
+            PrismMotion.Grow(drawList, tileMark, rect.Center, PressFx.Scale(ImGui.GetID($"prism.piece{index}"),
+                ready && over && ImGui.IsMouseDown(ImGuiMouseButton.Left), PressFx.ControlPressedScale));
             if (ready && UiInteract.Click(hit.Min, hit.Max, over))
             {
                 PickTile(index);
