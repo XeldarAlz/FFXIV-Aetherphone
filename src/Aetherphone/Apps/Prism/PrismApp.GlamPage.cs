@@ -46,7 +46,7 @@ internal sealed partial class PrismApp
 
     private readonly DoubleTapLike photoLike = new();
     private readonly DeferredTap photoTap = new();
-    private readonly Pager photoPager = new();
+    private readonly Pager photoPager = new(Motion.PageSettle);
     private readonly ActionSheet glamMenu = new();
     private readonly ActionSheet.Item[] glamMenuItems = new ActionSheet.Item[GlamMenuSize];
     private readonly GlamMenuAction[] glamMenuActions = new GlamMenuAction[GlamMenuSize];
