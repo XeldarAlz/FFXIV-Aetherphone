@@ -512,33 +512,6 @@ internal sealed partial class PrismApp : IResumableApp
     private static TextStyle FitStyle(string text, float room, in TextStyle largest) =>
         new(Typography.FitScale(text, room, largest.Scale, PrismType.Caption.Scale, largest.Weight), largest.Weight);
 
-    private int DrawTabs(Rect row, ReadOnlySpan<string> labels, int active, ref Spring slide, in TextStyle style) =>
-        UnderlineTabs.Draw(row, labels, active, ref slide, tabInk!,
-            new UnderlineTabStyle(style, style, PrismArt.Fore, PrismArt.Muted, PrismArt.Fore, Metrics.Stroke.Ring, 0f,
-                Motion.Release));
-
-    private static bool TabsFit(ReadOnlySpan<string> labels, float width, float scale, out TextStyle style)
-    {
-        var room = width / MathF.Max(1, labels.Length) - UnderlineTabs.LabelPadUnits * scale;
-        var fitted = PrismType.Headline.Scale;
-        for (var index = 0; index < labels.Length; index++)
-        {
-            fitted = MathF.Min(fitted, Typography.FitScale(labels[index], room, PrismType.Headline.Scale,
-                PrismType.Caption.Scale, PrismType.Headline.Weight));
-        }
-
-        style = new TextStyle(fitted, PrismType.Headline.Weight);
-        for (var index = 0; index < labels.Length; index++)
-        {
-            if (Typography.Measure(labels[index], style).X > room)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     private static float GridLine(float scale) =>
         MathF.Max(GridLineUnits * scale, Typography.LineHeight(PrismType.Headline));
 

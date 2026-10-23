@@ -37,9 +37,8 @@ internal sealed partial class PrismApp
     private const int PlacingsTab = 2;
 
     private readonly string[] profileTabs = new string[3];
+    private readonly string[] profileTabGlyphs = new string[3];
     private readonly int[] profileTabKinds = new int[3];
-    private readonly bool[] profileTabActive = new bool[3];
-    private readonly ChipRail profileTabRail = new();
     private readonly ActionSheet profileMenu = new();
     private readonly ActionSheet.Item[] profileMenuItems = new ActionSheet.Item[1];
     private readonly PullToRefresh profilePull = new();
@@ -565,29 +564,27 @@ internal sealed partial class PrismApp
     private float DrawProfileTabs(float left, float right, float top, bool mine, float scale)
     {
         var count = 0;
-        AddProfileTab(ref count, L.Prism.StatGlams, GlamsTab);
+        AddProfileTab(ref count, L.Prism.StatGlams, PhoneIcons.Photo, GlamsTab);
         if (mine)
         {
-            AddProfileTab(ref count, L.Prism.Saved, SavedTab);
+            AddProfileTab(ref count, L.Prism.Saved, PhoneIcons.Bookmark, SavedTab);
         }
 
-        AddProfileTab(ref count, L.Prism.PlacingsHeading, PlacingsTab);
+        AddProfileTab(ref count, L.Prism.PlacingsHeading, PhoneIcons.Crown, PlacingsTab);
         var kind = showSaved ? SavedTab : showPlacings ? PlacingsTab : GlamsTab;
         var active = 0;
         for (var index = 0; index < count; index++)
         {
-            profileTabActive[index] = profileTabKinds[index] == kind;
-            if (profileTabActive[index])
+            if (profileTabKinds[index] == kind)
             {
                 active = index;
             }
         }
 
         var row = new Rect(new Vector2(left, top), new Vector2(right, top + Metrics.Size.TapTarget * scale));
-        var labels = new ReadOnlySpan<string>(profileTabs, 0, count);
-        var picked = TabsFit(labels, row.Width, scale, out var tabStyle)
-            ? DrawTabs(row, labels, active, ref profileTabSlide, tabStyle)
-            : profileTabRail.Draw(row, ui, labels, new ReadOnlySpan<bool>(profileTabActive, 0, count));
+        var picked = UnderlineTabs.DrawIcons(row, new ReadOnlySpan<string>(profileTabGlyphs, 0, count),
+            new ReadOnlySpan<string>(profileTabs, 0, count), active, ref profileTabSlide, tabInk!, PrismArt.IconUnits,
+            Metrics.Stroke.Ring, Motion.Release);
         if (picked >= 0 && picked != active)
         {
             SelectProfileTab(profileTabKinds[picked]);
@@ -596,9 +593,10 @@ internal sealed partial class PrismApp
         return row.Max.Y;
     }
 
-    private void AddProfileTab(ref int count, LocString label, int kind)
+    private void AddProfileTab(ref int count, LocString label, string glyph, int kind)
     {
         profileTabs[count] = Loc.T(label);
+        profileTabGlyphs[count] = glyph;
         profileTabKinds[count] = kind;
         count++;
     }
