@@ -60,6 +60,7 @@ internal sealed partial class PrismApp
     private CachedText profileStatsText;
     private CachedText profileRankText;
     private CachedText listCountText;
+    private CachedText wornCountText;
     private CachedText vendorText;
     private bool listOwned;
 
@@ -799,10 +800,9 @@ internal sealed partial class PrismApp
             var lane = glams.List;
             if (!lane.Loading && !lane.HasMore && lane.Items.Length > 0)
             {
-                var key = HashCode.Combine(lane.Items.Length, Loc.Current.Code);
-                var count = listCountText.IsCurrent(key)
+                var count = listCountText.IsCurrent(lane.Items.Length)
                     ? listCountText.Value
-                    : listCountText.Store(key, Loc.Plural(L.Prism.GlamCount, lane.Items.Length));
+                    : listCountText.Store(lane.Items.Length, Loc.Plural(L.Prism.GlamCount, lane.Items.Length));
                 Typography.Draw(drawList, new Vector2(left, top), count, PrismArt.Muted, PrismType.Caption);
             }
 
@@ -824,10 +824,9 @@ internal sealed partial class PrismApp
         top = MathF.Max(top + icon, top + heroHeight) + Metrics.Space.Sm * scale;
         if (glams.Item is { } item && item.ItemId == listItemId)
         {
-            var key = HashCode.Combine(item.GlamCount, Loc.Current.Code);
-            var count = listCountText.IsCurrent(key)
-                ? listCountText.Value
-                : listCountText.Store(key, Loc.Plural(L.Prism.WornInGlams, item.GlamCount));
+            var count = wornCountText.IsCurrent(item.GlamCount)
+                ? wornCountText.Value
+                : wornCountText.Store(item.GlamCount, Loc.Plural(L.Prism.WornInGlams, item.GlamCount));
             Typography.Draw(drawList, new Vector2(left, top), Typography.FitText(count, right - left, PrismType.Caption),
                 PrismArt.Muted, PrismType.Caption);
         }
