@@ -192,14 +192,10 @@ internal sealed partial class PrismApp
 
     private void DrawGuideLook(ImDrawListPtr drawList, Rect frame, int index, float alpha, float scale)
     {
-        var url = GuideGlam(index) is { } glam ? Cover(glam) : string.Empty;
-        if (url.Length == 0)
+        if (!PrismStock.Draw(drawList, frame, index, alpha))
         {
             PrismArt.Placeholder(drawList, frame, false, scale, alpha);
-            return;
         }
-
-        DrawLook(drawList, frame, url, false, alpha);
     }
 
     private void DrawCoverPlate(ImDrawListPtr drawList, Rect plate, float scale) =>

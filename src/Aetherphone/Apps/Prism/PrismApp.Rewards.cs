@@ -14,6 +14,9 @@ namespace Aetherphone.Apps.Prism;
 internal sealed partial class PrismApp
 {
     private const float MedalGlyphShare = 1.1f;
+    private const int RewardStockFirst = 6;
+    private const float RewardDiscAlpha = 0.32f;
+    private const int RewardDiscSegments = 64;
     private const float MedalAvatarShare = 0.62f;
     private const float MedalIconShare = 0.55f;
     private const float MedalDelay = 0.25f;
@@ -124,7 +127,7 @@ internal sealed partial class PrismApp
         if (rewardKindCount > 1)
         {
             DrawPagerDots(drawList, rewardPager, new Rect(area.Min, new Vector2(area.Max.X, dotsBottom)), count, page,
-                RewardOverPhoto(rewardKinds[page], winner) ? PrismArt.PhotoFore : PrismArt.Fore, scale);
+                PrismArt.PhotoFore, scale);
         }
 
         DrawPhotoBack(drawList, area, topInset, scale);
@@ -135,18 +138,15 @@ internal sealed partial class PrismApp
         }
     }
 
-    private static bool RewardOverPhoto(PrismRewardKind kind, PrismPlacingDto? winner) =>
-        kind == PrismRewardKind.Frame && winner is not null;
-
     private void DrawRewardPage(ImDrawListPtr drawList, Rect page, float left, float width, float topInset,
         float dotsBottom, PrismRewardKind kind, PrismResultsDto? results, PrismPlacingDto? winner, float scale)
     {
-        var overPhoto = RewardOverPhoto(kind, winner);
-        if (overPhoto)
+        var winnerPhoto = kind == PrismRewardKind.Frame && winner is not null;
+        if (winnerPhoto)
         {
             DrawLook(drawList, page, winner!.ImageUrl, false, native: true, focusY: ProfileFocus(page, topInset));
         }
-        else
+        else if (!PrismStock.Draw(drawList, page, RewardStockFirst + (int)kind, 1f))
         {
             PrismArt.Placeholder(drawList, page, false, scale);
         }
@@ -165,7 +165,7 @@ internal sealed partial class PrismApp
         var y = dotsBottom - Metrics.Size.TapTarget * scale - block;
         var artTop = page.Min.Y + topInset + Metrics.Size.TapTarget * scale;
         var radius = MathF.Min(width * RewardArtShare, (y - artTop) * 0.5f - Metrics.Space.Lg * scale);
-        if (radius > 0f && !overPhoto)
+        if (radius > 0f && !winnerPhoto)
         {
             var center = new Vector2(page.Center.X, (artTop + y) * 0.5f);
             var mark = PrismMotion.Mark(drawList);
@@ -174,14 +174,10 @@ internal sealed partial class PrismApp
             PrismMotion.Scale(drawList, mark, center, MedalRestScale + (1f - MedalRestScale) * shown, shown);
         }
 
-        if (overPhoto)
-        {
-            PrismArt.Scrim(drawList, page, page.Max.Y - y, scale);
-        }
-
-        var ink = overPhoto ? PrismArt.PhotoFore : PrismArt.Fore;
-        var muted = overPhoto ? PrismArt.PhotoMuted : PrismArt.Muted;
-        var kicker = !overPhoto
+        PrismArt.Scrim(drawList, page, page.Max.Y - y, scale);
+        var ink = PrismArt.PhotoFore;
+        var muted = PrismArt.PhotoMuted;
+        var kicker = !winnerPhoto
             ? Loc.T(L.Prism.Rewards)
             : results?.WeekId == store.Week?.PreviousWeekId
                 ? LastWeekCredit(winner!)
@@ -210,20 +206,19 @@ internal sealed partial class PrismApp
 
     private void DrawRewardArt(ImDrawListPtr drawList, Vector2 center, float radius, PrismRewardKind kind, float scale)
     {
-        PrismArt.Medal(drawList, center, radius, 0, 0f, scale);
+        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, RewardDiscAlpha)), RewardDiscSegments);
         switch (kind)
         {
             case PrismRewardKind.Badge:
                 if (rewardBadge is not null)
                 {
-                    BadgeStrip.DrawOne(drawList, center, rewardBadge, images, Palette.Luminance(PrismArt.Back) >= 0.5f,
-                        radius * MedalGlyphShare);
+                    BadgeStrip.DrawOne(drawList, center, rewardBadge, images, false, radius * MedalGlyphShare);
                     break;
                 }
 
                 var pixels = radius * MedalGlyphShare;
                 var size = PrismType.Measure(Plain[1], PrismFace.Numerals, pixels);
-                PrismType.Draw(drawList, center - size * 0.5f, Plain[1], PrismArt.Fore, PrismFace.Numerals, pixels);
+                PrismType.Draw(drawList, center - size * 0.5f, Plain[1], PrismArt.PhotoFore, PrismFace.Numerals, pixels);
                 break;
             case PrismRewardKind.Frame:
                 DrawRewardAvatar(drawList, center, radius * MedalAvatarShare, scale);
