@@ -78,7 +78,7 @@ internal sealed partial class PrismApp
 
     private void DrawReveal(ImDrawListPtr drawList, Rect full, Rect content, float scale)
     {
-        if (store.Results is not { } results)
+        if (ShownResults() is not { } results)
         {
             Go(PrismScreen.Cover);
             return;
@@ -290,7 +290,7 @@ internal sealed partial class PrismApp
 
     private void DrawFinal(ImDrawListPtr drawList, Rect content, float scale)
     {
-        if (store.Results is not { } results)
+        if (ShownResults() is not { } results)
         {
             Go(PrismScreen.Cover);
             return;

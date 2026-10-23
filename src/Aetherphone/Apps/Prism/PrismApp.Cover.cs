@@ -50,7 +50,7 @@ internal sealed partial class PrismApp
         }
 
         var open = week.Id.Length > 0 && week.Phase.Length > 0;
-        var cover = CoverPlacing(store.Results);
+        var cover = CoverPlacing(ShownResults());
         var url = cover?.ImageUrl ?? week.MyEntry?.ImageUrl ?? string.Empty;
         onPhoto = url.Length > 0 || coverShown.Length > 0;
         PrismArt.OverPhoto(onPhoto);
@@ -333,7 +333,7 @@ internal sealed partial class PrismApp
         var primary = open ? PrimaryLabel(week) : string.Empty;
         var secondary = open
             ? week.Phase != PrismPhases.Results && week.PreviousWeekId.Length > 0
-            : store.Results is not null;
+            : ShowingResults();
         var gap = Metrics.Space.Sm * scale;
         var secondaryWidth = secondary
             ? ButtonWidth([lastWeek], primary.Length > 0 ? (row.Width - gap) * 0.5f : row.Width, scale)
@@ -394,7 +394,10 @@ internal sealed partial class PrismApp
         _ => string.Empty,
     };
 
-    private bool ShowingResults() => store.Results is { } results && PrismStore.ShowsTrack(results, store.Track);
+    private PrismResultsDto? ShownResults() =>
+        store.Results is { } results && PrismStore.ShowsTrack(results, store.Track) ? results : null;
+
+    private bool ShowingResults() => ShownResults() is not null;
 
     private void DrawCoverNotice(ImDrawListPtr drawList, Rect content, string title, string body, float scale)
     {
@@ -429,7 +432,7 @@ internal sealed partial class PrismApp
 
     private void OpenResults()
     {
-        if (store.Results is not { } results)
+        if (ShownResults() is not { } results)
         {
             return;
         }

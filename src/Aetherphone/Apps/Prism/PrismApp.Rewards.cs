@@ -44,7 +44,7 @@ internal sealed partial class PrismApp
     private CachedText rewardDaysText;
     private CachedText monogramText;
 
-    private PrismPrizesDto? Prizes => store.Week?.Prizes ?? store.Results?.Prizes;
+    private PrismPrizesDto? Prizes => store.Week?.Prizes ?? ShownResults()?.Prizes;
 
     private bool ChineseAccount => gameData.IsChineseGameClient();
 

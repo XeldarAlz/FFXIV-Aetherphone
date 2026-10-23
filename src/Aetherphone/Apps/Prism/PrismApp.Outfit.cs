@@ -216,11 +216,11 @@ internal sealed partial class PrismApp
         OpenGlam(new GlamDto(
             Id: placing.GlamId,
             Author: new GlamAuthorDto(DisplayName: placing.DisplayName, Handle: placing.Handle),
-            Title: store.Results?.Title ?? string.Empty,
+            Title: ShownResults()?.Title ?? string.Empty,
             Photos: new[] { new GlamPhotoDto(placing.ImageUrl, placing.Width, placing.Height) },
             Gear: outfit,
             Vanilla: GlamourService.IsVanilla(outfit),
-            WeekId: store.Results?.WeekId ?? string.Empty,
+            WeekId: ShownResults()?.WeekId ?? string.Empty,
             Placing: placing.Rank));
     }
 
