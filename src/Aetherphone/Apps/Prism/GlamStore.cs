@@ -27,6 +27,7 @@ internal sealed record GlamMore(string GlamId, GlamDto[] Items);
 internal sealed class GlamStore : IDisposable
 {
     public const int MaxPhotos = 4;
+    public const bool RevealsWholePhoto = false;
 
     private const int MoreLimit = 4;
     private const int MeRetrySeconds = 5;
@@ -536,7 +537,7 @@ internal sealed class GlamStore : IDisposable
             for (var index = 0; index < count; index++)
             {
                 var baked = ImageProcessor.BakeCroppedUpload(photos[index].Path, photos[index].Crop, width, height,
-                    PostAspects.RevealsWholeImage(GlamAspect), PhotoEdit.None);
+                    RevealsWholePhoto, PhotoEdit.None);
                 var upload = await media.UploadUrlAsync(baked.ContentType, PrismClient.MediaScope, token,
                     received => failure = received).ConfigureAwait(false);
                 if (upload is null || !await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, baked.ContentType,

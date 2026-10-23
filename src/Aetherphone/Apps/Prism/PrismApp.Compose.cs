@@ -81,7 +81,8 @@ internal sealed partial class PrismApp
             PrismType.Body, content.Width) + Metrics.Space.Md * scale;
         var paneHeight = MathF.Min(content.Width, (content.Max.Y - top) * PickPaneFraction);
         var pane = new Rect(new Vector2(content.Min.X, top), new Vector2(content.Max.X, top + paneHeight));
-        composeSession.DrawPickPane(pane, scale, PickStyle, GlamStore.PhotoRatio, true, true, Loc.T(L.Prism.PostGlam));
+        composeSession.DrawPickPane(pane, scale, PickStyle, GlamStore.PhotoRatio, GlamStore.RevealsWholePhoto, true,
+            Loc.T(L.Prism.PostGlam));
         var gridRect = new Rect(new Vector2(content.Min.X, pane.Max.Y + Metrics.Space.Md * scale),
             new Vector2(content.Max.X, content.Max.Y - PrismArt.BottomMargin(scale)));
         using (AppSurface.BeginEdgeToEdge(gridRect, smoothWheel: true))
