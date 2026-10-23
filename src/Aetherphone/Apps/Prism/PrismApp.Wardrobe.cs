@@ -252,6 +252,7 @@ internal sealed partial class PrismApp
             }
 
             var outfit = outfits[index];
+            var mark = PrismMotion.Mark(list);
             if (!DrawOutfitCover(list, photo, outfit.Cover))
             {
                 PrismArt.Placeholder(list, photo, false, scale);
@@ -261,7 +262,7 @@ internal sealed partial class PrismApp
                 }
             }
 
-            if (DrawGridTile(list, photo, string.Empty, outfit.Name, string.Empty, null, string.Empty,
+            if (DrawGridTile(list, mark, photo, string.Empty, outfit.Name, string.Empty, null, string.Empty,
                     PieceLabel(outfit.Gear), scale))
             {
                 OpenOutfit(outfit.Id);
