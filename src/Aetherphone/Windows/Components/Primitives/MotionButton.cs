@@ -42,7 +42,7 @@ internal static class MotionButton
     public static ButtonPose Animate(Rect rect, string key, bool hovered, bool pressed) =>
         Animate(rect, key.GetHashCode(), hovered, pressed);
 
-    public static ButtonPose Animate(Rect rect, int key, bool hovered, bool pressed, bool lift = true)
+    public static ButtonPose Animate(Rect rect, int key, bool hovered, bool pressed)
     {
         var frame = ImGui.GetFrameCount();
         var delta = ImGui.GetIO().DeltaTime;
@@ -66,7 +66,7 @@ internal static class MotionButton
         var hover = Math.Clamp(state.Hover.Step(hovered ? 1f : 0f, Motion.HoverLift, delta), 0f, 1f);
         var press = Math.Clamp(state.Press.Step(pressed ? 1f : 0f, pressed ? Motion.PressIn : Motion.Release, delta),
             0f, 1f);
-        var grow = 1f + (lift ? HoverLiftScale * hover : 0f) - PressDepthScale * press;
+        var grow = 1f + HoverLiftScale * hover - PressDepthScale * press;
         var center = rect.Center;
         var half = rect.Size * 0.5f * grow;
         var sheen = state.SheenClock / SheenSeconds;
