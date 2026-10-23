@@ -436,10 +436,6 @@ internal sealed partial class PrismApp
         }
 
         DrawPhotoBack(list, hero, topInset, scale);
-        if (DrawPhotoButton(list, hero, topInset, 1, PhoneIcons.Dots, Loc.T(L.Prism.More), scale))
-        {
-            OpenFitSheet(outfit);
-        }
 
         var left = origin.X + inset;
         var right = origin.X + width - inset;
