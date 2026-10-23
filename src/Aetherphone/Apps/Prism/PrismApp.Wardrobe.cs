@@ -26,7 +26,6 @@ internal enum WardrobeAction : byte
 
 internal sealed partial class PrismApp
 {
-    private const float BoardDesignUnits = 360f;
     private const float BoardTileUnits = 56f;
     private const float BoardAccessoryUnits = 44f;
     private const float BoardPitchUnits = 68f;
@@ -256,14 +255,10 @@ internal sealed partial class PrismApp
             if (!DrawOutfitCover(list, photo, outfit.Cover))
             {
                 PrismArt.Placeholder(list, photo, false, scale);
-                if (outfit.Cover is not { } cover || wallpaperImages.Failed(cover.Path))
-                {
-                    DrawOutfitBoard(list, photo, photo, outfit.Gear, false, scale);
-                }
             }
 
-            if (DrawGridTile(list, mark, photo, string.Empty, outfit.Name, string.Empty, null, string.Empty,
-                    PieceLabel(outfit.Gear), scale))
+            if (DrawGridTile(list, mark, photo, string.Empty, outfit.Name, string.Empty, PieceLabel(outfit.Gear),
+                    scale))
             {
                 OpenOutfit(outfit.Id);
             }
@@ -291,21 +286,15 @@ internal sealed partial class PrismApp
         return pieces > 0 ? CountLabel(pieces) : string.Empty;
     }
 
-    private void DrawOutfitBoard(ImDrawListPtr drawList, Rect board, Rect area, GlamGearDto[] gear, bool showEmpty,
-        float scale)
+    private void DrawOutfitBoard(ImDrawListPtr drawList, Rect area, GlamGearDto[] gear, float scale)
     {
-        var unit = board.Width / BoardDesignUnits;
-        var center = area.Center.X;
-        if (!showEmpty)
-        {
-            var low = WearsAny(gear, LeftSlots) ? -BoardColumnUnits - BoardAccessoryUnits * 0.5f
+        var low = WearsAny(gear, LeftSlots) ? -BoardColumnUnits - BoardAccessoryUnits * 0.5f
                 : -BoardTileUnits * 0.5f;
-            var high = WearsAny(gear, AccessorySlots) ? BoardColumnUnits + BoardAccessoryUnits * 0.5f
+        var high = WearsAny(gear, AccessorySlots) ? BoardColumnUnits + BoardAccessoryUnits * 0.5f
                 : BoardTileUnits * 0.5f;
-            unit = MathF.Min(area.Width / (high - low),
-                area.Height / (BoardPitchUnits * (BodySlots.Length - 1) + BoardTileUnits)) * BoardFill;
-            center -= (low + high) * 0.5f * unit;
-        }
+        var unit = MathF.Min(area.Width / (high - low),
+            area.Height / (BoardPitchUnits * (BodySlots.Length - 1) + BoardTileUnits)) * BoardFill;
+        var center = area.Center.X - (low + high) * 0.5f * unit;
 
         var pitch = BoardPitchUnits * unit;
         var firstRow = area.Center.Y - pitch * (BodySlots.Length - 1) * 0.5f;
@@ -313,15 +302,14 @@ internal sealed partial class PrismApp
         for (var row = 0; row < BodySlots.Length; row++)
         {
             var middle = firstRow + row * pitch;
-            DrawBoardSlot(drawList, new Vector2(center, middle), BoardTileUnits * unit, BodySlots[row], gear,
-                showEmpty, scale);
+            DrawBoardSlot(drawList, new Vector2(center, middle), BoardTileUnits * unit, BodySlots[row], gear, false, scale);
             DrawBoardSlot(drawList, new Vector2(center + side, middle), BoardAccessoryUnits * unit,
-                AccessorySlots[row], gear, showEmpty, scale);
+                AccessorySlots[row], gear, false, scale);
             var leftRow = row - BoardWeaponRow;
             if (leftRow >= 0 && leftRow < LeftSlots.Length)
             {
                 DrawBoardSlot(drawList, new Vector2(center - side, middle), BoardAccessoryUnits * unit,
-                    LeftSlots[leftRow], gear, showEmpty && LeftSlots[leftRow] != GearSlots.None, scale);
+                    LeftSlots[leftRow], gear, false, scale);
             }
         }
     }
@@ -424,9 +412,6 @@ internal sealed partial class PrismApp
             var add = Loc.T(L.Prism.AddPhoto);
             var half = ButtonWidth([add], width - inset * 2f, scale) * 0.5f;
             var addTop = hero.Max.Y - inset - Button.LargeHeight * scale;
-            var area = new Rect(new Vector2(hero.Min.X, hero.Min.Y + (Metrics.Size.TapTarget + Metrics.Space.Sm) * scale),
-                new Vector2(hero.Max.X, addTop - Metrics.Space.Sm * scale));
-            DrawOutfitBoard(list, hero, area, outfit.Gear, true, scale);
             if (DrawButton(list, new Rect(new Vector2(hero.Center.X - half, addTop),
                     new Vector2(hero.Center.X + half, addTop + Button.LargeHeight * scale)), add, ButtonStyle.Tinted,
                     scale))

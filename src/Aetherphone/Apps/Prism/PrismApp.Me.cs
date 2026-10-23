@@ -738,8 +738,8 @@ internal sealed partial class PrismApp
             }
 
             if (DrawGridTile(drawList, GridCell(left + gap, top, gridWidth, shown++, scale), Cover(glam),
-                    placings is null ? glam.Title : PlacingLabel(glam, placings), string.Empty, null, PhoneIcons.Wand,
-                    glam.TryOns > 0 ? CountLabel(glam.TryOns) : string.Empty, scale))
+                    placings is null ? glam.Title : PlacingLabel(glam, placings), PhoneIcons.Heart,
+                    glam.Likes > 0 ? CountLabel(glam.Likes) : string.Empty, scale))
             {
                 OpenGlam(glam);
             }

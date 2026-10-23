@@ -301,7 +301,7 @@ internal sealed partial class PrismApp
             }
 
             PrismArt.Placeholder(drawList, tile, false, scale);
-            DrawOutfitBoard(drawList, tile, tile, GuideGlam(index)?.Gear ?? Array.Empty<GlamGearDto>(), false, scale);
+            DrawOutfitBoard(drawList, tile, GuideGlam(index)?.Gear ?? Array.Empty<GlamGearDto>(), scale);
         }
     }
 
