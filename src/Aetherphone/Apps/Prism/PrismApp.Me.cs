@@ -558,12 +558,6 @@ internal sealed partial class PrismApp
         var lineSize = Typography.Measure(fittedLine, PrismType.Body);
         Typography.Draw(drawList, new Vector2(left, top + (height - lineSize.Y) * 0.5f), fittedLine, PrismArt.Fore,
             PrismType.Body);
-        var counts = new Rect(new Vector2(left, top), new Vector2(left + lineSize.X, top + height));
-        if (UiInteract.HoverClick(counts.Min, counts.Max))
-        {
-            SelectProfileTab(GlamsTab);
-        }
-
         return top + height;
     }
 
