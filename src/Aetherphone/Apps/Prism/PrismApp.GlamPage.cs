@@ -62,6 +62,7 @@ internal sealed partial class PrismApp
     private readonly Dictionary<GlamModDto, (string Line, bool Allowed, bool Installed)> modLines = new();
     private readonly Dictionary<GlamModDto, string> modBylines = new();
     private string? statsFor;
+    private GlamGearDto[]? statsGear;
     private bool statsStorage;
     private CachedText triedText;
     private CachedText bodyText;
@@ -223,13 +224,16 @@ internal sealed partial class PrismApp
     private void RefreshPieces(string key, GlamGearDto[] gear)
     {
         var storage = OwnedItems.StorageLoaded;
-        if (statsFor == key && statsStorage == storage)
+        if (statsFor == key && ReferenceEquals(statsGear, gear) && statsStorage == storage)
         {
             return;
         }
 
         statsFor = key;
+        statsGear = gear;
         statsStorage = storage;
+        cardTile = -1;
+        cardPiece = -1;
         modLines.Clear();
         modBylines.Clear();
         ownedPieces = GlamourService.OwnedPieces(gear, out totalPieces, ownedIds);
