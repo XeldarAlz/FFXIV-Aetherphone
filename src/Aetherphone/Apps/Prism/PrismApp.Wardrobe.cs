@@ -559,7 +559,7 @@ internal sealed partial class PrismApp
 
     private void DrawWardrobeSheet(Rect full)
     {
-        if (sheetCount == 0 || sheetScreen != screen)
+        if (sheetCount == 0 || sheetScreen != screen || !wardrobeSheet.CapturesPointer)
         {
             return;
         }
