@@ -77,9 +77,8 @@ internal static class DragScrollHost
     }
 
     private const int EvictAfterFrames = 240;
-    // imgui.cpp UpdateMouseWheel: one notch scrolls five heights of the default font, at most 67 percent of the view.
-    private const float WheelStepFontSizes = 5f;
-    private const float WheelStepMaxShare = 0.67f;
+    private const float ImGuiWheelStepFontSizes = 5f;
+    private const float ImGuiWheelStepMaxShare = 0.67f;
     private const float WheelRestEpsilon = 0.5f;
     private const float WheelYieldPixels = 1f;
 
@@ -295,7 +294,8 @@ internal static class DragScrollHost
             var font = io.FontDefault.IsNull ? io.Fonts.Fonts[0] : io.FontDefault;
             var fontSize = io.FontGlobalScale * font.FontSize * font.Scale * window.FontWindowScale * parentScale;
             var view = window.InnerRect.Max.Y - window.InnerRect.Min.Y;
-            var step = io.MouseWheel * MathF.Floor(MathF.Min(WheelStepFontSizes * fontSize, view * WheelStepMaxShare));
+            var step = io.MouseWheel *
+                       MathF.Floor(MathF.Min(ImGuiWheelStepFontSizes * fontSize, view * ImGuiWheelStepMaxShare));
             if (down)
             {
                 ImGui.SetScrollY(Math.Clamp(window.Scroll.Y - step, 0f, maxY));
