@@ -1066,7 +1066,7 @@ internal sealed partial class PrismApp
         if (RoundButton.Icon(drawList, wand, tap * 0.5f, PhoneIcons.Wand, controls, ButtonStyle.Plain,
                 Loc.T(L.Prism.TryOnPiece), HoverLabelSide.Below, glyphInk: PrismArt.Muted))
         {
-            TryOnPiece(piece);
+            TryOnPiece(piece, statsFor ?? string.Empty);
         }
 
         ImGui.PopID();

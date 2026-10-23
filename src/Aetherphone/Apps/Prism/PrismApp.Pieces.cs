@@ -482,7 +482,7 @@ internal sealed partial class PrismApp
         if (DrawButton(drawList, button, Loc.T(L.Prism.TryOnPiece), ButtonStyle.Tinted, scale, overlay: true,
                 ink: photoControls, id: "prism.tryOnPiece") && ready)
         {
-            TryOnPiece(single);
+            TryOnPiece(single, statsFor ?? string.Empty);
         }
     }
 
@@ -618,9 +618,12 @@ internal sealed partial class PrismApp
         OpenModGlams(mod);
     }
 
-    private void TryOnPiece(GlamGearDto piece)
+    private void TryOnPiece(GlamGearDto piece, string from)
     {
         glamour.TryOnPiece(piece);
-        StartWearing(string.Empty, GearItem(piece.ItemId, out var name, out _) ? name : string.Empty);
+        if (!Wearing(from))
+        {
+            StartWearing(string.Empty, GearItem(piece.ItemId, out var name, out _) ? name : string.Empty);
+        }
     }
 }
