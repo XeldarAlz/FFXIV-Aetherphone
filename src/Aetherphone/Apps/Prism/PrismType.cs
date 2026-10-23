@@ -31,7 +31,6 @@ internal static class PrismType
     private const int FitAttempts = 32;
     private const float BalanceFloor = 0.5f;
     private const int BalanceSteps = 10;
-    private const string Ellipsis = "…";
 
     private static readonly Dictionary<WrapKey, string[]> WrapCache = new();
     private static readonly List<string> Scratch = new();
@@ -322,21 +321,10 @@ internal static class PrismType
 
     private static string Ellipsize(string text, float pixels, float width)
     {
-        if (Measure(text, PrismFace.Headline, pixels).X <= width)
+        using (Push(text, PrismFace.Headline, pixels))
         {
-            return text;
+            return Typography.FitInCurrentFont(text, width * ImGui.GetFontSize() / Snap(PrismFace.Headline, pixels));
         }
-
-        for (var length = text.Length - 1; length > 0; length--)
-        {
-            var candidate = string.Concat(text.AsSpan(0, length).TrimEnd(), Ellipsis);
-            if (Measure(candidate, PrismFace.Headline, pixels).X <= width)
-            {
-                return candidate;
-            }
-        }
-
-        return Ellipsis;
     }
 
     internal static float FitRequest<TProbe>(ref TProbe probe, float maxPixels, float minPixels)

@@ -231,6 +231,8 @@ internal static partial class Typography
     public static string FitText(string text, float maxWidth, in TextStyle style) =>
         FitText(text, maxWidth, style.Scale, style.Weight);
 
+    public static string FitInCurrentFont(string text, float maxWidth) => Fit(text, maxWidth);
+
     public static string FitTextMiddle(string text, float maxWidth, in TextStyle style)
     {
         using (Plugin.Fonts.Push(style.Scale, style.Weight))
