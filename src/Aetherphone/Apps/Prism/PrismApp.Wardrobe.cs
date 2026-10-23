@@ -25,6 +25,9 @@ internal enum WardrobeAction : byte
 
 internal sealed partial class PrismApp
 {
+    private const string FitLogoArtwork = "prism.fg";
+    private const float FitLogoShare = 0.6f;
+    private const float FitLogoAlpha = 0.9f;
     private const float BoardTileUnits = 56f;
     private const float BoardAccessoryUnits = 44f;
     private const float BoardPitchUnits = 68f;
@@ -395,12 +398,11 @@ internal sealed partial class PrismApp
         else
         {
             PrismArt.Placeholder(list, hero, false, scale);
-            var add = Loc.T(L.Prism.AddPhoto);
-            var half = ButtonWidth([add], width - inset * 2f, scale) * 0.5f;
-            var addTop = hero.Max.Y - inset - Button.LargeHeight * scale;
-            if (DrawButton(list, new Rect(new Vector2(hero.Center.X - half, addTop),
-                    new Vector2(hero.Center.X + half, addTop + Button.LargeHeight * scale)), add, ButtonStyle.Tinted,
-                    scale))
+            AppIconTextures.TryDrawArtwork(list, FitLogoArtwork, hero.Center, hero.Width * FitLogoShare,
+                Vector4.One with { W = FitLogoAlpha });
+            var radius = Metrics.Size.TapTarget * 0.5f * scale;
+            if (RoundButton.Icon(list, new Vector2(hero.Center.X, hero.Max.Y - inset - radius), radius,
+                    PhoneIcons.PhotoPlus, controls, ButtonStyle.Gray, Loc.T(L.Prism.AddPhoto)))
             {
                 PickOutfitCover(outfit);
             }

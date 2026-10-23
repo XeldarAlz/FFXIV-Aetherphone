@@ -153,6 +153,7 @@ OUTLINE = [
     ("MoonStars", "moon-stars"),
     ("Shirt", "shirt"),
     ("UserCheck", "user-check"),
+    ("PhotoPlus", "photo-plus"),
 ]
 
 FILLED = [
