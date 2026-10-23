@@ -59,7 +59,7 @@ internal sealed partial class PrismApp
     private readonly HashSet<uint> ownedIds = new();
     private readonly Dictionary<int, string> dyeLines = new();
     private readonly Dictionary<GlamModDto, (string Line, bool Allowed, bool Installed)> modLines = new();
-    private readonly Dictionary<GlamModDto, string> modBylines = new();
+    private readonly Dictionary<(GlamModDto Mod, int Slot), string> modBylines = new();
     private string? statsFor;
     private GlamGearDto[]? statsGear;
     private bool statsStorage;
@@ -1203,7 +1203,7 @@ internal sealed partial class PrismApp
 
     private string ModByline(GlamModDto mod, int slot)
     {
-        if (modBylines.TryGetValue(mod, out var line))
+        if (modBylines.TryGetValue((mod, slot), out var line))
         {
             return line;
         }
@@ -1224,7 +1224,7 @@ internal sealed partial class PrismApp
             _ => L.Prism.CharacterHeading,
         });
         line = mod.Author.Length > 0 ? string.Concat(Loc.T(L.Prism.ModAuthor, mod.Author), GlamMetaSeparator, place) : place;
-        modBylines[mod] = line;
+        modBylines[(mod, slot)] = line;
         return line;
     }
 
