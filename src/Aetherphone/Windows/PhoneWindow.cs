@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Shell;
 using Aetherphone.Core.Theme;
@@ -16,6 +17,9 @@ internal sealed class PhoneWindow : Window
 
     private const int RecenterFrameCount = 3;
     private const int ScaledStyleVarCount = 6;
+    private const float AsideSmoothTime = 0.12f;
+    private const float AsideDropShare = 0.35f;
+    private const float AsideShown = 0.001f;
     private readonly PhoneShell shell;
     private readonly Configuration configuration;
     private int recenterFrames;
@@ -24,6 +28,7 @@ internal sealed class PhoneWindow : Window
     private bool dockGrowLeft;
     private bool dockGrowUp;
     private bool turning;
+    private Spring aside;
     private bool turnToLandscape;
     private MinimizePhase lastPhase;
     private float turnScale = 1f;
@@ -234,6 +239,11 @@ internal sealed class PhoneWindow : Window
         Flags = minimized || locked || holdStill
             ? BaseFlags | ImGuiWindowFlags.NoMove
             : BaseFlags;
+        if (PhoneAside.Requested)
+        {
+            Flags |= ImGuiWindowFlags.NoInputs;
+        }
+
         Components.DragScrollHost.Enabled = locked;
         if (phase == MinimizePhase.None && lastPhase == MinimizePhase.Expanding)
         {
@@ -307,6 +317,21 @@ internal sealed class PhoneWindow : Window
         var viewport = ImGui.GetMainViewport();
         var clip = new Rect(viewport.Pos, viewport.Pos + viewport.Size);
         LayerCompositor.Transform(window, LayerTransform.Turn(device.Center, turn.Angle, turnScale, clip));
+    }
+
+    private void ApplyAside(Rect device)
+    {
+        var away = aside.Step(PhoneAside.Requested ? 1f : 0f, AsideSmoothTime, FrameClock.Delta);
+        if (away < AsideShown)
+        {
+            return;
+        }
+
+        var viewport = ImGui.GetMainViewport();
+        var clip = new Rect(viewport.Pos, viewport.Pos + viewport.Size);
+        var drop = new Vector2(0f, device.Height * AsideDropShare * away);
+        LayerCompositor.Transform(ImGuiP.GetCurrentWindowRead(),
+            new LayerTransform(1f, device.Center, device.Center + drop, clip, 1f - away));
     }
 
     private static void PushScaledStyle(float zoom)
@@ -439,7 +464,7 @@ internal sealed class PhoneWindow : Window
         using (Plugin.Fonts.Push(1f))
         {
             ImGui.Dummy(ImGui.GetContentRegionAvail());
-            using (InputShield.Engage(turning))
+            using (InputShield.Engage(turning || PhoneAside.Requested))
             {
                 if (configuration.ShowPerfHud)
                 {
@@ -458,6 +483,8 @@ internal sealed class PhoneWindow : Window
             {
                 ApplyTurn(device);
             }
+
+            ApplyAside(device);
         }
 
         Components.WheelLock.ReleaseStale();

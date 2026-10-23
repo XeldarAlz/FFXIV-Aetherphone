@@ -13,6 +13,8 @@ This doc covers `src/Aetherphone.Harness`, a console host that runs the real plu
 | src/Aetherphone.Harness/Fakes | One fake per Dalamud service the plugin consumes |
 | src/Aetherphone.Harness/Fonts | The font atlas fake over ImGui's own atlas |
 | src/Aetherphone.Harness/Rendering | The CPU rasterizer and PNG output, used for driver screenshots |
+| src/Aetherphone.Harness/Inspection | Reads the frame's text back out of the draw data for `tree` and `tap --text` |
+| src/Aetherphone.Harness/Profiling | Per-frame allocation and draw time measurement for `perf` |
 | src/Aetherphone.Harness/Viewer | The native window: GLFW input and the OpenGL renderer |
 | src/Aetherphone.Harness/Scenarios | Loads a scenario file into the simulated character |
 | tools/harness/scenarios | The bundled scenarios, copied next to the harness binary |
@@ -38,7 +40,9 @@ Game data is optional but unlocks most of the phone. Lumina reads the game's own
 
 ## Running
 
-`tools/harness/aep window` opens a native window (Silk.NET over GLFW and OpenGL 3.3, so it runs on macOS, Windows, and Linux) sized to the phone, renders on the GPU at vsync, and takes mouse and keyboard input directly. `tools/harness/aep serve` runs the same thing headless. Both listen on `http://127.0.0.1:47821/` (`--port` changes it; the port is written to `~/.aetherphone-harness/driver.json`). `tools/harness/aep render --out phone.png` renders a single screenshot and exits. All accept `--width`, `--height`, `--frames`, `--config`, `--assets`, `--sqpack`, `--scenario`, and `--cache`. With game data present the harness loads the `endgame` scenario and logs its character in before the first frame; `--scenario none` starts without a character, the way the harness behaved before scenarios existed.
+`tools/harness/aep window` opens a native window (Silk.NET over GLFW and OpenGL 3.3, so it runs on macOS, Windows, and Linux) sized to the phone, renders on the GPU at vsync, and takes mouse and keyboard input directly. `tools/harness/aep serve` runs the same thing headless. Both listen on `http://127.0.0.1:47821/` (`--port` changes it; the port is written to `~/.aetherphone-harness/driver.json`). `tools/harness/aep render --out phone.png` renders a single screenshot and exits. All accept `--width`, `--height`, `--frames`, `--config`, `--assets`, `--sqpack`, `--scenario`, `--backend`, and `--cache`. With game data present the harness loads the `endgame` scenario and logs its character in before the first frame; `--scenario none` starts without a character, the way the harness behaved before scenarios existed.
+
+`--backend` picks the Aethernet server the social apps talk to: `dev` (the default, the aethernet-dev deployment), `live` (production at `api.aetherphone.net`, where anything you post is public), or any http(s) URL. Loopback URLs are refused, because a Release build of the plugin swaps them for production; use the machine's LAN address for a local backend. Each backend keeps its own config folder (`config`, `config-live`, `config-<host>-<port>`), so a token never reaches a server it was not issued by. A default `config` folder left over from a run against another backend moves to that backend's folder on the next start, and `state` reports the backend in use.
 
 In window mode time runs in real time, one simulation step per displayed frame, and driver commands run between frames. In headless mode time advances only when a command asks for frames.
 
@@ -49,7 +53,9 @@ Every driver command is available as a CLI verb and as an HTTP route with the sa
 | `state` | `/state` | Frame, current app, phone rect, minimize phase, login and data flags, scenario |
 | `step N` | `/step?frames=N` | 60 frames per simulated second |
 | `shot [path] [--full]` | `/shot?full=1&frames=N` | PNG cropped to the phone window by default |
-| `tap NAME` or `tap X Y` | `/tap?anchor=NAME` or `/tap?x=&y=` | `--settle N`, `--button N`, `--space screen` |
+| `tree [--all] [--full] [--json]` | `/tree?all=1&full=1&format=json` | Every visible line of text with its rect, plus the anchors; never advances time |
+| `tap NAME`, `tap X Y`, or `tap --text TEXT` | `/tap?anchor=NAME`, `/tap?x=&y=`, or `/tap?text=` | `--settle N`, `--button N`, `--space screen` |
+| `perf [--frames N] [--warmup N] [--json]` | `/perf?frames=N&warmup=N&format=json` | Steps the current screen and reports per-frame allocations, draw time, and the allocating types |
 | `drag X1 Y1 X2 Y2` | `/drag` | `--frames N` for the move duration |
 | `scroll X Y DY` | `/scroll` | Wheel delta at a point |
 | `type TEXT` | `/type?text=` | Sends the characters to ImGui |
@@ -67,6 +73,48 @@ Every driver command is available as a CLI verb and as an HTTP route with the sa
 | `url` | | Prints the viewer address |
 
 Coordinates are phone-relative pixels, the same space as the cropped screenshot. Anchors come from `UiAnchors.Report` calls in draw code; the harness forces recording every frame, so anything the onboarding tours can point at can be tapped by name.
+
+## Reading the screen as text
+
+`tree` answers what is on screen without a screenshot: one row per visible line of text, in reading order, with its phone-relative rect and pixel size, then the anchors.
+
+```
+frame 780  app chirper  phone 486x1053  30 lines
+  95,94 83x24  29px  Chirper
+  356,95 20x20  26px  [icon:AdjustmentsHorizontal]
+  99,154 66x14  22px  For You
+```
+
+It is read back out of the frame ImGui just drew, so every string counts, including raw `AddText` calls that bypass Typography. Each glyph quad in the draw data is matched to its font atlas entry. Icon glyphs print by name (`[icon:Bell]` for PhoneIcons, `[icon:Check]` for FontAwesome), so icon buttons can be found and tapped too.
+
+- **`(clipped)`** marks a line cut off sideways by its clip rect: text overflowing its container, or a chip scrolled partly out of a rail. Lines cut at the top or bottom of a scroll area are ordinary scrolling and carry no flag.
+- **`(covered)`** marks text that a later, at least half-opaque fill hides, such as the screen under a sheet. Covered lines are left out unless you pass `--all`.
+- **`--json`** returns the same lines with color and flags, for scripts.
+
+`tap --text TEXT` taps the centre of the first visible match: an exact line first, then a substring, then a case-insensitive substring. A miss answers 404 with every visible line, so the next call can correct itself.
+
+What it does not see: images (emoji, avatars, photos, app icons), text drawn under a fill lighter than half opacity, and a glyph cut on both its left and right edges at once.
+
+## Measuring allocations
+
+The draw path must not allocate (see [Conventions](conventions.md)), and `perf` measures that on whatever screen is open. It steps `--warmup` frames (default 60) so first-time loads settle, then measures `--frames` frames (default 600):
+
+```
+perf  app home  600 frames after 60 warmup
+  draw time     avg 0.78 ms  p95 1.70 ms  max 26.38 ms
+  draw alloc    avg 2.6 KB/frame  max 2.6 KB  in 600 of 600 frames
+  update alloc  avg 1.1 KB/frame  max 2.4 KB  in 600 of 600 frames
+  gc            gen0 0  gen1 0  gen2 0
+  sampled UI-thread allocations (one sample per ~100 KB)
+    936.6 KB  Aetherphone.Core.Aethernet.AppAvailability+<>c__DisplayClass27_0
+```
+
+- **draw alloc** counts bytes the UI thread allocated between `NewFrame` and `Render`; **update alloc** counts the `IFramework.Update` handlers and framework-thread work of the same frame. Both are exact, read from `GC.GetAllocatedBytesForCurrentThread`.
+- **sampled allocations** come from the runtime's GC allocation events on the UI thread, one sample per roughly 100 KB, so they rank where the bytes go rather than count them. A closure prints as its declaring class, `Class+<>c__DisplayClassN_M`: a lambda in that class that captures locals or parameters.
+- **errors** counts errors the plugin logged while measuring. A screen that throws every frame allocates for the exception, so fix those first.
+- The harness fakes allocate nothing on hot paths and anchor recording is paused while measuring, so the numbers are the plugin's own. Draw time is the harness CPU's, so compare it between runs rather than against the game.
+
+A common cause is a lambda that captures a method-scope variable: the compiler allocates the closure when the method is entered, before any early return or cache hit. Move the path that needs the lambda into its own method.
 
 ## The browser viewer
 
@@ -120,8 +168,8 @@ Content ids are derived from the name and world unless `contentId` is set, so a 
 - Three Dalamud statics resolve through Dalamud's service locator and wait forever without one: `UiBuilder.DefaultFontSizePx`, `UiBuilder.IconFont`, and `WindowSystem.Draw`. The plugin reads the first two through instance seams and the harness draws windows with its own loop. If the harness hangs on a new Dalamud API, `dotnet-stack report -p <pid>` shows which static is waiting.
 - Dalamud stamps its assemblies x64-only. The harness retargets `Aetherphone.dll` in its own output at startup; the test project's output needs the same treatment to run on Apple Silicon.
 - The rasterizer has no GPU. A phone frame costs about 12 ms at 1600x1200 on a 10-core machine, so `step 1000` takes around fifteen seconds.
-- A fresh config runs the full first-run boot (emblem and greetings, roughly 15 seconds of frames) and then the onboarding tour. Config lives in `~/.aetherphone-harness/config`, so it happens once.
-- The Aethernet apps talk to a real backend. A Release build, which is what `aep` runs, defaults to the live one at `api.aetherphone.net`, so anything you post after signing in is public.
+- A fresh config runs the full first-run boot (emblem and greetings, roughly 15 seconds of frames) and then the onboarding tour. Config lives in `~/.aetherphone-harness/config` (one folder per backend), so it happens once per backend.
+- The Aethernet apps talk to a real backend: aethernet-dev unless `--backend` says otherwise. The dev server is shared by the whole team, so posts made there are visible to every tester; reuse an existing test account instead of creating a new one per run.
 - Readers that touch game memory without a `GameMemory.Attached` check throw `InvalidOperationException` from FFXIVClientStructs once a character is logged in, because no address was ever resolved. The exception lands in `log` with the reader's name; gate the reader and give it a simulated branch.
 - The phone window is pinned at a fixed spot inside the display. In game the chassis can be dragged; under the harness that drag is ignored so the crop and the viewer's input mapping stay stable.
 

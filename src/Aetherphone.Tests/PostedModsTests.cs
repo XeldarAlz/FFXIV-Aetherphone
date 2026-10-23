@@ -27,7 +27,7 @@ public sealed class PostedModsTests
     [Fact]
     public void ALeftOutModNeverLeavesTheClient()
     {
-        var dropped = new HashSet<string>(StringComparer.Ordinal) { PostedMods.Key(-1, Body), PostedMods.Key(3, Coat) };
+        var dropped = new HashSet<string>(StringComparer.Ordinal) { PostedMods.Key(Body), PostedMods.Key(Coat) };
         var posted = PostedMods.Without(Outfit(), dropped);
 
         Assert.Equal(3, posted.Length);
@@ -39,7 +39,7 @@ public sealed class PostedModsTests
     [Fact]
     public void ACharacterSlotWithEveryModLeftOutIsDropped()
     {
-        var dropped = new HashSet<string>(StringComparer.Ordinal) { PostedMods.Key(-1, Body), PostedMods.Key(-1, Hair) };
+        var dropped = new HashSet<string>(StringComparer.Ordinal) { PostedMods.Key(Body), PostedMods.Key(Hair) };
         var posted = PostedMods.Without(Outfit(), dropped);
 
         Assert.Equal(2, posted.Length);
@@ -47,11 +47,16 @@ public sealed class PostedModsTests
     }
 
     [Fact]
-    public void TheSameModOnAnotherSlotStaysShared()
+    public void ALeftOutModLeavesEverySlotItCovers()
     {
-        var dropped = new HashSet<string>(StringComparer.Ordinal) { PostedMods.Key(-1, Coat) };
-        var posted = PostedMods.Without(Outfit(), dropped);
+        var gear = new[]
+        {
+            new GlamGearDto(3, 45123, Mods: new[] { Coat }),
+            new GlamGearDto(4, 45125, Mods: new[] { Coat, Hair }),
+        };
+        var posted = PostedMods.Without(gear, new HashSet<string>(StringComparer.Ordinal) { PostedMods.Key(Coat) });
 
-        Assert.Equal(new[] { Coat }, posted[0].Mods);
+        Assert.Null(posted[0].Mods);
+        Assert.Equal(new[] { Hair }, posted[1].Mods);
     }
 }

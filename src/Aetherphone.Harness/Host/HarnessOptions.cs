@@ -19,6 +19,10 @@ internal sealed class HarnessOptions
 
     public string ConfigDirectory { get; private set; } = string.Empty;
 
+    public bool ConfigDefaulted { get; private set; }
+
+    public string BackendUrl { get; private set; } = Configuration.TestAethernetBaseUrl;
+
     public string AssetDirectory { get; private set; } = string.Empty;
 
     public string SqpackDirectory { get; private set; } = string.Empty;
@@ -47,6 +51,9 @@ internal sealed class HarnessOptions
                     break;
                 case "--config":
                     options.ConfigDirectory = Value(arguments, ref index);
+                    break;
+                case "--backend":
+                    options.BackendUrl = HarnessBackend.Resolve(Value(arguments, ref index));
                     break;
                 case "--assets":
                     options.AssetDirectory = Value(arguments, ref index);
@@ -85,7 +92,8 @@ internal sealed class HarnessOptions
     {
         if (ConfigDirectory.Length == 0)
         {
-            ConfigDirectory = Path.Combine(CacheDirectory, "config");
+            ConfigDefaulted = true;
+            ConfigDirectory = Path.Combine(CacheDirectory, HarnessBackend.ConfigFolder(BackendUrl));
         }
 
         if (AssetDirectory.Length == 0)

@@ -14,14 +14,14 @@ internal enum LoveIslandScreen : byte
     Experience,
     Posts,
     Post,
-    Linkshells,
+    Syncshells,
 }
 
 internal readonly record struct LoveIslandRoute(LoveIslandScreen Screen, string Id)
 {
     public static readonly LoveIslandRoute Home = new(LoveIslandScreen.Home, string.Empty);
     public static readonly LoveIslandRoute Posts = new(LoveIslandScreen.Posts, string.Empty);
-    public static readonly LoveIslandRoute Linkshells = new(LoveIslandScreen.Linkshells, string.Empty);
+    public static readonly LoveIslandRoute Syncshells = new(LoveIslandScreen.Syncshells, string.Empty);
 
     public static LoveIslandRoute Experience(string experienceId) => new(LoveIslandScreen.Experience, experienceId);
 

@@ -55,10 +55,15 @@ internal static class DriverClient
             case "tap":
                 if (rest.Count == 0)
                 {
-                    return Usage("tap X Y | tap ANCHOR");
+                    return Usage("tap X Y | tap ANCHOR | tap --text TEXT");
                 }
 
-                if (float.TryParse(rest[0], NumberStyles.Float, CultureInfo.InvariantCulture, out _))
+                if (rest[0] == "--text" && rest.Count > 1)
+                {
+                    query.Add(new("text", rest[1]));
+                    AddOptions(rest, 2, query);
+                }
+                else if (float.TryParse(rest[0], NumberStyles.Float, CultureInfo.InvariantCulture, out _))
                 {
                     query.Add(new("x", rest[0]));
                     query.Add(new("y", rest.Count > 1 ? rest[1] : "0"));
@@ -68,6 +73,43 @@ internal static class DriverClient
                 {
                     query.Add(new("anchor", rest[0]));
                     AddOptions(rest, 1, query);
+                }
+
+                break;
+            case "tree":
+                for (var index = 0; index < rest.Count; index++)
+                {
+                    switch (rest[index])
+                    {
+                        case "--all":
+                            query.Add(new("all", "1"));
+                            break;
+                        case "--full":
+                            query.Add(new("full", "1"));
+                            break;
+                        case "--json":
+                            query.Add(new("format", "json"));
+                            break;
+                        case "--frames" when index + 1 < rest.Count:
+                            query.Add(new("frames", rest[index + 1]));
+                            index += 1;
+                            break;
+                    }
+                }
+
+                break;
+            case "perf":
+                for (var index = 0; index < rest.Count; index++)
+                {
+                    if (rest[index] == "--json")
+                    {
+                        query.Add(new("format", "json"));
+                    }
+                    else if (rest[index] is "--frames" or "--warmup" && index + 1 < rest.Count)
+                    {
+                        query.Add(new(rest[index][2..], rest[index + 1]));
+                        index += 1;
+                    }
                 }
 
                 break;
@@ -135,7 +177,7 @@ internal static class DriverClient
             case "quit":
                 break;
             default:
-                return Usage("url | state | step [N] | shot [PATH] [--full] | tap X Y | tap ANCHOR | drag X1 Y1 X2 Y2 | scroll X Y DY | type TEXT | key NAME | open [APP] | home | settings | anchors | log [--since N] | command TEXT | scenario [NAME|none] | install [APP|all] | login | logout | quit");
+                return Usage("url | state | step [N] | shot [PATH] [--full] | tree [--all] [--full] [--json] | perf [--frames N] [--warmup N] [--json] | tap X Y | tap ANCHOR | tap --text TEXT | drag X1 Y1 X2 Y2 | scroll X Y DY | type TEXT | key NAME | open [APP] | home | settings | anchors | log [--since N] | command TEXT | scenario [NAME|none] | install [APP|all] | login | logout | quit");
         }
 
         var url = BuildUrl(port, command, query);

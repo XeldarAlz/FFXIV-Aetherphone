@@ -19,6 +19,7 @@ const BotLogins = new Set(["dependabot[bot]", "github-actions[bot]"]);
 
 const ArchivedThreadPageLimit = 100;
 const ArchivedThreadPageCap = 30;
+const RelayWindowMilliseconds = 10 * 60 * 1000;
 const SnowflakePattern = /\d{15,}/g;
 const MentionTokenPattern = /<@&?\d+>/g;
 const MentionPattern = /(?:^|[^\w`/@])@([A-Za-z0-9](?:[A-Za-z0-9-]{0,38}))/g;
@@ -743,6 +744,64 @@ async function syncPullRequest(config, forum, pullRequestNumber) {
     await applyThreadState(context, threadId);
 }
 
+function findForkPullRequest(run, openPullRequests) {
+    let candidates = openPullRequests.filter(pullRequest => pullRequest.head.sha === run.head_sha);
+    if (candidates.length !== 1) {
+        candidates = openPullRequests.filter(pullRequest => pullRequest.head.ref === run.head_branch);
+    }
+    return candidates.length === 1 ? candidates[0] : null;
+}
+
+function findTriggeringReview(run, reviews) {
+    const runCreated = Date.parse(run.created_at);
+    let match = null;
+    for (const review of reviews) {
+        if (review.state === "PENDING" || !review.submitted_at || review.user?.login !== run.actor?.login) {
+            continue;
+        }
+        const submitted = Date.parse(review.submitted_at);
+        if (submitted > runCreated || runCreated - submitted > RelayWindowMilliseconds) {
+            continue;
+        }
+        if (match === null || submitted > Date.parse(match.submitted_at)) {
+            match = review;
+        }
+    }
+    return match;
+}
+
+// A review on a fork pull request runs pull-request-forum.yml without this repository's secrets, so
+// that run skips. pull-request-forum-relay.yml runs after it with the secrets and replays the review
+// from the GitHub API, using only the run metadata GitHub itself provides.
+async function relayForkReview(config, forum, event) {
+    const run = event.workflow_run;
+    if (run?.event !== "pull_request_review") {
+        console.log(`Nothing to relay for a ${run?.event ?? "missing"} run.`);
+        return;
+    }
+    if ((run.pull_requests ?? []).length > 0) {
+        console.log("The review is on a pull request from this repository; its own run already mirrored it.");
+        return;
+    }
+    const openPullRequests = await githubPaginate(config, `/repos/${config.repository}/pulls?state=open`);
+    const pullRequest = findForkPullRequest(run, openPullRequests);
+    if (pullRequest === null) {
+        console.log("No single open pull request matches the review run; nothing to relay.");
+        return;
+    }
+    if (pullRequest.head.repo?.full_name === config.repository) {
+        console.log(`#${pullRequest.number} comes from this repository; its own run already mirrored the review.`);
+        return;
+    }
+    const reviews = await githubPaginate(config, `/repos/${config.repository}/pulls/${pullRequest.number}/reviews`);
+    const review = findTriggeringReview(run, reviews);
+    if (review === null) {
+        console.log(`No review on #${pullRequest.number} matches the run; nothing to relay.`);
+        return;
+    }
+    await mirrorEvent(config, forum, "pull_request_review", { pull_request: { number: pullRequest.number }, review, sender: review.user });
+}
+
 async function checkConnection(config, forum) {
     await discordRequest(config, "GET", "/users/@me");
     console.log("Bot token: ok");
@@ -786,6 +845,10 @@ async function main() {
             return;
         }
         await syncPullRequest(config, forum, Number(requested));
+        return;
+    }
+    if (eventName === "workflow_run") {
+        await relayForkReview(config, forum, event);
         return;
     }
     await mirrorEvent(config, forum, eventName, event);

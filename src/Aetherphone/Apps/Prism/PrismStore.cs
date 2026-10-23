@@ -216,7 +216,7 @@ internal sealed class PrismStore : IDisposable
             }
 
             var request = new PrismEntryRequest(upload.Key, baked.Width, baked.Height,
-                entering.Length > 0 ? entering : null, outfit, race, gender);
+                entering.Length > 0 ? entering : null, outfit, race > 0 ? race : null, race > 0 ? gender : null);
             var entry = await client.EnterAsync(current.Id, request, token, received => failure = received)
                 .ConfigureAwait(false);
             if (entry is null)

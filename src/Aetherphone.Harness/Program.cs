@@ -32,6 +32,7 @@ internal static class Program
         try
         {
             options = HarnessOptions.Parse(arguments, 1);
+            HarnessBackend.SettleConfig(options);
         }
         catch (ArgumentException exception)
         {

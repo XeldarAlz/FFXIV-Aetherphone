@@ -1,0 +1,42 @@
+# Relays reviews on fork pull requests into the Discord forum. pull_request_review has no _target
+# variant, so on a fork pull request pull-request-forum.yml runs without this repository's secrets and
+# skips. workflow_run always runs the default branch's copy of this file with the secrets, after that
+# run completes, and the script replays the review from the GitHub API.
+#
+# It reads only the run metadata GitHub provides (head commit, branch, actor, time). Never download
+# the triggering run's artifacts or check out its code: a fork controls both.
+
+name: Pull request forum relay
+
+on:
+  workflow_run:
+    workflows: ["Pull request forum"]
+    types: [completed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  relay:
+    name: Relay fork reviews to Discord
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.event == 'pull_request_review'
+
+    steps:
+      - name: Check out the script from the default branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      # Secrets, not variables, for the same reason as pull-request-forum.yml: public logs.
+      - name: Relay the review
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_PULL_REQUEST_FORUM_ID: ${{ secrets.DISCORD_PULL_REQUEST_FORUM_ID }}
+          DISCORD_MAINTAINERS_ROLE_ID: ${{ secrets.DISCORD_MAINTAINERS_ROLE_ID }}
+          DISCORD_GITHUB_USERS: ${{ secrets.DISCORD_GITHUB_USERS }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/pull-request-forum.mjs

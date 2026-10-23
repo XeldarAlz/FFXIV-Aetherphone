@@ -371,6 +371,8 @@ internal abstract class SocialFeedStore : IDisposable
     public bool UserListSearchCapped => userListCursor is not null && userListResults.Length >= UserListSearchCap;
     public bool UserListSearchFilling => userListCursor is not null && !userListMoreFailed
         && userListResults.Length < UserListSearchCap;
+    public bool UserListSearchStalled => userListCursor is not null && userListMoreFailed
+        && userListResults.Length < UserListSearchCap;
 
     public int ReactionKindOf(string userId)
     {
@@ -1696,6 +1698,27 @@ internal abstract class SocialFeedStore : IDisposable
     {
         if (UserListSearchFilling)
         {
+            LoadMoreUserList();
+        }
+    }
+
+    public void RetryUserList()
+    {
+        var sourceId = userListSourceId;
+        if (sourceId is null)
+        {
+            return;
+        }
+
+        if (userListFailed)
+        {
+            OpenUserList(sourceId, userListKind);
+            return;
+        }
+
+        if (userListMoreFailed)
+        {
+            userListMoreFailed = false;
             LoadMoreUserList();
         }
     }

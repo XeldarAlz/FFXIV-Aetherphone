@@ -59,9 +59,6 @@ public sealed class GlamWireContractTests
         var profile = JsonSerializer.Deserialize("{\"glamCount\":3}", AethernetJsonContext.Default.GlamProfileDto);
         Assert.Equal(3, profile?.GlamCount);
         Assert.Null(profile?.Placings);
-        var collections = JsonSerializer.Deserialize("[{\"id\":\"saved\",\"name\":\"Saved\",\"count\":2}]",
-            AethernetJsonContext.Default.GlamCollectionDtoArray);
-        Assert.Equal("saved", collections?[0].Id);
     }
 
     [Fact]

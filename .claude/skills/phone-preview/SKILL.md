@@ -26,6 +26,8 @@ Run it in the background and wait for `~/.aetherphone-harness/driver.json` to ap
 tools/harness/aep serve
 ```
 
+The social apps talk to the aethernet-dev server by default. Only pass `--backend live` when the user asks for production: anything posted there is public. `state` reports the backend in use.
+
 The server steps frames only when a command asks it to. Nothing moves between commands, so screenshots are deterministic.
 
 A person can use the same phone live: `tools/harness/aep window` opens a native 60 fps window (GPU rendered) instead of the headless server, with the same driver inside it, and `tools/harness/aep url` prints a browser viewer that works with either mode. While a person is interacting, time runs in real time, so take driver screenshots when nobody is interacting.
@@ -38,9 +40,11 @@ Every command is `tools/harness/aep <command>` (`tools\harness\aep.cmd` on Windo
 | --- | --- |
 | `state` | Frame counter, current app id, phone rect, minimize phase |
 | `step N` | Advance N frames (60 per simulated second) |
+| `tree [--all] [--json]` | Every visible line of text with its rect and size, in reading order, plus the anchors |
 | `shot [path] [--full]` | Save a PNG of the phone (or the whole display); then Read the file |
+| `perf [--frames N] [--warmup N]` | Per-frame allocations (draw and update), draw time, errors, and the allocating types for the current screen |
 | `anchors` | Named UI elements on screen with centers, for taps by name |
-| `tap NAME` or `tap X Y` | Tap an anchor or a point; `--settle N` frames afterwards (default 12) |
+| `tap NAME`, `tap X Y`, `tap --text TEXT` | Tap an anchor, a point, or the first visible text match; `--settle N` frames afterwards (default 12) |
 | `drag X1 Y1 X2 Y2 [--frames N]` | Swipe or drag |
 | `scroll X Y DY` | Mouse wheel at a point |
 | `type TEXT` | Type into the focused field |
@@ -58,9 +62,12 @@ Every command is `tools/harness/aep <command>` (`tools\harness\aep.cmd` on Windo
 
 ## Typical review loop
 
-1. `tools/harness/aep open settings` then `tools/harness/aep shot /tmp/settings.png`, then Read the PNG.
-2. Find targets with `anchors`; tap by name when one exists, by pixel otherwise.
-3. After each action, `shot` again and check `log` for warnings. Buttons that drive the game (invites, chat sends, gearset swaps, item links) succeed and log a `game action: ...` line instead of touching a game.
+1. `tools/harness/aep open settings`, then `tools/harness/aep tree` to read what is on screen. It is plain text, costs far fewer tokens than a screenshot, and flags clipped text.
+2. Tap with `tap --text "General"` or by anchor name; fall back to pixels only when neither exists.
+3. After each action, `tree` again and check `log` for warnings. Buttons that drive the game (invites, chat sends, gearset swaps, item links) succeed and log a `game action: ...` line instead of touching a game.
+4. Take a `shot` and Read the PNG when the question is visual: layout, color, spacing, images, or motion. `tree` sees no images.
+
+After changing draw code, open the screen and run `perf`: the draw path should allocate 0 B per frame. The sampled types name the class to look in.
 
 ## What the harness cannot show
 
@@ -68,4 +75,4 @@ Every command is `tools/harness/aep <command>` (`tools\harness\aep.cmd` on Windo
 - Without game data the sheet-bound apps (Skywatcher, Dailies, Wallet, Jobs, Inventory, Market, Hunts, Maps, Housing, Collections) are hidden, world or item names are blank, and no scenario loads.
 - A config created before game data was available has no sheet-bound apps on the home screen; run `install` once.
 - No audio, no video screen, no camera capture, no hooks, and no incoming game chat.
-- A fresh config runs the first-run boot and onboarding tour. `step 1000` gets past the boot; the tour has buttons to tap. Config persists in `~/.aetherphone-harness/config`, so this happens once.
+- A fresh config runs the first-run boot and onboarding tour. `step 1000` gets past the boot; the tour has buttons to tap. Config persists in `~/.aetherphone-harness/config` (one folder per backend), so this happens once per backend.

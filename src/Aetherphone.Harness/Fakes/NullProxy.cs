@@ -4,7 +4,7 @@ namespace Aetherphone.Harness.Fakes;
 
 public class NullProxy : DispatchProxy
 {
-    private static readonly HashSet<string> Reported = new();
+    private static readonly Dictionary<MethodInfo, object?> Answers = new();
     private string interfaceName = string.Empty;
 
     public static TInterface Create<TInterface>()
@@ -22,27 +22,27 @@ public class NullProxy : DispatchProxy
             return null;
         }
 
-        var name = targetMethod.Name;
-        if (name.StartsWith("add_", StringComparison.Ordinal) || name.StartsWith("remove_", StringComparison.Ordinal))
+        lock (Answers)
         {
-            return null;
-        }
-
-        Report(name);
-        return DefaultValue.For(targetMethod.ReturnType);
-    }
-
-    private void Report(string member)
-    {
-        var key = interfaceName + "." + member;
-        lock (Reported)
-        {
-            if (!Reported.Add(key))
+            if (Answers.TryGetValue(targetMethod, out var answer))
             {
-                return;
+                return answer;
             }
         }
 
-        HarnessLog.Note($"{key} is not faked; returning a default value");
+        var name = targetMethod.Name;
+        var subscription = name.StartsWith("add_", StringComparison.Ordinal) || name.StartsWith("remove_", StringComparison.Ordinal);
+        if (!subscription)
+        {
+            HarnessLog.Note($"{interfaceName}.{name} is not faked; returning a default value");
+        }
+
+        var value = subscription ? null : DefaultValue.For(targetMethod.ReturnType);
+        lock (Answers)
+        {
+            Answers[targetMethod] = value;
+        }
+
+        return value;
     }
 }

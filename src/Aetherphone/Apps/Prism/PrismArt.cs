@@ -275,7 +275,7 @@ internal static class PrismArt
             var selected = chosen == index + 1;
             var share = selected ? fill : 0f;
             drawList.AddRect(min, max, ImGui.GetColorU32(hovered || selected ? Fore : Faint), 0f, ImDrawFlags.None,
-                1f);
+                HairlineWidth(scale));
             if (share > 0f)
             {
                 drawList.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(Fore, share)));
@@ -421,13 +421,14 @@ internal static class PrismArt
         var inset = StitchInsetUnits * scale;
         var dash = StitchDashUnits * scale;
         var color = ImGui.GetColorU32(Stitch);
+        var thickness = HairlineWidth(scale);
         var top = rect.Min.Y + inset;
         var bottom = rect.Max.Y - inset;
         for (var x = rect.Min.X + inset; x < rect.Max.X - inset; x += dash * 2f)
         {
             var end = MathF.Min(x + dash, rect.Max.X - inset);
-            drawList.AddLine(new Vector2(x, top), new Vector2(end, top), color);
-            drawList.AddLine(new Vector2(x, bottom), new Vector2(end, bottom), color);
+            drawList.AddLine(new Vector2(x, top), new Vector2(end, top), color, thickness);
+            drawList.AddLine(new Vector2(x, bottom), new Vector2(end, bottom), color, thickness);
         }
     }
 

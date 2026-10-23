@@ -33,9 +33,8 @@ internal static class CampaignTextKeys
     public const string Announcements = "announcements";
     public const string AnnouncementsFrom = "announcementsFrom";
     public const string AnnouncementsBody = "announcementsBody";
-    public const string LinkshellsTitle = "linkshellsTitle";
-    public const string LinkshellsBody = "linkshellsBody";
-    public const string AskContact = "askContact";
+    public const string SyncshellsTitle = "syncshellsTitle";
+    public const string SyncshellsBody = "syncshellsBody";
     public const string About = "about";
     public const string More = "more";
     public const string AboutFooter = "aboutFooter";
@@ -156,9 +155,8 @@ internal sealed class CampaignTexts
         CampaignTextKeys.Announcements => L.LoveIsland.Announcements,
         CampaignTextKeys.AnnouncementsFrom => L.LoveIsland.AnnouncementsFrom,
         CampaignTextKeys.AnnouncementsBody => L.LoveIsland.AnnouncementsBody,
-        CampaignTextKeys.LinkshellsTitle => L.LoveIsland.LinkshellsTitle,
-        CampaignTextKeys.LinkshellsBody => L.LoveIsland.LinkshellsBody,
-        CampaignTextKeys.AskContact => L.LoveIsland.AskContact,
+        CampaignTextKeys.SyncshellsTitle => L.LoveIsland.SyncshellsTitle,
+        CampaignTextKeys.SyncshellsBody => L.LoveIsland.SyncshellsBody,
         CampaignTextKeys.About => L.LoveIsland.About,
         CampaignTextKeys.More => L.LoveIsland.More,
         CampaignTextKeys.AboutFooter => L.LoveIsland.AboutFooter,

@@ -157,9 +157,9 @@ internal sealed partial class LoveIslandApp : IResumableApp
                 activeTab = LoveIslandTab.Perks;
                 store.RefreshMe();
                 break;
-            case CampaignLaunchKind.Linkshells:
+            case CampaignLaunchKind.Syncshells:
                 activeTab = LoveIslandTab.Tonight;
-                router.Push(LoveIslandRoute.Linkshells, false);
+                router.Push(LoveIslandRoute.Syncshells, false);
                 break;
         }
     }
@@ -286,8 +286,8 @@ internal sealed partial class LoveIslandApp : IResumableApp
             case LoveIslandScreen.Post:
                 DrawPostDetail(area, route.Id, depth);
                 break;
-            case LoveIslandScreen.Linkshells:
-                DrawLinkshells(area);
+            case LoveIslandScreen.Syncshells:
+                DrawSyncshells(area);
                 break;
             default:
                 DrawHome(area);
@@ -465,10 +465,10 @@ internal sealed partial class LoveIslandApp : IResumableApp
         router.Push(LoveIslandRoute.Posts);
     }
 
-    private void OpenLinkshells()
+    private void OpenSyncshells()
     {
         UiFeedback.Play(UiSound.Tap);
-        router.Push(LoveIslandRoute.Linkshells);
+        router.Push(LoveIslandRoute.Syncshells);
     }
 
     private void PostWithHashtag()

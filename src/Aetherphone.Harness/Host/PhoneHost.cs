@@ -4,7 +4,9 @@ using Aetherphone.Core.Game;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Harness.Fakes;
 using Aetherphone.Harness.Fonts;
+using Aetherphone.Harness.Inspection;
 using Aetherphone.Harness.Native;
+using Aetherphone.Harness.Profiling;
 using Aetherphone.Harness.Rendering;
 using Aetherphone.Harness.Scenarios;
 using Dalamud.Bindings.ImGui;
@@ -37,6 +39,8 @@ internal sealed unsafe class PhoneHost : IDisposable
     private readonly Plugin plugin;
     private readonly Stopwatch stopwatch = new();
     private readonly List<KeyValuePair<string, Rect>> anchorScratch = new();
+    private readonly GlyphCatalog glyphs = new();
+    private readonly ScreenReader screenReader = new();
     private Scenario? scenario;
 
     public PhoneHost(HarnessOptions options)
@@ -60,10 +64,12 @@ internal sealed unsafe class PhoneHost : IDisposable
         clientState = new FakeClientState();
         commands = new FakeCommandManager();
         data = new FakeDataManager(options.SqpackDirectory);
-        var pluginInterface = new FakePluginInterface(options.ConfigDirectory, options.AssetDirectory, uiBuilder,
-            typeof(Plugin).Assembly);
+        var pluginInterface = new FakePluginInterface(options.ConfigDirectory, options.AssetDirectory,
+            options.BackendUrl, uiBuilder, typeof(Plugin).Assembly);
         HarnessLog.Note(data.HasGameData ? "game data: " + options.SqpackDirectory : "game data: none, sheet-bound apps disabled");
+        HarnessLog.Note("backend: " + options.BackendUrl);
         cacheDirectory = options.CacheDirectory;
+        BackendUrl = options.BackendUrl;
         GameMemory.Detach();
         GameMemory.ActionSimulated += description => HarnessLog.Note("game action: " + description);
         if (!data.HasGameData)
@@ -102,6 +108,8 @@ internal sealed unsafe class PhoneHost : IDisposable
         HarnessLog.Note("plugin constructed");
         StartScenario(options.Scenario);
     }
+
+    public string BackendUrl { get; }
 
     public string? ScenarioName => scenario?.Name;
 
@@ -189,6 +197,8 @@ internal sealed unsafe class PhoneHost : IDisposable
 
     public int FrameIndex { get; private set; }
 
+    public FrameCost LastFrame { get; private set; }
+
     public int Width => renderer.Width;
 
     public int Height => renderer.Height;
@@ -254,12 +264,16 @@ internal sealed unsafe class PhoneHost : IDisposable
         fontAtlas.RebuildIfDirty();
         var io = ImGui.GetIO();
         io.DeltaTime = deltaSeconds;
+        var beforeUpdate = GC.GetAllocatedBytesForCurrentThread();
         framework.Tick(TimeSpan.FromSeconds(deltaSeconds));
+        var beforeDraw = GC.GetAllocatedBytesForCurrentThread();
         stopwatch.Restart();
         ImGui.NewFrame();
         uiBuilder.InvokeDraw();
         ImGui.Render();
         stopwatch.Stop();
+        LastFrame = new FrameCost(beforeDraw - beforeUpdate, GC.GetAllocatedBytesForCurrentThread() - beforeDraw,
+            stopwatch.Elapsed.TotalMilliseconds);
         uiBuilder.FrameCount += 1;
         FrameIndex += 1;
         if (FrameIndex % 300 == 0)
@@ -427,6 +441,16 @@ internal sealed unsafe class PhoneHost : IDisposable
     }
 
     public bool TryFindAnchor(string key, out Rect rect) => UiAnchors.TryGet(key, out rect);
+
+    public List<ScreenLine> ReadScreen()
+    {
+        if (glyphs.Generation != fontAtlas.Generation)
+        {
+            glyphs.Rebuild(fontAtlas.ImAtlas, fontAtlas.Generation);
+        }
+
+        return screenReader.Read(ImGui.GetDrawData(), glyphs);
+    }
 
     public byte[] ScreenshotPng(bool cropToPhone) => ScreenshotPng(cropToPhone, false, out _, out _);
 

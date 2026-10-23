@@ -8,6 +8,9 @@ How Aetherphone is checked and shipped: the unit tests, the CI workflow and its 
 | --- | --- |
 | src/Aetherphone.Tests/ | The xUnit test project |
 | .github/workflows/ci.yml | Guards, Release build, tests, plugin artifact |
+| tools/guards/check | Every guard, run by CI and locally |
+| tools/guards/hooks/pre-commit | Runs the guards over staged files before each commit |
+| .claude/settings.json | Runs the guards over each file a Claude Code session edits |
 | Directory.Build.props | The plugin version; warnings become errors on CI |
 | repo.json | This plugin's Dalamud manifest entry |
 | .github/workflows/release.yml | Publishes a release from a version tag |
@@ -48,7 +51,7 @@ Two kinds of test pin values on purpose. TourRegistryTests lists every app tour 
 
 ### Guards
 
-Guards are grep checks that need no compiler, so a mistake fails in seconds. This is the complete list; [Conventions](conventions.md) explains each rule.
+Guards are grep checks that need no compiler, so a mistake fails in seconds. They all live in tools/guards/check, and CI calls that same script, so a local run and CI always agree. This is the complete list; [Conventions](conventions.md) explains each rule.
 
 | Guard | Fails on | Scope |
 | --- | --- | --- |
@@ -63,7 +66,19 @@ Guards are grep checks that need no compiler, so a mistake fails in seconds. Thi
 | No byte order mark | A .cs file saved with a UTF-8 BOM | src/Aetherphone, src/Aetherphone.Tests |
 | Namespace matches folder | A missing file-scoped namespace, or one that differs from its folder path; all of Windows/Components uses Aetherphone.Windows.Components | src, except src/ManagedDoom |
 
-System.Linq is not an implicit using in the plugin, so the using line is the whole LINQ surface. To use LINQ on a cold path, add the file to the guard's allowlist and say why in the pull request.
+System.Linq is not an implicit using in the plugin, so the using line is the whole LINQ surface. To use LINQ on a cold path, add the file to the allowlist in tools/guards/check and say why in the pull request.
+
+#### Running the guards locally
+
+The script runs in bash on macOS, Linux and Windows (Git Bash, which comes with Git for Windows; `tools\guards\check.cmd` starts it from PowerShell or cmd).
+
+```bash
+tools/guards/check                 # every guard over the whole tree
+tools/guards/check em-dash linq    # only the named guards
+tools/guards/check --files a.cs    # every guard over just these files
+```
+
+`git config core.hooksPath tools/guards/hooks` turns on the pre-commit hook, which checks the staged files and refuses the commit on a failure. Claude Code sessions need no setup: .claude/settings.json runs the guards over every file the agent edits and hands any failure straight back to it.
 
 ### Build (Windows)
 
@@ -161,7 +176,7 @@ Every workflow, what it needs, and what a fork must do. An unset secret reads as
 | update-issue-template-versions.yml | Dropdown update on dev | `HUB_REPO_PAT` | Push refused if dev is protected | Change nothing |
 | announce-commits.yml | Posts dev pushes to Discord, no pings | `COMMITS_WEBHOOK_URL` | Skips | Change nothing |
 | uptime.yml | Fails when the production health check fails | `UPTIME_ALERT_WEBHOOK_URL` | Fails anyway, so GitHub emails | Retarget or delete it |
-| pull-request-forum.yml, staff-role-sync.yml | Maintainer Discord, below | `DISCORD_` secrets | Skips | Delete them |
+| pull-request-forum.yml, pull-request-forum-relay.yml, staff-role-sync.yml | Maintainer Discord, below | `DISCORD_` secrets | Skips | Delete them |
 | staff-post.yml | Maintainer Discord, run by hand | `DISCORD_` secrets | Errors | Delete it |
 
 **The hub dispatch trap.** A fork that sets `HUB_REPO_PAT` to get automatic releases also turns on release.yml's last step, which dispatches to XeldarAlz/DalamudPlugins and fails with the fork's token. Point that step at your own hub, or delete it, before you set the secret. A fork must also change the links in repo.json, rename its manifests and icon (see the [Trademark and Naming Policy](../TRADEMARK.md)), and point the client at its own backend ([Networking](networking.md)).
@@ -176,6 +191,7 @@ Every workflow, what it needs, and what a fork must do. An unset secret reads as
 - **Skipping the merge-back splits the branches.** The next release cannot fast-forward. When dev has moved on, the merge conflicts in ChangelogData.cs, L.cs and the catalogs: keep both sides in version order.
 - **Duplicate changelog keys merge silently.** Two branches taking the same next key merge into the JSON catalogs without a conflict, and one bullet shows the other's text. Search L.cs for duplicate keys after every rebase.
 - **pull_request_target runs with this repository's secrets.** label-pull-request.yml and pull-request-forum.yml run the default branch's copy and never check out the pull request. Never add a checkout of the pull request head, a build or a test to them.
+- **Fork reviews reach Discord through the relay.** pull_request_review has no `_target` variant, so a review on a fork pull request runs pull-request-forum.yml without secrets and it skips. pull-request-forum-relay.yml runs after it on workflow_run, with the secrets, and replays the review from the API. It reads only GitHub's run metadata; never download that run's artifacts or check out its code.
 - **The hub step can fail alone.** A network error can fail the last step after the release is out. Send the dispatch again by hand, or wait for the hub's next scheduled run.
 - **The Six Labors license key expires on 2028-01-09.** ImageSharp checks sixlabors.lic at build time, and an expired key fails every Release build, old tags included.
 

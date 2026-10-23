@@ -12,7 +12,7 @@ public sealed class CampaignTextsTests
         "endedTitle", "endedBody", "keepNight", "keepNightHintLive", "keepNightHintBefore", "liveDj", "noStream",
         "streamHint", "watchTwitch", "shareTitle", "shareBody", "websiteNote", "postCta", "galleryCta", "pinned",
         "announcements",
-        "announcementsFrom", "announcementsBody", "linkshellsTitle", "linkshellsBody", "askContact", "about", "more",
+        "announcementsFrom", "announcementsBody", "syncshellsTitle", "syncshellsBody", "about", "more",
         "aboutFooter", "experiencesSub", "nothingScheduled", "whoIsOn", "remindMe", "dcTravelNote", "gallerySub",
         "galleryCta2", "perksSub", "frameName", "frameBody", "badgeName", "badgeBody", "coinsName", "coinsBody",
         "howToEarn", "earnTitle", "earnBody", "equipCta", "earned", "notYet",
@@ -80,7 +80,6 @@ public sealed class CampaignTextsTests
         var texts = new CampaignTexts();
 
         Assert.Equal("12 from PNX", texts.T(CampaignTextKeys.AnnouncementsFrom, new CampaignTextArgs(N: "12")));
-        Assert.Equal("Ask Nayori", texts.T(CampaignTextKeys.AskContact, new CampaignTextArgs(Name: "Nayori")));
         Assert.Equal("Post once with #LoveIslandEclipse",
             texts.T(CampaignTextKeys.EarnTitle, new CampaignTextArgs(Hashtag: "LoveIslandEclipse")));
         Assert.Equal(

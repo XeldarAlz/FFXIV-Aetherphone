@@ -17,7 +17,7 @@ using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Camera;
 
-internal sealed class CameraApp : IPhoneApp
+internal sealed partial class CameraApp : IPhoneApp
 {
     private const float TopBarHeight = 88f;
     private const float TrayHeight = 172f;
@@ -41,13 +41,18 @@ internal sealed class CameraApp : IPhoneApp
     private const float MaxFrameSeconds = 0.1f;
     private const int SquareModeIndex = 0;
     private const int PhotoModeIndex = 1;
+    private const int ScreenModeIndex = 2;
+    private const int CropModeIndex = 3;
     private const int CaptureDelayFrames = 3;
     private const int CaptureWatchdogTicks = 30;
     private const int ShortTimerSeconds = 3;
     private const int LongTimerSeconds = 10;
+    private const int ScreenCountdownSeconds = 3;
     private const float RequestedShotSettleSeconds = 0.6f;
-    private static readonly LocString[] Modes = { L.Camera.ModeSquare, L.Camera.ModePhoto };
-    private static readonly string[] ModeAnchors = { "camera.mode.square", "camera.mode.photo" };
+    private static readonly LocString[] Modes =
+        { L.Camera.ModeSquare, L.Camera.ModePhoto, L.Camera.ModeScreen, L.Camera.ModeCrop };
+    private static readonly string[] ModeAnchors =
+        { "camera.mode.square", "camera.mode.photo", "camera.mode.screen", "camera.mode.crop" };
     private static readonly string[] CountdownDigits = new string[LongTimerSeconds + 1];
 
     public string Id => "camera";
@@ -89,6 +94,7 @@ internal sealed class CameraApp : IPhoneApp
     private int wellGeneration;
     private Spring flight;
     private bool flying;
+    private bool flightOverScreen;
     private Rect flightFrom;
     private Rect wellRect;
     private double timerEndsAt;
@@ -111,6 +117,8 @@ internal sealed class CameraApp : IPhoneApp
 
     private bool TimerRunning => timerEndsAt > 0d;
 
+    private bool PhoneAway => modeIndex is ScreenModeIndex or CropModeIndex;
+
     public void OnOpened()
     {
         flashAge = FlashDuration + 1f;
@@ -120,6 +128,7 @@ internal sealed class CameraApp : IPhoneApp
         modeIndex = PhotoModeIndex;
         dial.Snap(modeIndex);
         SyncLandscape();
+        StopCrop();
         DetachCaptureHooks();
         _ = LoadNewestAsync(++wellGeneration);
     }
@@ -129,6 +138,7 @@ internal sealed class CameraApp : IPhoneApp
         timerEndsAt = 0d;
         requestedShotDelay = 0f;
         AppLandscape.Release(Id);
+        StopCrop();
         DetachCaptureHooks();
     }
 
@@ -149,6 +159,7 @@ internal sealed class CameraApp : IPhoneApp
         var theme = context.Theme;
         var rounding = theme.ScreenRounding * scale;
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, MaxFrameSeconds);
+        drawnFrame = ImGui.GetFrameCount();
         WallpaperBackdrop.RecordFlat(CameraChrome.Dark);
         AdvanceTimers(delta);
         var screen = SceneChrome.ScreenFrom(context.Content, theme, scale);
@@ -158,7 +169,23 @@ internal sealed class CameraApp : IPhoneApp
         var drawList = ImGui.GetWindowDrawList();
         UiAnchors.Report("camera.viewfinder", viewfinder);
         HandleFocusTap(viewfinder);
-        CameraChrome.Viewfinder(drawList, viewfinder, captureRect, configuration.CameraGrid, scale);
+        var screenMode = modeIndex == ScreenModeIndex;
+        var away = PhoneAway;
+        CameraChrome.Viewfinder(drawList, viewfinder, captureRect, configuration.CameraGrid && !away, scale);
+        if (away)
+        {
+            CameraChrome.ScreenNote(drawList, viewfinder, Loc.T(screenMode ? L.Camera.ScreenTitle : L.Camera.CropTitle),
+                Loc.T(screenMode ? L.Camera.ScreenHint : L.Camera.CropHint), scale);
+        }
+
+        if (screenMode)
+        {
+            var whole = WholeScreen();
+            var background = ImGui.GetBackgroundDrawList();
+            CameraChrome.Viewfinder(background, whole, whole, configuration.CameraGrid, scale);
+            CameraChrome.ScreenCorners(background, whole, scale);
+        }
+
         CameraChrome.Reticle(drawList, reticleAge, ReticleDuration, reticlePosition, scale);
         DrawCountdown(drawList, captureRect, scale);
         if (landscape)
@@ -173,7 +200,15 @@ internal sealed class CameraApp : IPhoneApp
         }
 
         DrawFlight(drawList, delta, scale);
-        CameraChrome.Flash(drawList, screen, flashAge, FlashDuration, rounding);
+        if (away)
+        {
+            CameraChrome.Flash(ImGui.GetForegroundDrawList(), ShotRect(captureRect), flashAge, FlashDuration, 0f);
+        }
+        else
+        {
+            CameraChrome.Flash(drawList, screen, flashAge, FlashDuration, rounding);
+        }
+
         TakeRequestedShot(captureRect, delta);
     }
 
@@ -415,8 +450,16 @@ internal sealed class CameraApp : IPhoneApp
         if (remaining <= 0d)
         {
             timerEndsAt = 0d;
-            pendingCaptureRect = captureRect;
+            pendingCaptureRect = ShotRect(captureRect);
             StartCapture();
+            return;
+        }
+
+        if (PhoneAside.Requested && ImGui.IsKeyPressed(ImGuiKey.Escape, false))
+        {
+            timerEndsAt = 0d;
+            DetachCaptureHooks();
+            UiFeedback.Play(UiSound.ToggleOff);
             return;
         }
 
@@ -425,6 +468,12 @@ internal sealed class CameraApp : IPhoneApp
         {
             timerShown = shown;
             UiFeedback.Play(UiSound.Tap);
+        }
+
+        if (PhoneAway)
+        {
+            CameraChrome.Countdown(ImGui.GetForegroundDrawList(), ShotRect(captureRect).Center, Digits(shown), scale);
+            return;
         }
 
         CameraChrome.Countdown(drawList, captureRect.Center, Digits(shown), scale);
@@ -446,7 +495,8 @@ internal sealed class CameraApp : IPhoneApp
             return;
         }
 
-        CameraChrome.Flight(drawList, texture, flightFrom, wellRect, progress, scale);
+        CameraChrome.Flight(flightOverScreen ? ImGui.GetForegroundDrawList() : drawList, texture, flightFrom, wellRect,
+            progress, scale);
     }
 
     private void PromotePendingWell()
@@ -501,8 +551,21 @@ internal sealed class CameraApp : IPhoneApp
             return;
         }
 
-        pendingCaptureRect = captureRect;
+        if (modeIndex == CropModeIndex && !cropping)
+        {
+            BeginCrop();
+            return;
+        }
+
+        StopCrop();
+        pendingCaptureRect = ShotRect(captureRect);
         var seconds = configuration.CameraTimerSeconds;
+        if (modeIndex == ScreenModeIndex)
+        {
+            seconds = Math.Max(seconds, ScreenCountdownSeconds);
+            PhoneAside.Request(Id);
+        }
+
         if (seconds > 0)
         {
             timerShown = 0;
@@ -565,6 +628,7 @@ internal sealed class CameraApp : IPhoneApp
         flightTexture = Plugin.TextureProvider.CreateFromRaw(RawImageSpecification.Rgba32(width, height), pixels,
             "Aetherphone.Camera.Flight");
         flightFrom = pendingCaptureRect;
+        flightOverScreen = PhoneAway;
         flight.SnapTo(0f);
         flying = true;
         lastShotPath = path;
@@ -701,6 +765,7 @@ internal sealed class CameraApp : IPhoneApp
 
     private void DetachCaptureHooks()
     {
+        PhoneAside.Release(Id);
         captureCountdown = 0;
         if (!captureHooksAttached)
         {
@@ -724,6 +789,19 @@ internal sealed class CameraApp : IPhoneApp
         reticleAge = 0f;
     }
 
+    private Rect ShotRect(Rect captureRect) => modeIndex switch
+    {
+        ScreenModeIndex => WholeScreen(),
+        CropModeIndex => CropBox(),
+        _ => captureRect,
+    };
+
+    private static Rect WholeScreen()
+    {
+        var viewport = ImGui.GetMainViewport();
+        return new Rect(viewport.Pos, viewport.Pos + viewport.Size);
+    }
+
     private Rect CaptureRect(Rect viewfinder)
     {
         if (modeIndex != SquareModeIndex)
@@ -740,6 +818,7 @@ internal sealed class CameraApp : IPhoneApp
     public void Dispose()
     {
         cancellation.Cancel();
+        StopCrop();
         DetachCaptureHooks();
         wellTexture?.Dispose();
         pendingWellTexture?.Dispose();

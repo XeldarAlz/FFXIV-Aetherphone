@@ -4,8 +4,7 @@ namespace Aetherphone.Apps.Prism;
 
 internal static class PostedMods
 {
-    public static string Key(int slot, GlamModDto mod) =>
-        string.Concat(slot.ToString(System.Globalization.CultureInfo.InvariantCulture), "|", mod.Name, "|", mod.Author);
+    public static string Key(GlamModDto mod) => string.Concat(mod.Name, "|", mod.Author);
 
     public static GlamGearDto[] Without(GlamGearDto[] gear, HashSet<string> dropped)
     {
@@ -27,7 +26,7 @@ internal static class PostedMods
             var shared = new List<GlamModDto>(mods.Length);
             for (var modIndex = 0; modIndex < mods.Length; modIndex++)
             {
-                if (!dropped.Contains(Key(piece.Slot, mods[modIndex])))
+                if (!dropped.Contains(Key(mods[modIndex])))
                 {
                     shared.Add(mods[modIndex]);
                 }

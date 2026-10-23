@@ -6,6 +6,8 @@ using System.Text.Json;
 using Aetherphone.Core;
 using Aetherphone.Harness.Fakes;
 using Aetherphone.Harness.Host;
+using Aetherphone.Harness.Inspection;
+using Aetherphone.Harness.Profiling;
 using Aetherphone.Harness.Scenarios;
 
 namespace Aetherphone.Harness.Driver;
@@ -14,6 +16,8 @@ internal sealed class DriverServer
 {
     private const int DefaultSettleFrames = 12;
     private const int DefaultDragFrames = 12;
+    private const int DefaultPerfFrames = 600;
+    private const int DefaultPerfWarmup = 60;
     private const float MinimumLiveDelta = 1f / 90f;
     private const float MaximumLiveDelta = 1f / 10f;
     private const float FirstLiveDelta = 1f / 60f;
@@ -218,6 +222,14 @@ internal sealed class DriverServer
                 return Json(200, State());
             case "/anchors":
                 return Json(200, Anchors());
+            case "/tree":
+                host.Step(Int(query, "frames", 0));
+                return Tree(query);
+            case "/perf":
+                var report = FrameProfiler.Measure(host, Int(query, "warmup", DefaultPerfWarmup), Int(query, "frames", DefaultPerfFrames));
+                return query["format"] == "json"
+                    ? Json(200, report)
+                    : new Response(200, "text/plain; charset=utf-8", Encoding.UTF8.GetBytes(report.Format()));
             case "/log":
                 return Json(200, new { ok = true, latest = HarnessLog.LatestSequence, lines = HarnessLog.Since(Long(query, "since", 0)) });
             case "/login":
@@ -325,10 +337,56 @@ internal sealed class DriverServer
         }
     }
 
+    private Response Tree(System.Collections.Specialized.NameValueCollection query)
+    {
+        var full = query["full"] is not null;
+        var phone = host.PhoneRect;
+        var area = full ? new Rect(Vector2.Zero, new Vector2(host.Width, host.Height)) : phone;
+        var origin = full ? Vector2.Zero : phone.Min;
+        var lines = ScreenTree.Visible(host.ReadScreen(), area, query["all"] is not null);
+        if (query["format"] != "json")
+        {
+            var header = $"frame {host.FrameIndex}  app {host.CurrentAppId ?? "home"}  phone {Math.Round(phone.Width)}x{Math.Round(phone.Height)}";
+            var text = ScreenTree.Format(lines, host.Anchors(), origin, header);
+            return new Response(200, "text/plain; charset=utf-8", Encoding.UTF8.GetBytes(text));
+        }
+
+        var entries = new List<object>(lines.Count);
+        for (var index = 0; index < lines.Count; index++)
+        {
+            var line = lines[index];
+            var local = line.Bounds.Translate(-origin);
+            entries.Add(new
+            {
+                text = line.Text,
+                x = local.Min.X,
+                y = local.Min.Y,
+                width = local.Width,
+                height = local.Height,
+                size = line.Size,
+                color = line.ColorHex(),
+                clipped = line.Clipped,
+                covered = line.Covered,
+            });
+        }
+
+        return Json(200, new { ok = true, state = State(), lines = entries, anchors = AnchorEntries(origin) });
+    }
+
     private Response Tap(System.Collections.Specialized.NameValueCollection query)
     {
         Vector2 screen;
-        if (query["anchor"] is { Length: > 0 } anchor)
+        if (query["text"] is { Length: > 0 } wanted)
+        {
+            var lines = ScreenTree.Visible(host.ReadScreen(), host.PhoneRect, false);
+            if (!ScreenTree.TryFind(lines, wanted, out _, out var span))
+            {
+                return Json(404, new { ok = false, error = $"no visible text matches '{wanted}'", lines = LineTexts(lines) });
+            }
+
+            screen = span.Center;
+        }
+        else if (query["anchor"] is { Length: > 0 } anchor)
         {
             if (!host.TryFindAnchor(anchor, out var rect))
             {
@@ -366,15 +424,17 @@ internal sealed class DriverServer
             loggedIn = host.IsLoggedIn,
             gameData = host.HasGameData,
             scenario = host.ScenarioName,
+            backend = host.BackendUrl,
             phone = new { x = rect.Min.X, y = rect.Min.Y, width = rect.Width, height = rect.Height },
             display = new { width = host.Width, height = host.Height },
             latestLog = HarnessLog.LatestSequence,
         };
     }
 
-    private object Anchors()
+    private object Anchors() => new { ok = true, anchors = AnchorEntries(host.PhoneRect.Min) };
+
+    private List<object> AnchorEntries(Vector2 origin)
     {
-        var origin = host.PhoneRect.Min;
         var entries = host.Anchors();
         var list = new List<object>(entries.Count);
         for (var index = 0; index < entries.Count; index++)
@@ -393,7 +453,18 @@ internal sealed class DriverServer
             });
         }
 
-        return new { ok = true, anchors = list };
+        return list;
+    }
+
+    private static List<string> LineTexts(List<ScreenLine> lines)
+    {
+        var texts = new List<string>(lines.Count);
+        for (var index = 0; index < lines.Count; index++)
+        {
+            texts.Add(lines[index].Text);
+        }
+
+        return texts;
     }
 
     private List<string> AnchorNames()

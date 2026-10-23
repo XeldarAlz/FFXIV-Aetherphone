@@ -34,7 +34,7 @@ The full developer documentation lives in [`docs/`](docs/README.md): the archite
 
 ## Before you open a PR
 
-1. `dotnet build -c Release` with zero warnings. CI treats every warning, code-style rules included, as an error.
+1. `dotnet build -c Release` with zero warnings, and `tools/guards/check` passing. CI treats every warning, code-style rules included, as an error, and runs the same guards. `git config core.hooksPath tools/guards/hooks` runs the guards on every commit.
 2. Test in-game: open the phone with `/phone` (or `/phonedev` on a Debug build), exercise the app or screen you touched, and watch a real notification/tell flow through if you changed messaging.
 3. Keep the diff focused. One concern per PR.
 4. Match the existing style; the rules are written down in [docs/conventions.md](docs/conventions.md). Code is self-documenting; comments explain *why* (or a hard-coded constant), never *what*. No heavy abstractions "for later."

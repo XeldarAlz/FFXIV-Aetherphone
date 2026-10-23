@@ -26,7 +26,7 @@ internal static class CampaignFixtures
                 Experience("opening", Start + 2L * Hour, Start + 4L * Hour, "https://twitch.tv/example"),
                 Experience("midnight", Start + 5L * Hour, Start + 7L * Hour),
             },
-            Array.Empty<CampaignMemberDto>(), Array.Empty<CampaignLinkshellDto>(), null, updatedAt);
+            Array.Empty<CampaignMemberDto>(), Array.Empty<CampaignSyncshellDto>(), null, updatedAt);
 
     public static CampaignPostDto Post(string id, long publishedAt, bool pinned = false) =>
         new(id, "Title " + id, "Body " + id, Array.Empty<string>(), null, pinned, publishedAt);

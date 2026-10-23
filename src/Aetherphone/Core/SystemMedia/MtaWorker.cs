@@ -20,6 +20,11 @@ internal sealed class MtaWorker : IDisposable
         this.tick = tick;
         this.teardown = teardown;
         thread = new Thread(Run) { IsBackground = true, Name = name, };
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
         thread.SetApartmentState(ApartmentState.MTA);
         thread.Start();
     }
@@ -38,7 +43,7 @@ internal sealed class MtaWorker : IDisposable
     {
         stopping = true;
         wake.Set();
-        if (thread.Join(JoinTimeoutMilliseconds))
+        if (!thread.IsAlive || thread.Join(JoinTimeoutMilliseconds))
         {
             wake.Dispose();
             return;

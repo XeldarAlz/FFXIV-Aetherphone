@@ -69,6 +69,7 @@ internal sealed partial class PrismApp
         if (PrismArt.Strip(drawList, strip, label, Arrow, true, ready, UiSound.Shutter))
         {
             var (race, gender) = WornBody();
+            RememberEntryDrops();
             store.Enter(pickSession.FirstSelected, pickSession.CropsArray()[0], EntryOutfit(), race, gender,
                 entrySettled);
         }
@@ -109,7 +110,8 @@ internal sealed partial class PrismApp
     private string OutfitLink()
     {
         var count = VanillaEntry ? DraftPieces() : KeptModCount();
-        var key = HashCode.Combine(VanillaEntry, count, Loc.Current.Code);
+        var listed = VanillaEntry || capturedMods.Length > 0;
+        var key = HashCode.Combine(VanillaEntry, count, listed, Loc.Current.Code);
         if (outfitLinkText.IsCurrent(key))
         {
             return outfitLinkText.Value;
@@ -117,7 +119,7 @@ internal sealed partial class PrismApp
 
         var text = VanillaEntry
             ? count == 0 ? Loc.T(L.Prism.AddYourGear) : Loc.Plural(L.Prism.GearSummary, count)
-            : count == 0 ? string.Empty : Loc.Plural(L.Prism.ModsSummary, count);
+            : listed ? Loc.Plural(L.Prism.ModsSummary, count) : string.Empty;
         return outfitLinkText.Store(key, text.Length > 0 ? string.Concat(text, " ", Arrow) : string.Empty);
     }
 

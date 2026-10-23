@@ -9,6 +9,7 @@ This page is the rulebook for code and commits in the Aetherphone client repo. R
 | .editorconfig | Formatting, naming, and code-style rules, enforced in the build |
 | Directory.Build.props | Turns on code style and analyzers in the build, and warnings as errors in CI |
 | .github/workflows/ci.yml | The guard checks and the build every pull request must pass |
+| tools/guards/check | The guard checks themselves, runnable locally |
 | .github/workflows/label-pull-request.yml | The pull request title check |
 | docs/ai-usage.md | The AI involvement levels and the asset provenance rules |
 
@@ -88,7 +89,7 @@ private IPhoneApp? FindApp(string query)
 
 ### Structure rules
 
-CI checks these with fast source scans before anything compiles; [Testing and release](testing-and-release.md) lists every guard.
+CI checks these with fast source scans before anything compiles, and `tools/guards/check` runs the same scans locally; [Testing and release](testing-and-release.md) lists every guard.
 
 - **Layering.** Code under Core and Windows never imports `Aetherphone.Apps`; only the two composition roots may. [Architecture](architecture.md) explains the rule and where new code goes instead.
 - **The namespace matches the folder.** src/Aetherphone/Core/Apps/ is `Aetherphone.Core.Apps`. Windows/Components is the one exception: its subfolders group files by kind, and every file there declares the flat `Aetherphone.Windows.Components` namespace.

@@ -371,13 +371,16 @@ internal sealed partial class PrismApp : IResumableApp
             {
                 GoBack();
             }
+            else if (backClicked && screen is PrismScreen.GearSearch or PrismScreen.DyePick)
+            {
+                BackToOutfit();
+            }
             else if (backClicked)
             {
                 Go(screen switch
                 {
                     PrismScreen.Pick => pickReturn,
                     PrismScreen.Outfit => outfitReturn,
-                    PrismScreen.GearSearch or PrismScreen.DyePick => PrismScreen.Outfit,
                     _ => PrismScreen.Cover,
                 }, -1);
             }

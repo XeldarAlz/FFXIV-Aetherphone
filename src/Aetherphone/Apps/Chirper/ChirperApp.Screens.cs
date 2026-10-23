@@ -300,9 +300,13 @@ internal sealed partial class ChirperApp
         {
             if (snapshot.Length == 0)
             {
-                var message = store.UserListLoading ? Loc.T(L.Common.Loading)
-                    : store.UserListFailed ? Loc.T(L.Chirper.ProfileError)
-                    : Loc.T(L.Social.ListEmpty);
+                if (store.UserListFailed)
+                {
+                    UserListSearch.DrawFailure(listRect, store, ui);
+                    return;
+                }
+
+                var message = store.UserListLoading ? Loc.T(L.Common.Loading) : Loc.T(L.Social.ListEmpty);
                 Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 60f * scale), message,
                     ChirperInk.MutedInk, MetaStyle);
                 return;
@@ -311,6 +315,11 @@ internal sealed partial class ChirperApp
             ImGui.Dummy(new Vector2(0f, 4f * scale));
             for (var index = 0; index < snapshot.Length; index++)
             {
+                if (SocialUserRow.SkipHidden(UserRowStyle))
+                {
+                    continue;
+                }
+
                 DrawUserRow(snapshot[index]);
             }
 
@@ -335,6 +344,12 @@ internal sealed partial class ChirperApp
         {
             if (matches.Count == 0)
             {
+                if (UserListSearch.Failed(store))
+                {
+                    UserListSearch.DrawFailure(listRect, store, ui);
+                    return;
+                }
+
                 Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 60f * scale),
                     UserListSearch.EmptyMessage(store), ChirperInk.MutedInk, MetaStyle);
                 return;
@@ -343,6 +358,11 @@ internal sealed partial class ChirperApp
             ImGui.Dummy(new Vector2(0f, 4f * scale));
             for (var index = 0; index < matches.Count; index++)
             {
+                if (SocialUserRow.SkipHidden(UserRowStyle))
+                {
+                    continue;
+                }
+
                 DrawUserRow(matches[index]);
             }
 
@@ -351,6 +371,7 @@ internal sealed partial class ChirperApp
                 InfiniteScroll.DrawLoadingRow(listRect.Center.X, ChirperInk.MutedInk);
             }
 
+            UserListSearch.DrawStalledFooter(store, ui, ChirperInk.MutedInk);
             var cappedNote = userListSearch.CappedNote(store);
             if (cappedNote.Length > 0)
             {
