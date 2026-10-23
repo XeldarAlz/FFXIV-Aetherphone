@@ -32,6 +32,7 @@ internal sealed partial class PrismApp
     private const float BoardPitchUnits = 68f;
     private const float BoardColumnUnits = 96f;
     private const int BoardWeaponRow = 1;
+    private const float BoardFill = 0.9f;
     private const int SheetCapacity = 4;
 
     private static readonly int[] BodySlots =
@@ -270,23 +271,49 @@ internal sealed partial class PrismApp
         float scale)
     {
         var unit = board.Width / BoardDesignUnits;
+        var center = area.Center.X;
+        if (!showEmpty)
+        {
+            var low = WearsAny(gear, LeftSlots) ? -BoardColumnUnits - BoardAccessoryUnits * 0.5f
+                : -BoardTileUnits * 0.5f;
+            var high = WearsAny(gear, AccessorySlots) ? BoardColumnUnits + BoardAccessoryUnits * 0.5f
+                : BoardTileUnits * 0.5f;
+            unit = MathF.Min(area.Width / (high - low),
+                area.Height / (BoardPitchUnits * (BodySlots.Length - 1) + BoardTileUnits)) * BoardFill;
+            center -= (low + high) * 0.5f * unit;
+        }
+
         var pitch = BoardPitchUnits * unit;
         var firstRow = area.Center.Y - pitch * (BodySlots.Length - 1) * 0.5f;
         var side = BoardColumnUnits * unit;
         for (var row = 0; row < BodySlots.Length; row++)
         {
             var middle = firstRow + row * pitch;
-            DrawBoardSlot(drawList, new Vector2(area.Center.X, middle), BoardTileUnits * unit, BodySlots[row], gear,
+            DrawBoardSlot(drawList, new Vector2(center, middle), BoardTileUnits * unit, BodySlots[row], gear,
                 showEmpty, scale);
-            DrawBoardSlot(drawList, new Vector2(area.Center.X + side, middle), BoardAccessoryUnits * unit,
+            DrawBoardSlot(drawList, new Vector2(center + side, middle), BoardAccessoryUnits * unit,
                 AccessorySlots[row], gear, showEmpty, scale);
             var leftRow = row - BoardWeaponRow;
             if (leftRow >= 0 && leftRow < LeftSlots.Length)
             {
-                DrawBoardSlot(drawList, new Vector2(area.Center.X - side, middle), BoardAccessoryUnits * unit,
+                DrawBoardSlot(drawList, new Vector2(center - side, middle), BoardAccessoryUnits * unit,
                     LeftSlots[leftRow], gear, showEmpty && LeftSlots[leftRow] != GearSlots.None, scale);
             }
         }
+    }
+
+    private static bool WearsAny(GlamGearDto[] gear, int[] slots)
+    {
+        for (var index = 0; index < gear.Length; index++)
+        {
+            var piece = gear[index];
+            if (Array.IndexOf(slots, piece.Slot) >= 0 && (piece.ItemId != 0 || piece.Mods is { Length: > 0 }))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void DrawBoardSlot(ImDrawListPtr drawList, Vector2 center, float size, int slot, GlamGearDto[] gear,
