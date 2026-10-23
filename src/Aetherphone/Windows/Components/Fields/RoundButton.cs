@@ -77,7 +77,9 @@ internal static class RoundButton
         bool enabled, bool hovered, uint key, Vector4? fill = null)
     {
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
-        var pose = enabled ? MotionButton.Animate(rect, (int)key, hovered, pressed) : new ButtonPose(rect, 0f, 0f, -1f);
+        var pose = enabled
+            ? MotionButton.Animate(rect, (int)key, hovered, pressed, lift: false)
+            : new ButtonPose(rect, 0f, 0f, -1f);
         var face = pose.Face;
         var radius = face.Height * 0.5f;
         var alpha = enabled ? 1f : DisabledAlpha;

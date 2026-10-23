@@ -36,6 +36,12 @@ internal sealed class IconInk
 
     public IconInkMark Mark(char codepoint) => marks.TryGetValue(codepoint, out var mark) ? mark : Unmeasured;
 
+    public static Vector2 Pen(Vector2 center, Vector2 inkOffset, float ratio)
+    {
+        var anchor = new Vector2(MathF.Round(center.X - inkOffset.X), MathF.Round(center.Y - inkOffset.Y)) + inkOffset;
+        return anchor - inkOffset * ratio;
+    }
+
     public static unsafe IconInk Measure(IFontAtlasBuildToolkitPostBuild toolkit, ImFontPtr font)
     {
         var atlas = toolkit.NewImAtlas;

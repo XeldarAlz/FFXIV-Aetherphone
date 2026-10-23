@@ -21,7 +21,7 @@ internal static class MusicRenderer
         var hovered = alpha > 0.6f && UiInteract.Hover(center - hit, center + hit);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
         var spring = Springs.TryGetValue(id, out var stored) ? stored : new Spring(1f);
-        var grow = spring.Step(pressed ? Motion.PressScaleControl : hovered ? 1f + Motion.HoverLiftIcon : 1f,
+        var grow = spring.Step(pressed ? Motion.PressScaleControl : 1f,
             pressed ? Motion.PressIn : Motion.Release, MathF.Min(ImGui.GetIO().DeltaTime, 0.1f));
         Springs[id] = spring;
         var drawnRadius = radius * grow;

@@ -127,8 +127,7 @@ internal sealed class TabBar
             hover[index].Step(hovered ? 1f : 0f, Motion.HoverLift, delta);
             var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
             press[index].Step(pressed ? 1f : 0f, pressed ? Motion.PressIn : Motion.Release, delta);
-            var itemScale = (1f - PressDepth * Math.Clamp(press[index].Value, 0f, 1f))
-                            * (1f + Motion.HoverLiftIcon * Math.Clamp(hover[index].Value, 0f, 1f));
+            var itemScale = 1f - PressDepth * Math.Clamp(press[index].Value, 0f, 1f);
             poses[index] = new TabItemPose(iconCenter, itemScale);
             if (item.AnchorKey is { } anchorKey)
             {
@@ -233,8 +232,7 @@ internal sealed class TabBar
         actionHover.Step(hovered ? 1f : 0f, Motion.HoverLift, delta);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
         actionPress.Step(pressed ? 1f : 0f, pressed ? Motion.PressIn : Motion.Release, delta);
-        var grow = (1f - PressDepth * Math.Clamp(actionPress.Value, 0f, 1f))
-                   * (1f + Motion.HoverLiftIcon * Math.Clamp(actionHover.Value, 0f, 1f));
+        var grow = 1f - PressDepth * Math.Clamp(actionPress.Value, 0f, 1f);
         var half = circle.Size * 0.5f * grow;
         var min = circle.Center - half;
         var max = circle.Center + half;

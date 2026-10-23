@@ -33,7 +33,7 @@ internal static class HoverButton
         var rect = new Rect(center - extent, center + extent);
         var hovered = interactive && UiInteract.Hover(rect.Min, rect.Max);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
-        var pose = MotionButton.Animate(rect, (int)ImGui.GetID(id), hovered, pressed);
+        var pose = MotionButton.Animate(rect, (int)ImGui.GetID(id), hovered, pressed, lift: false);
         var face = pose.Face;
         var faceRadius = face.Height * 0.5f;
         var ghost = tint.W <= 0f;

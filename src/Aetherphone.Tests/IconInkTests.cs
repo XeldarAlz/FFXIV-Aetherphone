@@ -153,6 +153,32 @@ public sealed class IconInkTests
         Assert.Equal(1f, IconInk.OpticalScale(box, true), 3);
     }
 
+    [Fact]
+    public void PenLandsOnAWholePixelAtFullSize()
+    {
+        var pen = IconInk.Pen(new Vector2(100.3f, 50.7f), new Vector2(11.25f, 9.5f), 1f);
+
+        Assert.Equal(MathF.Round(100.3f - 11.25f), pen.X, 4);
+        Assert.Equal(MathF.Round(50.7f - 9.5f), pen.Y, 4);
+    }
+
+    [Fact]
+    public void ScaledGlyphKeepsItsInkCentreStill()
+    {
+        var center = new Vector2(100.3f, 50.7f);
+        var inkOffset = new Vector2(11.25f, 9.5f);
+        var rest = IconInk.Pen(center, inkOffset, 1f) + inkOffset;
+        for (var step = 0; step <= 20; step++)
+        {
+            var ratio = 0.9f + step * 0.01f;
+            var inkCentre = IconInk.Pen(center, inkOffset, ratio) + inkOffset * ratio;
+            Assert.Equal(rest.X, inkCentre.X, 4);
+            Assert.Equal(rest.Y, inkCentre.Y, 4);
+        }
+
+        Assert.True(Vector2.Distance(rest, center) <= MathF.Sqrt(0.5f) + 0.0001f);
+    }
+
     private static float Outline(float side, float stroke) => side * side - (side - 2f * stroke) * (side - 2f * stroke);
 
     private static float OutlineEdge(float side, float stroke) => 4f * side + 4f * (side - 2f * stroke);

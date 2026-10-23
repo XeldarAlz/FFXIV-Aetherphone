@@ -28,11 +28,25 @@ internal static class PhoneIcon
 
             var ink = Plugin.Fonts.InkMark(font, glyph[0]);
             var size = optical ? boxHeight * ink.Scale : boxHeight;
-            var ratio = size / font.FontSize;
-            // ImGui floors the text pen to whole pixels, which left every icon up to a pixel up and left of centre.
-            var pen = new Vector2(MathF.Round(center.X - float.Lerp(found.X0, found.X1, ink.Centre.X) * ratio),
-                MathF.Round(center.Y - float.Lerp(found.Y0, found.Y1, ink.Centre.Y) * ratio));
-            drawList.AddText(font, size, pen, color, glyph);
+            var inkOffset = new Vector2(float.Lerp(found.X0, found.X1, ink.Centre.X),
+                float.Lerp(found.Y0, found.Y1, ink.Centre.Y));
+            var pen = IconInk.Pen(center, inkOffset, size / font.FontSize);
+            // ImGui floors the text pen to whole pixels, so a scaled glyph's vertices carry the rest of its pen and
+            // it grows or shrinks around one fixed point instead of stepping a pixel at a time.
+            var whole = new Vector2(MathF.Floor(pen.X), MathF.Floor(pen.Y));
+            var firstVertex = drawList.VtxBuffer.Size;
+            drawList.AddText(font, size, whole, color, glyph);
+            var remainder = pen - whole;
+            if (remainder == Vector2.Zero)
+            {
+                return;
+            }
+
+            var vertices = drawList.VtxBuffer.AsSpan();
+            for (var index = firstVertex; index < vertices.Length; index++)
+            {
+                vertices[index].Pos += remainder;
+            }
         }
     }
 }
