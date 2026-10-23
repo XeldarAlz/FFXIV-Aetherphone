@@ -54,7 +54,6 @@ internal sealed partial class PrismApp
     private readonly string[] followLabels = new string[2];
     private readonly Dictionary<string, string> handleLines = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> tagLabels = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, bool> followed = new(StringComparer.Ordinal);
     private readonly ChipRail tagRail = new();
     private readonly Dictionary<uint, (string Name, uint Icon)> itemRows = new();
     private readonly HashSet<uint> ownedIds = new();
@@ -841,27 +840,16 @@ internal sealed partial class PrismApp
             return top + tap;
         }
 
-        var following = Following(author);
+        var following = glams.Follows(author) ?? false;
         var followLeft = handleLeft + handleWidth;
         if (DrawButton(drawList, new Rect(new Vector2(followLeft, top), new Vector2(followLeft + followWidth, top + tap)),
                 followLabels[following ? 1 : 0], ButtonStyle.Plain, scale,
                 ink: following ? controls with { Accent = PrismArt.Muted } : null, id: "prism.follow"))
         {
-            followed[author.Id] = !following;
             glams.SetFollow(author, !following);
         }
 
         return top + tap;
-    }
-
-    private bool Following(GlamAuthorDto author)
-    {
-        if (followed.TryGetValue(author.Id, out var known))
-        {
-            return known;
-        }
-
-        return glams.Profile is { } profile && profile.User?.Id == author.Id && profile.Following;
     }
 
     private string MetaLine(GlamDto glam)

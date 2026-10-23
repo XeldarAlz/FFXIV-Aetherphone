@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
@@ -51,6 +52,8 @@ internal sealed class GlamStore : IDisposable
     };
     private readonly FeedLane<GlamDto> list = FeedLane<GlamDto>.ServerOrdered();
     private readonly HashSet<string> triedOn = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, bool> follows = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, bool> followLookups = new(StringComparer.Ordinal);
 
     private Func<string?, CancellationToken, Action<AepFailure>?, Task<GlamPage?>>? listFetch;
     private volatile string listKey = string.Empty;
@@ -67,6 +70,7 @@ internal sealed class GlamStore : IDisposable
     private volatile bool posting;
     private volatile bool postFailed;
     private volatile int epoch;
+    private volatile string followsFor = string.Empty;
     private bool? vanillaOnly;
     private (int Race, int Gender) body;
 
@@ -111,6 +115,37 @@ internal sealed class GlamStore : IDisposable
     public bool PostFailed => postFailed;
 
     public string PostFailureText => postFailure.Text();
+
+    public bool? Follows(GlamAuthorDto author)
+    {
+        var owner = MyId;
+        if (owner != followsFor)
+        {
+            followsFor = owner;
+            follows.Clear();
+            followLookups.Clear();
+        }
+
+        if (follows.TryGetValue(author.Id, out var known))
+        {
+            return known;
+        }
+
+        if (session.IsSignedIn && followLookups.TryAdd(author.Id, true))
+        {
+            var userId = author.Id;
+            work.Run("follow state", async token =>
+            {
+                var fetched = await client.ProfileAsync(userId, token).ConfigureAwait(false);
+                if (fetched is not null && followsFor == owner)
+                {
+                    follows.TryAdd(userId, fetched.Following);
+                }
+            });
+        }
+
+        return null;
+    }
 
     public FeedLane<GlamDto> Lane(GlamScope scope) => discover[(int)scope];
 
@@ -251,6 +286,7 @@ internal sealed class GlamStore : IDisposable
             if (fetched is not null && profile?.User?.Id == userId)
             {
                 profile = fetched with { User = fetched.User ?? author };
+                follows[userId] = fetched.Following;
             }
         });
     }
@@ -421,6 +457,7 @@ internal sealed class GlamStore : IDisposable
 
     public void SetFollow(GlamAuthorDto author, bool follow)
     {
+        follows[author.Id] = follow;
         if (profile is { } current && current.User?.Id == author.Id)
         {
             profile = current with { Following = follow };
@@ -431,7 +468,13 @@ internal sealed class GlamStore : IDisposable
             var done = follow
                 ? await social.FollowAsync(author.Id, token).ConfigureAwait(false) is not null
                 : await social.UnfollowAsync(author.Id, token).ConfigureAwait(false);
-            if (!done && profile is { } latest && latest.User?.Id == author.Id)
+            if (done)
+            {
+                return;
+            }
+
+            follows[author.Id] = !follow;
+            if (profile is { } latest && latest.User?.Id == author.Id)
             {
                 profile = latest with { Following = !follow };
             }
