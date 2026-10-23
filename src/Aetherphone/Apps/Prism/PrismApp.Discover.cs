@@ -282,18 +282,7 @@ internal sealed partial class PrismApp
 
     private void ClickProfile(Rect hit, GlamAuthorDto? author)
     {
-        if (author is not { Id.Length: > 0 })
-        {
-            return;
-        }
-
-        var hovered = UiInteract.Hover(hit.Min, hit.Max);
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        if (UiInteract.Click(hit.Min, hit.Max, hovered))
+        if (author is { Id.Length: > 0 } && UiInteract.HoverClick(hit.Min, hit.Max))
         {
             OpenProfile(author);
         }
