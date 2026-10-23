@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -6,6 +7,20 @@ namespace Aetherphone.Apps.Prism;
 
 internal sealed partial class PrismApp
 {
+    private const string ShardLayerId = "prism.shards";
+
+    private void DrawShards(Rect full, float scale)
+    {
+        if (!shards.Active)
+        {
+            return;
+        }
+
+        using var layer = ScreenLayer.BeginPassive(ShardLayerId, full);
+        shards.Draw(ImGui.GetWindowDrawList(), full,
+            MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds), scale);
+    }
+
     private static int DrawTrackSegments(string id, Rect row, IReadOnlyList<string> labels, int selected, float scale)
     {
         var picked = DrawSegments(id, row, labels, selected);

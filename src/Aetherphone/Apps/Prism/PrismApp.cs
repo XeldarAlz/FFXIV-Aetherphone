@@ -268,8 +268,7 @@ internal sealed partial class PrismApp : IResumableApp
             stage.Transform(PrismMotion.Stage(full, enter, enterDirection, scale));
         }
 
-        shards.Draw(ImGui.GetForegroundDrawList(), full,
-            MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds), scale);
+        DrawShards(full, scale);
 
         if (!bar || photoViewer.Active)
         {

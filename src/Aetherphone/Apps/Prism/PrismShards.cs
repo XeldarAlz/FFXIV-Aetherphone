@@ -27,6 +27,22 @@ internal sealed class PrismShards
         public int Hue;
     }
 
+    public bool Active
+    {
+        get
+        {
+            for (var index = 0; index < Capacity; index++)
+            {
+                if (shards[index].Life > 0f && shards[index].Age < shards[index].Life)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
     public void Burst(Vector2 origin, float angle, float spread, float speed, float life)
     {
         var count = PrismLight.Hues.Length;
