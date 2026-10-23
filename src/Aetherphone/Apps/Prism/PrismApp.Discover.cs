@@ -18,6 +18,8 @@ internal sealed partial class PrismApp
     private const float ContestRowUnits = 56f;
     private const float ContestThumbUnits = 48f;
     private const float EmptyGlyphUnits = 28f;
+    private const float EmptyDiscUnits = 34f;
+    private const float EmptyActionUnits = 132f;
     private const float EmptyTextUnits = 300f;
 
     private static readonly LocString[] ScopeNames = { L.Prism.ScopeNew, L.Prism.ScopePopular, L.Prism.ScopeFollowing };
@@ -386,7 +388,7 @@ internal sealed partial class PrismApp
                 new Vector2(left + width, top + Metrics.Space.Xl * scale));
             var bottom = DrawEmpty(drawList, area, failed ? PhoneIcons.Refresh : PhoneIcons.Photo,
                 failed ? Loc.T(L.Common.LoadFailed) : emptyTitle, Loc.T(failed ? L.Common.LoadFailedHint : emptyHint),
-                action, scale, out var acted);
+                action, ButtonStyle.Solid, scale, out var acted);
             if (acted && failed)
             {
                 RetryLane(lane);
@@ -496,21 +498,23 @@ internal sealed partial class PrismApp
     }
 
     private float DrawEmpty(ImDrawListPtr drawList, Rect area, string glyph, string title, string hint, string action,
-        float scale, out bool acted)
+        ButtonStyle actionStyle, float scale, out bool acted)
     {
         acted = false;
         var textWidth = MathF.Max(1f, MathF.Min(area.Width - Metrics.Space.Xxl * 2f * scale, EmptyTextUnits * scale));
-        var glyphSize = EmptyGlyphUnits * scale;
+        var disc = EmptyDiscUnits * scale;
         var titleLine = Typography.LineHeight(PrismType.Headline);
         var titleHeight = title.Length > 0 ? titleLine + Metrics.Space.Xs * scale : 0f;
         var wrap = PrismType.BalancedWidth(hint, PrismType.Body, textWidth);
         var hintHeight = Typography.MeasureWrappedBlock(hint, PrismType.Body, wrap).Y;
         var buttonHeight = action.Length > 0 ? Metrics.Space.Lg * scale + Button.LargeHeight * scale : 0f;
-        var height = glyphSize + Metrics.Space.Md * scale + titleHeight + hintHeight + buttonHeight;
+        var height = disc * 2f + Metrics.Space.Md * scale + titleHeight + hintHeight + buttonHeight;
         var top = MathF.Max(area.Min.Y, area.Center.Y - height * 0.5f);
         var center = area.Center.X;
-        PhoneIcon.Draw(drawList, new Vector2(center, top + glyphSize * 0.5f), glyph, PrismArt.Muted, glyphSize);
-        top += glyphSize + Metrics.Space.Md * scale;
+        var discCenter = new Vector2(center, top + disc);
+        drawList.AddCircleFilled(discCenter, disc, ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Tertiary)));
+        PhoneIcon.Draw(drawList, discCenter, glyph, PrismArt.Muted, EmptyGlyphUnits * scale);
+        top += disc * 2f + Metrics.Space.Md * scale;
         if (title.Length > 0)
         {
             Typography.DrawCentered(drawList, new Vector2(center, top + titleLine * 0.5f),
@@ -525,10 +529,11 @@ internal sealed partial class PrismApp
         }
 
         top += Metrics.Space.Lg * scale;
-        var half = ButtonWidth([action], area.Width - Metrics.Space.Lg * 2f * scale, scale) * 0.5f;
+        var room = area.Width - Metrics.Space.Lg * 2f * scale;
+        var half = MathF.Min(MathF.Max(ButtonWidth([action], room, scale), EmptyActionUnits * scale), room) * 0.5f;
         var button = new Rect(new Vector2(center - half, top),
             new Vector2(center + half, top + Button.LargeHeight * scale));
-        acted = DrawButton(drawList, button, action, ButtonStyle.Solid, scale);
+        acted = DrawButton(drawList, button, action, actionStyle, scale);
         return button.Max.Y;
     }
 
@@ -558,7 +563,7 @@ internal sealed partial class PrismApp
     {
         var area = new Rect(content.Min, new Vector2(content.Max.X, content.Max.Y - bottomChrome));
         DrawEmpty(drawList, area, PhoneIcons.User, Loc.T(L.Prism.SignInTitle), Loc.T(L.Prism.SignInBrowse),
-            Loc.T(L.Prism.OpenSettings), scale, out var acted);
+            Loc.T(L.Prism.OpenSettings), ButtonStyle.Solid, scale, out var acted);
         if (acted)
         {
             navigation.Open("settings");

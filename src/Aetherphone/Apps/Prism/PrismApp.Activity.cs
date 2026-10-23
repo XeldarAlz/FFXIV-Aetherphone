@@ -92,7 +92,7 @@ internal sealed partial class PrismApp
             var area = new Rect(new Vector2(origin.X, cursor + Metrics.Space.Xxl * scale),
                 new Vector2(origin.X + width, cursor + Metrics.Space.Xxl * scale));
             cursor = DrawEmpty(list, area, PhoneIcons.Heart, Loc.T(L.Prism.ActivityEmptyTitle),
-                Loc.T(L.Prism.ActivityEmpty), string.Empty, scale, out _);
+                Loc.T(L.Prism.ActivityEmpty), string.Empty, ButtonStyle.Solid, scale, out _);
         }
         else if (bucket < 0)
         {
