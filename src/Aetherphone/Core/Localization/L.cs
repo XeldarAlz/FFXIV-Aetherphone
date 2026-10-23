@@ -10942,6 +10942,11 @@ internal static class L
         public static readonly LocString MoreFrom = new("prism.moreFrom", "More from {0}");
         public static readonly LocString InspiredBy = new("prism.inspiredBy", "Inspired by another glam");
         public static readonly LocString FitsMe = new("prism.fitsMe", "Fits me");
+        public static readonly LocString FilterRace = new("prism.filterRace", "Race");
+        public static readonly LocString AnyRace = new("prism.anyRace", "Any race");
+        public static readonly LocString ClearFilters = new("prism.clearFilters", "Clear filters");
+        public static readonly LocString FiltersEmptyHint = new("prism.filtersEmptyHint",
+            "No glams fit every filter you picked. Turn one off to see more.");
         public static readonly LocString StillTryingOn = new("prism.stillTryingOn",
             "You're still trying something on, so it would go out as your gear. Take it off unless the photo shows it.");
         public static readonly LocString CheckMarket = new("prism.checkMarket", "Check market");

@@ -56,7 +56,6 @@ internal sealed partial class PrismApp
         {
             discoverQuery = string.Empty;
             searchOpen = false;
-            ClearDiscoverFilters();
             return;
         }
 
@@ -77,26 +76,9 @@ internal sealed partial class PrismApp
             PrismArt.Muted, inset + glyph + Metrics.Space.Sm * scale, QueryMaxLength);
         UpdateSearch();
         UpdateTagGlams();
-        var bodyTop = field.Max.Y + Metrics.Space.Xs * scale;
-        var browsing = discoverQuery.Trim().Length == 0;
-        if (browsing)
-        {
-            var chips = new Rect(new Vector2(field.Min.X, bodyTop),
-                new Vector2(content.Max.X - Metrics.Space.Lg * scale, bodyTop + ChipRail.RowHeight * scale));
-            DrawFilterChips(chips);
-            bodyTop = chips.Max.Y + Metrics.Space.Sm * scale;
-        }
-
         using var id = UiScope.PushId(SearchScrollId);
-        var body = new Rect(new Vector2(content.Min.X, bodyTop), content.Max);
-        if (browsing)
-        {
-            DrawSearchBrowse(body, scale);
-        }
-        else
-        {
-            DrawSearchBody(body, scale);
-        }
+        DrawSearchBody(new Rect(new Vector2(content.Min.X, field.Max.Y + Metrics.Space.Xs * scale), content.Max),
+            scale);
     }
 
     private void UpdateSearch()
@@ -178,23 +160,6 @@ internal sealed partial class PrismApp
         {
             tagRetryAt = now + TagRetrySeconds;
             glams.OpenTag(searchTag);
-        }
-    }
-
-    private void DrawSearchBrowse(Rect body, float scale)
-    {
-        var lane = glams.Lane(discoverScope);
-        using var surface = BeginBody(body);
-        var list = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ScrollLayout.StableContentWidth();
-        var outer = Metrics.Space.Xxs * scale;
-        var bottom = DrawLaneGrid(list, origin.X + outer, origin.Y, width - outer * 2f, lane, L.Prism.EmptyFeedHint,
-            scale, 0, Loc.T(L.Prism.EmptyFeedTitle));
-        ImGui.Dummy(new Vector2(width, bottom - origin.Y));
-        if (InfiniteScroll.ReachedBottom())
-        {
-            glams.LoadMore(discoverScope);
         }
     }
 

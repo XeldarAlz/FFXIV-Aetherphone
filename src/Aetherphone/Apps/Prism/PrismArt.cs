@@ -15,6 +15,7 @@ internal enum PrismFact : byte
     Race,
     Male,
     Female,
+    FitsMe,
 }
 
 internal static class PrismArt
@@ -79,6 +80,8 @@ internal static class PrismArt
     private const int IconCapSegments = 6;
     private const float ArcStepDegrees = 22.5f;
     private const float TileIconShare = 0.58f;
+    private const float ToggleGlyphShare = 0.6f;
+    private const float ToggleFillFrom = 0.8f;
 
     public static readonly Vector4 Bone = new(0.957f, 0.945f, 0.918f, 1f);
     public static readonly Vector4 Ink = new(0.067f, 0.067f, 0.067f, 1f);
@@ -672,6 +675,22 @@ internal static class PrismArt
     public static void FactIcon(ImDrawListPtr drawList, Vector2 center, float size, PrismFact fact, Vector4 ink) =>
         DrawStrokes(drawList, center, size, FactIcons[(int)fact], ink);
 
+    public static void FactToggle(ImDrawListPtr drawList, Vector2 center, float radius, PrismFact fact, float fill,
+        float hover)
+    {
+        var ink = Vector4.Lerp(Fore, Muted, hover);
+        var size = radius * 2f * ToggleGlyphShare;
+        var thickness = IconStrokeUnits * size / IconUnits;
+        drawList.AddCircle(center, radius - thickness * 0.5f, ImGui.GetColorU32(ink), 0, thickness);
+        if (fill > 0.001f)
+        {
+            drawList.AddCircleFilled(center, radius * (ToggleFillFrom + (1f - ToggleFillFrom) * fill),
+                ImGui.GetColorU32(ink with { W = ink.W * fill }));
+        }
+
+        FactIcon(drawList, center, size, fact, Vector4.Lerp(ink, OnFore, fill));
+    }
+
     private static void DrawStrokes(ImDrawListPtr drawList, Vector2 center, float size, IconStroke[] strokes,
         Vector4 ink)
     {
@@ -775,7 +794,13 @@ internal static class PrismArt
             new IconPen().Through(12f, 14.5f, 12f, 21f).Open(),
             new IconPen().Through(9f, 18f, 15f, 18f).Open(),
         ];
-        return [SlotIcons[0], leaf, person, male, female];
+        IconStroke[] fitsMe =
+        [
+            Oval(9.5f, 8f, 3.8f, 3.8f),
+            new IconPen().Arc(9.5f, 21f, 6.2f, 6.5f, 180f, 360f).Open(),
+            new IconPen().Through(16f, 15.5f, 18.2f, 17.7f, 21.8f, 13.5f).Open(),
+        ];
+        return [SlotIcons[0], leaf, person, male, female, fitsMe];
     }
 
     private static IconStroke[][] BuildSlotIcons()

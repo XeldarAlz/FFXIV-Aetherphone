@@ -32,7 +32,8 @@ A link is clickable only when it is `https` on an allowed host: `xivmodarchive.c
 - Owned pieces count the bags, armoury, glamour dresser and armoire (`Core/Glamour/OwnedItems.cs`). The dresser and armoire only count once the player has opened them this session, and the glam page says so; until then a piece the client can't find shows a hollow ring, and its card says Open your dresser to check.
 - The chip at the bottom left of a glam's photo ("7 pieces") opens its pieces layer: the photo dims and the outfit's item icons run down the right edge, head to feet, with accessories, weapons and mods each grouped into one tile. A tile opens a card with the piece's dyes, whether you own it, Try on piece and, unless you own it, Check market. Tapping the photo or Back closes the layer.
 - An item's page shows whether you own it, its gil vendor price and a market board link, from the phone's market index. The server only sends the glam count and what the item is worn with.
-- Search, behind the magnifier at the top right of Discover, matches tradable gear by name through the market index and opens that item's glams, so untradable pieces are only reachable from a glam that uses them. A single word or `#text` also offers that tag, with a strip of its first three glams under it. The glam of the day photo ignores the feed filters.
+- Search, behind the magnifier at the top right of Discover, matches tradable gear by name through the market index and opens that item's glams, so untradable pieces are only reachable from a glam that uses them. A single word or `#text` also offers that tag, with a strip of its first three glams under it.
+- Discover filters its feed from a row of icons under the New, Popular and Following tabs: Fits me, race, male, female, modded and vanilla. An icon fills while its filter is on, and hovering it names the filter (the race icon names the chosen race). Fits me sets race and gender from the character you are wearing; changing either one by hand turns Fits me off and keeps the other. Male and female exclude each other, as do modded and vanilla. The glam of the day photo ignores the feed filters.
 - Without Penumbra the glam page says mods need it and a new post is stamped vanilla; without Glamourer it says Try on uses the game's window.
 
 ## Server contract
@@ -77,7 +78,7 @@ Everything is under the signed-in Aethernet session. Paths are built in `Core/Ae
 
 | Route | Body | Returns |
 | --- | --- | --- |
-| `GET /prism/glams?scope=new\|popular\|today\|following[&vanilla=true\|false][&race=&gender=][&cursor=]` | | `{ items: Glam[], nextCursor }`; `race` and `gender` (Fits me) keep glams made on that body |
+| `GET /prism/glams?scope=new\|popular\|today\|following[&vanilla=true\|false][&race=][&gender=][&cursor=]` | | `{ items: Glam[], nextCursor }`; `race` (1 to 8) and `gender` (0 male, 1 female) filter on their own, either or both, and a missing one means any; Fits me sends both from the worn character |
 | `GET /prism/glams/{id}` | | `Glam` |
 | `POST /prism/glams` | `{ title, photos: [{ key, width, height }], gear, tags, race, gender, vanilla, inspiredBy }` | `Glam`; the client sets `inspiredBy` to the glam the poster still has tried on, and the page links back to it |
 | `DELETE /prism/glams/{id}` | | 204 |

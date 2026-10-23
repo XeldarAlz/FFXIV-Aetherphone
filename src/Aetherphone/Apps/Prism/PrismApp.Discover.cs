@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Social;
 using Aetherphone.Windows.Components;
@@ -7,6 +8,16 @@ using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Prism;
+
+internal enum DiscoverFilter : byte
+{
+    FitsMe,
+    Race,
+    Male,
+    Female,
+    Modded,
+    Vanilla,
+}
 
 internal sealed partial class PrismApp
 {
@@ -25,22 +36,29 @@ internal sealed partial class PrismApp
     private const float EmptyDiscUnits = 34f;
     private const float EmptyActionUnits = 132f;
     private const float EmptyTextUnits = 300f;
+    private const float FilterDiscUnits = 34f;
+    private const int RaceCount = 8;
+    private const int MaleGender = 0;
+    private const int FemaleGender = 1;
 
     private static readonly LocString[] ScopeNames = { L.Prism.ScopeNew, L.Prism.ScopePopular, L.Prism.ScopeFollowing };
     private static readonly GlamScope[] ShownScopes = { GlamScope.New, GlamScope.Popular, GlamScope.Following };
-    private static readonly LocString[] FilterNames = { L.Prism.FitsMe, L.Prism.FilterModded, L.Prism.FilterVanilla };
+    private static readonly PrismFact[] FilterFacts =
+    {
+        PrismFact.FitsMe, PrismFact.Race, PrismFact.Male, PrismFact.Female, PrismFact.Modded, PrismFact.Vanilla,
+    };
     private static readonly Vector4 TileShade = new(0f, 0f, 0f, 0.7f);
     private static readonly Vector4 TileClear = new(0f, 0f, 0f, 0f);
 
     private readonly PullToRefresh discoverPull = new();
     private readonly ChipRail scopeRail = new();
-    private readonly ChipRail filterRail = new();
     private readonly string[] scopeLabels = new string[ScopeNames.Length];
     private readonly bool[] scopeActive = new bool[ScopeNames.Length];
-    private readonly string[] filterLabels = new string[FilterNames.Length];
-    private readonly bool[] filterActive = new bool[FilterNames.Length];
+    private readonly Spring[] filterFill = new Spring[FilterFacts.Length];
+    private readonly ActionSheet raceSheet = new();
+    private readonly ActionSheet.Item[] raceItems = new ActionSheet.Item[RaceCount + 1];
     private GlamScope discoverScope = GlamScope.New;
-    private int discoverFilter;
+    private bool fitsMe;
     private bool todayResolved;
     private Action? refreshDiscoverNow;
     private CachedText contestCaption;
@@ -60,8 +78,15 @@ internal sealed partial class PrismApp
             return;
         }
 
+        raceSheet.Gate();
         var top = DrawDiscoverHeader(drawList, content, scale);
-        var body = new Rect(new Vector2(content.Min.X, top), content.Max);
+        top = DrawFilterRow(drawList, content.Min.X + Metrics.Space.Lg * scale, top, scale) + Metrics.Space.Xs * scale;
+        DrawDiscoverFeed(new Rect(new Vector2(content.Min.X, top), content.Max), scale);
+        DrawRaceSheet(full);
+    }
+
+    private void DrawDiscoverFeed(Rect body, float scale)
+    {
         var lane = glams.Lane(discoverScope);
         using var surface = BeginBody(body);
         discoverPull.Draw(body, surface.Pull, surface.Dragging, lane.Loading, PrismArt.Muted,
@@ -77,10 +102,12 @@ internal sealed partial class PrismApp
         cursor = DrawContestRow(list, origin.X, cursor, width, scale);
         var items = lane.Items;
         var first = hero is not null && items.Length > 0 && items[0].Id == hero.Id ? 1 : 0;
+        var filtered = AnyFilterOn();
         var following = discoverScope == GlamScope.Following;
         cursor = DrawLaneGrid(list, origin.X + outer, cursor, width - outer * 2f, lane,
-            following ? L.Prism.FollowingEmptyHint : L.Prism.EmptyFeedHint, scale, first,
-            Loc.T(following ? L.Prism.FollowingEmptyTitle : L.Prism.EmptyFeedTitle));
+            filtered ? L.Prism.FiltersEmptyHint : following ? L.Prism.FollowingEmptyHint : L.Prism.EmptyFeedHint,
+            scale, first,
+            Loc.T(filtered ? L.Prism.NoMatches : following ? L.Prism.FollowingEmptyTitle : L.Prism.EmptyFeedTitle));
         ImGui.Dummy(new Vector2(width, cursor - origin.Y));
         if (InfiniteScroll.ReachedBottom())
         {
@@ -116,40 +143,172 @@ internal sealed partial class PrismApp
             drawList.AddCircleFilled(dot, ActivityDotUnits * scale, ImGui.GetColorU32(PrismArt.Fore));
         }
 
-        return top + tap + Metrics.Space.Sm * scale;
+        return top + tap;
     }
 
-    private void DrawFilterChips(Rect chips)
+    private float DrawFilterRow(ImDrawListPtr drawList, float left, float top, float scale)
     {
-        for (var index = 0; index < FilterNames.Length; index++)
+        var tap = Metrics.Size.TapTarget * scale;
+        var radius = FilterDiscUnits * 0.5f * scale;
+        var reach = new Vector2(tap * 0.5f, tap * 0.5f);
+        var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+        var key = (int)ImGui.GetID("prism.filter");
+        var x = left + radius;
+        var tapped = -1;
+        for (var index = 0; index < FilterFacts.Length; index++)
         {
-            filterLabels[index] = Loc.T(FilterNames[index]);
-            filterActive[index] = index == 0 ? glams.Race > 0 : discoverFilter == index;
+            if (index == (int)DiscoverFilter.Modded)
+            {
+                x += Metrics.Space.Md * scale;
+            }
+
+            var center = new Vector2(x, top + tap * 0.5f);
+            var hit = new Rect(center - reach, center + reach);
+            var hovered = UiInteract.Hover(hit.Min, hit.Max);
+            var pose = MotionButton.Animate(hit, key + index, hovered,
+                hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left));
+            var target = FilterOn((DiscoverFilter)index) ? 1f : 0f;
+            var fill = Math.Clamp(filterFill[index].Step(target, Motion.Appear, delta), 0f, 1f);
+            var face = radius * pose.Face.Width / hit.Width;
+            PrismArt.FactToggle(drawList, center, face, FilterFacts[index], fill, pose.Hover);
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+
+            if (pose.Hover > 0.02f)
+            {
+                var extent = new Vector2(face, face);
+                HoverTooltip.Enqueue(new Rect(center - extent, center + extent), FilterLabel((DiscoverFilter)index),
+                    pose.Hover, HoverLabelSide.Below);
+            }
+
+            if (UiInteract.Click(hit.Min, hit.Max, hovered))
+            {
+                tapped = index;
+            }
+
+            x += tap;
         }
 
-        var tapped = filterRail.Draw(chips, ui, filterLabels, filterActive);
-        if (tapped == 0)
+        if (tapped >= 0)
         {
-            var (race, gender) = WornBody();
-            glams.SetBody(glams.Race > 0 ? 0 : race, glams.Race > 0 ? null : gender);
-            pendingScroll = 0f;
-            RefreshDiscover(true);
+            TapFilter((DiscoverFilter)tapped);
         }
-        else if (tapped > 0)
+
+        return top + tap;
+    }
+
+    private bool FilterOn(DiscoverFilter filter) => filter switch
+    {
+        DiscoverFilter.FitsMe => fitsMe,
+        DiscoverFilter.Race => glams.Race > 0,
+        DiscoverFilter.Male => glams.Gender == MaleGender,
+        DiscoverFilter.Female => glams.Gender == FemaleGender,
+        DiscoverFilter.Modded => glams.VanillaOnly == false,
+        _ => glams.VanillaOnly == true,
+    };
+
+    private string FilterLabel(DiscoverFilter filter) => filter switch
+    {
+        DiscoverFilter.FitsMe => Loc.T(L.Prism.FitsMe),
+        DiscoverFilter.Race => RaceLabel(glams.Race, glams.Gender == FemaleGender) is { Length: > 0 } race
+            ? race
+            : Loc.T(L.Prism.FilterRace),
+        DiscoverFilter.Male => Loc.T(L.Prism.GenderMale),
+        DiscoverFilter.Female => Loc.T(L.Prism.GenderFemale),
+        DiscoverFilter.Modded => Loc.T(L.Prism.FilterModded),
+        _ => Loc.T(L.Prism.FilterVanilla),
+    };
+
+    private void TapFilter(DiscoverFilter filter)
+    {
+        switch (filter)
         {
-            SetDiscoverFilter(discoverFilter == tapped ? 0 : tapped);
+            case DiscoverFilter.FitsMe:
+                ToggleFitsMe();
+                break;
+            case DiscoverFilter.Race:
+                OpenRaceSheet();
+                return;
+            case DiscoverFilter.Male:
+            case DiscoverFilter.Female:
+                var gender = filter == DiscoverFilter.Male ? MaleGender : FemaleGender;
+                fitsMe = false;
+                glams.SetBody(glams.Race, glams.Gender == gender ? null : gender);
+                break;
+            default:
+                var vanilla = filter == DiscoverFilter.Vanilla;
+                glams.SetVanillaOnly(glams.VanillaOnly == vanilla ? null : vanilla);
+                break;
+        }
+
+        RefreshFiltered();
+    }
+
+    private void ToggleFitsMe()
+    {
+        if (fitsMe)
+        {
+            fitsMe = false;
+            glams.SetBody(0, null);
+            return;
+        }
+
+        var (race, gender) = WornBody();
+        if (race > 0)
+        {
+            fitsMe = true;
+            glams.SetBody(race, gender);
         }
     }
 
-    private void ClearDiscoverFilters()
+    private void OpenRaceSheet()
     {
-        if (glams.Race == 0 && discoverFilter == 0)
+        var female = glams.Gender == FemaleGender;
+        raceItems[0] = new ActionSheet.Item(Loc.T(L.Prism.AnyRace), Selected: glams.Race == 0, Checkable: true);
+        for (var race = 1; race <= RaceCount; race++)
+        {
+            raceItems[race] = new ActionSheet.Item(gameData.RaceName((uint)race, female), Selected: glams.Race == race,
+                Checkable: true);
+        }
+
+        raceSheet.Open();
+    }
+
+    private void DrawRaceSheet(Rect full)
+    {
+        if (!raceSheet.CapturesPointer)
         {
             return;
         }
 
+        var picked = raceSheet.Draw(full, ActionSheetStyle.From(ui), raceItems, Loc.T(L.Common.Cancel), false,
+            Loc.T(L.Prism.FilterRace));
+        if (picked < 0 || picked == glams.Race)
+        {
+            return;
+        }
+
+        fitsMe = false;
+        glams.SetBody(picked, glams.Gender);
+        RefreshFiltered();
+    }
+
+    private bool AnyFilterOn() => glams.Race > 0 || glams.Gender is not null || glams.VanillaOnly is not null;
+
+    private void ClearFilters()
+    {
+        fitsMe = false;
         glams.SetBody(0, null);
-        SetDiscoverFilter(0);
+        glams.SetVanillaOnly(null);
+        RefreshFiltered();
+    }
+
+    private void RefreshFiltered()
+    {
+        pendingScroll = 0f;
+        glams.Refresh(discoverScope);
     }
 
     private bool DrawHeaderIcon(ImDrawListPtr drawList, Vector2 center, float radius, string glyph, string tip) =>
@@ -206,19 +365,6 @@ internal sealed partial class PrismApp
         discoverScope = ShownScopes[picked];
         pendingScroll = 0f;
         RefreshDiscover(false);
-    }
-
-    private void SetDiscoverFilter(int filter)
-    {
-        discoverFilter = filter;
-        glams.SetVanillaOnly(filter switch
-        {
-            1 => false,
-            2 => true,
-            _ => null,
-        });
-        pendingScroll = 0f;
-        RefreshDiscover(true);
     }
 
     private void RefreshDiscoverAlways() => RefreshDiscover(true);
@@ -500,14 +646,20 @@ internal sealed partial class PrismApp
             return string.Empty;
         }
 
-        return Loc.T(screen == PrismScreen.Discover && discoverScope == GlamScope.Following ? L.Prism.ScopePopular
+        var discover = screen == PrismScreen.Discover;
+        return Loc.T(discover && AnyFilterOn() ? L.Prism.ClearFilters
+            : discover && discoverScope == GlamScope.Following ? L.Prism.ScopePopular
             : screen == PrismScreen.Me && showSaved ? L.Prism.TabDiscover
             : L.Prism.PostGlam);
     }
 
     private void RunLaneAction()
     {
-        if (screen == PrismScreen.Discover && discoverScope == GlamScope.Following)
+        if (screen == PrismScreen.Discover && AnyFilterOn())
+        {
+            ClearFilters();
+        }
+        else if (screen == PrismScreen.Discover && discoverScope == GlamScope.Following)
         {
             discoverScope = GlamScope.Popular;
             RefreshDiscover(false);
