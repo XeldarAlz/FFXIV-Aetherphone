@@ -302,9 +302,13 @@ internal sealed partial class PrismApp
             return;
         }
 
+        if (cardTile < 0)
+        {
+            cardReveal.SnapTo(0f);
+        }
+
         cardTile = index;
         cardPiece = piece;
-        cardReveal.SnapTo(0f);
     }
 
     private void DrawPieceTile(ImDrawListPtr drawList, Rect rect, PieceTile tile, GlamGearDto[] gear, bool selected,
@@ -515,7 +519,6 @@ internal sealed partial class PrismApp
                 if (DrawCardPieceRow(drawList, row, gear[piece], interactive, scale))
                 {
                     cardPiece = piece;
-                    cardReveal.SnapTo(0f);
                 }
 
                 drawn++;
