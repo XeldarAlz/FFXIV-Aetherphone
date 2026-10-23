@@ -10862,9 +10862,6 @@ internal static class L
         public static readonly LocString YourHeat = new("prism.yourHeat", "Your heat");
         public static readonly LocString FinalTitle = new("prism.finalTitle", "The final");
         public static readonly LocString Back = new("prism.back", "Back");
-        public static readonly LocString Issue = new("prism.issue", "N°{0}");
-        public static readonly LocPlural LooksThisIssue =
-            new("prism.looksThisIssue", "{0} glam this issue", "{0} glams this issue");
         public static readonly LocString YourLook = new("prism.yourLook", "Your glam");
         public static readonly LocString ReplayReveal = new("prism.replayReveal", "Replay the reveal");
         public static readonly LocString Submitting = new("prism.submitting", "Sending your scores…");
@@ -10930,7 +10927,6 @@ internal static class L
         public static readonly LocString NotOwned = new("prism.notOwned", "You don't have this one");
         public static readonly LocString CheckStorage = new("prism.checkStorage", "Open your dresser to check");
         public static readonly LocString VendorPrice = new("prism.vendorPrice", "Sold by vendors for {0} gil");
-        public static readonly LocString Owned = new("prism.owned", "Owned");
         public static readonly LocString Installed = new("prism.installed", "Installed");
         public static readonly LocString AddToWardrobe = new("prism.addToWardrobe", "Add to wardrobe");
         public static readonly LocString InWardrobe = new("prism.inWardrobe", "In your wardrobe");
@@ -10948,8 +10944,6 @@ internal static class L
             "You're still trying something on, so it would go out as your gear. Take it off unless the photo shows it.");
         public static readonly LocString CheckMarket = new("prism.checkMarket", "Check market");
         public static readonly LocString GlamOfTheDay = new("prism.glamOfTheDay", "Glam of the day");
-        public static readonly LocPlural SeasonStanding = new("prism.seasonStanding", "{1}: rank {2}, {0:N0} point",
-            "{1}: rank {2}, {0:N0} points");
         public static readonly LocString Rename = new("prism.rename", "Rename");
         public static readonly LocString AddPhoto = new("prism.addPhoto", "Add a photo");
         public static readonly LocString ChangePhoto = new("prism.changePhoto", "Change photo");
@@ -10993,8 +10987,6 @@ internal static class L
         public static readonly LocString SavedEmptyHint = new("prism.savedEmptyHint", "Glams you save show up here.");
         public static readonly LocString ProfileEmptyHint = new("prism.profileEmptyHint", "No glams posted yet.");
         public static readonly LocString StatGlams = new("prism.statGlams", "Glams");
-        public static readonly LocString StatTriedOn = new("prism.statTriedOn", "Tried on");
-        public static readonly LocString StatLikes = new("prism.statLikes", "Likes");
         public static readonly LocString PlacingsHeading = new("prism.placingsHeading", "Placings");
         public static readonly LocPlural WornInGlams = new("prism.wornInGlams", "Worn in {0} glam", "Worn in {0} glams");
         public static readonly LocString Follow = new("prism.follow", "Follow");
