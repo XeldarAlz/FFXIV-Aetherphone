@@ -88,8 +88,9 @@ internal sealed partial class PrismApp
         var height = WearingBarUnits * scale;
         var min = new Vector2(stage.Min.X, stage.Max.Y - height);
         var max = stage.Max;
-        using var layer = ScreenLayer.Begin("prism.wearing", new Rect(new Vector2(stage.Min.X, min.Y), stage.Max), false);
-        UiInteract.HoverOverlay(new Rect(min, max));
+        var bar = new Rect(min, max);
+        using var layer = ScreenLayer.Begin("prism.wearing", TabBar.GlassLayer(bar, scale), false);
+        UiInteract.HoverOverlay(bar);
         var drawList = ImGui.GetWindowDrawList();
         Material.ThemedGlass(drawList, min, max, height * 0.5f, scale, ui.BackdropColor, TabBar.GlassOpacity);
         var left = min.X + height * 0.5f;

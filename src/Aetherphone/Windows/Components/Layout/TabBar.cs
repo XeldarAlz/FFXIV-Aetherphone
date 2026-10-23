@@ -37,6 +37,7 @@ internal sealed class TabBar
     public const float GlassOpacity = 0.86f;
     public const float FlatGlassOpacity = 0.95f;
     private const float LayerHeadroomUnits = 12f;
+    private const float LayerBleedUnits = 4f;
     private const float HighlightTint = 0.22f;
     private const float HighlightRimAlpha = 0.16f;
     private const float PressDepth = 1f - Motion.PressScaleControl;
@@ -80,6 +81,12 @@ internal sealed class TabBar
 
     public static Rect Zone(Rect area, float scale) => TabBarLayout.Zone(area, scale);
 
+    public static Rect GlassLayer(Rect rect, float scale)
+    {
+        var bleed = new Vector2(LayerBleedUnits * scale, 0f);
+        return new Rect(rect.Min - bleed, rect.Max + bleed);
+    }
+
     public static bool Hosting => hostDepth > 0;
 
     public static HostScope ReserveContent(float scale, float extraInset = 0f) =>
@@ -111,7 +118,7 @@ internal sealed class TabBar
         var tone = Material.ToneFor(backdrop);
         var zone = TabBarLayout.Zone(area, scale, Height);
         var layerRect = new Rect(new Vector2(zone.Min.X, zone.Min.Y - LayerHeadroomUnits * scale), zone.Max);
-        using var layer = ScreenLayer.Begin("tabbar", layerRect, false);
+        using var layer = ScreenLayer.Begin("tabbar", GlassLayer(layerRect, scale), false);
         UiInteract.HoverOverlay(layerRect);
         var drawList = ImGui.GetWindowDrawList();
         var radius = capsule.Height * 0.5f;
