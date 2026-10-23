@@ -124,14 +124,14 @@ internal sealed partial class PrismApp
         for (var index = 0; index < FilterNames.Length; index++)
         {
             filterLabels[index] = Loc.T(FilterNames[index]);
-            filterActive[index] = index == 0 ? glams.FitsBody : discoverFilter == index;
+            filterActive[index] = index == 0 ? glams.Race > 0 : discoverFilter == index;
         }
 
         var tapped = filterRail.Draw(chips, ui, filterLabels, filterActive);
         if (tapped == 0)
         {
-            var (race, gender) = glams.FitsBody ? (0, 0) : WornBody();
-            glams.SetBody(race, gender);
+            var (race, gender) = WornBody();
+            glams.SetBody(glams.Race > 0 ? 0 : race, glams.Race > 0 ? null : gender);
             pendingScroll = 0f;
             RefreshDiscover(true);
         }
@@ -143,12 +143,12 @@ internal sealed partial class PrismApp
 
     private void ClearDiscoverFilters()
     {
-        if (!glams.FitsBody && discoverFilter == 0)
+        if (glams.Race == 0 && discoverFilter == 0)
         {
             return;
         }
 
-        glams.SetBody(0, 0);
+        glams.SetBody(0, null);
         SetDiscoverFilter(0);
     }
 

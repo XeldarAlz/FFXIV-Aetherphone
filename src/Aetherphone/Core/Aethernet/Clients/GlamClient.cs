@@ -19,7 +19,7 @@ internal sealed class GlamClient
         this.net = net;
     }
 
-    internal static string FeedPath(string scope, bool? vanilla, string? cursor, int race = 0, int gender = 0)
+    internal static string FeedPath(string scope, bool? vanilla, string? cursor, int race = 0, int? gender = null)
     {
         var path = $"/prism/glams?scope={Uri.EscapeDataString(scope)}";
         if (vanilla is { } only)
@@ -29,7 +29,12 @@ internal sealed class GlamClient
 
         if (race > 0)
         {
-            path += $"&race={race}&gender={gender}";
+            path += $"&race={race}";
+        }
+
+        if (gender is { } chosen)
+        {
+            path += $"&gender={chosen}";
         }
 
         return WithCursor(path, cursor);
@@ -65,7 +70,7 @@ internal sealed class GlamClient
     internal static string TagGlamsPath(string tag, string? cursor) =>
         WithCursor($"/prism/tags/{Uri.EscapeDataString(tag)}/glams", cursor);
 
-    public Task<GlamPage?> FeedAsync(string scope, bool? vanilla, (int Race, int Gender) body, string? cursor,
+    public Task<GlamPage?> FeedAsync(string scope, bool? vanilla, (int Race, int? Gender) body, string? cursor,
         CancellationToken token, Action<AepFailure>? onFailure = null) =>
         net.GetAsync(FeedPath(scope, vanilla, cursor, body.Race, body.Gender), AethernetJsonContext.Default.GlamPage,
             token, null, onFailure);

@@ -16,6 +16,10 @@ public sealed class GlamWireContractTests
         Assert.Equal("/prism/glams?scope=today&vanilla=true&cursor=c%2F1", GlamClient.FeedPath("today", true, "c/1"));
         Assert.Equal("/prism/glams?scope=following&vanilla=false", GlamClient.FeedPath("following", false, null));
         Assert.Equal("/prism/glams?scope=new&race=8&gender=1", GlamClient.FeedPath("new", null, null, 8, 1));
+        Assert.Equal("/prism/glams?scope=new&race=8", GlamClient.FeedPath("new", null, null, 8));
+        Assert.Equal("/prism/glams?scope=popular&gender=0", GlamClient.FeedPath("popular", null, null, 0, 0));
+        Assert.Equal("/prism/glams?scope=new&vanilla=false&gender=1&cursor=x",
+            GlamClient.FeedPath("new", false, "x", 0, 1));
         Assert.Equal("/prism/glams/g%2F1", GlamClient.GlamPath("g/1"));
         Assert.Equal("/prism/glams/g_1/like", GlamClient.LikePath("g_1"));
         Assert.Equal("/prism/glams/g_1/tryon", GlamClient.TryOnPath("g_1"));

@@ -72,7 +72,7 @@ internal sealed class GlamStore : IDisposable
     private volatile int epoch;
     private volatile string followsFor = string.Empty;
     private bool? vanillaOnly;
-    private (int Race, int Gender) body;
+    private (int Race, int? Gender) body;
 
     public GlamStore(AethernetSession session, AethernetApi api)
     {
@@ -91,7 +91,9 @@ internal sealed class GlamStore : IDisposable
 
     public bool? VanillaOnly => vanillaOnly;
 
-    public bool FitsBody => body.Race > 0;
+    public int Race => body.Race;
+
+    public int? Gender => body.Gender;
 
     public GlamDto? Detail => detail;
 
@@ -166,7 +168,7 @@ internal sealed class GlamStore : IDisposable
         ClearDiscover();
     }
 
-    public void SetBody(int race, int gender)
+    public void SetBody(int race, int? gender)
     {
         if (body == (race, gender))
         {
