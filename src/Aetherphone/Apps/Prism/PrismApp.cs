@@ -664,7 +664,9 @@ internal sealed partial class PrismApp : IResumableApp
         }
 
         var drawnPixels = MathF.Max(rect.Width, rect.Height);
-        var texture = native ? images.Get(url) ?? images.Nearest(url, drawnPixels) : images.Sized(url, drawnPixels);
+        var texture = native && drawnPixels > TextureSizes.SizeOf(TextureSizes.LevelCount)
+            ? images.Get(url) ?? images.Nearest(url, drawnPixels)
+            : images.Sized(url, drawnPixels);
         if (texture is null)
         {
             PrismArt.Placeholder(drawList, rect, images.Failed(url), UiScale.Current, alpha);
