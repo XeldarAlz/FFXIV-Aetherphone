@@ -191,7 +191,8 @@ internal sealed partial class PrismApp
         var author = profile?.User;
         var lane = glams.List;
         SyncProfileCover(author?.Id ?? string.Empty, lane);
-        var covered = profileCover is not null || profile is { GlamCount: > 0 } || !showSaved && lane.Loading;
+        var covered = profileCover is not null || profile is { GlamCount: > 0 } ||
+                      profile is null && !showSaved && lane.Loading;
         var full = FullFrom(content, scale);
         var top = covered ? PhotoTop(full, content) : content.Min.Y;
         profileMenu.Gate();
