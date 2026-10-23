@@ -59,7 +59,7 @@ internal sealed partial class PrismApp
         }
 
         var field = new Rect(new Vector2(content.Min.X + Metrics.Space.Lg * scale, top),
-            new Vector2(cancelRect.Min.X, top + tap));
+            new Vector2(cancelRect.Min.X - Metrics.Space.Sm * scale, top + tap));
         SearchBar.Surface(drawList, field, controls);
         var inset = Metrics.Space.Md * scale;
         var glyph = SearchGlyphUnits * scale;
