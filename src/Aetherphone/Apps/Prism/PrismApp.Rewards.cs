@@ -131,6 +131,11 @@ internal sealed partial class PrismApp
         }
 
         DrawPhotoBack(drawList, area, topInset, scale);
+        if (entering)
+        {
+            PrismLight.Primary(drawList, button, !store.Busy, scale);
+        }
+
         if (entering && DrawButton(drawList, button, EnterLabel(), ButtonStyle.Solid, scale, enabled: !store.Busy,
                 id: "prism.rewards.enter"))
         {

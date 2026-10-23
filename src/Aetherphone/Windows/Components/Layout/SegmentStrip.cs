@@ -8,6 +8,7 @@ namespace Aetherphone.Windows.Components;
 internal static class SegmentStrip
 {
     private const float TrackHeight = 30f;
+    private const float ThumbInsetUnits = 2f;
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Dictionary<string, Spring> Thumbs = new(StringComparer.Ordinal);
 
@@ -68,13 +69,8 @@ internal static class SegmentStrip
         }
 
         var position = AnimateThumb(id, selected);
-        var inset = 2f * scale;
-        var thumbCenterX = trackMin.X + (position + 0.5f) * segmentWidth;
-        var thumbHalf = segmentWidth * 0.5f - inset;
-        var thumbMin = new Vector2(thumbCenterX - thumbHalf, trackMin.Y + inset);
-        var thumbMax = new Vector2(thumbCenterX + thumbHalf, trackMax.Y - inset);
-        var thumbRadius = radius - inset;
-        Squircle.Fill(drawList, thumbMin, thumbMax, thumbRadius, ImGui.GetColorU32(accent with { W = 1f }));
+        var thumb = Thumb(trackMin, trackMax, segmentWidth, position, scale);
+        Squircle.Fill(drawList, thumb.Min, thumb.Max, thumb.Height * 0.5f, ImGui.GetColorU32(accent with { W = 1f }));
         var labelMaxWidth = MathF.Max(1f, segmentWidth - Metrics.Space.Sm * scale);
         var labelStyle = new TextStyle(textScale, FontWeight.SemiBold);
         for (var index = 0; index < options.Count; index++)
@@ -100,6 +96,23 @@ internal static class SegmentStrip
         var left = row.Min.X + index * segmentWidth;
         return new Rect(new Vector2(left, row.Center.Y - height * 0.5f),
             new Vector2(left + segmentWidth, row.Center.Y + height * 0.5f));
+    }
+
+    public static Rect ThumbRect(string id, Rect row, int count, out float position, float trackHeight = TrackHeight)
+    {
+        position = Thumbs.TryGetValue(id, out var spring) ? spring.Value : 0f;
+        var height = trackHeight * UiScale.Current;
+        var trackMin = new Vector2(row.Min.X, row.Center.Y - height * 0.5f);
+        var trackMax = new Vector2(row.Max.X, row.Center.Y + height * 0.5f);
+        return Thumb(trackMin, trackMax, row.Width / Math.Max(1, count), position, UiScale.Current);
+    }
+
+    private static Rect Thumb(Vector2 trackMin, Vector2 trackMax, float segmentWidth, float position, float scale)
+    {
+        var inset = ThumbInsetUnits * scale;
+        var centerX = trackMin.X + (position + 0.5f) * segmentWidth;
+        var half = segmentWidth * 0.5f - inset;
+        return new Rect(new Vector2(centerX - half, trackMin.Y + inset), new Vector2(centerX + half, trackMax.Y - inset));
     }
 
     private static float AnimateThumb(string id, int selected)

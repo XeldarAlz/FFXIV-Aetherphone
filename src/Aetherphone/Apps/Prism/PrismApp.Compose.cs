@@ -363,9 +363,9 @@ internal sealed partial class PrismApp
         var tap = Metrics.Size.TapTarget * scale;
         kindLabels[0] = Loc.T(L.Prism.ModdedStamp);
         kindLabels[1] = Loc.T(L.Prism.VanillaStamp);
-        composeVanilla = DrawSegments("prism.composeKind",
+        composeVanilla = DrawTrackSegments("prism.composeKind",
             new Rect(new Vector2(left, top), new Vector2(left + width, top + tap)), kindLabels,
-            composeVanilla ? 1 : 0) == 1;
+            composeVanilla ? 1 : 0, scale) == 1;
         top += tap + Metrics.Space.Xl * scale;
         top = DrawSectionTitle(drawList, left, left + width, top, Loc.T(L.Prism.YourGear), string.Empty, scale) +
               Metrics.Space.Xs * scale;

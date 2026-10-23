@@ -34,6 +34,7 @@ internal sealed partial class PrismApp
     private const float EmptyDiscUnits = 34f;
     private const float EmptyActionUnits = 132f;
     private const float EmptyTextUnits = 300f;
+    private const float ScopeLineUnits = 2f;
     private const int RaceCount = 8;
     private const int MaleGender = 0;
     private const int FemaleGender = 1;
@@ -55,6 +56,9 @@ internal sealed partial class PrismApp
     private readonly DropdownMenu.Item[] raceItems = new DropdownMenu.Item[RaceCount + 1];
     private GlamScope discoverScope = GlamScope.New;
     private bool fitsMe;
+    private bool scopeLineShown;
+    private Spring scopeLineLeft;
+    private Spring scopeLineRight;
     private bool todayResolved;
     private Action? refreshDiscoverNow;
     private CachedText contestCaption;
@@ -320,9 +324,19 @@ internal sealed partial class PrismApp
         else
         {
             var x = row.Min.X;
+            var lineLeft = x;
+            var lineRight = x;
+            var lineTop = row.Center.Y;
             for (var index = 0; index < ScopeNames.Length; index++)
             {
                 var size = Typography.Measure(scopeLabels[index], PrismType.Title);
+                if (scopeActive[index])
+                {
+                    lineLeft = x;
+                    lineRight = x + size.X;
+                    lineTop = row.Center.Y + size.Y * 0.5f + Metrics.Space.Xxs * scale;
+                }
+
                 var hit = new Rect(new Vector2(x - gap * 0.5f, row.Min.Y),
                     new Vector2(x + size.X + gap * 0.5f, row.Max.Y));
                 var hovered = UiInteract.Hover(hit.Min, hit.Max);
@@ -340,6 +354,8 @@ internal sealed partial class PrismApp
 
                 x += size.X + gap;
             }
+
+            DrawScopeLine(drawList, lineLeft, lineRight, lineTop, scale);
         }
 
         if (picked < 0 || scopeActive[picked])
@@ -350,6 +366,21 @@ internal sealed partial class PrismApp
         discoverScope = ShownScopes[picked];
         pendingScroll = 0f;
         RefreshDiscover(false);
+    }
+
+    private void DrawScopeLine(ImDrawListPtr drawList, float left, float right, float top, float scale)
+    {
+        if (!scopeLineShown)
+        {
+            scopeLineLeft.SnapTo(left);
+            scopeLineRight.SnapTo(right);
+            scopeLineShown = true;
+        }
+
+        var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+        PrismLight.Strip(drawList, scopeLineLeft.Step(left, Motion.Release, delta),
+            scopeLineRight.Step(right, Motion.Release, delta), top, MathF.Max(1f, ScopeLineUnits * scale),
+            PrismLight.TabAlpha);
     }
 
     private void RefreshDiscoverAlways() => RefreshDiscover(true);

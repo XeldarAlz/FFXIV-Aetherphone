@@ -64,7 +64,7 @@ internal sealed partial class PrismApp
         galleryTracks[0] = PrismTracks.Name(PrismTracks.Modded);
         galleryTracks[1] = PrismTracks.Name(PrismTracks.Vanilla);
         var selected = gallery.Track == PrismTracks.Vanilla ? 1 : 0;
-        var picked = DrawSegments("prism.gallery.tracks", row, galleryTracks, selected);
+        var picked = DrawTrackSegments("prism.gallery.tracks", row, galleryTracks, selected, UiScale.Current);
         if (picked != selected)
         {
             gallery = gallery with { Track = picked == 1 ? PrismTracks.Vanilla : PrismTracks.Modded };

@@ -56,6 +56,7 @@ internal static class PrismArt
     private const float ArcStepDegrees = 22.5f;
     private const float TileIconShare = 0.58f;
     private const float ToggleRestAlpha = 0.7f;
+    private const float ToggleEdgeShare = 0.62f;
     private const float TileDyeAlpha = 0.22f;
     private const float TileDotShare = 0.08f;
     private const float TileDotInsetShare = 0.18f;
@@ -110,10 +111,7 @@ internal static class PrismArt
 
     public static void OverPhoto(bool photo) => inks = photo ? PhotoInks : themeInks;
 
-    private static readonly Vector4[] Spectrum =
-    {
-        AccentRing.Red, AccentRing.Orange, AccentRing.Gold, AccentRing.Green, AccentRing.Azure, AccentRing.Violet,
-    };
+    private static readonly Vector4[] Spectrum = PrismLight.Hues;
 
     private static readonly uint[] SpectrumPacked = PackAll(Spectrum);
 
@@ -429,6 +427,13 @@ internal static class PrismArt
         var ink = Vector4.Lerp(rest, Fore, MathF.Max(hover, fill));
         var strokes = FactIcons[(int)fact];
         var shape = FactFills[(int)fact];
+        if (fact is PrismFact.Modded or PrismFact.Vanilla)
+        {
+            PrismLight.CircleEdge(drawList, center, size * ToggleEdgeShare,
+                fact == PrismFact.Modded ? PrismGlow.Spectrum : PrismGlow.Pearl, PrismLight.EdgeAlpha * fill,
+                UiScale.Current);
+        }
+
         if (fill > 0.001f)
         {
             FillShapes(drawList, center, size, strokes, shape, ink with { W = ink.W * fill });

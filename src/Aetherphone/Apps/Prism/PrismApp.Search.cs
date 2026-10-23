@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Market;
@@ -38,6 +39,7 @@ internal sealed partial class PrismApp
     private bool searchIndexed;
     private bool searchOpen;
     private bool searchFocus;
+    private Spring searchEdge;
 
     private void OpenSearch()
     {
@@ -75,6 +77,10 @@ internal sealed partial class PrismApp
 
         GlassField.Text(field, "##glamSearch", Loc.T(L.Prism.SearchHint), ref discoverQuery, PrismArt.Fore,
             PrismArt.Muted, inset + glyph + Metrics.Space.Sm * scale, QueryMaxLength);
+        var focus = searchEdge.Step(ImGui.IsItemActive() ? 1f : 0f, Motion.Appear,
+            MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds));
+        PrismLight.PillEdge(drawList, SearchBar.Capsule(field), PrismGlow.Spectrum, PrismLight.FieldAlpha * focus,
+            scale);
         UpdateSearch();
         UpdateTagGlams();
         UpdatePeople();

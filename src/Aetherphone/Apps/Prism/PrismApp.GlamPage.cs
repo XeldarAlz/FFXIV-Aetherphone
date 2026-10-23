@@ -583,6 +583,11 @@ internal sealed partial class PrismApp
         var saved = wearing && !settling && !wardrobe.Loading ? wardrobe.FindByGlam(key) : null;
         var label = !wearing || settling ? pillLabels[0] : saved is null ? pillLabels[1] : pillLabels[2];
         var locked = settling || wearing && wardrobe.Loading || overlay && UiInteract.InputBlocked;
+        if (saved is null)
+        {
+            PrismLight.Primary(drawList, rect, !locked, scale);
+        }
+
         if (!DrawPill(drawList, rect, label, saved is not null, overlay, locked, scale))
         {
             return;
