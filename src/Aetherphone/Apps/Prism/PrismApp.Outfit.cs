@@ -262,7 +262,7 @@ internal sealed partial class PrismApp
         var vanilla = VanillaEntry;
         var top = DrawBackHeader(drawList, content, store.Week?.Title ?? string.Empty, scale) +
                   Metrics.Space.Sm * scale;
-        var row = ActionRow(content, scale);
+        var row = ActionRect(content, scale);
         var body = new Rect(new Vector2(content.Min.X, top),
             new Vector2(content.Max.X, row.Min.Y - Metrics.Space.Lg * scale));
         using (BeginBody(body))

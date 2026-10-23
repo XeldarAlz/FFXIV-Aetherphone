@@ -61,7 +61,7 @@ internal sealed partial class PrismApp
         pickSession.DrawPickPane(pane, scale, PickStyle, PrismStore.EntryRatio, PrismStore.EntryRevealsWholeImage,
             !store.Busy, Loc.T(L.Prism.EnterLook));
 
-        var row = ActionRow(content, scale);
+        var row = ActionRect(content, scale);
         var label = Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.EnterThisLook);
         var ready = pickSession.HasSelection && !store.Busy && (!VanillaEntry || DraftPieces() > 0);
         if (DrawButton(drawList, row, label, ButtonStyle.Solid, scale, enabled: ready, id: PickPrimaryId,
@@ -77,16 +77,14 @@ internal sealed partial class PrismApp
         var link = OutfitLink();
         if (link.Length > 0)
         {
-            var linkTop = gridBottom - Button.LargeHeight * scale;
-            var linkLeft = row.Min.X - Metrics.Space.Xl * scale * 0.5f;
-            var linkRect = new Rect(new Vector2(linkLeft, linkTop),
-                new Vector2(linkLeft + ButtonWidth([link], row.Width, scale), gridBottom));
+            var linkRect = PlainRect(new Vector2(row.Min.X, gridBottom - Button.LargeHeight * scale * 0.5f), link,
+                row.Width, 0f, scale);
             if (DrawButton(drawList, linkRect, link, ButtonStyle.Plain, scale, enabled: !store.Busy))
             {
                 OpenOutfit();
             }
 
-            gridBottom = linkTop;
+            gridBottom = linkRect.Min.Y;
         }
 
         gridBottom -= Metrics.Space.Lg * scale;

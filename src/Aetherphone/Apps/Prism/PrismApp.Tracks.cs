@@ -73,8 +73,8 @@ internal sealed partial class PrismApp
         }
 
         var count = Math.Min(tracks.Length, MaxTracks);
-        var full = SceneChrome.ScreenFrom(content, followedTheme!, scale);
-        var button = ActionRow(content, scale);
+        var full = FullFrom(content, scale);
+        var button = ActionRect(content, scale);
         var gap = Metrics.Space.Lg * scale;
         var blockKey = HashCode.Combine(Loc.Current.Code, content.Width, Plugin.Fonts.Generation, count);
         if (blockKey != trackBlockKey)

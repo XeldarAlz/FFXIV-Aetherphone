@@ -167,9 +167,6 @@ internal sealed partial class PrismApp
         }
     }
 
-    private Rect FullFrom(Rect content, float scale) =>
-        SceneChrome.ScreenFrom(content, followedTheme ?? PhoneTheme.Default, scale);
-
     private static float BodyTop() => ImGui.GetWindowPos().Y - ImGui.GetScrollY();
 
     private void DrawProfile(ImDrawListPtr drawList, Rect content, float scale)

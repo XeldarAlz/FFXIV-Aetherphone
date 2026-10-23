@@ -36,7 +36,7 @@ internal sealed partial class PrismApp
         if (!store.IsSignedIn)
         {
             DrawCoverNotice(drawList, content, Loc.T(L.Prism.SignInTitle), Loc.T(L.Prism.SignInRequired), scale);
-            if (DrawButton(drawList, ActionRow(content, scale), Loc.T(L.Prism.OpenSettings), ButtonStyle.Solid, scale))
+            if (DrawButton(drawList, ActionRect(content, scale), Loc.T(L.Prism.OpenSettings), ButtonStyle.Solid, scale))
             {
                 navigation.Open("settings");
             }
@@ -389,17 +389,10 @@ internal sealed partial class PrismApp
 
     private bool ShowingResults() => store.Results is { } results && PrismStore.ShowsTrack(results, store.Track);
 
-    private Rect ActionRow(Rect content, float scale)
-    {
-        var bottom = content.Max.Y - bottomChrome - PrismArt.BottomMargin(scale);
-        return new Rect(new Vector2(content.Min.X, bottom - Button.LargeHeight * scale),
-            new Vector2(content.Max.X, bottom));
-    }
-
     private void DrawCoverNotice(ImDrawListPtr drawList, Rect content, string title, string body, float scale)
     {
         var width = content.Width;
-        var bottom = ActionRow(content, scale).Min.Y - Metrics.Space.Xxl * scale;
+        var bottom = ActionRect(content, scale).Min.Y - Metrics.Space.Xxl * scale;
         var top = bottom - Typography.MeasureWrappedBlock(body, PrismType.Body, width).Y - Metrics.Space.Sm * scale -
                   PrismType.HeroHeight(title, width);
         top += PrismType.DrawHero(drawList, new Vector2(content.Min.X, top), title, width, PrismArt.Fore) +
@@ -420,7 +413,7 @@ internal sealed partial class PrismApp
         var reason = store.WeekFailureText;
         DrawCoverNotice(drawList, content, Loc.T(L.Common.LoadFailed),
             reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint), scale);
-        if (DrawButton(drawList, ActionRow(content, scale), Loc.T(L.Common.Retry), ButtonStyle.Solid, scale))
+        if (DrawButton(drawList, ActionRect(content, scale), Loc.T(L.Common.Retry), ButtonStyle.Solid, scale))
         {
             UiFeedback.Play(UiSound.Refresh);
             store.Refresh();

@@ -150,7 +150,7 @@ internal sealed partial class PrismApp
         var questionHeight = Typography.MeasureWrappedBlock(question, PrismType.Title, width).Y;
         var below = Metrics.Space.Lg * scale * 3f + captionLine * 2f + Metrics.Space.Xxs * scale + questionHeight +
                     size + Metrics.Space.Xs * scale;
-        var full = ScreenOf(content, scale);
+        var full = FullFrom(content, scale);
         var photoTop = PhotoTop(full, content);
         var photo = new Rect(new Vector2(full.Min.X, photoTop), new Vector2(full.Max.X,
             MathF.Min(photoTop + full.Width / PrismStore.EntryRatio, content.Max.Y - below)));
@@ -667,9 +667,6 @@ internal sealed partial class PrismApp
         return new Rect(new Vector2(left, anchor.Y - height * 0.5f),
             new Vector2(left + width, anchor.Y + height * 0.5f));
     }
-
-    private Rect ScreenOf(Rect content, float scale) =>
-        followedTheme is { } theme ? SceneChrome.ScreenFrom(content, theme, scale) : content;
 
     private void DrawCenteredLabel(ImDrawListPtr drawList, Rect content, string text)
     {

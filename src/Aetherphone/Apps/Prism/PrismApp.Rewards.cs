@@ -92,7 +92,7 @@ internal sealed partial class PrismApp
     {
         SyncRewardArt();
         var top = DrawBackHeader(drawList, content, store.Week?.Title ?? string.Empty, scale);
-        var full = ScreenOf(content, scale);
+        var full = FullFrom(content, scale);
         var body = new Rect(new Vector2(full.Min.X, top), new Vector2(full.Max.X, content.Max.Y));
         using var surface = BeginBody(body);
         var list = ImGui.GetWindowDrawList();

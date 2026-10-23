@@ -43,9 +43,7 @@ internal sealed partial class PrismApp
 
         var left = content.Min.X;
         var width = content.Width;
-        var bottom = content.Max.Y - PrismArt.BottomMargin(scale);
-        var actions = new Rect(new Vector2(left, bottom - Button.LargeHeight * scale),
-            new Vector2(content.Max.X, bottom));
+        var actions = ActionRect(content, scale);
         var title = Loc.T(StatusTitle(entry.Status));
         var entryFailed = !store.Busy && (store.Failed(PrismAction.Enter) || store.Failed(PrismAction.Withdraw) ||
                                           store.Failed(PrismAction.Outfit));

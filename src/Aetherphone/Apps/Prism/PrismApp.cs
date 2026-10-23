@@ -444,6 +444,9 @@ internal sealed partial class PrismApp : IResumableApp
         return top + height;
     }
 
+    private Rect FullFrom(Rect content, float scale) =>
+        SceneChrome.ScreenFrom(content, followedTheme ?? PhoneTheme.Default, scale);
+
     private static float PhotoTop(Rect full, Rect content) => PrismArt.Light ? content.Min.Y : full.Min.Y;
 
     private static float PhotoInset(Rect full, Rect content) => content.Min.Y - PhotoTop(full, content);

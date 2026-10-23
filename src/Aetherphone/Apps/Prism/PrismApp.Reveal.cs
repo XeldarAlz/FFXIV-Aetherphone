@@ -299,7 +299,7 @@ internal sealed partial class PrismApp
         FollowPlacingProfile();
         SyncOrder(results);
         var top = DrawBackHeader(drawList, content, results.Title, scale);
-        var full = ScreenOf(content, scale);
+        var full = FullFrom(content, scale);
         var body = new Rect(new Vector2(full.Min.X, top), new Vector2(full.Max.X, content.Max.Y));
         using var surface = BeginBody(body);
         var list = ImGui.GetWindowDrawList();
