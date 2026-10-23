@@ -50,9 +50,9 @@ internal sealed partial class PrismApp
         }
     }
 
-    private void DrawActivity(ImDrawListPtr drawList, Rect content, float scale)
+    private void DrawActivity(ImDrawListPtr drawList, Rect full, Rect content, float scale)
     {
-        content = AppArea(content, scale);
+        content = AppArea(full, content);
         var top = DrawBackHeader(drawList, content, Loc.T(L.Prism.Activity), scale);
         activityFeed.EnsureFresh(social.Latest);
         var body = new Rect(new Vector2(content.Min.X, top), content.Max);

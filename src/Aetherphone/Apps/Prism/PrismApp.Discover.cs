@@ -42,9 +42,9 @@ internal sealed partial class PrismApp
     private Action? refreshDiscoverNow;
     private CachedText contestCaption;
 
-    private void DrawDiscover(ImDrawListPtr drawList, Rect content, float scale)
+    private void DrawDiscover(ImDrawListPtr drawList, Rect full, Rect content, float scale)
     {
-        content = AppArea(content, scale);
+        content = AppArea(full, content);
         if (!glams.IsSignedIn)
         {
             DrawSignedOut(drawList, content, scale);
@@ -564,8 +564,8 @@ internal sealed partial class PrismApp
         }
     }
 
-    private Rect AppArea(Rect content, float scale) =>
-        followedTheme is { } theme ? SceneChrome.AppAreaFrom(content, theme, scale) : content;
+    private static Rect AppArea(Rect full, Rect content) =>
+        new(new Vector2(full.Min.X, content.Min.Y), new Vector2(full.Max.X, content.Max.Y));
 
     private static string Cover(GlamDto glam) => glam.Photos is { Length: > 0 } photos ? photos[0].Url : string.Empty;
 

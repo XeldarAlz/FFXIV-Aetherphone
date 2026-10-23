@@ -153,7 +153,7 @@ internal sealed partial class PrismApp
         return line;
     }
 
-    private void DrawGlamDetail(ImDrawListPtr drawList, Rect content, float scale)
+    private void DrawGlamDetail(ImDrawListPtr drawList, Rect full, Rect content, float scale)
     {
         if (glams.Detail is not { } glam)
         {
@@ -170,7 +170,6 @@ internal sealed partial class PrismApp
         glamMenu.Gate();
         var key = WearKey(glam);
         RefreshPieces(key, glam.Gear ?? Array.Empty<GlamGearDto>());
-        var full = SceneChrome.ScreenFrom(content, followedTheme!, scale);
         using (BeginBody(new Rect(new Vector2(full.Min.X, PhotoTop(full, content)), new Vector2(full.Max.X, content.Max.Y))))
         {
             DrawGlamBody(ImGui.GetWindowDrawList(), full, content, glam, key, scale);

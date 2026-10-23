@@ -324,10 +324,10 @@ internal sealed partial class PrismApp : IResumableApp
                 DrawTrackChoice(drawList, content, scale);
                 break;
             case PrismScreen.Discover:
-                DrawDiscover(drawList, content, scale);
+                DrawDiscover(drawList, full, content, scale);
                 break;
             case PrismScreen.GlamDetail:
-                DrawGlamDetail(drawList, content, scale);
+                DrawGlamDetail(drawList, full, content, scale);
                 break;
             case PrismScreen.Compose:
                 DrawCompose(drawList, content, scale);
@@ -349,7 +349,7 @@ internal sealed partial class PrismApp : IResumableApp
                 DrawWardrobeCover(drawList, content, scale);
                 break;
             case PrismScreen.Activity:
-                DrawActivity(drawList, content, scale);
+                DrawActivity(drawList, full, content, scale);
                 break;
             default:
                 DrawCover(drawList, full, content, scale);
