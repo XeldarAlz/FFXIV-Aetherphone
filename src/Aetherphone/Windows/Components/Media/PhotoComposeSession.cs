@@ -847,9 +847,11 @@ internal sealed class PhotoComposeSession : IDisposable
     // aspect is the previewed photo's own aspect, not the shared container the caller frames it in,
     // so the caller must contain-fit the returned uv window rather than stretch it.
     public bool TryGetPreviewUv(float aspect, bool allowReveal, out IDalamudTextureWrap texture, out Vector2 uv0,
-        out Vector2 uv1)
+        out Vector2 uv1) => TryGetPreviewUv(ClampedPreviewIndex, aspect, allowReveal, out texture, out uv0, out uv1);
+
+    public bool TryGetPreviewUv(int index, float aspect, bool allowReveal, out IDalamudTextureWrap texture,
+        out Vector2 uv0, out Vector2 uv1)
     {
-        var index = ClampedPreviewIndex;
         var loaded = TextureFor(index, ImGui.GetTime());
         if (loaded is null)
         {
@@ -861,7 +863,7 @@ internal sealed class PhotoComposeSession : IDisposable
 
         texture = loaded;
         var minZoom = allowReveal ? WallpaperCrop.MinZoomToReveal(loaded.Size, aspect) : WallpaperCrop.MinZoom;
-        var crop = CropAt(index).Clamped(loaded.Size, aspect, minZoom);
+        var crop = (index == CurrentIndex ? CurrentTargetCrop : CropAt(index)).Clamped(loaded.Size, aspect, minZoom);
         (uv0, uv1) = crop.ComputeUv(loaded.Size, aspect, minZoom);
         return true;
     }

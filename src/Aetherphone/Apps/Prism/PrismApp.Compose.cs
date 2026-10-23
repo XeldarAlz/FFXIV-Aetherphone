@@ -20,6 +20,8 @@ internal sealed partial class PrismApp
     private const int MaxTags = 6;
     private const double RecaptureSeconds = 1.0;
     private const float HeaderSideShare = 0.3f;
+    private const float ComposePhotoShare = 0.5f;
+    private const float ComposePhotoHeightShare = 0.36f;
 
     private readonly PhotoComposeSession composeSession;
     private readonly HashSet<string> droppedMods = new(StringComparer.Ordinal);
@@ -138,6 +140,8 @@ internal sealed partial class PrismApp
 
         var left = content.Min.X;
         var width = content.Width;
+        top = DrawComposePhotos(drawList, left, top, width, content.Height * ComposePhotoHeightShare, scale) +
+              Metrics.Space.Lg * scale;
         if (focusTitle)
         {
             ImGui.SetKeyboardFocusHere();
@@ -176,6 +180,45 @@ internal sealed partial class PrismApp
             var cursor = DrawCaptured(list, origin.X, origin.Y, bodyWidth, scale);
             ImGui.Dummy(new Vector2(bodyWidth, cursor - origin.Y));
         }
+    }
+
+    private float DrawComposePhotos(ImDrawListPtr drawList, float left, float top, float width, float maxHeight,
+        float scale)
+    {
+        var count = composeSession.SelectedCount;
+        if (count == 0)
+        {
+            return top;
+        }
+
+        var gap = Metrics.Space.Xs * scale;
+        var cardWidth = MathF.Min(MathF.Min(width * ComposePhotoShare, maxHeight * GlamStore.PhotoRatio),
+            (width - gap * (count - 1)) / count);
+        var cardHeight = cardWidth / GlamStore.PhotoRatio;
+        var start = left + (width - cardWidth * count - gap * (count - 1)) * 0.5f;
+        for (var index = 0; index < count; index++)
+        {
+            var min = new Vector2(start + index * (cardWidth + gap), top);
+            var card = new Rect(min, min + new Vector2(cardWidth, cardHeight));
+            if (composeSession.TryGetPreviewUv(index, GlamStore.PhotoRatio, GlamStore.RevealsWholePhoto,
+                    out var texture, out var uv0, out var uv1))
+            {
+                drawList.AddImage(texture.Handle, card.Min, card.Max, uv0, uv1);
+            }
+            else
+            {
+                PrismArt.Placeholder(drawList, card, false, scale);
+            }
+
+            var hovered = HoverWash(drawList, card);
+            if (UiInteract.Click(card.Min, card.Max, hovered))
+            {
+                composeSession.SelectCurrent(index);
+                composeDetails = false;
+            }
+        }
+
+        return top + cardHeight;
     }
 
     private float DrawStillTryingOn(ImDrawListPtr drawList, float left, float top, float width, float scale)
