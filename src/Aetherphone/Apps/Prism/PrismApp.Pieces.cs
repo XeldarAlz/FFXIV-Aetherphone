@@ -50,11 +50,11 @@ internal sealed partial class PrismApp
     };
 
     private static readonly string[] PlusCounts = { "+0", "+1", "+2", "+3", "+4", "+5", "+6", "+7", "+8", "+9" };
-    private static readonly Vector4 TileFill = new(0f, 0f, 0f, 0.5f);
-    private static readonly Vector4 CardFill = new(0.08f, 0.08f, 0.09f, 0.94f);
+    private static readonly uint TileFill = Palette.Pack(new Vector4(0f, 0f, 0f, 0.5f));
+    private static readonly uint CardFill = Palette.Pack(new Vector4(0.08f, 0.08f, 0.09f, 0.94f));
     private static readonly Vector4 PhotoRim = new(0f, 0f, 0f, 0.6f);
     private static readonly Vector4 PhotoRing = new(1f, 1f, 1f, 0.5f);
-    private static readonly Vector4 PhotoHover = new(1f, 1f, 1f, 0.08f);
+    private static readonly uint PhotoHover = Palette.Pack(new Vector4(1f, 1f, 1f, 0.08f));
 
     private readonly PieceTile[] pieceTiles = new PieceTile[MaxPieceTiles];
     private int[] pieceOrder = Array.Empty<int>();
@@ -287,7 +287,7 @@ internal sealed partial class PrismApp
         var pad = Metrics.Space.Sm * scale;
         var half = PrismArt.ChipUnits * scale * 0.5f;
         var min = new Vector2(rightCenter.X - size.X - pad * 2f, rightCenter.Y - half);
-        drawList.AddRectFilled(min, new Vector2(rightCenter.X, rightCenter.Y + half), ImGui.GetColorU32(CardFill), half);
+        drawList.AddRectFilled(min, new Vector2(rightCenter.X, rightCenter.Y + half), CardFill, half);
         Typography.Draw(drawList, new Vector2(min.X + pad, rightCenter.Y - size.Y * 0.5f), text, PrismArt.PhotoFore,
             PrismType.Caption);
     }
@@ -312,7 +312,7 @@ internal sealed partial class PrismApp
     {
         var radius = Metrics.Radius.Sm * scale;
         var piece = tile.Group == PieceGroup.Mods ? null : gear[tile.Piece];
-        drawList.AddRectFilled(rect.Min, rect.Max, ImGui.GetColorU32(TileFill), radius);
+        drawList.AddRectFilled(rect.Min, rect.Max, TileFill, radius);
         if (piece is null)
         {
             PrismArt.SlotIcon(drawList, rect.Center, rect.Width * 0.5f, GearSlots.None, PrismArt.PhotoFore);
@@ -417,7 +417,7 @@ internal sealed partial class PrismApp
         var cardTop = MathF.Max(limits.Min.Y, MathF.Min(anchor, limits.Max.Y - height));
         var card = new Rect(new Vector2(limits.Max.X - width, cardTop), new Vector2(limits.Max.X, cardTop + height));
         var over = UiInteract.HoverOverlay(card);
-        drawList.AddRectFilled(card.Min, card.Max, ImGui.GetColorU32(CardFill), Metrics.Radius.Card * scale);
+        drawList.AddRectFilled(card.Min, card.Max, CardFill, Metrics.Radius.Card * scale);
         var left = card.Min.X + pad;
         var cursor = card.Min.Y + pad;
         var title = single is not null && GearItem(single.ItemId, out var name, out _) ? name : TileName(tile, gear);
@@ -594,8 +594,7 @@ internal sealed partial class PrismApp
         }
 
         var bleed = new Vector2(Metrics.Space.Xs * UiScale.Current, 0f);
-        drawList.AddRectFilled(row.Min - bleed, row.Max + bleed, ImGui.GetColorU32(PhotoHover),
-            Metrics.Radius.Sm * UiScale.Current);
+        drawList.AddRectFilled(row.Min - bleed, row.Max + bleed, PhotoHover, Metrics.Radius.Sm * UiScale.Current);
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         return true;
     }
