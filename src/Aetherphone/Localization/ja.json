@@ -5816,6 +5816,7 @@
   "prism.removePiece": "外す",
   "prism.glamGearNote": "写真の装備をひとつずつ追加して染色を選ぶと、みんながこのグラムを試着できます。",
   "prism.modHint": "使ったModの名前",
+  "prism.modTypeHint": "Modが変えるものを選んでください。キャラクター、または追加した装備です。",
   "prism.addMod": "追加",
   "prism.addDye": "染色を追加",
   "prism.noDye": "染色なし",

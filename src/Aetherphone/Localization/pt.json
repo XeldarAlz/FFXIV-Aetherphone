@@ -5816,6 +5816,7 @@
   "prism.removePiece": "Remover",
   "prism.glamGearNote": "Adicione cada peça da sua foto e escolha as tinturas para que outras pessoas possam provar o glam.",
   "prism.modHint": "Diga um mod que você usou",
+  "prism.modTypeHint": "Escolha o que o mod altera: seu personagem ou uma peça que você adicionou.",
   "prism.addMod": "Adicionar",
   "prism.addDye": "Adicionar tintura",
   "prism.noDye": "Sem tintura",

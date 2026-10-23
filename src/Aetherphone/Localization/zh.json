@@ -5816,6 +5816,7 @@
   "prism.removePiece": "移除",
   "prism.glamGearNote": "添加照片中的每件装备并选择染色，其他人就能试穿这套幻化。",
   "prism.modHint": "填写你用到的模组",
+  "prism.modTypeHint": "选择这个模组改变的内容：你的角色，或你添加的一件装备。",
   "prism.addMod": "添加",
   "prism.addDye": "添加染色",
   "prism.noDye": "无染色",

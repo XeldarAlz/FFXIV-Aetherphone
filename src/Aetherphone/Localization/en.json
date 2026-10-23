@@ -5816,6 +5816,7 @@
   "prism.removePiece": "Remove",
   "prism.glamGearNote": "Add each piece in your photo and pick its dyes, so people can try the glam on.",
   "prism.modHint": "Name a mod you used",
+  "prism.modTypeHint": "Pick what the mod changes: your character, or a piece you added.",
   "prism.addMod": "Add",
   "prism.addDye": "Add dye",
   "prism.noDye": "No dye",

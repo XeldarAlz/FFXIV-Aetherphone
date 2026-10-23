@@ -5816,6 +5816,7 @@
   "prism.removePiece": "Entfernen",
   "prism.glamGearNote": "Füge jedes Teil auf deinem Foto hinzu und wähle seine Farben, damit andere den Glam anprobieren können.",
   "prism.modHint": "Nenne einen Mod, den du benutzt hast",
+  "prism.modTypeHint": "Wähle, was die Mod verändert: deinen Charakter oder ein Teil, das du hinzugefügt hast.",
   "prism.addMod": "Hinzufügen",
   "prism.addDye": "Farbe hinzufügen",
   "prism.noDye": "Keine Farbe",
