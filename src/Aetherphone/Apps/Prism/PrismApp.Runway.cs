@@ -155,8 +155,8 @@ internal sealed partial class PrismApp
                     size + Metrics.Space.Xs * scale;
         var full = FullFrom(content, scale);
         var photoTop = PhotoTop(full, content);
-        var photo = new Rect(new Vector2(full.Min.X, photoTop), new Vector2(full.Max.X,
-            MathF.Max(photoTop, MathF.Min(photoTop + full.Width / PrismStore.EntryRatio, content.Max.Y - below))));
+        var photo = new Rect(new Vector2(full.Min.X, photoTop),
+            new Vector2(full.Max.X, MathF.Max(photoTop, content.Max.Y - below)));
         var captionTop = photo.Max.Y + Metrics.Space.Lg * scale;
         var questionTop = captionTop + captionLine + Metrics.Space.Xxs * scale;
         var rowTop = questionTop + questionHeight + Metrics.Space.Lg * scale;
@@ -432,19 +432,24 @@ internal sealed partial class PrismApp
     private void DrawPickGrid(ImDrawListPtr drawList, Rect area, PrismLookDto[] looks, float scale)
     {
         var count = Math.Min(looks.Length, pickOrder.Length);
-        var rows = (count + PicksColumns - 1) / PicksColumns;
         var gap = Metrics.Space.Xs * scale;
-        var tileWidth = (area.Width - gap * (PicksColumns - 1)) / PicksColumns;
-        var tileHeight = MathF.Min(tileWidth / PrismStore.EntryRatio,
-            MathF.Max(Metrics.Size.TapTarget * scale, (area.Height - gap * (rows - 1)) / MathF.Max(1, rows)));
-        tileWidth = tileHeight * PrismStore.EntryRatio;
-        var gridLeft = area.Center.X - (tileWidth * PicksColumns + gap * (PicksColumns - 1)) * 0.5f;
+        var columns = PicksColumns;
+        var tileHeight = PickTileHeight(area, count, columns, gap, scale);
+        var wide = PickTileHeight(area, count, columns - 1, gap, scale);
+        if (wide > tileHeight)
+        {
+            columns--;
+            tileHeight = wide;
+        }
+
+        var tileWidth = tileHeight * PrismStore.EntryRatio;
+        var gridLeft = area.Center.X - (tileWidth * columns + gap * (columns - 1)) * 0.5f;
         var rounding = Metrics.Radius.Md * scale;
         var fade = PrismMotion.At(pickSwapAge, 0f, Motion.Appear);
         for (var slot = 0; slot < count; slot++)
         {
-            var min = new Vector2(gridLeft + slot % PicksColumns * (tileWidth + gap),
-                area.Min.Y + slot / PicksColumns * (tileHeight + gap));
+            var min = new Vector2(gridLeft + slot % columns * (tileWidth + gap),
+                area.Min.Y + slot / columns * (tileHeight + gap));
             var tile = new Rect(min, min + new Vector2(tileWidth, tileHeight));
             var shown = pickOrder[slot];
             var swapping = fade < PrismMotion.Settled && pickFrom[slot] != shown;
@@ -468,6 +473,13 @@ internal sealed partial class PrismApp
                 OpenPick(shown);
             }
         }
+    }
+
+    private static float PickTileHeight(Rect area, int count, int columns, float gap, float scale)
+    {
+        var rows = (count + columns - 1) / columns;
+        return MathF.Min((area.Width - gap * (columns - 1)) / columns / PrismStore.EntryRatio,
+            MathF.Max(Metrics.Size.TapTarget * scale, (area.Height - gap * (rows - 1)) / MathF.Max(1, rows)));
     }
 
     private void DrawRoundedLook(ImDrawListPtr drawList, Rect rect, string url, float alpha, float rounding)
