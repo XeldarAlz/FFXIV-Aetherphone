@@ -77,6 +77,7 @@ internal sealed class PhotoComposeSession : IDisposable
     private readonly List<float?> framedForRatio = new();
     private string[] pickerPaths = Array.Empty<string>();
     private string? pendingPickedPath;
+    private int openings;
     private Spring zoomSpring = new(1f);
     private Spring centerXSpring = new(0.5f);
     private Spring centerYSpring = new(0.5f);
@@ -162,6 +163,7 @@ internal sealed class PhotoComposeSession : IDisposable
         CurrentIndex = 0;
         PreviewIndex = 0;
         Notice = string.Empty;
+        Interlocked.Increment(ref openings);
         pendingPickedPath = null;
         pickerPaths = library.List();
         LoadCrop(DefaultCrop);
@@ -169,7 +171,14 @@ internal sealed class PhotoComposeSession : IDisposable
 
     public void LaunchImportDialog(string title)
     {
-        FilePicker.PickImage(title, path => Interlocked.Exchange(ref pendingPickedPath, path));
+        var opening = Volatile.Read(ref openings);
+        FilePicker.PickImage(title, path =>
+        {
+            if (Volatile.Read(ref openings) == opening)
+            {
+                Interlocked.Exchange(ref pendingPickedPath, path);
+            }
+        });
     }
 
     public void ConsumePendingImport()
