@@ -115,7 +115,7 @@ internal static class UnderlineTabs
         var color = active ? style.ActiveInk : hovered ? ink.TitleInk : style.IdleInk;
         var fitted = Typography.FitText(label, MathF.Max(1f, rect.Width - LabelPadUnits * scale), textStyle);
         var center = rect.Center - new Vector2(0f, LabelLift * scale);
-        if (hovered)
+        if (hovered && !active)
         {
             var size = Typography.Measure(fitted, textStyle);
             var half = new Vector2(size.X * 0.5f + HoverPadX * scale, size.Y * 0.5f + HoverPadY * scale);
