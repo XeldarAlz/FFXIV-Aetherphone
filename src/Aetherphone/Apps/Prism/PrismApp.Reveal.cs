@@ -596,17 +596,13 @@ internal sealed partial class PrismApp
 
     private string RevealTitle(PrismResultsDto results, bool summary)
     {
-        var mine = results.MyHeatRank > 0;
-        var key = HashCode.Combine(summary, mine, results.Title, Loc.Current.Code);
-        if (revealTitle.IsCurrent(key))
+        if (summary && results.MyHeatRank <= 0)
         {
-            return revealTitle.Value;
+            return string.Empty;
         }
 
-        var text = summary && !mine ? string.Empty
-            : results.Title.Length == 0 ? Loc.T(summary ? L.Prism.YourPlacing : L.Prism.FinalTitle)
-            : Loc.T(L.Prism.WithTrack, Loc.T(summary ? L.Prism.YourPlacing : L.Prism.FinalTitle), results.Title);
-        return revealTitle.Store(key, text);
+        var label = Loc.T(summary ? L.Prism.YourPlacing : L.Prism.FinalTitle);
+        return results.Title.Length == 0 ? label : FactLine(ref revealTitle, label, results.Title);
     }
 
     private static string PlacingDetail(PrismPlacingDto placing) =>

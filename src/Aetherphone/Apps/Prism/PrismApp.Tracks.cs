@@ -272,11 +272,5 @@ internal sealed partial class PrismApp
                 Loc.T(L.Prism.LastWeekWinner, AtHandle(winner.Handle, winner.DisplayName)));
     }
 
-    private string TrackCaption(string title)
-    {
-        var key = HashCode.Combine(title, Loc.Current.Code);
-        return trackCaptionText.IsCurrent(key)
-            ? trackCaptionText.Value
-            : trackCaptionText.Store(key, Loc.T(L.Prism.WithTrack, Loc.T(L.Prism.ChooseTrack), title));
-    }
+    private string TrackCaption(string title) => FactLine(ref trackCaptionText, Loc.T(L.Prism.ChooseTrack), title);
 }

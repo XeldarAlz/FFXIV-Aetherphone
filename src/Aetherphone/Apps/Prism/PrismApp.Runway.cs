@@ -596,11 +596,8 @@ internal sealed partial class PrismApp
         if (canJudge && DrawButton(drawList, ActionRect(content, scale, 1), Loc.T(L.Prism.JudgeAnother),
                 ButtonStyle.Solid, scale))
         {
-            heatDone = false;
             ratingBallot = null;
-            store.ClearBallot();
-            store.RequestBallot();
-            Go(PrismScreen.Runway);
+            StartJudging();
         }
 
         var done = Loc.T(L.Prism.Done);
@@ -685,27 +682,15 @@ internal sealed partial class PrismApp
                 Plain[Math.Min(total, Plain.Length - 1)]));
     }
 
-    private string RateCaption(int current, int total)
-    {
-        var key = HashCode.Combine(current, total, Loc.Current.Code);
-        return rateCaption.IsCurrent(key)
-            ? rateCaption.Value
-            : rateCaption.Store(key, Loc.T(L.Prism.WithTrack, LookCounter(current, total), Loc.T(L.Prism.InspectHint)));
-    }
+    private string RateCaption(int current, int total) =>
+        FactLine(ref rateCaption, LookCounter(current, total), Loc.T(L.Prism.InspectHint));
 
     private string PicksCaption(PrismBallotDto ballot)
     {
-        var week = store.Week?.Title ?? string.Empty;
-        var key = HashCode.Combine(ballot.Stage, ballot.HeatLabel, week, Loc.Current.Code);
-        if (picksCaption.IsCurrent(key))
-        {
-            return picksCaption.Value;
-        }
-
         var heat = HeatTitle(ballot);
-        var text = heat.Length > 0 && week.Length > 0 ? Loc.T(L.Prism.WithTrack, heat, week)
+        var week = store.Week?.Title ?? string.Empty;
+        return heat.Length > 0 && week.Length > 0 ? FactLine(ref picksCaption, heat, week)
             : heat.Length > 0 ? heat : week;
-        return picksCaption.Store(key, text);
     }
 
     private string CoinCounter(long coins)
