@@ -60,7 +60,11 @@ internal static class PrismArt
     private const float ChipGlyphUnits = 13f;
     private const float FailedGlyphShare = 0.3f;
     private const float TryOnHoldSeconds = 0.9f;
-    private const float TryOnDim = 0.25f;
+    private const float TryOnDim = 0.45f;
+    private const float TryOnBandShare = 0.35f;
+    private const float TryOnBandPeak = 0.3f;
+    private const float RefractionBandShare = 0.6f;
+    private const float RefractionBandPeak = 0.45f;
     private const float IconStrokeUnits = 1.8f;
     private const int IconMaxPoints = 64;
     private const int IconCapSegments = 6;
@@ -131,12 +135,12 @@ internal static class PrismArt
     private static readonly string[] Digits = { "1", "2", "3", "4", "5" };
 
     private static readonly IconStroke[][] SlotIcons = BuildSlotIcons();
+    private static readonly float[] BandShape = BuildBandShape();
     private static string momentLabel = string.Empty;
     private static string momentFitted = string.Empty;
     private static float momentRoom;
-    private static float momentSize;
+    private static float momentWidth;
     private static int momentFonts;
-    private static Rect momentPill;
 
     public static float LabelPixels() => LabelUnits * UiScale.Current;
 
@@ -433,27 +437,51 @@ internal static class PrismArt
         return Vector4.Lerp(Spectrum[index], Spectrum[next], Math.Clamp(position - index, 0f, 1f));
     }
 
-    public static void Refraction(ImDrawListPtr drawList, Rect screen, float progress)
+    public static void Refraction(ImDrawListPtr drawList, Rect screen, float progress) =>
+        Bands(drawList, screen, progress, RefractionBandShare, RefractionBandPeak);
+
+    private static void Bands(ImDrawListPtr drawList, Rect screen, float progress, float share, float peak)
     {
         if (progress <= 0f || progress >= PrismMotion.Settled)
         {
             return;
         }
 
-        var alpha = (1f - progress) * 0.45f;
-        var band = screen.Width * 0.6f;
+        var alpha = (1f - progress) * peak;
+        var band = screen.Width * share;
         var left = screen.Min.X - band + (screen.Width + band) * progress;
         var bar = band / Spectrum.Length;
-        var alphaBits = (uint)(alpha * 255f + 0.5f) << 24;
+        drawList.PushClipRect(screen.Min, screen.Max, true);
         for (var index = 0; index < Spectrum.Length; index++)
         {
-            var min = new Vector2(MathF.Max(screen.Min.X, left + bar * index), screen.Min.Y);
-            var max = new Vector2(MathF.Min(screen.Max.X, left + bar * (index + 1)), screen.Max.Y);
-            if (max.X > min.X)
+            var min = new Vector2(left + bar * index, screen.Min.Y);
+            var max = new Vector2(min.X + bar, screen.Max.Y);
+            if (max.X <= screen.Min.X || min.X >= screen.Max.X)
             {
-                drawList.AddRectFilled(min, max, (SpectrumPacked[index] & 0x00FFFFFFu) | alphaBits);
+                continue;
             }
+
+            var from = BandColor(index, alpha);
+            var to = BandColor(index + 1, alpha);
+            drawList.AddRectFilledMultiColor(min, max, from, to, to, from);
         }
+
+        drawList.PopClipRect();
+    }
+
+    private static uint BandColor(int stop, float alpha) =>
+        (SpectrumPacked[Math.Min(stop, Spectrum.Length - 1)] & 0x00FFFFFFu) |
+        ((uint)(alpha * BandShape[stop] * 255f + 0.5f) << 24);
+
+    private static float[] BuildBandShape()
+    {
+        var shape = new float[Spectrum.Length + 1];
+        for (var index = 0; index < shape.Length; index++)
+        {
+            shape[index] = MathF.Sin(MathF.PI * index / Spectrum.Length);
+        }
+
+        return shape;
     }
 
     public static void Placeholder(ImDrawListPtr drawList, Rect rect, bool failed, float scale, float opacity = 1f)
@@ -570,22 +598,24 @@ internal static class PrismArt
         var sweep = PrismMotion.At(age, 0f, Motion.Sheet);
         var show = sweep * (1f - PrismMotion.At(age, TryOnHoldSeconds, Motion.Appear));
         drawList.AddRectFilled(photo.Min, photo.Max, Palette.Pack(ShadeClear with { W = TryOnDim * show }));
-        Refraction(drawList, photo, sweep);
-        var room = photo.Width - Metrics.Space.Lg * scale * 2f;
-        var size = PrismType.Snap(PrismFace.Label, LabelPixels());
-        if (!ReferenceEquals(label, momentLabel) || room != momentRoom || size != momentSize ||
-            Plugin.Fonts.Generation != momentFonts)
+        Bands(drawList, photo, sweep, TryOnBandShare, TryOnBandPeak);
+        var line = Typography.LineHeight(PrismType.Headline);
+        var gap = Metrics.Space.Xs * scale;
+        var room = photo.Width - Metrics.Space.Lg * scale * 2f - line - gap;
+        if (!ReferenceEquals(label, momentLabel) || room != momentRoom || Plugin.Fonts.Generation != momentFonts)
         {
             momentLabel = label;
             momentRoom = room;
-            momentSize = size;
             momentFonts = Plugin.Fonts.Generation;
-            momentPill = PillRect(Vector2.Zero, room, label, true, scale, out momentFitted);
+            momentFitted = Typography.FitText(label, MathF.Max(1f, room), PrismType.Headline);
+            momentWidth = Typography.Measure(momentFitted, PrismType.Headline).X;
         }
 
-        var pill = new Rect(momentPill.Min + photo.Center, momentPill.Max + photo.Center);
-        PaintPill(drawList, pill, glyph, momentFitted, ChipFill with { W = ChipFill.W * show }, White with { W = show },
-            scale);
+        var ink = White with { W = show };
+        var left = photo.Center.X - (line + gap + momentWidth) * 0.5f;
+        PhoneIcon.Draw(drawList, new Vector2(left + line * 0.5f, photo.Center.Y), glyph, ink, line);
+        Typography.Draw(drawList, new Vector2(left + line + gap, photo.Center.Y - line * 0.5f), momentFitted, ink,
+            PrismType.Headline);
     }
 
     private static Rect PillRect(Vector2 anchor, float maxWidth, string label, bool centered, float scale,
