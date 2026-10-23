@@ -321,7 +321,7 @@ internal sealed partial class PrismApp
                 var outfit = Loc.T(L.Prism.WinnersOutfit);
                 var button = new Rect(new Vector2(left, cursor),
                     new Vector2(left + ButtonWidth([outfit], width, scale), cursor + Button.LargeHeight * scale));
-                if (DrawButton(list, button, outfit, ButtonStyle.Tinted, scale))
+                if (DrawButton(list, button, outfit, ButtonStyle.Plain, scale))
                 {
                     OpenGlam(finalOrder[0]);
                 }
