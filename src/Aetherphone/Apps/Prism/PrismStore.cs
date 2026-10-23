@@ -226,7 +226,7 @@ internal sealed class PrismStore : IDisposable
                 {
                     lastWeekResults[id] = fetched;
                 }
-            });
+            }, () => lastWeekResults.TryRemove(new KeyValuePair<string, PrismResultsDto?>(id, null)));
         }
     }
 
