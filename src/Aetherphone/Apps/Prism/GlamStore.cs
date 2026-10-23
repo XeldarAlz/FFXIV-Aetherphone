@@ -29,6 +29,7 @@ internal sealed class GlamStore : IDisposable
     public const int MaxPhotos = 4;
 
     private const int MoreLimit = 4;
+    private const int MeRetrySeconds = 5;
 
     private const int PhotoBaseSize = 1080;
     private const PostAspect GlamAspect = PostAspect.Portrait;
@@ -39,12 +40,15 @@ internal sealed class GlamStore : IDisposable
     };
 
     private readonly AethernetSession session;
+    private readonly AccountClient account;
     private readonly GlamClient client;
     private readonly MediaClient media;
     private readonly SafetyClient safety;
     private readonly SocialClient social;
     private readonly StoreWork work = new("Glams");
     private readonly FailureSlot postFailure = new();
+    private readonly FailureSlot profileFailure = new();
+    private readonly RetryGate meGate = new(TimeSpan.FromSeconds(MeRetrySeconds));
     private readonly FeedLane<GlamDto>[] discover =
     {
         FeedLane<GlamDto>.ServerOrdered(), FeedLane<GlamDto>.ServerOrdered(), FeedLane<GlamDto>.ServerOrdered(),
@@ -71,12 +75,22 @@ internal sealed class GlamStore : IDisposable
     private volatile bool postFailed;
     private volatile int epoch;
     private volatile string followsFor = string.Empty;
+    private volatile GlamAuthorDto? me;
+    private volatile string meFor = string.Empty;
+    private volatile bool loadingMe;
+    private volatile bool savingProfile;
+    private volatile GlamAuthorDto[] people = Array.Empty<GlamAuthorDto>();
+    private volatile string peopleFor = string.Empty;
+    private volatile string peopleAsked = string.Empty;
+    private volatile bool peopleLoading;
+    private volatile bool peopleFailed;
     private bool? vanillaOnly;
     private (int Race, int? Gender) body;
 
     public GlamStore(AethernetSession session, AethernetApi api)
     {
         this.session = session;
+        account = api.Account;
         client = api.Glams;
         media = api.Media;
         safety = api.Safety;
@@ -88,6 +102,22 @@ internal sealed class GlamStore : IDisposable
     public bool IsSignedIn => session.IsSignedIn;
 
     public string MyId => session.CurrentUser?.Id ?? string.Empty;
+
+    public GlamAuthorDto? Me => meFor.Length > 0 && meFor == MyId ? me : null;
+
+    public bool SavingProfile => savingProfile;
+
+    public string ProfileFailureText => profileFailure.Text();
+
+    public GlamAuthorDto[] People => people;
+
+    public string PeopleFor => peopleFor;
+
+    public string PeopleAsked => peopleAsked;
+
+    public bool PeopleLoading => peopleLoading;
+
+    public bool PeopleFailed => peopleFailed;
 
     public bool? VanillaOnly => vanillaOnly;
 
@@ -546,6 +576,104 @@ internal sealed class GlamStore : IDisposable
     public void Report(string glamId, ReportReason reason, Action<bool> done) =>
         work.Run("report", token => safety.ReportAsync(GlamClient.ReportTarget, glamId, reason, token), done);
 
+    public void EnsureMe()
+    {
+        var owner = MyId;
+        if (!IsSignedIn || owner.Length == 0 || loadingMe || Me is not null || !meGate.TryPass())
+        {
+            return;
+        }
+
+        loadingMe = true;
+        work.Run("me", async token =>
+        {
+            var fetched = await account.MeAsync(token).ConfigureAwait(false);
+            if (fetched is not null && owner == MyId)
+            {
+                AcceptMe(fetched, owner);
+            }
+        }, () => loadingMe = false);
+    }
+
+    public void UpdateProfile(string displayName, string handle, string bio, GlamPhotoDraft? photo,
+        Action<bool> onComplete)
+    {
+        var owner = MyId;
+        if (savingProfile || !IsSignedIn || owner.Length == 0)
+        {
+            return;
+        }
+
+        savingProfile = true;
+        profileFailure.Clear();
+        work.Run("profile update", async token =>
+        {
+            var failure = AepFailure.None;
+            string? avatarUrl = null;
+            if (photo is { } picked)
+            {
+                avatarUrl = await AvatarUpload.UploadAsync(media, picked.Path, picked.Crop, token,
+                    received => failure = received).ConfigureAwait(false);
+                if (avatarUrl is null)
+                {
+                    return FailProfile(failure);
+                }
+            }
+
+            var updated = await account.UpdateProfileAsync(
+                new UpdateProfileRequest(displayName, handle, bio, avatarUrl), token, null,
+                received => failure = received).ConfigureAwait(false);
+            if (updated is null)
+            {
+                return FailProfile(failure);
+            }
+
+            AcceptMe(updated, owner);
+            return true;
+        }, onComplete, () => savingProfile = false);
+    }
+
+    public void SearchPeople(string query, bool retry = false)
+    {
+        if (!IsSignedIn || query.Length == 0 || (query == peopleAsked && !retry))
+        {
+            return;
+        }
+
+        peopleAsked = query;
+        peopleLoading = true;
+        peopleFailed = false;
+        work.Run("people", async token =>
+        {
+            var result = await account.SearchAsync(query, token).ConfigureAwait(false);
+            if (peopleAsked != query)
+            {
+                return;
+            }
+
+            if (result?.Users is not { } users)
+            {
+                peopleFailed = true;
+                return;
+            }
+
+            var found = new GlamAuthorDto[users.Length];
+            for (var index = 0; index < users.Length; index++)
+            {
+                found[index] = Author(users[index], users[index].Id);
+            }
+
+            people = found;
+            peopleFor = query;
+        }, () =>
+        {
+            if (peopleAsked == query)
+            {
+                peopleLoading = false;
+            }
+        });
+    }
+
     public void RefreshSeason()
     {
         work.Run("season", async token =>
@@ -628,6 +756,26 @@ internal sealed class GlamStore : IDisposable
         {
             detail = null;
         }
+    }
+
+    private static GlamAuthorDto Author(UserDto user, string id) =>
+        new(id, user.DisplayName, user.Handle, user.AvatarUrl ?? string.Empty, user.Bio);
+
+    private void AcceptMe(UserDto user, string owner)
+    {
+        var mine = Author(user, owner);
+        me = mine;
+        meFor = owner;
+        if (profile is { } current && current.User?.Id == owner)
+        {
+            profile = current with { User = mine };
+        }
+    }
+
+    private bool FailProfile(AepFailure failure)
+    {
+        profileFailure.Set(failure.Failed ? failure : AepFailure.Transport(AepFailureKind.Offline));
+        return false;
     }
 
     private bool FailPost(AepFailure failure)

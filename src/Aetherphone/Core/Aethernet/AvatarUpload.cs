@@ -2,6 +2,7 @@ using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Net;
 using Aetherphone.Core.Wallpapers;
 
 namespace Aetherphone.Core.Aethernet;
@@ -47,28 +48,37 @@ internal static class AvatarUpload
     public static async Task<AvatarUploadResult> RunAsync(AccountClient account, MediaClient media, string sourcePath,
         WallpaperCrop crop, CancellationToken token)
     {
-        var baked = ImageProcessor.BakeSquareJpeg(sourcePath, crop, Size);
-        var upload = await media.UploadUrlAsync("image/jpeg", "avatar", token).ConfigureAwait(false);
-        if (upload is null)
-        {
-            return AvatarUploadResult.Unreachable;
-        }
-
-        if (!await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token).ConfigureAwait(false))
+        var publicUrl = await UploadAsync(media, sourcePath, crop, token).ConfigureAwait(false);
+        if (publicUrl is null)
         {
             return AvatarUploadResult.Unreachable;
         }
 
         var status = 0;
         var updated = await account
-            .UpdateProfileAsync(new UpdateProfileRequest(null, null, null, upload.PublicUrl), token,
+            .UpdateProfileAsync(new UpdateProfileRequest(null, null, null, publicUrl), token,
                 code => status = code)
             .ConfigureAwait(false);
         if (updated is not null)
         {
-            return new AvatarUploadResult(AvatarUploadOutcome.Uploaded, updated, upload.PublicUrl);
+            return new AvatarUploadResult(AvatarUploadOutcome.Uploaded, updated, publicUrl);
         }
 
         return status is >= 400 and < 500 ? AvatarUploadResult.Rejected : AvatarUploadResult.Unreachable;
+    }
+
+    public static async Task<string?> UploadAsync(MediaClient media, string sourcePath, WallpaperCrop crop,
+        CancellationToken token, Action<AepFailure>? onFailure = null)
+    {
+        var baked = ImageProcessor.BakeSquareJpeg(sourcePath, crop, Size);
+        var upload = await media.UploadUrlAsync("image/jpeg", "avatar", token, onFailure).ConfigureAwait(false);
+        if (upload is null ||
+            !await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token, onFailure)
+                .ConfigureAwait(false))
+        {
+            return null;
+        }
+
+        return upload.PublicUrl;
     }
 }

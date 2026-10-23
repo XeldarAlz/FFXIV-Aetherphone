@@ -21,7 +21,8 @@ internal sealed record GlamModDto(
 
 internal sealed record GlamOptionDto(string Group = "", string[]? Picked = null);
 
-internal sealed record GlamAuthorDto(string Id = "", string DisplayName = "", string Handle = "", string AvatarUrl = "");
+internal sealed record GlamAuthorDto(string Id = "", string DisplayName = "", string Handle = "", string AvatarUrl = "",
+    string Bio = "");
 
 internal sealed record GlamPhotoDto(string Url = "", int Width = 0, int Height = 0);
 
