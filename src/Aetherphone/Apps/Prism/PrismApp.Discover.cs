@@ -24,7 +24,6 @@ internal sealed partial class PrismApp
     private const int GridColumns = 2;
     private const int ExploreColumns = 3;
     private const int PlaceholderRows = 2;
-    private const float TileShadeShare = 0.4f;
     private const float HeaderDotShare = 0.32f;
     private const float HeaderDotRimUnits = 1.5f;
     private const float ContestRowUnits = 120f;
@@ -45,8 +44,6 @@ internal sealed partial class PrismApp
     {
         PrismFact.FitsMe, PrismFact.Race, PrismFact.Male, PrismFact.Female, PrismFact.Modded, PrismFact.Vanilla,
     };
-    private static readonly Vector4 TileShade = new(0f, 0f, 0f, 0.7f);
-    private static readonly Vector4 TileClear = new(0f, 0f, 0f, 0f);
 
     private readonly PullToRefresh discoverPull = new();
     private readonly ChipRail scopeRail = new();

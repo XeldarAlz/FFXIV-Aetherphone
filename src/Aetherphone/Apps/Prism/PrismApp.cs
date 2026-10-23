@@ -52,7 +52,6 @@ internal enum PrismScreen : byte
 internal sealed partial class PrismApp : IResumableApp
 {
     private const float RefreshSeconds = 120f;
-    private const float HeaderGapUnits = 14f;
     private const float NoticeMaxUnits = PrismType.TitleUnits;
     private const float NoticeMinUnits = PrismType.HeadingUnits;
     private const int NoticeLines = 3;
@@ -368,37 +367,6 @@ internal sealed partial class PrismApp : IResumableApp
         SyncTab(next);
         enterDirection = direction;
         screenAge = 0f;
-        introDelay = 0f;
-    }
-
-    private float DrawHeader(ImDrawListPtr drawList, Rect content, string left, string right, bool back, float scale)
-    {
-        var gutter = PrismArt.Gutter(scale);
-        var top = content.Min.Y + HeaderGapUnits * scale;
-        var row = new Rect(new Vector2(content.Min.X + gutter, top), new Vector2(content.Max.X - gutter, top));
-        float height;
-        if (back)
-        {
-            if (PrismArt.Link(drawList, row.Min, Loc.T(L.Prism.Back), PrismArt.Muted, scale))
-            {
-                LeaveScreen();
-            }
-
-            height = PrismType.LineHeight(PrismFace.Label, PrismArt.LabelPixels());
-            if (right.Length > 0)
-            {
-                PrismType.DrawRight(drawList, new Vector2(row.Max.X, top), right, PrismArt.Fore, PrismFace.Label,
-                    PrismArt.LabelPixels());
-            }
-        }
-        else
-        {
-            height = PrismArt.Programme(drawList, row, left, right, PrismArt.Fore);
-        }
-
-        var rule = top + height + HeaderGapUnits * 0.5f * scale;
-        PrismArt.Hairline(drawList, row.Min.X, row.Max.X, rule, PrismArt.Fore, scale);
-        return rule + HeaderGapUnits * scale;
     }
 
     private void LeaveScreen()
@@ -734,40 +702,6 @@ internal sealed partial class PrismApp : IResumableApp
         drawList.PushClipRect(position, position + size, true);
         PrismType.Draw(drawList, position + new Vector2(0f, size.Y * (1f - progress)), text, color, face, pixels);
         drawList.PopClipRect();
-    }
-
-    private float DrawNotice(ImDrawListPtr drawList, Rect content, string title, string body, float scale,
-        int strips = 1)
-    {
-        var gutter = PrismArt.Gutter(scale);
-        var width = content.Width - gutter * 2f;
-        var pixels = PrismType.Fit(title, PrismFace.Headline, width, NoticeMaxUnits * scale,
-            NoticeMinUnits * scale, NoticeLines, out var lines);
-        var copy = PrismType.Sentences(body, TextStyles.Subheadline, width);
-        var bodyWidth = PrismType.BalancedWidth(copy, TextStyles.Subheadline, width);
-        var bodyHeight = copy.Length > 0 ? Typography.MeasureWrappedBlock(copy, TextStyles.Subheadline, bodyWidth).Y : 0f;
-        var height = lines.Length * PrismType.LineHeight(PrismFace.Headline, pixels) + Metrics.Space.Lg * scale +
-                     bodyHeight;
-        var bottom = StripRect(content, scale, strips - 1).Min.Y - Metrics.Space.Xxl * scale;
-        var top = bottom - height;
-        top += PrismType.DrawLines(drawList, new Vector2(content.Min.X + gutter, top), lines, PrismArt.Fore,
-            PrismFace.Headline, pixels) + Metrics.Space.Lg * scale;
-        if (copy.Length > 0)
-        {
-            Typography.DrawWrappedLeft(new Vector2(content.Min.X + gutter, top), copy, PrismArt.Muted,
-                TextStyles.Subheadline, bodyWidth);
-        }
-
-        return bottom;
-    }
-
-    private Rect StripRect(Rect content, float scale, int fromBottom = 0)
-    {
-        var gutter = PrismArt.Gutter(scale);
-        var height = PrismArt.StripUnits * scale;
-        var bottom = content.Max.Y - bottomChrome - PrismArt.BottomMargin(scale) -
-                     fromBottom * (height + Metrics.Space.Md * scale);
-        return new Rect(new Vector2(content.Min.X + gutter, bottom - height), new Vector2(content.Max.X - gutter, bottom));
     }
 
     private void TickRefresh()

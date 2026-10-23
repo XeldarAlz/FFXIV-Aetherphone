@@ -57,7 +57,6 @@ internal sealed partial class PrismApp
     private PrismScreen bodyScreen;
     private PrismScreen drawingScreen;
     private float pendingScroll = KeepScroll;
-    private string? introWeek;
     private string wearingKey = string.Empty;
     private string wearingTitle = string.Empty;
     private string wearingGlamId = string.Empty;
@@ -188,13 +187,6 @@ internal sealed partial class PrismApp
         }
         else if (next == PrismTab.Week)
         {
-            var week = store.Week?.Id ?? string.Empty;
-            if (week != introWeek)
-            {
-                introWeek = week;
-                introDelay = IntroSeconds;
-            }
-
             store.Refresh();
         }
     }

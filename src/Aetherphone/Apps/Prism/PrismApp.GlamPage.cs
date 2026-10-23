@@ -26,10 +26,6 @@ internal enum GlamMenuAction : byte
 
 internal sealed partial class PrismApp
 {
-    private const float MutedOnPhoto = 0.72f;
-    private const float DetailTitleUnits = PrismType.TitleUnits;
-    private const float DetailTitleMinUnits = PrismType.HeadingUnits;
-    private const string Arrow = "→";
     private const string GlamMetaSeparator = " · ";
     private const string LikeSlotTemplate = "9.9K";
     private const int AvatarSegments = 32;
@@ -66,7 +62,6 @@ internal sealed partial class PrismApp
     private CachedText triedText;
     private CachedText raceText;
     private CachedText moreText;
-    private CachedText getText;
     private CachedText metaText;
     private CachedText ownedCountText;
     private CachedText installedText;
@@ -1247,90 +1242,6 @@ internal sealed partial class PrismApp
         return line;
     }
 
-    private float DrawGearList(ImDrawListPtr drawList, float left, float top, float width, GlamGearDto[] gear,
-        bool interactive, float scale)
-    {
-        for (var index = 0; index < gear.Length; index++)
-        {
-            if (gear[index].ItemId != 0)
-            {
-                top = DrawGearRow(drawList, left, top, width, gear[index], interactive, scale);
-            }
-        }
-
-        for (var index = 0; index < gear.Length; index++)
-        {
-            if (gear[index].ItemId == 0 && gear[index].Mods is { Length: > 0 } mods)
-            {
-                top = DrawSectionLabel(drawList, left, top + Metrics.Space.Lg * scale, width, 1,
-                    Loc.T(L.Prism.CharacterHeading), scale);
-                top = DrawModChips(drawList, left, top, width, mods, interactive, scale);
-            }
-        }
-
-        return top;
-    }
-
-    private float DrawGearRow(ImDrawListPtr drawList, float left, float top, float width, GlamGearDto piece,
-        bool interactive, float scale)
-    {
-        var labelPixels = PrismArt.LabelPixels();
-        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
-        var icon = GearIconUnits * scale;
-        if (GearItem(piece.ItemId, out var name, out var iconId))
-        {
-            GameIconTile.Draw(drawList, textures, iconId, new Vector2(left, top), new Vector2(left + icon, top + icon), 0f,
-                scale);
-        }
-
-        var dyes = DyeLine(piece.Stain0, piece.Stain1);
-        var owned = interactive && screen == PrismScreen.GlamDetail && ownedIds.Contains(piece.ItemId);
-        var lines = dyes.Length > 0 || owned ? 2 : 1;
-        var textTop = top + MathF.Max(0f, (icon - labelLine * lines) * 0.5f);
-        var textLeft = left + icon + Metrics.Space.Md * scale;
-        var tryLabel = Loc.T(L.Prism.TryOnGlam);
-        var tryWidth = interactive ? PrismType.Measure(tryLabel, PrismFace.Label, labelPixels).X : 0f;
-        var room = width - (textLeft - left) - (interactive ? tryWidth + Metrics.Space.Md * scale : 0f);
-        var fitted = PrismType.FitLabel(name, labelPixels, room);
-        if (!interactive)
-        {
-            PrismType.Draw(drawList, new Vector2(textLeft, textTop), fitted, PrismArt.Fore, PrismFace.Label,
-                labelPixels);
-        }
-        else if (PrismArt.Link(drawList, new Vector2(textLeft, textTop), fitted, PrismArt.Fore, scale))
-        {
-            OpenItemGlams(piece.ItemId);
-        }
-
-        if (interactive &&
-            PrismArt.Link(drawList, new Vector2(left + width - tryWidth, textTop), tryLabel, PrismArt.Muted, scale))
-        {
-            glamour.TryOnPiece(piece);
-            StartWearing(string.Empty, name);
-        }
-
-        if (owned)
-        {
-            PrismType.DrawRight(drawList, new Vector2(left + width, textTop + labelLine), Loc.T(L.Prism.Owned),
-                PrismArt.Muted, PrismFace.Label, labelPixels);
-        }
-
-        if (dyes.Length > 0)
-        {
-            PrismType.Draw(drawList, new Vector2(textLeft, textTop + labelLine),
-                PrismType.FitLabel(dyes, labelPixels, room), PrismArt.Muted, PrismFace.Label, labelPixels);
-        }
-
-        var bottom = top + MathF.Max(icon, labelLine * 2f) + Metrics.Space.Sm * scale;
-        if (piece.Mods is { Length: > 0 } mods)
-        {
-            bottom = DrawModChips(drawList, textLeft, bottom, width - (textLeft - left), mods, interactive, scale);
-        }
-
-        PrismArt.Hairline(drawList, left, left + width, bottom, PrismArt.Faint, scale);
-        return bottom + Metrics.Space.Md * scale;
-    }
-
     private string DyeLine(byte stain0, byte stain1)
     {
         var key = stain0 | stain1 << 8;
@@ -1343,52 +1254,6 @@ internal sealed partial class PrismApp
         }
 
         return line;
-    }
-
-    private float DrawModChips(ImDrawListPtr drawList, float left, float top, float width, GlamModDto[] mods,
-        bool interactive, float scale)
-    {
-        var labelPixels = PrismArt.LabelPixels();
-        var pitch = PrismType.LineHeight(PrismFace.Label, labelPixels) + Metrics.Space.Sm * scale;
-        var getKey = Loc.Current.Code.GetHashCode(StringComparison.Ordinal);
-        var get = getText.IsCurrent(getKey) ? getText.Value : getText.Store(getKey, Loc.T(L.Prism.GetMod) + " " + Arrow);
-        var getWidth = PrismType.Measure(get, PrismFace.Label, labelPixels).X;
-        for (var index = 0; index < mods.Length; index++)
-        {
-            var mod = mods[index];
-            var (line, allowed, installed) = ModLine(mod);
-            installed &= interactive;
-            allowed &= interactive && !installed;
-            var have = installed ? Loc.T(L.Prism.Installed) : string.Empty;
-            var haveWidth = installed ? PrismType.Measure(have, PrismFace.Label, labelPixels).X : 0f;
-            var side = allowed ? getWidth : haveWidth;
-            var room = width - (side > 0f ? side + Metrics.Space.Md * scale : 0f);
-            var fitted = PrismType.FitLabel(line, labelPixels, room);
-            if (!interactive)
-            {
-                PrismType.Draw(drawList, new Vector2(left, top), fitted, PrismArt.Fore, PrismFace.Label, labelPixels);
-            }
-            else if (PrismArt.Link(drawList, new Vector2(left, top), fitted, PrismArt.Fore, scale, pitch))
-            {
-                OpenModGlams(mod);
-            }
-
-            if (installed)
-            {
-                PrismType.DrawRight(drawList, new Vector2(left + width, top), have, PrismArt.Muted, PrismFace.Label,
-                    labelPixels);
-            }
-
-            if (allowed && PrismArt.Link(drawList, new Vector2(left + width - getWidth, top), get, PrismArt.Muted, scale,
-                    pitch))
-            {
-                UrlActions.AskThenOpen(mod.Link);
-            }
-
-            top += pitch;
-        }
-
-        return top + Metrics.Space.Sm * scale;
     }
 
     private (string Line, bool Allowed, bool Installed) ModLine(GlamModDto mod)

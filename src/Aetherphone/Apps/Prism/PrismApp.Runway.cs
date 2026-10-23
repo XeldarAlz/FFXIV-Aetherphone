@@ -27,12 +27,10 @@ internal sealed partial class PrismApp
     private const float PodiumLeadShare = 0.38f;
     private const float PodiumMedalUnits = 14f;
     private const string SendPicksId = "prism.sendPicks";
-    private const string MoreGlyph = "•••";
     private const int OutcomePending = 0;
     private const int OutcomeSent = 1;
     private const int OutcomeFailed = 2;
 
-    private static readonly string[] Padded = BuildDigits("00");
     private static readonly string[] Plain = BuildDigits("0");
     private static readonly uint PickPillFill = Palette.Pack(new Vector4(0f, 0f, 0f, 0.55f));
     private static readonly uint PickHoverWash = Palette.Pack(new Vector4(1f, 1f, 1f, 0.12f));

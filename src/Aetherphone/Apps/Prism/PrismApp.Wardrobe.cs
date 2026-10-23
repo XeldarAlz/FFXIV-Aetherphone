@@ -32,7 +32,6 @@ internal sealed partial class PrismApp
     private const float BoardColumnUnits = 96f;
     private const int BoardWeaponRow = 1;
     private const int SheetCapacity = 4;
-    private const int CollagePieces = 4;
 
     private static readonly int[] BodySlots =
     {

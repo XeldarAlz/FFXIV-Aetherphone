@@ -81,10 +81,6 @@ internal sealed partial class PrismApp
     private void FinishGuide()
     {
         OpenTab(guideReturn);
-        if (guideReturn == PrismTab.Week)
-        {
-            introDelay = IntroSeconds;
-        }
     }
 
     private void DrawGuide(ImDrawListPtr drawList, Rect content, float scale)

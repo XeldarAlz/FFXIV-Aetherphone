@@ -33,7 +33,6 @@ internal sealed partial class PrismApp
     private const float RevealTapTopUnits = 56f;
     private const float StoryBarGapUnits = 8f;
     private const float StoryRowGapUnits = 12f;
-    private const float SectionIndexUnits = 36f;
     private const float RuleRevealDelay = 0.25f;
     private const float CreditDelay = 0.3f;
     private const float CreditWorldShare = 0.4f;
@@ -389,19 +388,6 @@ internal sealed partial class PrismApp
             NoticeLines, out var lines);
         return top + PrismType.DrawLines(drawList, new Vector2(left, top), lines, PrismArt.Fore,
             PrismFace.Headline, pixels) + Metrics.Space.Xl * scale;
-    }
-
-    private static float DrawSectionLabel(ImDrawListPtr drawList, float left, float top, float width, int index,
-        string label, float scale)
-    {
-        var labelPixels = PrismArt.LabelPixels();
-        PrismType.Draw(drawList, new Vector2(left, top), Padded[Math.Min(index + 1, Padded.Length - 1)],
-            PrismArt.Muted, PrismFace.Label, labelPixels);
-        PrismType.Draw(drawList, new Vector2(left + SectionIndexUnits * scale, top), label,
-            PrismArt.Fore, PrismFace.Label, labelPixels);
-        var rule = top + PrismType.LineHeight(PrismFace.Label, labelPixels) + Metrics.Space.Sm * scale;
-        PrismArt.Hairline(drawList, left, left + width, rule, PrismArt.Faint, scale);
-        return rule + Metrics.Space.Md * scale;
     }
 
     private float DrawPodium(ImDrawListPtr drawList, float left, float top, float width, float scale)
