@@ -10972,9 +10972,6 @@ internal static class L
         public static readonly LocString Save = new("prism.save", "Save");
         public static readonly LocString Saved = new("prism.saved", "Saved");
         public static readonly LocString Like = new("prism.like", "Like");
-        public static readonly LocPlural OwnPieces = new("prism.ownPieces", "You own {1} of {0} piece",
-            "You own {1} of {0} pieces");
-        public static readonly LocString ModsInstalled = new("prism.modsInstalled", "{0} of {1} mods installed");
         public static readonly LocString GearHeading = new("prism.gearHeading", "Gear");
         public static readonly LocString CharacterHeading = new("prism.characterHeading", "Character");
         public static readonly LocString GetMod = new("prism.getMod", "Get it");
@@ -11084,7 +11081,6 @@ internal static class L
         public static readonly LocString Activity = new("prism.activity", "Activity");
         public static readonly LocString ActivityToday = new("prism.activityToday", "Today");
         public static readonly LocString ActivityThisWeek = new("prism.activityThisWeek", "This week");
-        public static readonly LocString ActivityThisMonth = new("prism.activityThisMonth", "This month");
         public static readonly LocString ActivityEarlier = new("prism.activityEarlier", "Earlier");
         public static readonly LocString PreviousGlam = new("prism.previousGlam", "Previous glam");
         public static readonly LocString Published = new("prism.published", "Published");
