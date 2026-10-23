@@ -10835,7 +10835,6 @@ internal static class L
         public static readonly LocString FinalCloses = new("prism.finalCloses", "The final closes");
         public static readonly LocString ResultsAt = new("prism.resultsAt", "Results arrive");
         public static readonly LocString EnterLook = new("prism.enterLook", "Enter your glam");
-        public static readonly LocString EnterThisLook = new("prism.enterThisLook", "Enter this glam");
         public static readonly LocString Uploading = new("prism.uploading", "Uploading your glam…");
         public static readonly LocString Withdraw = new("prism.withdraw", "Withdraw");
         public static readonly LocString WithdrawTitle = new("prism.withdrawTitle", "Withdraw your glam?");
@@ -10947,7 +10946,7 @@ internal static class L
         public static readonly LocString Rename = new("prism.rename", "Rename");
         public static readonly LocString AddPhoto = new("prism.addPhoto", "Add a photo");
         public static readonly LocString ChangePhoto = new("prism.changePhoto", "Change photo");
-        public static readonly LocString UsePhoto = new("prism.usePhoto", "Use this photo");
+        public static readonly LocString UsePhoto = new("prism.usePhoto", "Use photo");
         public static readonly LocString Rewards = new("prism.rewards", "Rewards");
         public static readonly LocString RewardsHeadline = new("prism.rewardsHeadline", "Win the week");
         public static readonly LocString RewardsIntro = new("prism.rewardsIntro",

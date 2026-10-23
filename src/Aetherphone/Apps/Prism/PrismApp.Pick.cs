@@ -47,8 +47,18 @@ internal sealed partial class PrismApp
 
         pickIntake.AcceptDrop(content, library, PrismArt.Fore);
         var week = store.Week;
-        var top = DrawBackHeader(drawList, content, week?.Title ?? Loc.T(L.Prism.EnterLook), scale) +
-                  Metrics.Space.Sm * scale;
+        var enter = Loc.T(L.Prism.Enter);
+        var ready = pickSession.HasSelection && !store.Busy && (!VanillaEntry || DraftPieces() > 0);
+        var top = DrawActionHeader(drawList, content, Loc.T(L.Common.Cancel), week?.Title ?? Loc.T(L.Prism.EnterLook),
+            enter, enter, ready, UiSound.Shutter, scale, out var entered) + Metrics.Space.Sm * scale;
+        if (entered)
+        {
+            var (race, gender) = WornBody();
+            RememberEntryDrops();
+            store.Enter(pickSession.FirstSelected, pickSession.CropsArray()[0], EntryOutfit(), race, gender,
+                entrySettled);
+        }
+
         if (week is { Brief.Length: > 0 })
         {
             top += Typography.DrawWrappedLeft(new Vector2(content.Min.X, top), week.Brief, PrismArt.Muted,
@@ -61,38 +71,28 @@ internal sealed partial class PrismApp
             !store.Busy, Loc.T(L.Prism.EnterLook));
 
         var row = ActionRect(content, scale);
-        var label = Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.EnterThisLook);
-        var ready = pickSession.HasSelection && !store.Busy && (!VanillaEntry || DraftPieces() > 0);
-        if (DrawButton(drawList, row, label, ButtonStyle.Solid, scale, enabled: ready, id: "prism.pick.primary",
-                tapSound: UiSound.Shutter))
-        {
-            var (race, gender) = WornBody();
-            RememberEntryDrops();
-            store.Enter(pickSession.FirstSelected, pickSession.CropsArray()[0], EntryOutfit(), race, gender,
-                entrySettled);
-        }
-
-        var gridBottom = row.Min.Y - Metrics.Space.Sm * scale;
+        var gridBottom = content.Max.Y - bottomChrome - PrismArt.BottomMargin(scale);
         var link = OutfitLink();
         if (link.Length > 0)
         {
-            var linkRect = PlainRect(new Vector2(row.Min.X, gridBottom - Button.LargeHeight * scale * 0.5f), link,
-                row.Width, 0f, scale);
-            if (DrawButton(drawList, linkRect, link, ButtonStyle.Plain, scale, enabled: !store.Busy))
+            var linkRect = PlainRect(row.Center, link, row.Width, 0.5f, scale);
+            if (DrawButton(drawList, linkRect, link, ButtonStyle.Tinted, scale, enabled: !store.Busy))
             {
                 OpenOutfit();
             }
 
-            gridBottom = linkRect.Min.Y;
+            gridBottom = linkRect.Min.Y - Metrics.Space.Lg * scale;
         }
 
-        gridBottom -= Metrics.Space.Lg * scale;
-        if (store.Failed(PrismAction.Enter) && !store.Busy)
+        var notice = store.Busy ? Loc.T(L.Prism.Uploading)
+            : store.Failed(PrismAction.Enter) ? store.ActionFailureText is { Length: > 0 } reason
+                ? reason
+                : Loc.T(L.Common.LoadFailedHint)
+            : string.Empty;
+        if (notice.Length > 0)
         {
-            var reason = store.ActionFailureText;
-            var text = reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint);
-            gridBottom -= Typography.MeasureWrappedBlock(text, PrismType.Body, row.Width).Y;
-            Typography.DrawWrappedLeft(new Vector2(row.Min.X, gridBottom), text, PrismArt.Muted, PrismType.Body,
+            gridBottom -= Typography.MeasureWrappedBlock(notice, PrismType.Body, row.Width).Y;
+            Typography.DrawWrappedLeft(new Vector2(row.Min.X, gridBottom), notice, PrismArt.Muted, PrismType.Body,
                 row.Width);
             gridBottom -= Metrics.Space.Md * scale;
         }

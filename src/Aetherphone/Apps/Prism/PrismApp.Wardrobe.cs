@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows;
@@ -655,8 +656,8 @@ internal sealed partial class PrismApp
 
         composeSession.ConsumePendingImport();
         var use = Loc.T(L.Prism.UsePhoto);
-        var top = DrawActionHeader(drawList, content, Loc.T(L.Prism.AddPhoto), true, use, use,
-            composeSession.HasSelection, scale, out var chosen) + Metrics.Space.Sm * scale;
+        var top = DrawActionHeader(drawList, content, Loc.T(L.Common.Cancel), Loc.T(L.Prism.AddPhoto), use, use,
+            composeSession.HasSelection, UiSound.Tap, scale, out var chosen) + Metrics.Space.Sm * scale;
         var paneHeight = MathF.Min(content.Width, (content.Max.Y - top) * PickPaneFraction);
         var pane = new Rect(new Vector2(content.Min.X, top), new Vector2(content.Max.X, top + paneHeight));
         composeSession.DrawPickPane(pane, scale, PickStyle, GlamStore.PhotoRatio, false, true, Loc.T(L.Prism.AddPhoto));

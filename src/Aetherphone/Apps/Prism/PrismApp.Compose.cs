@@ -19,6 +19,7 @@ internal sealed partial class PrismApp
     private const int TagsMaxLength = 80;
     private const int MaxTags = 6;
     private const double RecaptureSeconds = 1.0;
+    private const float HeaderSideShare = 0.3f;
 
     private readonly PhotoComposeSession composeSession;
     private readonly HashSet<string> droppedMods = new(StringComparer.Ordinal);
@@ -66,9 +67,8 @@ internal sealed partial class PrismApp
         }
 
         var next = Loc.T(L.Common.Next);
-        var top = DrawActionHeader(drawList, content, Loc.T(L.Prism.PostGlam), false, next, next,
-            composeSession.HasSelection, scale, out var advance) +
-                  Metrics.Space.Sm * scale;
+        var top = DrawActionHeader(drawList, content, Loc.T(L.Common.Cancel), Loc.T(L.Prism.PostGlam), next, next,
+            composeSession.HasSelection, UiSound.Tap, scale, out var advance) + Metrics.Space.Sm * scale;
         if (advance)
         {
             captured = glamour.Capture();
@@ -91,40 +91,36 @@ internal sealed partial class PrismApp
         }
     }
 
-    private float DrawActionHeader(ImDrawListPtr drawList, Rect content, string heading, bool back, string action,
-        string widestAction, bool enabled, float scale, out bool acted)
+    private float DrawActionHeader(ImDrawListPtr drawList, Rect content, string leave, string heading, string action,
+        string widestAction, bool enabled, UiSound tapSound, float scale, out bool acted)
     {
         var row = new Rect(content.Min, new Vector2(content.Max.X, content.Min.Y + Metrics.Size.TapTarget * scale));
-        var leading = row.Height;
-        if (back)
+        var leading = ButtonWidth([leave], row.Width * HeaderSideShare, scale);
+        if (DrawButton(drawList, new Rect(row.Min, new Vector2(row.Min.X + leading, row.Max.Y)), leave,
+                ButtonStyle.Plain, scale, id: "prism.headerLeave"))
         {
-            DrawBackHeader(drawList, content, string.Empty, scale);
-        }
-        else
-        {
-            var cancel = Loc.T(L.Common.Cancel);
-            leading = ButtonWidth([cancel], row.Width * 0.3f, scale);
-            if (DrawButton(drawList, new Rect(row.Min, new Vector2(row.Min.X + leading, row.Max.Y)), cancel,
-                    ButtonStyle.Plain, scale))
-            {
-                LeaveScreen();
-            }
+            LeaveScreen();
         }
 
-        var trailing = ButtonWidth([action, widestAction], row.Width * 0.5f, scale);
+        var trailing = ButtonWidth([action, widestAction], row.Width * HeaderSideShare, scale);
         acted = DrawButton(drawList, new Rect(new Vector2(row.Max.X - trailing, row.Min.Y), row.Max), action,
-            ButtonStyle.Solid, scale, enabled: enabled, id: "prism.headerAction");
-        var side = MathF.Max(leading, trailing) + Metrics.Space.Sm * scale;
-        var room = row.Width - side * 2f;
-        if (room < Metrics.Size.TapTarget * scale)
+            ButtonStyle.Plain, scale, enabled: enabled, id: "prism.headerAction", tapSound: tapSound);
+        var gap = Metrics.Space.Sm * scale;
+        var centred = row.Width - (MathF.Max(leading, trailing) + gap) * 2f;
+        var between = row.Width - leading - trailing - gap * 2f;
+        if (between < Metrics.Size.TapTarget * scale)
         {
             return row.Max.Y;
         }
 
+        var fits = Typography.Measure(heading, PrismType.Headline).X <= centred;
+        var room = fits ? centred : between;
         var style = FitStyle(heading, room, PrismType.Headline);
         var title = Typography.FitText(heading, room, style);
         var size = Typography.Measure(title, style);
-        Typography.Draw(drawList, row.Center - size * 0.5f, title, PrismArt.Fore, style);
+        var middle = fits ? row.Center.X : row.Min.X + leading + gap + between * 0.5f;
+        Typography.Draw(drawList, new Vector2(middle - size.X * 0.5f, row.Center.Y - size.Y * 0.5f), title,
+            PrismArt.Fore, style);
         return row.Max.Y;
     }
 
@@ -132,9 +128,8 @@ internal sealed partial class PrismApp
     {
         var label = Loc.T(glams.Posting ? L.Prism.Posting : L.Prism.Post);
         var ready = !string.IsNullOrWhiteSpace(glamTitle) && !glams.Posting;
-        var top = DrawActionHeader(drawList, content, Loc.T(L.Prism.PostGlam), true, label,
-            Loc.T(L.Prism.Posting), ready, scale, out var post) +
-                  Metrics.Space.Sm * scale;
+        var top = DrawActionHeader(drawList, content, Loc.T(L.Prism.Back), Loc.T(L.Prism.PostGlam), label,
+            Loc.T(L.Prism.Posting), ready, UiSound.Shutter, scale, out var post) + Metrics.Space.Sm * scale;
         if (post)
         {
             PostGlam();
