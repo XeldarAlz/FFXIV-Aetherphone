@@ -99,7 +99,16 @@ internal sealed partial class PrismApp
         var origin = ImGui.GetCursorScreenPos();
         var width = content.Width;
         var left = origin.X + content.Min.X - full.Min.X;
-        var cursor = DrawRewardsHero(list, left, origin.Y + Metrics.Space.Sm * scale, width, scale);
+        var cursor = origin.Y + Metrics.Space.Sm * scale;
+        if (CoverPlacing(ShownResults()) is { ImageUrl.Length: > 0 } winner)
+        {
+            var photo = new Rect(new Vector2(origin.X, cursor), new Vector2(origin.X + full.Width,
+                cursor + full.Width * CoverShare));
+            DrawLook(list, photo, winner.ImageUrl, false, native: true);
+            cursor = photo.Max.Y + Metrics.Space.Lg * scale;
+        }
+
+        cursor = DrawRewardsHero(list, left, cursor, width, scale);
         cursor = DrawRewardMedals(list, left, cursor, width, scale);
         for (var index = 0; index < rewardKindCount; index++)
         {
