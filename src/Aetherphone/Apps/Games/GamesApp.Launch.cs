@@ -2,6 +2,7 @@ using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.Hub;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Shell;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -94,6 +95,7 @@ internal sealed partial class GamesApp
         var transform = LaunchMorph.Transform(source, area, progress, icon);
         using (var playing = OpenLaunchLayer(router.LayerId(router.Depth - 1), area, progress, in transform))
         {
+            using var glassSuspension = RealGlass.Suspend(!transform.IsIdentity);
             drawView(router.Current, area, router.Depth);
             playing.Transform(in transform);
         }

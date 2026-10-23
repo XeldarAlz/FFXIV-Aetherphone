@@ -12,6 +12,7 @@ using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Report;
 using Aetherphone.Core.Sharing;
+using Aetherphone.Core.Shell;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
@@ -251,9 +252,11 @@ internal sealed partial class PrismApp : IResumableApp
         bottomChrome = bar
             ? TabBar.ContentInset(scale, TabBarUnits) + (wearing ? (WearingBarUnits + WearingGapUnits) * scale : 0f)
             : 0f;
+        var stageTransform = PrismMotion.Stage(full, enter, enterDirection, scale);
         var stage = ScreenLayer.Begin("prism.stage", full, enter < TransitionTiming.InteractiveProgress);
         try
         {
+            using var glassSuspension = RealGlass.Suspend(!stageTransform.IsIdentity);
             onPhoto = false;
             using var inset = AppSurface.ReserveBottom(bottomChrome);
             using var host = TabBar.Host(bar);
@@ -269,7 +272,7 @@ internal sealed partial class PrismApp : IResumableApp
         }
         finally
         {
-            stage.Transform(PrismMotion.Stage(full, enter, enterDirection, scale));
+            stage.Transform(in stageTransform);
         }
 
         DrawShards(full, scale);

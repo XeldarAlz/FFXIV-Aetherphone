@@ -1,3 +1,4 @@
+using Aetherphone.Core.Shell;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Core.Animation;
@@ -36,6 +37,7 @@ internal static class SceneCompositor
     public static void DrawLayer(Rect clip, in Layer layer)
     {
         var offset = new Vector2(MathF.Round(layer.Offset.X), MathF.Round(layer.Offset.Y));
+        using var glassSuspension = RealGlass.Suspend(offset != Vector2.Zero);
         using var stage = ScreenLayer.Begin(layer.Id, clip, layer.Shield);
         if (layer.Background.W > 0f)
         {

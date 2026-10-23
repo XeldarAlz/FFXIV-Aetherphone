@@ -36,6 +36,7 @@ internal sealed class ShellScreenPainter
     public void PaintCurrentTransformed(Rect screen, float screenRadius, PhoneTheme theme, in HomeMotion motion,
         bool landscape, in LayerTransform transform)
     {
+        using var glassSuspension = RealGlass.Suspend(!transform.IsIdentity);
         using var stage = ScreenLayer.Begin(CurrentLayerId, screen, true);
         PaintCurrentInside(screen, screenRadius, theme, motion);
         using (ScreenLayer.BeginPassive("chrome", screen))

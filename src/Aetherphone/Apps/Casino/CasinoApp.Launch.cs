@@ -1,6 +1,7 @@
 using Aetherphone.Apps.Games.Hub;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Shell;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -90,6 +91,7 @@ internal sealed partial class CasinoApp
 
         var transform = LaunchMorph.Transform(source, area, progress, false);
         var interactive = !launch.Dismissing && progress >= TransitionTiming.InteractiveProgress;
+        using var glassSuspension = RealGlass.Suspend(!transform.IsIdentity);
         using var playing = interactive
             ? ScreenLayer.BeginWarped(router.LayerId(router.Depth - 1), area, in transform)
             : ScreenLayer.Begin(router.LayerId(router.Depth - 1), area, true);

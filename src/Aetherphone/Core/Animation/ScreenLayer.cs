@@ -1,3 +1,4 @@
+using Aetherphone.Core.Shell;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Core.Animation;
@@ -13,31 +14,39 @@ internal ref struct ScreenLayer
     private readonly Rect rect;
     private ImGuiWindowPtr window;
     private readonly InputShield shield;
+    private readonly bool suspendsGlass;
     private bool open;
 
-    private ScreenLayer(Rect rect, ImGuiWindowPtr window, InputShield shield)
+    private ScreenLayer(Rect rect, ImGuiWindowPtr window, InputShield shield, bool suspendsGlass)
     {
         this.rect = rect;
         this.window = window;
         this.shield = shield;
+        this.suspendsGlass = suspendsGlass;
         open = true;
     }
 
     public static ScreenLayer Begin(string id, Rect rect, bool shield) =>
-        Open(id, rect, StageFlags, InputShield.Engage(shield));
+        Open(id, rect, StageFlags, InputShield.Engage(shield), false);
 
     public static ScreenLayer BeginWarped(string id, Rect rect, in LayerTransform warp) =>
-        Open(id, rect, StageFlags, InputShield.Warp(in warp));
+        Open(id, rect, StageFlags, InputShield.Warp(in warp), !warp.IsIdentity);
 
     public static ScreenLayer BeginPassive(string id, Rect rect) =>
-        Open(id, rect, PassiveFlags, InputShield.Engage(false));
+        Open(id, rect, PassiveFlags, InputShield.Engage(false), false);
 
-    private static ScreenLayer Open(string id, Rect rect, ImGuiWindowFlags flags, InputShield shield)
+    private static ScreenLayer Open(string id, Rect rect, ImGuiWindowFlags flags, InputShield shield,
+        bool suspendGlass)
     {
+        if (suspendGlass)
+        {
+            RealGlass.PushSuspension();
+        }
+
         ImGui.SetCursorScreenPos(rect.Min);
         ImGui.PushID(id);
         ImGui.BeginChild("stage", rect.Size, false, flags);
-        return new ScreenLayer(rect, ImGuiP.GetCurrentWindowRead(), shield);
+        return new ScreenLayer(rect, ImGuiP.GetCurrentWindowRead(), shield, suspendGlass);
     }
 
     public readonly void Veil(uint color)
@@ -62,6 +71,10 @@ internal ref struct ScreenLayer
         shield.Dispose();
         ImGui.EndChild();
         ImGui.PopID();
+        if (suspendsGlass)
+        {
+            RealGlass.PopSuspension();
+        }
     }
 
     public void Dispose() => End();

@@ -466,6 +466,8 @@ internal sealed class PhoneWindow : Window
             ImGui.Dummy(ImGui.GetContentRegionAvail());
             using (InputShield.Engage(turning || PhoneAside.Requested))
             {
+                using var glassSuspension =
+                    RealGlass.Suspend(turning || PhoneAside.Requested || aside.Value >= AsideShown);
                 if (configuration.ShowPerfHud)
                 {
                     Components.PerfHud.BeginShell();

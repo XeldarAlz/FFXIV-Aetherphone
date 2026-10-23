@@ -1,3 +1,4 @@
+using Aetherphone.Core.Shell;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 
@@ -78,6 +79,11 @@ internal static class Material
             return;
         }
 
+        if (RealGlass.TryDraw(drawList, min, max, radius, RealGlassKind.Frosted, GlassTone.Dark, default, opacity))
+        {
+            return;
+        }
+
         Squircle.Fill(drawList, min, max, radius, ImGui.GetColorU32(FrostedFill with { W = FrostedFill.W * opacity }));
         EdgeSquircle(drawList, min, max, radius, scale, opacity);
     }
@@ -107,6 +113,11 @@ internal static class Material
             return;
         }
 
+        if (RealGlass.TryDraw(drawList, min, max, radius, RealGlassKind.Accent, GlassTone.Dark, accent, opacity))
+        {
+            return;
+        }
+
         Squircle.Fill(drawList, min, max, radius, ImGui.GetColorU32(accent with { W = opacity }));
         GlassRim(drawList, min, max, radius, scale, GlassTone.Dark, opacity);
         PointerLight(drawList, min, max, radius, scale, GlassTone.Dark, opacity);
@@ -120,6 +131,11 @@ internal static class Material
         GlassTone tone, float brightness, float opacity = 1f)
     {
         if (opacity <= 0f)
+        {
+            return;
+        }
+
+        if (RealGlass.TryDraw(drawList, min, max, radius, RealGlassKind.Liquid, tone, default, opacity))
         {
             return;
         }
