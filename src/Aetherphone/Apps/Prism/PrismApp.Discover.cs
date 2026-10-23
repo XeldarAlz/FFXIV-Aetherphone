@@ -490,10 +490,35 @@ internal sealed partial class PrismApp
 
         if (UiInteract.Click(row.Min, row.Max, hovered))
         {
-            OpenTab(PrismTab.Week);
+            RunContestRow(week);
         }
 
         return row.Max.Y + Metrics.Space.Xxs * scale;
+    }
+
+    private void RunContestRow(PrismWeekDto week)
+    {
+        if (store.Busy)
+        {
+            return;
+        }
+
+        if (PrismPhases.Judgeable(week.Phase))
+        {
+            StartJudging();
+        }
+        else if (week.MyEntry is not null)
+        {
+            Go(PrismScreen.Entry);
+        }
+        else if (HasTracks)
+        {
+            OpenTab(PrismTab.Week);
+        }
+        else
+        {
+            StartPick();
+        }
     }
 
     private PrismWeekDto? OpenContest() =>

@@ -9,6 +9,11 @@ internal sealed partial class PrismApp
     private static int DrawTrackSegments(string id, Rect row, IReadOnlyList<string> labels, int selected, float scale)
     {
         var picked = DrawSegments(id, row, labels, selected);
+        if (selected < 0)
+        {
+            return picked;
+        }
+
         var thumb = SegmentStrip.ThumbRect(id, row, labels.Count, out var position, Metrics.Size.TapTarget);
         var vanilla = Math.Clamp(position, 0f, 1f);
         var drawList = ImGui.GetWindowDrawList();

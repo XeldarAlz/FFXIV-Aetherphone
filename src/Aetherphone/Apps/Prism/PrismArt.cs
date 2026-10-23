@@ -61,10 +61,6 @@ internal static class PrismArt
     private const float TileIconShare = 0.58f;
     private const float ToggleRestAlpha = 0.7f;
     private const float ToggleEdgeShare = 0.62f;
-    private const float TileDyeAlpha = 0.22f;
-    private const float TileDotShare = 0.08f;
-    private const float TileDotInsetShare = 0.18f;
-    private const float TileDotRingAlpha = 0.35f;
 
     public static readonly Vector4 Bone = new(0.957f, 0.945f, 0.918f, 1f);
     public static readonly Vector4 Ink = new(0.067f, 0.067f, 0.067f, 1f);
@@ -546,8 +542,7 @@ internal static class PrismArt
         }
     }
 
-    public static void SlotTile(ImDrawListPtr drawList, Rect tile, int slot, uint dyeRgb, float scale,
-        bool empty = false)
+    public static void SlotTile(ImDrawListPtr drawList, Rect tile, int slot, float scale, bool empty = false)
     {
         var size = tile.Width;
         var radius = size * Metrics.Radius.HomeTileFactor;
@@ -562,20 +557,8 @@ internal static class PrismArt
             return;
         }
 
-        var tint = Palette.FromRgb(dyeRgb);
-        drawList.AddRectFilled(tile.Min, tile.Max,
-            ImGui.GetColorU32(dyeRgb == 0 ? level : tint with { W = TileDyeAlpha }), radius);
+        drawList.AddRectFilled(tile.Min, tile.Max, ImGui.GetColorU32(level), radius);
         SlotIcon(drawList, tile.Center, iconSize, slot, themeInks.Fore);
-        if (dyeRgb == 0)
-        {
-            return;
-        }
-
-        var dot = size * TileDotShare;
-        var dotCenter = tile.Max - new Vector2(size * TileDotInsetShare, size * TileDotInsetShare);
-        drawList.AddCircleFilled(dotCenter, dot + HairlineWidth(scale),
-            ImGui.GetColorU32(themeInks.Fore with { W = TileDotRingAlpha }));
-        drawList.AddCircleFilled(dotCenter, dot, ImGui.GetColorU32(tint));
     }
 
     private readonly record struct IconStroke(Vector2[] Points, bool Closed);

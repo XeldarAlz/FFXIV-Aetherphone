@@ -69,8 +69,13 @@ internal static class SegmentStrip
         }
 
         var position = AnimateThumb(id, selected);
-        var thumb = Thumb(trackMin, trackMax, segmentWidth, position, scale);
-        Squircle.Fill(drawList, thumb.Min, thumb.Max, thumb.Height * 0.5f, ImGui.GetColorU32(accent with { W = 1f }));
+        if (selected >= 0)
+        {
+            var thumb = Thumb(trackMin, trackMax, segmentWidth, position, scale);
+            Squircle.Fill(drawList, thumb.Min, thumb.Max, thumb.Height * 0.5f,
+                ImGui.GetColorU32(accent with { W = 1f }));
+        }
+
         var labelMaxWidth = MathF.Max(1f, segmentWidth - Metrics.Space.Sm * scale);
         var labelStyle = new TextStyle(textScale, FontWeight.SemiBold);
         for (var index = 0; index < options.Count; index++)
@@ -117,6 +122,12 @@ internal static class SegmentStrip
 
     private static float AnimateThumb(string id, int selected)
     {
+        if (selected < 0)
+        {
+            Thumbs.Remove(id);
+            return selected;
+        }
+
         if (!Thumbs.TryGetValue(id, out var spring))
         {
             spring = new Spring(selected);

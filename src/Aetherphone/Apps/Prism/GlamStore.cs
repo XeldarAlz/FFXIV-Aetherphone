@@ -31,6 +31,8 @@ internal sealed class GlamStore : IDisposable
 
     private const int MoreLimit = 4;
     private const int MeRetrySeconds = 5;
+    private const int BannerRetrySeconds = 5;
+    private const int NotFoundStatus = 404;
 
     private const int PhotoBaseSize = 1080;
     private const PostAspect GlamAspect = PostAspect.Portrait;
@@ -50,6 +52,7 @@ internal sealed class GlamStore : IDisposable
     private readonly FailureSlot postFailure = new();
     private readonly FailureSlot profileFailure = new();
     private readonly RetryGate meGate = new(TimeSpan.FromSeconds(MeRetrySeconds));
+    private readonly RetryGate bannerGate = new(TimeSpan.FromSeconds(BannerRetrySeconds));
     private readonly FeedLane<GlamDto>[] discover =
     {
         FeedLane<GlamDto>.ServerOrdered(), FeedLane<GlamDto>.ServerOrdered(), FeedLane<GlamDto>.ServerOrdered(),
@@ -83,6 +86,7 @@ internal sealed class GlamStore : IDisposable
     private volatile GlamDto? banner;
     private volatile string bannerFor = string.Empty;
     private volatile bool bannerMissing;
+    private volatile bool bannerFailed;
     private volatile GlamAuthorDto[] people = Array.Empty<GlamAuthorDto>();
     private volatile string peopleFor = string.Empty;
     private volatile string peopleAsked = string.Empty;
@@ -353,12 +357,9 @@ internal sealed class GlamStore : IDisposable
     public void OpenTag(string tag) =>
         OpenList(TagKey(tag), (cursor, token, failure) => client.TagGlamsAsync(tag, cursor, token, failure));
 
-    public void OpenWeek(string weekId, string track)
-    {
-        var fits = body;
-        OpenList($"week:{weekId}|{track}|{fits.Race}|{fits.Gender}",
-            (cursor, token, failure) => client.WeekGlamsAsync(weekId, track, fits, cursor, token, failure));
-    }
+    public void OpenWeek(string weekId, string track) =>
+        OpenList(string.Concat("week:", weekId, "|", track),
+            (cursor, token, failure) => client.WeekGlamsAsync(weekId, track, cursor, token, failure));
 
     public void OpenMoreFrom(GlamDto glam)
     {
@@ -608,11 +609,13 @@ internal sealed class GlamStore : IDisposable
 
     public GlamDto? BannerGlam(string glamId, out bool missing)
     {
-        if (bannerFor != glamId && IsSignedIn)
+        if (IsSignedIn && bannerFor != glamId)
         {
-            bannerFor = glamId;
-            banner = null;
-            bannerMissing = false;
+            bannerGate.Reset();
+            FetchBanner(glamId);
+        }
+        else if (IsSignedIn && bannerFailed && bannerFor == glamId && bannerGate.TryPass())
+        {
             FetchBanner(glamId);
         }
 
@@ -620,21 +623,31 @@ internal sealed class GlamStore : IDisposable
         return banner is { } found && found.Id == glamId ? found : null;
     }
 
-    private void FetchBanner(string glamId) =>
+    private void FetchBanner(string glamId)
+    {
+        bannerFor = glamId;
+        banner = null;
+        bannerMissing = false;
+        bannerFailed = false;
+        bannerGate.TryPass();
         work.Run("banner", async token =>
         {
-            var fetched = await client.GlamAsync(glamId, token).ConfigureAwait(false);
+            var failure = AepFailure.None;
+            var fetched = await client.GlamAsync(glamId, token, received => failure = received)
+                .ConfigureAwait(false);
             if (bannerFor != glamId)
             {
                 return;
             }
 
             banner = fetched;
-            bannerMissing = fetched is null;
+            bannerMissing = fetched is null && failure.StatusCode == NotFoundStatus;
+            bannerFailed = fetched is null && !bannerMissing;
         });
+    }
 
     public void UpdateProfile(string displayName, string handle, string bio, GlamPhotoDraft? photo,
-        GlamBannerDto? banner, Action<bool> onComplete)
+        GlamBannerDto? bannerGlam, Action<bool> onComplete)
     {
         var owner = MyId;
         if (savingProfile || !IsSignedIn || owner.Length == 0)
@@ -659,14 +672,16 @@ internal sealed class GlamStore : IDisposable
             }
 
             var updated = await account.UpdateProfileAsync(
-                new UpdateProfileRequest(displayName, handle, bio, avatarUrl, BannerGlam: banner), token, null,
+                new UpdateProfileRequest(displayName, handle, bio, avatarUrl, BannerGlam: bannerGlam), token, null,
                 received => failure = received).ConfigureAwait(false);
             if (updated is null)
             {
                 return FailProfile(failure);
             }
 
-            AcceptMe(updated, owner);
+            AcceptMe(bannerGlam is null || updated.BannerGlam is not null
+                ? updated
+                : updated with { BannerGlam = bannerGlam }, owner);
             return true;
         }, onComplete, () => savingProfile = false);
     }

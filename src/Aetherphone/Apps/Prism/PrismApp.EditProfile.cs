@@ -50,12 +50,6 @@ internal sealed partial class PrismApp
             editFailed = outcome == OutcomeFailed;
             if (!editFailed)
             {
-                if (savingBanner is { } kept)
-                {
-                    KeepBanner(kept);
-                }
-
-                savingBanner = null;
                 GoBack();
                 return;
             }
@@ -211,7 +205,6 @@ internal sealed partial class PrismApp
         }
 
         editFailed = false;
-        savingBanner = banner;
         glams.UpdateProfile(name, handle, bio, editPhoto, banner,
             profileSettled ??= succeeded => editOutcome = succeeded ? OutcomeSent : OutcomeFailed);
     }

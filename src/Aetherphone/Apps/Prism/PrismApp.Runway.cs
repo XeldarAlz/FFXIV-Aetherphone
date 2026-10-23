@@ -347,6 +347,7 @@ internal sealed partial class PrismApp
         lookIndex++;
         if (lookIndex < stars.Length)
         {
+            lookSeconds = SavedSeconds(lookIndex);
             return;
         }
 
@@ -363,10 +364,12 @@ internal sealed partial class PrismApp
         lookIndex = index;
         chosen = 0;
         scoreFill.SnapTo(0f);
-        lookSeconds = stars[index] is { } star ? star.ViewedMs / 1000f : 0f;
+        lookSeconds = SavedSeconds(index);
         turnAge = previousLookUrl.Length > 0 ? 0f : TurnIdle;
         turnSign = direction;
     }
+
+    private float SavedSeconds(int index) => stars[index] is { } star ? star.ViewedMs / 1000f : 0f;
 
     private void ShowPicks(int direction)
     {

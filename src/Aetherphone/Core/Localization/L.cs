@@ -10919,8 +10919,6 @@ internal static class L
             "Without Glamourer, Prism uses the game's Try On window, without mods.");
         public static readonly LocString OpenStorage = new("prism.openStorage",
             "Prism counts your dresser and armoire after you open them once.");
-        public static readonly LocString PostsAsVanilla = new("prism.postsAsVanilla",
-            "Mods are read through Penumbra. Without it, this glam posts as vanilla.");
         public static readonly LocString DesignsAdded = new("prism.designsAdded", "Designs added: {0}");
         public static readonly LocString YouOwnThis = new("prism.youOwnThis", "You have this one");
         public static readonly LocString NotOwned = new("prism.notOwned", "You don't have this one");
@@ -10931,6 +10929,11 @@ internal static class L
         public static readonly LocString InWardrobe = new("prism.inWardrobe", "In your wardrobe");
         public static readonly LocString GenderFemale = new("prism.genderFemale", "Female");
         public static readonly LocString GenderMale = new("prism.genderMale", "Male");
+        public static readonly LocString BodyLabel = new("prism.bodyLabel", "Race and gender");
+        public static readonly LocString BodyNeeded = new("prism.bodyNeeded",
+            "Choose the race and gender in your photo.");
+        public static readonly LocString TrackNeeded = new("prism.trackNeeded", "Choose Modded or Vanilla.");
+        public static readonly LocString GearNeeded = new("prism.gearNeeded", "Add each piece in your photo.");
         public static readonly LocString MoreFrom = new("prism.moreFrom", "More from {0}");
         public static readonly LocString InspiredBy = new("prism.inspiredBy", "Inspired by another glam");
         public static readonly LocString FitsMe = new("prism.fitsMe", "Fits me");
@@ -10948,6 +10951,8 @@ internal static class L
         public static readonly LocString ChangePhoto = new("prism.changePhoto", "Change photo");
         public static readonly LocString UsePhoto = new("prism.usePhoto", "Use photo");
         public static readonly LocString Rewards = new("prism.rewards", "Rewards");
+        public static readonly LocString NoRewardsHint = new("prism.noRewardsHint",
+            "This week's prizes aren't set yet.");
         public static readonly LocString RewardBadgeTitle = new("prism.rewardBadgeTitle", "Podium badges");
         public static readonly LocString RewardBadgeBody = new("prism.rewardBadgeBody",
             "Finish on a podium and a badge joins your profile, worn next to your name across Aetherphone.");
@@ -10978,6 +10983,9 @@ internal static class L
         public static readonly LocString CapturedHeading = new("prism.capturedHeading", "From your character");
         public static readonly LocString CapturedCounts = new("prism.capturedCounts", "Pieces {0}, mods {1}");
         public static readonly LocString CapturedNote = new("prism.capturedNote", "Gear, dyes and mods are read from your character when you post, so wear the glam while you post it.");
+        public static readonly LocString AutoCaptureLabel = new("prism.autoCaptureLabel", "Fill in from my character");
+        public static readonly LocString AutoCaptureHint = new("prism.autoCaptureHint",
+            "Reads your gear, dyes and mods through Glamourer and Penumbra.");
         public static readonly LocString Post = new("prism.post", "Post");
         public static readonly LocString Posting = new("prism.posting", "Posting\u2026");
         public static readonly LocString SavedEmptyHint = new("prism.savedEmptyHint", "Glams you save show up here.");

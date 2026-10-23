@@ -24,10 +24,8 @@ internal sealed partial class PrismApp
 
     private static readonly GlamBannerDto AutomaticBanner = new();
 
-    private GlamBannerDto? localBanner;
     private GlamBannerDto? editBanner;
     private GlamDto? editBannerGlam;
-    private GlamBannerDto? savingBanner;
     private GlamDto? cropGlam;
     private Spring cropFocusX;
     private Spring cropFocusY;
@@ -35,32 +33,7 @@ internal sealed partial class PrismApp
     private Vector2 cropFrom;
     private Vector2 cropPress;
 
-    private GlamBannerDto? OwnBanner()
-    {
-        if (glams.Me?.BannerGlam is { } served)
-        {
-            return served;
-        }
-
-        var owner = glams.MyId;
-        if (owner.Length == 0 || configuration.PrismBannerUser != owner)
-        {
-            return null;
-        }
-
-        return localBanner ??= new GlamBannerDto(configuration.PrismBannerGlamId, configuration.PrismBannerFocusX,
-            configuration.PrismBannerFocusY);
-    }
-
-    private void KeepBanner(GlamBannerDto banner)
-    {
-        configuration.PrismBannerUser = glams.MyId;
-        configuration.PrismBannerGlamId = banner.GlamId;
-        configuration.PrismBannerFocusX = banner.FocusX;
-        configuration.PrismBannerFocusY = banner.FocusY;
-        configuration.Save();
-        localBanner = banner;
-    }
+    private GlamBannerDto? OwnBanner() => glams.Me?.BannerGlam;
 
     private static bool SameBanner(GlamBannerDto? banner, GlamBannerDto? other)
     {
@@ -147,6 +120,7 @@ internal sealed partial class PrismApp
     {
         if (glams.Me is { } me)
         {
+            showSaved = false;
             glams.OpenProfile(me);
         }
 

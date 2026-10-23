@@ -378,7 +378,7 @@ internal sealed partial class PrismApp
             }
             else
             {
-                PrismArt.SlotTile(drawList, tile, (int)GearSlots.All[index], 0u, scale, true);
+                PrismArt.SlotTile(drawList, tile, (int)GearSlots.All[index], scale, true);
             }
 
             var textTop = top + (head - captionLine - nameLine) * 0.5f;
@@ -433,7 +433,7 @@ internal sealed partial class PrismApp
             }
             else
             {
-                PrismArt.SlotTile(drawList, tile, (int)GearSlots.All[index], 0u, scale, !on);
+                PrismArt.SlotTile(drawList, tile, (int)GearSlots.All[index], scale, !on);
             }
 
             var hovered = HoverWash(drawList, tile, tile, radius);

@@ -43,6 +43,7 @@ internal sealed partial class PrismApp
     private const float LikeHoldSeconds = 0.45f;
     private const float LikeStamp = 0.35f;
     private const float PostAvatarUnits = 24f;
+    private const float BodyFactShare = 0.3f;
     private const float GlamRowUnits = 56f;
     private const float PagerSlopUnits = 12f;
     private const float PagerSlopBias = 1.2f;
@@ -868,7 +869,7 @@ internal sealed partial class PrismApp
         var handleLeft = left + radius * 2f + Metrics.Space.Sm * scale;
         var other = author.Id.Length > 0 && author.Id != glams.MyId;
         var followWidth = other ? tap : 0f;
-        var facts = DrawGlamFacts(drawList, right, middle, glam, scale);
+        var facts = DrawGlamFacts(drawList, handleLeft, right, middle, glam, scale);
         var handle = Typography.FitText(AuthorLine(author),
             MathF.Max(1f, right - handleLeft - followWidth - facts - Metrics.Space.Sm * scale), PrismType.Headline);
         var handleWidth = Typography.Measure(handle, PrismType.Headline).X;
@@ -1009,23 +1010,37 @@ internal sealed partial class PrismApp
         return top + GridHeight(inner, more.Length, scale);
     }
 
-    private float DrawGlamFacts(ImDrawListPtr drawList, float right, float middle, GlamDto glam, float scale)
+    private float DrawGlamFacts(ImDrawListPtr drawList, float left, float right, float middle, GlamDto glam,
+        float scale)
     {
         var glyph = PrismArt.RowIconUnits * scale;
         var pitch = glyph + Metrics.Space.Sm * scale;
-        var x = right;
-        var female = glam.Gender == 1;
-        var race = RaceLabel(glam.Race, female);
-        if (race.Length > 0)
-        {
-            x = DrawFact(drawList, x, middle, female ? PrismFact.Female : PrismFact.Male,
-                Loc.T(female ? L.Prism.GenderFemale : L.Prism.GenderMale), glyph, pitch);
-            x = DrawFact(drawList, x, middle, PrismFact.Race, race, glyph, pitch);
-        }
-
+        var x = DrawBodyFact(drawList, left, right, middle, glam, glyph, scale);
         x = DrawFact(drawList, x, middle, glam.Vanilla ? PrismFact.Vanilla : PrismFact.Modded,
             Loc.T(glam.Vanilla ? L.Prism.VanillaStamp : L.Prism.ModdedStamp), glyph, pitch);
         return right - x;
+    }
+
+    private float DrawBodyFact(ImDrawListPtr drawList, float left, float right, float middle, GlamDto glam,
+        float glyph, float scale)
+    {
+        var female = glam.Gender == FemaleGender;
+        var race = RaceLabel(glam.Race, female);
+        if (race.Length == 0)
+        {
+            return right;
+        }
+
+        var fitted = Typography.FitText(race, MathF.Max(1f, (right - left) * BodyFactShare), PrismType.Caption);
+        var textLeft = right - Typography.Measure(fitted, PrismType.Caption).X;
+        Typography.Draw(drawList, new Vector2(textLeft, middle - Typography.LineHeight(PrismType.Caption) * 0.5f),
+            fitted, PrismArt.Muted, PrismType.Caption);
+        var symbol = new Vector2(textLeft - Metrics.Space.Xxs * scale - glyph * 0.5f, middle);
+        PrismArt.FactIcon(drawList, symbol, glyph, female ? PrismFact.Female : PrismFact.Male, PrismArt.Muted);
+        var half = new Vector2(glyph * 0.5f, glyph * 0.5f);
+        HoverTooltip.Show(new Rect(symbol - half, new Vector2(right, middle + half.Y)),
+            Loc.T(female ? L.Prism.GenderFemale : L.Prism.GenderMale), HoverLabelSide.Above);
+        return symbol.X - glyph * 0.5f - Metrics.Space.Sm * scale;
     }
 
     private static float DrawFact(ImDrawListPtr drawList, float right, float middle, PrismFact fact, string label,
@@ -1223,7 +1238,7 @@ internal sealed partial class PrismApp
         var icon = PieceTileUnits * scale;
         var tile = new Rect(new Vector2(left, row.Center.Y - icon * 0.5f),
             new Vector2(left + icon, row.Center.Y + icon * 0.5f));
-        PrismArt.SlotTile(drawList, tile, slot, 0, scale);
+        PrismArt.SlotTile(drawList, tile, slot, scale);
         var (side, allowed, installed) = ModLine(mod);
         var sideRight = right;
         if (side.Length > 0)
