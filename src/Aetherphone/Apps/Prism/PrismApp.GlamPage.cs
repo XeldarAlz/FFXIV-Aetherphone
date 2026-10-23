@@ -1204,7 +1204,7 @@ internal sealed partial class PrismApp
         var icon = PieceTileUnits * scale;
         var tile = new Rect(new Vector2(left, row.Center.Y - icon * 0.5f),
             new Vector2(left + icon, row.Center.Y + icon * 0.5f));
-        PrismArt.SlotTile(drawList, tile, slot, 0, scale);
+        PrismArt.SlotTile(drawList, tile, slot, scale);
         var (side, allowed, installed) = ModLine(mod);
         var sideRight = right;
         if (side.Length > 0)

@@ -1,7 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Confirm;
-using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
@@ -28,26 +27,8 @@ internal sealed partial class PrismApp
     private const string FitLogoArtwork = "prism.fg";
     private const float FitLogoShare = 0.6f;
     private const float FitLogoAlpha = 0.9f;
-    private const float BoardTileUnits = 56f;
-    private const float BoardAccessoryUnits = 44f;
-    private const float BoardPitchUnits = 68f;
-    private const float BoardColumnUnits = 96f;
-    private const int BoardWeaponRow = 1;
-    private const float BoardFill = 0.9f;
     private const int SheetCapacity = 4;
     private const float SaveGlyphUnits = 14f;
-
-    private static readonly int[] BodySlots =
-    {
-        (int)GearSlot.Head, (int)GearSlot.Body, (int)GearSlot.Hands, (int)GearSlot.Legs, (int)GearSlot.Feet,
-    };
-
-    private static readonly int[] AccessorySlots =
-    {
-        (int)GearSlot.Ears, (int)GearSlot.Neck, (int)GearSlot.Wrists, (int)GearSlot.RingRight, (int)GearSlot.RingLeft,
-    };
-
-    private static readonly int[] LeftSlots = { (int)GearSlot.MainHand, (int)GearSlot.OffHand, GearSlots.None };
 
     private readonly WardrobeStore wardrobe;
     private readonly Random roulette = new();
@@ -285,68 +266,6 @@ internal sealed partial class PrismApp
         }
 
         return pieces > 0 ? CountLabel(pieces) : string.Empty;
-    }
-
-    private void DrawOutfitBoard(ImDrawListPtr drawList, Rect area, GlamGearDto[] gear, float scale)
-    {
-        var low = WearsAny(gear, LeftSlots) ? -BoardColumnUnits - BoardAccessoryUnits * 0.5f
-                : -BoardTileUnits * 0.5f;
-        var high = WearsAny(gear, AccessorySlots) ? BoardColumnUnits + BoardAccessoryUnits * 0.5f
-                : BoardTileUnits * 0.5f;
-        var unit = MathF.Min(area.Width / (high - low),
-            area.Height / (BoardPitchUnits * (BodySlots.Length - 1) + BoardTileUnits)) * BoardFill;
-        var center = area.Center.X - (low + high) * 0.5f * unit;
-
-        var pitch = BoardPitchUnits * unit;
-        var firstRow = area.Center.Y - pitch * (BodySlots.Length - 1) * 0.5f;
-        var side = BoardColumnUnits * unit;
-        for (var row = 0; row < BodySlots.Length; row++)
-        {
-            var middle = firstRow + row * pitch;
-            DrawBoardSlot(drawList, new Vector2(center, middle), BoardTileUnits * unit, BodySlots[row], gear, scale);
-            DrawBoardSlot(drawList, new Vector2(center + side, middle), BoardAccessoryUnits * unit,
-                AccessorySlots[row], gear, scale);
-            var leftRow = row - BoardWeaponRow;
-            if (leftRow >= 0 && leftRow < LeftSlots.Length)
-            {
-                DrawBoardSlot(drawList, new Vector2(center - side, middle), BoardAccessoryUnits * unit,
-                    LeftSlots[leftRow], gear, scale);
-            }
-        }
-    }
-
-    private static bool WearsAny(GlamGearDto[] gear, int[] slots)
-    {
-        for (var index = 0; index < gear.Length; index++)
-        {
-            var piece = gear[index];
-            if (Array.IndexOf(slots, piece.Slot) >= 0 && (piece.ItemId != 0 || piece.Mods is { Length: > 0 }))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private void DrawBoardSlot(ImDrawListPtr drawList, Vector2 center, float size, int slot, GlamGearDto[] gear,
-        float scale)
-    {
-        var half = new Vector2(size * 0.5f, size * 0.5f);
-        var tile = new Rect(center - half, center + half);
-        for (var index = 0; index < gear.Length; index++)
-        {
-            var piece = gear[index];
-            var matches = slot == GearSlots.None
-                ? piece.ItemId == 0 && piece.Mods is { Length: > 0 }
-                : piece.Slot == slot && piece.ItemId != 0;
-            if (matches)
-            {
-                PrismArt.SlotTile(drawList, tile, slot, gameData.StainColor(piece.Stain0 != 0 ? piece.Stain0 : piece.Stain1),
-                    scale);
-                return;
-            }
-        }
     }
 
     private void DrawWardrobeOutfit(ImDrawListPtr drawList, Rect full, Rect content, float scale)
