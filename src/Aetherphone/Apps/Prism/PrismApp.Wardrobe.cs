@@ -256,7 +256,7 @@ internal sealed partial class PrismApp
             if (!DrawOutfitCover(list, photo, outfit.Cover))
             {
                 PrismArt.Placeholder(list, photo, false, scale);
-                if (outfit.Cover is null)
+                if (outfit.Cover is not { } cover || wallpaperImages.Failed(cover.Path))
                 {
                     DrawOutfitBoard(list, photo, photo, outfit.Gear, false, scale);
                 }
