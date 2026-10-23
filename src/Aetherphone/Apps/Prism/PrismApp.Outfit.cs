@@ -323,8 +323,6 @@ internal sealed partial class PrismApp
         var icon = GearIconUnits * scale;
         var gap = Metrics.Space.Md * scale;
         var textLeft = left + icon + gap;
-        var remove = Loc.T(L.Prism.RemovePiece);
-        var removeWidth = ButtonWidth([remove], width * 0.5f, scale);
         var captionLine = Typography.LineHeight(PrismType.Caption);
         var nameLine = Typography.LineHeight(PrismType.Headline);
         top = DrawGearGrid(drawList, left, top, width, scale) + Metrics.Space.Md * scale;
@@ -352,7 +350,7 @@ internal sealed partial class PrismApp
                 continue;
             }
 
-            var tapRight = itemId != 0 ? left + width - removeWidth - Metrics.Space.Sm * scale : left + width;
+            var tapRight = itemId != 0 ? left + width - tap - Metrics.Space.Sm * scale : left + width;
             var hovered = UiInteract.Hover(new Vector2(left, top), new Vector2(tapRight, top + head));
             if (hovered)
             {
@@ -384,9 +382,9 @@ internal sealed partial class PrismApp
                 Typography.FitText(name, MathF.Max(1f, tapRight - textLeft), PrismType.Headline),
                 itemId != 0 || hovered ? PrismArt.Fore : PrismArt.Muted, PrismType.Headline);
             ImGui.PushID(index);
-            var removed = itemId != 0 && DrawButton(drawList,
-                new Rect(new Vector2(left + width - removeWidth, top + (head - tap) * 0.5f),
-                    new Vector2(left + width, top + (head + tap) * 0.5f)), remove, ButtonStyle.Plain, scale);
+            var removed = itemId != 0 && RoundButton.Icon(drawList,
+                new Vector2(left + width - tap * 0.5f, top + head * 0.5f), tap * 0.5f, PhoneIcons.X, controls,
+                ButtonStyle.Plain, Loc.T(L.Prism.RemovePiece), glyphInk: PrismArt.Muted);
             ImGui.PopID();
             if (removed)
             {

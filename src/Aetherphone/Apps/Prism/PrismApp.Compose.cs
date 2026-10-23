@@ -404,8 +404,7 @@ internal sealed partial class PrismApp
         }
 
         top = bottom + Metrics.Space.Sm * scale;
-        var remove = Loc.T(L.Prism.RemovePiece);
-        var removeWidth = ButtonWidth([remove], width * 0.5f, scale);
+        var removeWidth = Metrics.Size.TapTarget * scale;
         var nameHeight = Typography.LineHeight(PrismType.Headline);
         var captionHeight = Typography.LineHeight(PrismType.Caption);
         var rowHeight = MathF.Max(Metrics.Size.TapTarget * scale, nameHeight + captionHeight);
@@ -420,9 +419,9 @@ internal sealed partial class PrismApp
                 Typography.FitText(ModTypeName(namedModSlots[index]), room, PrismType.Caption), PrismArt.Muted,
                 PrismType.Caption);
             ImGui.PushID(index);
-            var removed = DrawButton(drawList,
-                new Rect(new Vector2(left + width - removeWidth, top), new Vector2(left + width, top + rowHeight)),
-                remove, ButtonStyle.Plain, scale, id: "prism.removeMod");
+            var removed = RoundButton.Icon(drawList,
+                new Vector2(left + width - removeWidth * 0.5f, top + rowHeight * 0.5f), removeWidth * 0.5f,
+                PhoneIcons.X, controls, ButtonStyle.Plain, Loc.T(L.Prism.RemovePiece), glyphInk: PrismArt.Muted);
             ImGui.PopID();
             top += rowHeight;
             if (removed)
