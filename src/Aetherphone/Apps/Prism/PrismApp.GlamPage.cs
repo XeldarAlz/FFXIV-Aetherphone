@@ -32,8 +32,6 @@ internal sealed partial class PrismApp
     private const string Arrow = "→";
     private const string GlamMetaSeparator = " · ";
     private const string LikeSlotTemplate = "9.9K";
-    private const string PillId = "prism.tryOn";
-    private const string FollowId = "prism.follow";
     private const int AvatarSegments = 32;
     private const int GlamMenuSize = 3;
     private const float LikeBloomSeconds = 0.9f;
@@ -180,7 +178,7 @@ internal sealed partial class PrismApp
             content.Width) + Metrics.Space.Sm * scale;
         var retry = Loc.T(L.Common.Retry);
         var rect = new Rect(new Vector2(content.Min.X, top),
-            new Vector2(content.Min.X + ButtonWidth(new ReadOnlySpan<string>(ref retry), content.Width, scale),
+            new Vector2(content.Min.X + ButtonWidth([retry], content.Width, scale),
                 top + Button.LargeHeight * scale));
         if (missing && DrawButton(drawList, rect, retry, ButtonStyle.Plain, scale))
         {
@@ -560,8 +558,8 @@ internal sealed partial class PrismApp
         var settling = wearing && tryOnKey == key && ImGui.GetTime() - tryOnAt < PrismArt.TryOnSeconds;
         var saved = wearing && !settling && !wardrobe.Loading ? wardrobe.FindByGlam(key) : null;
         var label = !wearing || settling ? pillLabels[0] : saved is null ? pillLabels[1] : pillLabels[2];
-        if (!DrawPill(drawList, rect, rect, label, saved is null ? ButtonStyle.Solid : ButtonStyle.Tinted,
-                saved is null ? string.Empty : PhoneIcons.Check, overlay, PillId, scale) || settling ||
+        if (!DrawPill(drawList, rect, label, saved is null ? ButtonStyle.Solid : ButtonStyle.Tinted,
+                saved is null ? string.Empty : PhoneIcons.Check, overlay, scale) || settling ||
             wearing && wardrobe.Loading || overlay && UiInteract.InputBlocked)
         {
             return;
@@ -583,17 +581,16 @@ internal sealed partial class PrismApp
         }
     }
 
-    private bool DrawPill(ImDrawListPtr drawList, Rect hit, Rect rect, string label, ButtonStyle style, string glyph,
-        bool overlay, string id, float scale)
+    private bool DrawPill(ImDrawListPtr drawList, Rect rect, string label, ButtonStyle style, string glyph,
+        bool overlay, float scale)
     {
-        var hovered = overlay ? UiInteract.HoverWindowOnly(hit.Min, hit.Max) : UiInteract.Hover(hit.Min, hit.Max);
-        var face = Button.Surface(drawList, rect, controls, style, ButtonRole.Normal, true, hovered, ImGui.GetID(id));
+        var hovered = overlay ? UiInteract.HoverWindowOnly(rect.Min, rect.Max) : UiInteract.Hover(rect.Min, rect.Max);
+        var face = Button.Surface(drawList, rect, controls, style, ButtonRole.Normal, true, hovered,
+            ImGui.GetID("prism.tryOn"));
         var glyphSize = glyph.Length > 0 ? Typography.LineHeight(PrismType.Caption) : 0f;
         var lead = glyphSize > 0f ? glyphSize + Metrics.Space.Xs * scale : 0f;
-        var largest = Button.LabelStyle(rect.Height);
         var room = MathF.Max(1f, rect.Width - Metrics.Space.Lg * scale - lead);
-        var labelStyle = new TextStyle(
-            Typography.FitScale(label, room, largest.Scale, PrismType.Caption.Scale, largest.Weight), largest.Weight);
+        var labelStyle = FitStyle(label, room, Button.LabelStyle(rect.Height));
         var fitted = Typography.FitText(label, room, labelStyle);
         var size = Typography.Measure(fitted, labelStyle);
         var textLeft = face.Face.Center.X - (size.X + lead) * 0.5f;
@@ -605,7 +602,7 @@ internal sealed partial class PrismApp
 
         Typography.Draw(drawList, new Vector2(textLeft + lead, face.Face.Center.Y - size.Y * 0.5f), fitted,
             face.LabelInk, labelStyle);
-        return UiInteract.Click(hit.Min, hit.Max, hovered);
+        return UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
     private void TryOnGlam(GlamDto glam, string key)
@@ -791,7 +788,7 @@ internal sealed partial class PrismApp
         var followLeft = handleLeft + handleWidth;
         if (DrawButton(drawList, new Rect(new Vector2(followLeft, top), new Vector2(followLeft + followWidth, top + tap)),
                 followLabels[following ? 1 : 0], ButtonStyle.Plain, scale,
-                ink: following ? controls with { Accent = PrismArt.Muted } : null, id: FollowId))
+                ink: following ? controls with { Accent = PrismArt.Muted } : null, id: "prism.follow"))
         {
             followed[author.Id] = !following;
             glams.SetFollow(author, !following);

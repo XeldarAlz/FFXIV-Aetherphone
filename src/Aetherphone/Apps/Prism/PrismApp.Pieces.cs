@@ -459,7 +459,7 @@ internal sealed partial class PrismApp
         {
             var label = Loc.T(L.Prism.CheckMarket);
             var link = new Rect(new Vector2(left, cursor),
-                new Vector2(left + ButtonWidth(new ReadOnlySpan<string>(ref label), inner, scale), cursor + tap));
+                new Vector2(left + ButtonWidth([label], inner, scale), cursor + tap));
             if (DrawButton(drawList, link, label, ButtonStyle.Plain, scale, enabled: ready, overlay: true,
                     ink: photoControls, id: "prism.pieceMarket"))
             {
