@@ -15,6 +15,9 @@ internal sealed partial class PrismApp
     private const int MaxTracks = 3;
     private const float BackdropMarkUnits = 84f;
     private const float BackdropMarkShare = 0.3f;
+    private const int PageTileUnitsShown = 3;
+    private const float PageTileWidthUnits = 56f;
+    private const float PageTileHeightUnits = 44f;
 
     private static readonly string ResultsGlyph = IconGlyph.Of(FontAwesomeIcon.Trophy);
     private static readonly string GalleryGlyph = IconGlyph.Of(FontAwesomeIcon.Th);
@@ -23,7 +26,9 @@ internal sealed partial class PrismApp
     private readonly CachedText[] trackCreditTexts = new CachedText[MaxTracks];
     private readonly CachedText[] trackEntryTexts = new CachedText[MaxTracks];
     private readonly Pager trackPager = new(Motion.PageSettle);
+    private readonly PrismCountdown pageCountdown = new();
     private CachedText phaseText;
+    private CachedText phaseCaptionText;
     private PrismWeekDto? lastWeekAsked;
     private int trackPage = -1;
     private Vector2 trackPress;
@@ -156,7 +161,7 @@ internal sealed partial class PrismApp
         var copyWidth = width - tap - Metrics.Space.Md * scale;
         var titleHeight = PrismType.HeroHeight(title, copyWidth);
         var labelHeight = track is not null ? line + Metrics.Space.Xs * scale : 0f;
-        var phaseHeight = phase.Length > 0 ? Metrics.Space.Xs * scale + PhaseLineHeight(scale) : 0f;
+        var phaseHeight = phase.Length > 0 ? Metrics.Space.Xs * scale + PhaseLineHeight(week, scale) : 0f;
         var copyGap = phase.Length > 0 ? rowGap : Metrics.Space.Xs * scale;
         var copyHeight = copy.Length > 0
             ? copyGap + Typography.MeasureWrappedBlock(copy, PrismType.Body, copyWidth).Y
@@ -192,7 +197,7 @@ internal sealed partial class PrismApp
         y += titleHeight;
         if (phase.Length > 0)
         {
-            y = DrawPhaseLine(drawList, new Vector2(left, y + Metrics.Space.Xs * scale), copyWidth, phase, scale);
+            y = DrawPhaseLine(drawList, new Vector2(left, y + Metrics.Space.Xs * scale), copyWidth, week, phase, scale);
         }
 
         if (copy.Length > 0)
@@ -230,14 +235,46 @@ internal sealed partial class PrismApp
         PrismLight.Week(drawList, page, weekId, PrismArt.Page, PrismArt.Fore, BackdropMarkUnits * scale,
             BackdropMarkShare);
 
-    private static float PhaseLineHeight(float scale) => Typography.LineHeight(PrismType.Body);
+    private static float PhaseLineHeight(PrismWeekDto week, float scale) =>
+        PrismCountdown.Remaining(PrismCountdown.Deadline(week)) > 0
+            ? Typography.LineHeight(PrismType.Caption) + Metrics.Space.Xs * scale + PageTileHeightUnits * scale
+            : Typography.LineHeight(PrismType.Body);
 
-    private static float DrawPhaseLine(ImDrawListPtr drawList, Vector2 topLeft, float width, string phase,
-        float scale)
+    private float DrawPhaseLine(ImDrawListPtr drawList, Vector2 topLeft, float width, PrismWeekDto week,
+        string phase, float scale)
     {
-        Typography.Draw(drawList, topLeft, Typography.FitText(phase, width, PrismType.Body), PrismArt.Muted,
-            PrismType.Body);
-        return topLeft.Y + PhaseLineHeight(scale);
+        var deadline = PrismCountdown.Deadline(week);
+        if (PrismCountdown.Remaining(deadline) <= 0)
+        {
+            Typography.Draw(drawList, topLeft, Typography.FitText(phase, width, PrismType.Body), PrismArt.Muted,
+                PrismType.Body);
+            return topLeft.Y + Typography.LineHeight(PrismType.Body);
+        }
+
+        Typography.Draw(drawList, topLeft, Typography.FitText(PhaseCaption(week), width, PrismType.Caption),
+            PrismArt.Muted, PrismType.Caption);
+        var top = topLeft.Y + Typography.LineHeight(PrismType.Caption) + Metrics.Space.Xs * scale;
+        var tilesWidth = MathF.Min(width,
+            PageTileUnitsShown * PageTileWidthUnits * scale + (PageTileUnitsShown - 1) * Metrics.Space.Xs * scale);
+        var tiles = new Rect(new Vector2(topLeft.X, top),
+            new Vector2(topLeft.X + tilesWidth, top + PageTileHeightUnits * scale));
+        pageCountdown.DrawCompact(drawList, tiles, deadline, scale);
+        return tiles.Max.Y;
+    }
+
+    private string PhaseCaption(PrismWeekDto week)
+    {
+        var label = Loc.T(DeadlineLabel(week.Phase));
+        if (!PrismPhases.Judgeable(week.Phase))
+        {
+            return label;
+        }
+
+        var judged = JudgedLine(week.BallotsCast);
+        var key = HashCode.Combine(label, judged);
+        return phaseCaptionText.IsCurrent(key)
+            ? phaseCaptionText.Value
+            : phaseCaptionText.Store(key, Loc.T(L.Prism.WithTrack, label, judged));
     }
 
     private void DrawContestAction(ImDrawListPtr drawList, Vector2 center, string label, PrismTrackDto? track,
