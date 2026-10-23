@@ -2,6 +2,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
+using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Prism;
@@ -16,6 +17,7 @@ internal sealed partial class PrismApp
     private readonly Dictionary<int, string> placeNumbers = new();
     private string? placeNumbersLanguage;
     private WeekGallery gallery;
+    private CachedText weekLineText;
 
     private void OpenGallery(string weekId, string track, string title)
     {
@@ -246,6 +248,49 @@ internal sealed partial class PrismApp
         }
 
         return bottom;
+    }
+
+    private float DrawWeekLine(ImDrawListPtr drawList, float left, float right, float top, GlamDto glam, float scale)
+    {
+        var middle = top + Metrics.Size.TapTarget * scale * 0.5f;
+        var radius = CoverMedalUnits * scale;
+        DrawPlacingMedal(drawList, new Vector2(left + radius, middle), radius, glam.Placing, false, scale);
+        var textLeft = left + radius * 2f + Metrics.Space.Sm * scale;
+        var glyph = PrismArt.IconUnits * scale;
+        var label = Typography.FitText(WeekLine(glam), MathF.Max(1f, right - textLeft - glyph), PrismType.Body);
+        var size = Typography.Measure(label, PrismType.Body);
+        var hit = new Rect(new Vector2(left, top),
+            new Vector2(textLeft + size.X + glyph, top + Metrics.Size.TapTarget * scale));
+        var hovered = UiInteract.Hover(hit.Min, hit.Max);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        Typography.Draw(drawList, new Vector2(textLeft, middle - size.Y * 0.5f), label,
+            hovered ? PrismArt.Muted : PrismArt.Fore, PrismType.Body);
+        PhoneIcon.Draw(drawList, new Vector2(textLeft + size.X + glyph * 0.5f, middle), PhoneIcons.ChevronRight,
+            PrismArt.Muted, glyph);
+        if (UiInteract.Click(hit.Min, hit.Max, hovered))
+        {
+            OpenGallery(glam.WeekId, glam.Vanilla ? PrismTracks.Vanilla : PrismTracks.Modded, string.Empty);
+        }
+
+        return hit.Max.Y;
+    }
+
+    private string WeekLine(GlamDto glam)
+    {
+        var title = WeekTitle(glam.WeekId);
+        if (title.Length == 0)
+        {
+            title = PrismTracks.Name(glam.Vanilla ? PrismTracks.Vanilla : PrismTracks.Modded);
+        }
+
+        var key = HashCode.Combine(glam.Placing, title);
+        return weekLineText.IsCurrent(key)
+            ? weekLineText.Value
+            : weekLineText.Store(key, Loc.T(L.Prism.PlacingLine, glam.Placing, title));
     }
 
     private string WeekTitle(string weekId)

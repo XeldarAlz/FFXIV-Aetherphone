@@ -782,6 +782,11 @@ internal sealed partial class PrismApp
                 PrismArt.Muted, PrismType.Caption, width);
         }
 
+        if (glam.Placing > 0 && glam.WeekId.Length > 0)
+        {
+            top = DrawWeekLine(drawList, left, right, top, glam, scale);
+        }
+
         if (glam.InspiredBy.Length > 0)
         {
             var tap = Metrics.Size.TapTarget * scale;

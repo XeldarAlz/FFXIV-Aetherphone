@@ -671,7 +671,8 @@ internal sealed partial class PrismApp
         var radius = PlacingMedalUnits * scale;
         var pitch = MathF.Max(Metrics.Size.TapTarget * scale, Typography.LineHeight(PrismType.Headline));
         var textLeft = left + inset + radius * 2f + Metrics.Space.Md * scale;
-        var right = left + width - inset;
+        var glyph = PrismArt.IconUnits * scale;
+        var right = left + width - inset - glyph - Metrics.Space.Xs * scale;
         for (var index = 0; index < placings.Length; index++)
         {
             var placing = placings[index];
@@ -680,8 +681,16 @@ internal sealed partial class PrismApp
                 continue;
             }
 
+            var row = new Rect(new Vector2(left, bottom), new Vector2(left + width, bottom + pitch));
+            if (placing.WeekId.Length > 0 && UiInteract.Click(row.Min, row.Max, HoverWash(drawList, row)))
+            {
+                OpenGallery(placing.WeekId, placing.Track, placing.Title);
+            }
+
             var middle = bottom + pitch * 0.5f;
             DrawPlacingMedal(drawList, new Vector2(left + inset + radius, middle), radius, placing.Rank, false, scale);
+            PhoneIcon.Draw(drawList, new Vector2(left + width - inset - glyph * 0.5f, middle), PhoneIcons.ChevronRight,
+                PrismArt.Muted, glyph);
             var track = placing.Track.Length > 0 ? PrismTracks.Name(placing.Track) : string.Empty;
             var trackSize = Typography.Measure(track, PrismType.Caption);
             Typography.Draw(drawList, new Vector2(right - trackSize.X, middle - trackSize.Y * 0.5f), track,
