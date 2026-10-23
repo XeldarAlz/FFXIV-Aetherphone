@@ -1028,18 +1028,10 @@ internal sealed partial class PrismApp
         return row.Max.Y;
     }
 
-    private bool HighlightRow(ImDrawListPtr drawList, Rect row, float scale)
+    private static bool HighlightRow(ImDrawListPtr drawList, Rect row, float scale)
     {
-        if (!UiInteract.Hover(row.Min, row.Max))
-        {
-            return false;
-        }
-
         var bleed = new Vector2(Metrics.Space.Xs * scale, 0f);
-        drawList.AddRectFilled(row.Min - bleed, row.Max + bleed,
-            ImGui.GetColorU32(Surfaces.Fill(controls, FillLevel.Quaternary)), Metrics.Radius.Md * scale);
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        return true;
+        return HoverWash(drawList, row, new Rect(row.Min - bleed, row.Max + bleed), Metrics.Radius.Md * scale);
     }
 
     private void DrawRowText(ImDrawListPtr drawList, float left, float right, float middle, string name,

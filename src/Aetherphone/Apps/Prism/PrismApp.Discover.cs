@@ -310,20 +310,6 @@ internal sealed partial class PrismApp
         return left + handleSize.X;
     }
 
-    private static bool HoverWash(ImDrawListPtr drawList, Rect rect)
-    {
-        var hovered = UiInteract.Hover(rect.Min, rect.Max);
-        if (!hovered)
-        {
-            return false;
-        }
-
-        drawList.AddRectFilled(rect.Min, rect.Max,
-            ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Quaternary)));
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        return true;
-    }
-
     private void ClickProfile(Rect hit, GlamAuthorDto? author)
     {
         if (author is not { Id.Length: > 0 })

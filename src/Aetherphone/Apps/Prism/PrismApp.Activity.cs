@@ -141,7 +141,6 @@ internal sealed partial class PrismApp
         }
 
         var hovered = HoverWash(drawList, row);
-
         var middle = row.Center.Y;
         var placing = item.Type == SocialActivity.TypePlacing;
         var center = new Vector2(row.Min.X + inset + avatar * 0.5f, middle);

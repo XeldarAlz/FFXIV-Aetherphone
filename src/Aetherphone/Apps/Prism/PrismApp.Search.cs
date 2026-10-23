@@ -233,7 +233,6 @@ internal sealed partial class PrismApp
         float scale)
     {
         var hovered = HoverWash(drawList, row);
-
         var room = MathF.Max(1f, row.Max.X - Metrics.Space.Lg * scale - textLeft);
         var titleLine = Typography.LineHeight(PrismType.Headline);
         var y = row.Center.Y - (titleLine + Typography.LineHeight(PrismType.Caption)) * 0.5f;

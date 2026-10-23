@@ -585,14 +585,7 @@ internal sealed partial class PrismApp : IResumableApp
         }
 
         DrawLook(drawList, photo, url, false);
-        var hovered = UiInteract.Hover(tile.Min, tile.Max);
-        if (hovered)
-        {
-            drawList.AddRectFilled(photo.Min, photo.Max,
-                ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Quaternary)));
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
+        var hovered = HoverWash(drawList, tile, photo, 0f);
         var middle = (photo.Max.Y + tile.Max.Y) * 0.5f;
         var left = photo.Min.X;
         var right = photo.Max.X;
@@ -627,6 +620,21 @@ internal sealed partial class PrismApp : IResumableApp
             new Vector2(left, middle - Typography.Measure(fitted, PrismType.Headline).Y * 0.5f), fitted, PrismArt.Fore,
             PrismType.Headline);
         return UiInteract.Click(tile.Min, tile.Max, hovered);
+    }
+
+    private static bool HoverWash(ImDrawListPtr drawList, Rect rect) => HoverWash(drawList, rect, rect, 0f);
+
+    private static bool HoverWash(ImDrawListPtr drawList, Rect hit, Rect wash, float rounding)
+    {
+        if (!UiInteract.Hover(hit.Min, hit.Max))
+        {
+            return false;
+        }
+
+        drawList.AddRectFilled(wash.Min, wash.Max,
+            ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Quaternary)), rounding);
+        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        return true;
     }
 
     private Rect DrawLook(ImDrawListPtr drawList, Rect rect, string url, bool contain, float alpha = 1f,
