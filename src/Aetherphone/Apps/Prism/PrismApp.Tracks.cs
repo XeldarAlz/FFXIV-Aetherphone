@@ -89,7 +89,7 @@ internal sealed partial class PrismApp
         var height = MathF.Max(0f, MathF.Min(full.Width * CoverRatio, button.Min.Y - gap - trackBlock - gap - top));
         var photo = new Rect(new Vector2(full.Min.X, top), new Vector2(full.Max.X, top + height));
         var area = new Rect(photo.Min, new Vector2(photo.Max.X, button.Min.Y - gap));
-        DriveTrackPager(area, count, scale);
+        DrivePager(trackPager, area, count, ref trackPressed, ref trackPress, scale);
         var scroll = trackPager.Value;
         var first = Math.Clamp((int)MathF.Floor(scroll), 0, count - 1);
         var last = Math.Clamp((int)MathF.Ceiling(scroll), 0, count - 1);
@@ -108,7 +108,7 @@ internal sealed partial class PrismApp
         }
 
         var page = Math.Clamp((int)MathF.Round(scroll), 0, count - 1);
-        DrawTrackDots(drawList, photo, count, page,
+        DrawPagerDots(drawList, trackPager, photo, count, page,
             CoverPlacing(store.LastWeekResults(tracks[page].Id)) is null ? PrismArt.Fore : PrismArt.PhotoFore, scale);
         DrawPhotoBack(drawList, photo, PhotoInset(full, content), scale);
         if (DrawButton(drawList, button, TrackAction(page, tracks[page]), ButtonStyle.Solid, scale,
@@ -118,17 +118,18 @@ internal sealed partial class PrismApp
         }
     }
 
-    private void DriveTrackPager(Rect area, int count, float scale)
+    private static void DrivePager(Pager pager, Rect area, int count, ref bool pressed, ref Vector2 press,
+        float scale)
     {
         var delta = ImGui.GetIO().DeltaTime;
-        trackPager.Step(delta, count);
+        pager.Step(delta, count);
         var mouse = ImGui.GetMousePos();
-        if (trackPager.Dragging)
+        if (pager.Dragging)
         {
-            trackPager.Drag(mouse.X, area.Width, count, delta);
+            pager.Drag(mouse.X, area.Width, count, delta);
             if (!ImGui.IsMouseDown(ImGuiMouseButton.Left))
             {
-                trackPager.Release(area.Width, count);
+                pager.Release(area.Width, count);
             }
 
             return;
@@ -136,28 +137,29 @@ internal sealed partial class PrismApp
 
         if (UiInteract.Hover(area.Min, area.Max) && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
-            trackPressed = true;
-            trackPress = mouse;
+            pressed = true;
+            press = mouse;
         }
 
-        if (!trackPressed || !ImGui.IsMouseDown(ImGuiMouseButton.Left))
+        if (!pressed || !ImGui.IsMouseDown(ImGuiMouseButton.Left))
         {
-            trackPressed = false;
+            pressed = false;
             return;
         }
 
-        var move = mouse - trackPress;
+        var move = mouse - press;
         if (MathF.Abs(move.X) <= PagerSlopUnits * scale || MathF.Abs(move.X) <= MathF.Abs(move.Y))
         {
             return;
         }
 
-        trackPressed = false;
+        pressed = false;
         UiInteract.CancelPendingTap();
-        trackPager.Begin(trackPress.X);
+        pager.Begin(press.X);
     }
 
-    private void DrawTrackDots(ImDrawListPtr drawList, Rect photo, int count, int page, Vector4 ink, float scale)
+    private static void DrawPagerDots(ImDrawListPtr drawList, Pager pager, Rect photo, int count, int page, Vector4 ink,
+        float scale)
     {
         var tap = Metrics.Size.TapTarget * scale;
         var center = new Vector2(photo.Center.X, photo.Max.Y - tap * 0.5f);
@@ -166,7 +168,7 @@ internal sealed partial class PrismApp
             new Vector2(center.X + tap * count * 0.5f, photo.Max.Y));
         if (UiInteract.HoverClick(hit.Min, hit.Max))
         {
-            trackPager.AnimateTo(ImGui.GetMousePos().X >= center.X ? page + 1 : page - 1, count);
+            pager.AnimateTo(ImGui.GetMousePos().X >= center.X ? page + 1 : page - 1, count);
         }
     }
 

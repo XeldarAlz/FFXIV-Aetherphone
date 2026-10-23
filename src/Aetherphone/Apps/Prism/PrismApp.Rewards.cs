@@ -13,16 +13,14 @@ namespace Aetherphone.Apps.Prism;
 
 internal sealed partial class PrismApp
 {
-    private const float MedalUnits = 30f;
     private const float MedalGlyphShare = 1.1f;
     private const float MedalAvatarShare = 0.62f;
     private const float MedalIconShare = 0.55f;
     private const float MedalDelay = 0.25f;
-    private const float ChapterDelay = 0.5f;
     private const float MedalRestScale = 0.82f;
     private const float RewardMonogramScale = 0.8f;
     private const int RewardAvatarSegments = 48;
-    private const float RewardPhotoShare = 0.5f;
+    private const float RewardArtShare = 0.3f;
 
     private static readonly LocString[] RewardTitles =
     {
@@ -36,6 +34,7 @@ internal sealed partial class PrismApp
 
     private readonly List<PrismPrizeRow> rewardRows = new();
     private readonly PrismRewardKind[] rewardKinds = new PrismRewardKind[PrismRewards.KindCount];
+    private readonly Pager rewardPager = new(Motion.PageSettle);
     private int rewardKindCount;
     private PrismPrizesDto? rewardsFor;
     private PrismJudgeRewardDto? rewardsJudging;
@@ -45,12 +44,18 @@ internal sealed partial class PrismApp
     private CachedText rewardDaysText;
     private CachedText monogramText;
     private CachedText rewardWinnerText;
+    private Vector2 rewardPress;
+    private bool rewardPressed;
 
     private PrismPrizesDto? Prizes => store.Week?.Prizes ?? ShownResults()?.Prizes;
 
     private bool ChineseAccount => gameData.IsChineseGameClient();
 
-    private void OpenRewards() => Push(PrismScreen.Rewards);
+    private void OpenRewards()
+    {
+        rewardPager.SnapTo(0, PrismRewards.KindCount);
+        Push(PrismScreen.Rewards);
+    }
 
     private void SyncRewardArt()
     {
@@ -93,56 +98,108 @@ internal sealed partial class PrismApp
     private void DrawRewards(ImDrawListPtr drawList, Rect content, float scale)
     {
         SyncRewardArt();
-        var top = DrawBackHeader(drawList, content, store.Week?.Title ?? string.Empty, scale);
         var full = FullFrom(content, scale);
-        var body = new Rect(new Vector2(full.Min.X, top), new Vector2(full.Max.X, content.Max.Y));
-        using var surface = BeginBody(body);
-        var list = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var width = content.Width;
-        var left = origin.X + content.Min.X - full.Min.X;
-        var cursor = origin.Y + Metrics.Space.Sm * scale;
-        if (ShownResults() is { } results && CoverPlacing(results) is { ImageUrl.Length: > 0 } winner)
+        var topInset = PhotoInset(full, content);
+        var entering = store.Week is { Phase: PrismPhases.Entering, MyEntry: null };
+        var button = ActionRect(content, scale);
+        var area = new Rect(new Vector2(full.Min.X, PhotoTop(full, content)),
+            new Vector2(full.Max.X, content.Max.Y - bottomChrome));
+        var dotsBottom = entering ? button.Min.Y - Metrics.Space.Lg * scale : area.Max.Y;
+        var count = Math.Max(1, rewardKindCount);
+        DrivePager(rewardPager, area, count, ref rewardPressed, ref rewardPress, scale);
+        var scroll = rewardPager.Value;
+        var first = Math.Clamp((int)MathF.Floor(scroll), 0, count - 1);
+        var last = Math.Clamp((int)MathF.Ceiling(scroll), 0, count - 1);
+        var results = ShownResults();
+        var winner = CoverPlacing(results) is { ImageUrl.Length: > 0 } placing ? placing : null;
+        drawList.PushClipRect(area.Min, area.Max, true);
+        for (var index = first; index <= last && index < rewardKindCount; index++)
         {
-            var photo = new Rect(new Vector2(origin.X, cursor), new Vector2(origin.X + full.Width,
-                cursor + full.Width * RewardPhotoShare));
-            DrawLook(list, photo, winner.ImageUrl, false, native: true, focusY: ProfileFocus(photo, 0f));
-            DrawRewardCredit(list, photo, left, width, results, winner, scale);
-            cursor = photo.Max.Y + Metrics.Space.Lg * scale;
+            var offset = new Vector2((index - scroll) * full.Width, 0f);
+            DrawRewardPage(drawList, new Rect(area.Min + offset, area.Max + offset), content.Min.X + offset.X,
+                content.Width, topInset, dotsBottom, rewardKinds[index], results, winner, scale);
         }
 
-        cursor = DrawRewardsHero(list, left, cursor, width, scale);
-        cursor = DrawRewardMedals(list, left, cursor, width, scale);
-        for (var index = 0; index < rewardKindCount; index++)
+        drawList.PopClipRect();
+        var page = Math.Clamp((int)MathF.Round(scroll), 0, count - 1);
+        if (rewardKindCount > 1)
         {
-            cursor = DrawRewardChapter(list, left, cursor, width, rewardKinds[index], index, scale);
+            DrawPagerDots(drawList, rewardPager, new Rect(area.Min, new Vector2(area.Max.X, dotsBottom)), count, page,
+                RewardOverPhoto(rewardKinds[page], winner) ? PrismArt.PhotoFore : PrismArt.Fore, scale);
         }
 
-        if (store.Week is { Phase: PrismPhases.Entering, MyEntry: null })
+        DrawPhotoBack(drawList, area, topInset, scale);
+        if (entering && DrawButton(drawList, button, EnterLabel(), ButtonStyle.Solid, scale, enabled: !store.Busy,
+                id: "prism.rewards.enter"))
         {
-            var enter = new Rect(new Vector2(left, cursor),
-                new Vector2(left + width, cursor + Button.LargeHeight * scale));
-            if (DrawButton(list, enter, EnterLabel(), ButtonStyle.Solid, scale, enabled: !store.Busy,
-                    id: "prism.rewards.enter"))
-            {
-                StartEntry();
-            }
-
-            cursor = enter.Max.Y;
+            StartEntry();
         }
-
-        ImGui.Dummy(new Vector2(width, cursor - origin.Y + PrismArt.BottomMargin(scale)));
     }
 
-    private void DrawRewardCredit(ImDrawListPtr drawList, Rect photo, float left, float width,
-        PrismResultsDto results, PrismPlacingDto winner, float scale)
+    private static bool RewardOverPhoto(PrismRewardKind kind, PrismPlacingDto? winner) =>
+        kind == PrismRewardKind.Frame && winner is not null;
+
+    private void DrawRewardPage(ImDrawListPtr drawList, Rect page, float left, float width, float topInset,
+        float dotsBottom, PrismRewardKind kind, PrismResultsDto? results, PrismPlacingDto? winner, float scale)
     {
+        var overPhoto = RewardOverPhoto(kind, winner);
+        if (overPhoto)
+        {
+            DrawLook(drawList, page, winner!.ImageUrl, false, native: true, focusY: ProfileFocus(page, topInset));
+        }
+        else
+        {
+            PrismArt.Placeholder(drawList, page, false, scale);
+        }
+
         var line = Typography.LineHeight(PrismType.Caption);
-        PrismArt.Scrim(drawList, photo, line, scale);
-        var credit = results.WeekId == store.Week?.PreviousWeekId ? LastWeekCredit(winner) : CoverByLine(winner);
-        Typography.Draw(drawList, new Vector2(left, photo.Max.Y - Metrics.Space.Md * scale - line),
-            Typography.FitText(credit, width, PrismType.Caption), PrismArt.PhotoFore, PrismType.Caption);
+        var gap = Metrics.Space.Xxs * scale;
+        var title = Loc.T(RewardTitles[(int)kind]);
+        var body = Loc.T(RewardBodies[(int)kind]);
+        var extra = RewardExtra(kind);
+        var gilNote = kind == PrismRewardKind.Gil && !ChineseAccount && Prizes is { GilNote.Length: > 0 } prizes
+            ? prizes.GilNote
+            : string.Empty;
+        var block = line + gap + PrismType.HeroHeight(title, width) + Metrics.Space.Sm * scale +
+                    Typography.MeasureWrappedBlock(body, PrismType.Body, width).Y + NoteHeight(extra, width, scale) +
+                    NoteHeight(gilNote, width, scale);
+        var y = dotsBottom - Metrics.Size.TapTarget * scale - block;
+        var artTop = page.Min.Y + topInset + Metrics.Size.TapTarget * scale;
+        var radius = MathF.Min(width * RewardArtShare, (y - artTop) * 0.5f - Metrics.Space.Lg * scale);
+        if (radius > 0f && !overPhoto)
+        {
+            var center = new Vector2(page.Center.X, (artTop + y) * 0.5f);
+            var mark = PrismMotion.Mark(drawList);
+            DrawRewardArt(drawList, center, radius, kind, scale);
+            var shown = PrismMotion.At(screenAge, MedalDelay, Motion.PageSettle);
+            PrismMotion.Scale(drawList, mark, center, MedalRestScale + (1f - MedalRestScale) * shown, shown);
+        }
+
+        if (overPhoto)
+        {
+            PrismArt.Scrim(drawList, page, page.Max.Y - y, scale);
+        }
+
+        var ink = overPhoto ? PrismArt.PhotoFore : PrismArt.Fore;
+        var muted = overPhoto ? PrismArt.PhotoMuted : PrismArt.Muted;
+        var kicker = !overPhoto
+            ? Loc.T(L.Prism.Rewards)
+            : results?.WeekId == store.Week?.PreviousWeekId
+                ? LastWeekCredit(winner!)
+                : CoverByLine(winner!);
+        Typography.Draw(drawList, new Vector2(left, y), Typography.FitText(kicker, width, PrismType.Caption), muted,
+            PrismType.Caption);
+        y += line + gap;
+        y += PrismType.DrawHero(drawList, new Vector2(left, y), title, width, ink) + Metrics.Space.Sm * scale;
+        y += Typography.DrawWrappedLeft(new Vector2(left, y), body, muted, PrismType.Body, width);
+        y = DrawRewardNote(left, y, width, extra, ink, scale);
+        DrawRewardNote(left, y, width, gilNote, ink, scale);
     }
+
+    private static float NoteHeight(string note, float width, float scale) =>
+        note.Length == 0
+            ? 0f
+            : Metrics.Space.Sm * scale + Typography.MeasureWrappedBlock(note, PrismType.Caption, width).Y;
 
     private string LastWeekCredit(PrismPlacingDto winner)
     {
@@ -150,42 +207,6 @@ internal sealed partial class PrismApp
         return rewardWinnerText.IsCurrent(key)
             ? rewardWinnerText.Value
             : rewardWinnerText.Store(key, Loc.T(L.Prism.LastWeekWinner, AtHandle(winner.Handle, winner.DisplayName)));
-    }
-
-    private float DrawRewardsHero(ImDrawListPtr drawList, float left, float top, float width, float scale)
-    {
-        var mark = PrismMotion.Mark(drawList);
-        Typography.Draw(drawList, new Vector2(left, top), Loc.T(L.Prism.Rewards), PrismArt.Muted, PrismType.Caption);
-        top += Typography.LineHeight(PrismType.Caption) + Metrics.Space.Xxs * scale;
-        top += PrismType.DrawHero(drawList, new Vector2(left, top), Loc.T(L.Prism.RewardsHeadline), width,
-            PrismArt.Fore) + Metrics.Space.Sm * scale;
-        var intro = PrismType.Sentences(Loc.T(L.Prism.RewardsIntro), PrismType.Body, width);
-        top += Typography.DrawWrappedLeft(new Vector2(left, top), intro, PrismArt.Muted, PrismType.Body,
-            PrismType.BalancedWidth(intro, PrismType.Body, width));
-        PrismMotion.Rise(drawList, mark, PrismMotion.At(screenAge, 0f, Motion.PageSettle), PrismMotion.RiseUnits * scale);
-        return top + Metrics.Space.Xl * scale;
-    }
-
-    private float DrawRewardMedals(ImDrawListPtr drawList, float left, float top, float width, float scale)
-    {
-        if (rewardKindCount == 0)
-        {
-            return top;
-        }
-
-        var gap = Metrics.Space.Md * scale;
-        var column = (width - gap * (PrismRewards.KindCount - 1)) / PrismRewards.KindCount;
-        var radius = MathF.Min(MedalUnits * scale, column * 0.5f);
-        for (var index = 0; index < rewardKindCount; index++)
-        {
-            var center = new Vector2(left + column * (index + 0.5f) + gap * index, top + radius);
-            var mark = PrismMotion.Mark(drawList);
-            DrawRewardArt(drawList, center, radius, rewardKinds[index], scale);
-            var shown = PrismMotion.At(screenAge, MedalDelay + index * PrismMotion.Stagger, Motion.PageSettle);
-            PrismMotion.Scale(drawList, mark, center, MedalRestScale + (1f - MedalRestScale) * shown, shown);
-        }
-
-        return top + radius * 2f + Metrics.Space.Xl * scale;
     }
 
     private void DrawRewardArt(ImDrawListPtr drawList, Vector2 center, float radius, PrismRewardKind kind, float scale)
@@ -238,27 +259,7 @@ internal sealed partial class PrismApp
         }
     }
 
-    private float DrawRewardChapter(ImDrawListPtr drawList, float left, float top, float width, PrismRewardKind kind,
-        int number,
-        float scale)
-    {
-        var mark = PrismMotion.Mark(drawList);
-        var cursor = DrawSectionTitle(drawList, left, left + width, top, Loc.T(RewardTitles[(int)kind]), string.Empty,
-            scale) + Metrics.Space.Xs * scale;
-        cursor += Typography.DrawWrappedLeft(new Vector2(left, cursor), Loc.T(RewardBodies[(int)kind]), PrismArt.Muted,
-            PrismType.Body, width);
-        cursor = DrawRewardNote(left, cursor, width, RewardExtra(kind), scale);
-        if (kind == PrismRewardKind.Gil && !ChineseAccount && Prizes is { GilNote.Length: > 0 } prizes)
-        {
-            cursor = DrawRewardNote(left, cursor, width, prizes.GilNote, scale);
-        }
-
-        PrismMotion.Rise(drawList, mark, PrismMotion.At(screenAge, ChapterDelay + number * PrismMotion.Stagger,
-            Motion.PageSettle), PrismMotion.RiseUnits * scale);
-        return cursor + Metrics.Space.Xl * scale;
-    }
-
-    private static float DrawRewardNote(float left, float top, float width, string note, float scale)
+    private static float DrawRewardNote(float left, float top, float width, string note, Vector4 ink, float scale)
     {
         if (note.Length == 0)
         {
@@ -266,7 +267,7 @@ internal sealed partial class PrismApp
         }
 
         return top + Metrics.Space.Sm * scale + Typography.DrawWrappedLeft(new Vector2(left, top + Metrics.Space.Sm * scale),
-            note, PrismArt.Fore, PrismType.Caption, width);
+            note, ink, PrismType.Caption, width);
     }
 
     private string RewardExtra(PrismRewardKind kind)
