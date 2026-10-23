@@ -108,6 +108,8 @@ internal sealed partial class PrismApp : IResumableApp
     private string? pendingSharedPhoto;
     private float sinceRefresh;
     private Vector2 pressedTile = new(float.NaN);
+    private bool tilePressed;
+    private float tileScale = 1f;
 
     public PrismApp(AethernetSession session, AethernetApi api, RemoteImageCache images, PhotoLibrary library,
         WallpaperImageCache wallpaperImages, Configuration configuration, ConfirmService confirm,
@@ -235,6 +237,8 @@ internal sealed partial class PrismApp : IResumableApp
             return;
         }
 
+        tileScale = PressFx.Scale(ImGui.GetID("prism.tilePress"), tilePressed, PressFx.CardPressedScale);
+        tilePressed = false;
         TickRefresh();
         ForgetLoadsOnNewWeek();
         ConsumeSharedPhoto();
@@ -595,12 +599,12 @@ internal sealed partial class PrismApp : IResumableApp
         if (pressed)
         {
             pressedTile = tile.Min;
+            tilePressed = true;
         }
 
         if (tile.Min == pressedTile)
         {
-            PrismMotion.Grow(drawList, mark, tile.Center,
-                PressFx.Scale(ImGui.GetID("prism.tilePress"), pressed, PressFx.CardPressedScale));
+            PrismMotion.Grow(drawList, mark, tile.Center, tileScale);
         }
 
         return UiInteract.Click(tile.Min, tile.Max, hovered);
