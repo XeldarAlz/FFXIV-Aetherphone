@@ -124,9 +124,9 @@ internal sealed class TabBar
         var radius = capsule.Height * 0.5f;
         Material.ThemedGlass(drawList, capsule.Min, capsule.Max, radius, scale, backdrop, CurrentGlassOpacity);
 
-        var activeCell = TabBarLayout.Cell(capsule, items.Length, activeIndex, scale);
         StepHighlight(activeIndex, delta);
-        DrawHighlight(drawList, activeCell, activeIndex, ui.Accent, Math.Clamp(press[activeIndex].Value, 0f, 1f), scale);
+        DrawHighlight(drawList, TabBarLayout.Highlight(capsule, items.Length, highlightSlot.Value, scale), ui.Accent,
+            Math.Clamp(press[activeIndex].Value, 0f, 1f), scale);
 
         var inactiveInk = tone == GlassTone.Dark ? MutedOnDarkGlass : theme.TextMuted;
         var result = TabBarResult.None;
@@ -225,11 +225,9 @@ internal sealed class TabBar
         highlightSlot.Step(targetSlot, Motion.TabBar, delta);
     }
 
-    private void DrawHighlight(ImDrawListPtr drawList, Rect activeCell, int activeIndex, Vector4 accent,
-        float pressAmount, float scale)
+    private static void DrawHighlight(ImDrawListPtr drawList, Rect highlight, Vector4 accent, float pressAmount,
+        float scale)
     {
-        var highlight = TabBarLayout.Highlight(activeCell, scale)
-            .Translate(new Vector2((highlightSlot.Value - activeIndex) * activeCell.Width, 0f));
         var half = highlight.Size * 0.5f * (1f - PressDepth * pressAmount);
         var min = highlight.Center - half;
         var max = highlight.Center + half;

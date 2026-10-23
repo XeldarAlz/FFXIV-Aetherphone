@@ -58,10 +58,23 @@ internal static class TabBarLayout
 
     public static Vector2 IconCenter(Rect cell) => cell.Center;
 
-    public static Rect Highlight(Rect cell, float scale)
+    public static Rect Highlight(Rect capsule, int count, int index, float scale)
     {
+        var cell = Cell(capsule, count, index, scale);
         var inset = HighlightInset * scale;
-        return new Rect(new Vector2(cell.Min.X + inset, cell.Min.Y + inset),
-            new Vector2(MathF.Max(cell.Min.X + inset, cell.Max.X - inset), cell.Max.Y - inset));
+        var left = index == 0 ? capsule.Min.X + inset : cell.Min.X + inset;
+        var right = index == count - 1 ? capsule.Max.X - inset : cell.Max.X - inset;
+        return new Rect(new Vector2(left, cell.Min.Y + inset), new Vector2(MathF.Max(left, right), cell.Max.Y - inset));
+    }
+
+    public static Rect Highlight(Rect capsule, int count, float slot, float scale)
+    {
+        var last = Math.Max(0, count - 1);
+        var clamped = Math.Clamp(slot, 0f, last);
+        var lower = Math.Min((int)clamped, last);
+        var from = Highlight(capsule, count, lower, scale);
+        var to = Highlight(capsule, count, Math.Min(lower + 1, last), scale);
+        var amount = clamped - lower;
+        return new Rect(Vector2.Lerp(from.Min, to.Min, amount), Vector2.Lerp(from.Max, to.Max, amount));
     }
 }
