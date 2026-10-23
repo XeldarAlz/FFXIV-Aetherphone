@@ -10877,16 +10877,13 @@ internal static class L
         public static readonly LocString ScoreHigh = new("prism.scoreHigh", "Nails it");
         public static readonly LocString JudgingCoinLabel = new("prism.judgingCoinLabel", "Aether Coin for judging");
         public static readonly LocString HowItWorks = new("prism.howItWorks", "How it works");
-        public static readonly LocString GuideEnterTitle = new("prism.guideEnterTitle", "Enter one glam");
-        public static readonly LocString GuideEnterBody = new("prism.guideEnterBody",
-            "A new theme drops every week. Pick the one photo that wears it best, mods and all.");
+        public static readonly LocString GuideEnterTitle = new("prism.guideEnterTitle", "A theme every week");
+        public static readonly LocString GuideEnterBody = new("prism.guideEnterBody", "Enter one glam that nails it.");
         public static readonly LocString GuideJudgeBody = new("prism.guideJudgeBody",
-            "Score glams from 1 to 5 in heats of about twelve. Entries are anonymous, and every judge's scores are evened out so nobody can sink a glam alone.");
-        public static readonly LocString GuideFinalBody = new("prism.guideFinalBody",
-            "The top glams from each heat meet in the final, and everyone judges it.");
+            "Rate anonymous glams from 1 to 5.");
         public static readonly LocString GuideRevealTitle = new("prism.guideRevealTitle", "The reveal");
         public static readonly LocString GuideRevealBody = new("prism.guideRevealBody",
-            "Results play out as a countdown to first place. The podium and active judges earn Aether Coin.");
+            "Top glams face off in the final for Aether Coin.");
         public static readonly LocString TabDiscover = new("prism.tabDiscover", "Discover");
         public static readonly LocString TabWeek = new("prism.tabWeek", "This week");
         public static readonly LocString TabWardrobe = new("prism.tabWardrobe", "Wardrobe");
@@ -11000,16 +10997,16 @@ internal static class L
         public static readonly LocString SurpriseMe = new("prism.surpriseMe", "Surprise me");
         public static readonly LocString GuideIntroTitle = new("prism.guideIntroTitle", "Welcome to Prism");
         public static readonly LocString GuideIntroBody = new("prism.guideIntroBody",
-            "Share glams, try on anyone's and keep a wardrobe of your own. There's a contest every week too.");
+            "Discover glams, try them on and share your own.");
         public static readonly LocString GuideTryTitle = new("prism.guideTryTitle", "Try on any glam");
         public static readonly LocString GuideTryBody = new("prism.guideTryBody",
-            "Every glam lists its gear, dyes and mods. Try on puts it on your character with Glamourer, with the mods you have.");
+            "One tap puts the whole look on your character.");
         public static readonly LocString GuidePostTitle = new("prism.guidePostTitle", "Post your own");
         public static readonly LocString GuidePostBody = new("prism.guidePostBody",
-            "Pick up to four photos, then add the pieces, dyes and mods you wore so people can try it on. Prism links each mod to its page and never hosts mod files.");
+            "Add your photos and the gear you wore.");
         public static readonly LocString GuideWardrobeTitle = new("prism.guideWardrobeTitle", "Keep a wardrobe");
         public static readonly LocString GuideWardrobeBody = new("prism.guideWardrobeBody",
-            "Save what you're wearing, bring in Glamourer designs or add any glam, then put it back on in one tap. Only you can see it.");
+            "Save outfits and put them back on in one tap.");
         public static readonly LocString GetStarted = new("prism.getStarted", "Get started");
         public static readonly LocString Skip = new("prism.skip", "Skip");
         public static readonly LocString NextTheme = new("prism.nextTheme", "Next theme");

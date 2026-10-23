@@ -299,7 +299,7 @@ internal sealed partial class PrismApp : IResumableApp
                 DrawFinal(drawList, full, content, scale);
                 break;
             case PrismScreen.Guide:
-                DrawGuide(drawList, content, scale);
+                DrawGuide(drawList, full, content, scale);
                 break;
             case PrismScreen.Rewards:
                 DrawRewards(drawList, full, content, scale);

@@ -27,23 +27,6 @@ internal static class PrismMotion
         Shift(drawList, from, new Vector2(0f, distance * (1f - progress)), progress);
     }
 
-    public static void Center(ImDrawListPtr drawList, int from, Rect area)
-    {
-        var vertices = drawList.VtxBuffer.AsSpan();
-        var top = float.MaxValue;
-        var bottom = float.MinValue;
-        for (var index = Math.Max(0, from); index < vertices.Length; index++)
-        {
-            top = MathF.Min(top, vertices[index].Pos.Y);
-            bottom = MathF.Max(bottom, vertices[index].Pos.Y);
-        }
-
-        if (bottom > top)
-        {
-            Shift(drawList, from, new Vector2(0f, area.Center.Y - (top + bottom) * 0.5f), 1f);
-        }
-    }
-
     public static void Shift(ImDrawListPtr drawList, int from, Vector2 offset, float alpha)
     {
         var transform = new LayerTransform(1f, Vector2.Zero, offset, default, alpha);

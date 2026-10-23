@@ -441,6 +441,11 @@ internal sealed partial class PrismApp
             return;
         }
 
+        DrawLikeBloom(drawList, frame, age, scale);
+    }
+
+    private static void DrawLikeBloom(ImDrawListPtr drawList, Rect frame, float age, float scale)
+    {
         drawList.PushClipRect(frame.Min, frame.Max, true);
         var size = MathF.Min(frame.Width, frame.Height) * 0.22f;
         var mark = PrismMotion.Mark(drawList);

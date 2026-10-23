@@ -300,14 +300,14 @@ internal sealed partial class PrismApp
         for (var row = 0; row < BodySlots.Length; row++)
         {
             var middle = firstRow + row * pitch;
-            DrawBoardSlot(drawList, new Vector2(center, middle), BoardTileUnits * unit, BodySlots[row], gear, false, scale);
+            DrawBoardSlot(drawList, new Vector2(center, middle), BoardTileUnits * unit, BodySlots[row], gear, scale);
             DrawBoardSlot(drawList, new Vector2(center + side, middle), BoardAccessoryUnits * unit,
-                AccessorySlots[row], gear, false, scale);
+                AccessorySlots[row], gear, scale);
             var leftRow = row - BoardWeaponRow;
             if (leftRow >= 0 && leftRow < LeftSlots.Length)
             {
                 DrawBoardSlot(drawList, new Vector2(center - side, middle), BoardAccessoryUnits * unit,
-                    LeftSlots[leftRow], gear, false, scale);
+                    LeftSlots[leftRow], gear, scale);
             }
         }
     }
@@ -327,7 +327,7 @@ internal sealed partial class PrismApp
     }
 
     private void DrawBoardSlot(ImDrawListPtr drawList, Vector2 center, float size, int slot, GlamGearDto[] gear,
-        bool showEmpty, float scale)
+        float scale)
     {
         var half = new Vector2(size * 0.5f, size * 0.5f);
         var tile = new Rect(center - half, center + half);
@@ -341,19 +341,8 @@ internal sealed partial class PrismApp
             {
                 PrismArt.SlotTile(drawList, tile, slot, gameData.StainColor(piece.Stain0 != 0 ? piece.Stain0 : piece.Stain1),
                     scale);
-                if (showEmpty)
-                {
-                    HoverTooltip.Show(tile, piece.ItemId == 0 ? ModCountLine()
-                        : GearItem(piece.ItemId, out var name, out _) ? name : string.Empty);
-                }
-
                 return;
             }
-        }
-
-        if (showEmpty)
-        {
-            PrismArt.SlotTile(drawList, tile, slot, 0, scale, true);
         }
     }
 

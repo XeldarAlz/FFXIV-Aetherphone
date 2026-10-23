@@ -453,8 +453,15 @@ internal sealed partial class PrismApp
             }
         }
 
+        return top + GearGridHeight(count, width, scale);
+    }
+
+    private static float GearGridHeight(int count, float width, float scale)
+    {
+        var gap = Metrics.Space.Sm * scale;
+        var size = (width - gap * (GearGridColumns - 1)) / GearGridColumns;
         var rows = (count + GearGridColumns - 1) / GearGridColumns;
-        return top + rows * size + (rows - 1) * gap;
+        return rows * size + (rows - 1) * gap;
     }
 
     private void DrawDyeTarget(ImDrawListPtr drawList, Rect target, int slot, int channel, float scale)
