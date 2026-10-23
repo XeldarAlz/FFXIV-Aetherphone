@@ -199,10 +199,8 @@ internal sealed partial class PrismApp
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth();
         var gap = Metrics.Space.Xxs * scale;
-        var column = (width - gap * (GridColumns + 1)) / GridColumns;
-        var height = column / GlamStore.PhotoRatio;
+        var gridWidth = width - gap * 2f;
         var line = GridLine(scale);
-        var pitch = height + line + gap;
         var outfits = wardrobe.Outfits;
         var busy = wardrobe.Loading || wardrobe.Importing;
         var count = busy ? PlaceholderRows * GridColumns : outfits.Length;
@@ -214,9 +212,7 @@ internal sealed partial class PrismApp
                 continue;
             }
 
-            var min = new Vector2(origin.X + gap + shown % GridColumns * (column + gap), origin.Y + shown / GridColumns * pitch);
-            var photo = new Rect(min, min + new Vector2(column, height));
-            shown++;
+            var photo = GridCell(origin.X + gap, origin.Y, gridWidth, shown++, scale);
             if (!ImGui.IsRectVisible(photo.Min, new Vector2(photo.Max.X, photo.Max.Y + line)))
             {
                 continue;
@@ -245,8 +241,7 @@ internal sealed partial class PrismApp
             }
         }
 
-        ImGui.Dummy(new Vector2(width,
-            (shown + GridColumns - 1) / GridColumns * pitch + PrismArt.BottomMargin(scale)));
+        ImGui.Dummy(new Vector2(width, GridHeight(gridWidth, shown, scale) + PrismArt.BottomMargin(scale)));
     }
 
     private void OpenOutfit(string id)

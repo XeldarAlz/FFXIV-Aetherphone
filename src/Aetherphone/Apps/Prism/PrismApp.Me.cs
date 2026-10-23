@@ -721,10 +721,7 @@ internal sealed partial class PrismApp
         GlamPlacingDto[]? placings, float scale)
     {
         var gap = Metrics.Space.Xxs * scale;
-        var tileLeft = left + gap;
-        var column = (width - gap * (GridColumns + 1)) / GridColumns;
-        var height = column / GlamStore.PhotoRatio;
-        var pitch = height + GridLine(scale) + gap;
+        var gridWidth = width - gap * 2f;
         var shown = 0;
         for (var index = 0; index < items.Length; index++)
         {
@@ -734,18 +731,15 @@ internal sealed partial class PrismApp
                 continue;
             }
 
-            var x = tileLeft + shown % GridColumns * (column + gap);
-            var y = top + shown / GridColumns * pitch;
-            shown++;
-            var photo = new Rect(new Vector2(x, y), new Vector2(x + column, y + height));
-            if (DrawGridTile(drawList, photo, Cover(glam), placings is null ? glam.Title : PlacingLabel(glam, placings),
-                    string.Empty, null, PhoneIcons.Wand, glam.TryOns > 0 ? CountLabel(glam.TryOns) : string.Empty, scale))
+            if (DrawGridTile(drawList, GridCell(left + gap, top, gridWidth, shown++, scale), Cover(glam),
+                    placings is null ? glam.Title : PlacingLabel(glam, placings), string.Empty, null, PhoneIcons.Wand,
+                    glam.TryOns > 0 ? CountLabel(glam.TryOns) : string.Empty, scale))
             {
                 OpenGlam(glam);
             }
         }
 
-        var bottom = top + (shown + GridColumns - 1) / GridColumns * pitch;
+        var bottom = top + GridHeight(gridWidth, shown, scale);
         return glams.List.LoadingMore && shown > 0 ? DrawLoadingRowBelow(left, width, bottom) : bottom;
     }
 
