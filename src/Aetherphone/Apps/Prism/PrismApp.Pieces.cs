@@ -420,9 +420,7 @@ internal sealed partial class PrismApp
         drawList.AddRectFilled(card.Min, card.Max, ImGui.GetColorU32(CardFill), Metrics.Radius.Card * scale);
         var left = card.Min.X + pad;
         var cursor = card.Min.Y + pad;
-        var title = single is not null && GearItem(single.ItemId, out var name, out _) ? name
-            : tile.Group == PieceGroup.Mods ? ModCountLine()
-            : Loc.T(tile.Group == PieceGroup.Weapon ? L.Prism.Weapon : L.Prism.Accessories);
+        var title = single is not null && GearItem(single.ItemId, out var name, out _) ? name : TileName(tile, gear);
         Typography.Draw(drawList, new Vector2(left, cursor), Typography.FitText(title, inner, PrismType.Headline),
             PrismArt.PhotoFore, PrismType.Headline);
         cursor += headline + Metrics.Space.Xs * scale;

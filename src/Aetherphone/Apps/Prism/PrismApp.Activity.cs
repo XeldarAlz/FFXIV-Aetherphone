@@ -195,8 +195,7 @@ internal sealed partial class PrismApp
         var tapped = UiInteract.Click(row.Min, row.Max, hovered);
         var reach = new Vector2(Metrics.Size.TapTarget * scale * 0.5f);
         var avatarHit = new Rect(center - reach, center + reach);
-        var onAvatar = !placing && item.ActorId.Length > 0 &&
-                       UiInteract.Click(avatarHit.Min, avatarHit.Max, UiInteract.Hover(avatarHit.Min, avatarHit.Max));
+        var onAvatar = !placing && item.ActorId.Length > 0 && UiInteract.Click(avatarHit.Min, avatarHit.Max);
         if (!tapped && !onAvatar)
         {
             return row.Max.Y;
