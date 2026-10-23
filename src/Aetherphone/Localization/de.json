@@ -1147,6 +1147,8 @@
   "changelog.r1400.37": "Ausschnitt-Modus zur Kamera hinzugefügt, der einen beliebigen Teil des Bildschirms über einen verschieb- und skalierbaren Rahmen aufnimmt, beigetragen von t3sco",
   "changelog.r1400.38": "Behoben, dass Abonnenten- und Folge-ich-Listen, die nicht geladen wurden, keinen neuen Versuch erlaubten: Sie bieten jetzt Erneut versuchen an, ebenso eine Suche darin, die unterwegs abbricht, beigetragen von hellovvn",
   "changelog.r1400.39": "Antworten-Schaltfläche unter Kommentaren hinzugefügt, die deinen Kommentar mit dem @Benutzernamen der Person beginnt, beigetragen von hellovvn",
+  "changelog.r1400.40": "Symbole in Tableisten und Kopfzeilen auf eine einheitliche optische Größe umgestellt, damit gefüllte und Umriss-Symbole nebeneinander gleich groß wirken, beigetragen von t3sco",
+  "changelog.r1400.41": "Behoben, dass Symbole leicht neben der Mitte ihrer Schaltflächen saßen und beim Darüberfahren wackelten, beigetragen von t3sco",
   "changelog.r1400.5": "Ausblenden von Nachrichten blockierter Personen in ChocoChat-Gruppenchats hinzugefügt: Jede erscheint als kurze Zeile, die du zum Lesen antippen kannst, und sie benachrichtigen dich nicht mehr",
   "changelog.r1400.6": "Behoben, dass Sprachnachrichten mit Automatische Verstärkung beim lauten Sprechen verzerrten und danach leise blieben",
   "changelog.r1400.7": "Einen Regler Mikrofonschwelle mit Live-Pegelanzeige und Mikrofon testen hinzugefügt: Bei 0 kommt jedes Geräusch durch, höhere Werte brauchen lauteres Sprechen, bevor andere dich hören",

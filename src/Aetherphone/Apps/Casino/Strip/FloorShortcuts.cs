@@ -143,8 +143,7 @@ internal sealed class FloorShortcuts
         var block = icon + IconGap * scale + labelBlock;
         var blockTop = regionTop + MathF.Max(0f, (regionBottom - regionTop - block) * 0.5f);
         var iconCenter = new Vector2((min.X + max.X) * 0.5f, blockTop + icon * 0.5f);
-        CasinoArt.IconTileAt(drawList, iconCenter, icon * (1f + Motion.HoverLiftIcon * hover), item.Tint,
-            item.Icon);
+        CasinoArt.IconTileAt(drawList, iconCenter, icon, item.Tint, item.Icon);
         var lineHeight = Typography.LineHeight(fit.Style);
         var top = blockTop + icon + IconGap * scale;
         for (var line = 0; line < fit.Lines.Length; line++)

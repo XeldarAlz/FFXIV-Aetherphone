@@ -807,17 +807,7 @@ internal sealed partial class DynamicIsland
         var hovered = active && UiInteract.Hover(center - extent, center + extent);
         var color = hovered ? Palette.Mix(fill, Ink, 0.14f) : fill;
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(color, alpha * color.W)), 28);
-        using (Plugin.Fonts.PushDalamudIcon())
-        {
-            var glyph = IconGlyph.Of(icon);
-            var size = ImGui.CalcTextSize(glyph);
-            ImGui.SetCursorScreenPos(center - size * 0.5f);
-            using (UiScope.PushColor(ImGuiCol.Text, Palette.WithAlpha(ink, alpha)))
-            {
-                Typography.Plain(glyph);
-            }
-        }
-
+        AppSkin.Icon(drawList, center, IconGlyph.Of(icon), Palette.WithAlpha(ink, alpha), 1f);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

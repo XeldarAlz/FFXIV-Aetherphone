@@ -1147,6 +1147,8 @@
   "changelog.r1400.37": "Added a Crop mode to Camera that shoots any part of the screen through a box you drag and resize, contributed by t3sco",
   "changelog.r1400.38": "Fixed followers and following lists that did not load leaving no way to try again: they now offer Retry, as does a search through one that stops partway, contributed by hellovvn",
   "changelog.r1400.39": "Added a Reply button under comments that starts your comment with their @handle, contributed by hellovvn",
+  "changelog.r1400.40": "Changed tab bar and header icons to one optical size, so solid and outline icons look even side by side, contributed by t3sco",
+  "changelog.r1400.41": "Fixed icons sitting slightly off center on their buttons and wiggling on hover, contributed by t3sco",
   "changelog.r1400.5": "Added hiding messages from people you blocked in ChocoChat group chats: each shows as a short row you can tap to read, and they no longer notify you",
   "changelog.r1400.6": "Fixed voice messages recorded with Automatic gain distorting when you raise your voice and staying quiet afterwards",
   "changelog.r1400.7": "Added a Microphone threshold slider with a live level meter and Test microphone: at 0 every sound gets through, and higher numbers need louder speech before others hear you",

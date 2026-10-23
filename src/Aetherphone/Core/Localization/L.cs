@@ -2399,6 +2399,10 @@ internal static class L
                 "Changed app names on the home screen to always show in full: a long name shrinks a little or wraps onto a second line instead of ending in an ellipsis"),
             new("changelog.r1400.28",
                 "Changed new apps to arrive on your home screen by themselves, in the first free spot starting from the first page; an app you remove stays removed"),
+            new("changelog.r1400.40",
+                "Changed tab bar and header icons to one optical size, so solid and outline icons look even side by side, contributed by t3sco"),
+            new("changelog.r1400.41",
+                "Fixed icons sitting slightly off center on their buttons and wiggling on hover, contributed by t3sco"),
         };
 
         public static readonly LocString[] Release1400Gamba =

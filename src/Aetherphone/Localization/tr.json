@@ -1147,6 +1147,8 @@
   "changelog.r1400.37": "Kamera'ya, taşıyıp boyutlandırdığın bir çerçeveyle ekranın istediğin kısmını çeken Kırp modu eklendi, katkı: t3sco",
   "changelog.r1400.38": "Yüklenemeyen takipçi ve takip edilenler listelerinin yeniden deneme imkânı vermemesi düzeltildi: artık Tekrar dene sunuyorlar, yarıda kalan bir liste araması da öyle, katkı: hellovvn",
   "changelog.r1400.39": "Yorumların altına, yorumunu kişinin @kullanıcı adıyla başlatan Yanıtla düğmesi eklendi, katkı: hellovvn",
+  "changelog.r1400.40": "Sekme çubuğu ve başlık simgeleri aynı optik boyuta getirildi, böylece dolgulu ve çizgi simgeler yan yana dengeli görünüyor, katkı: t3sco",
+  "changelog.r1400.41": "Simgelerin düğmelerinde hafifçe ortadan kayık durması ve üzerine gelince titremesi düzeltildi, katkı: t3sco",
   "changelog.r1400.5": "ChocoChat grup sohbetlerinde engellediğin kişilerin mesajlarını gizleme eklendi: her biri okumak için dokunabileceğin kısa bir satır olarak görünür ve artık bildirim göndermez",
   "changelog.r1400.6": "Otomatik kazançla kaydedilen sesli mesajların sesini yükselttiğinde bozulması ve ardından kısık kalması düzeltildi",
   "changelog.r1400.7": "Canlı seviye göstergeli ve Mikrofonu test et seçenekli bir Mikrofon eşiği kaydırıcısı eklendi: 0'da her ses geçer, daha yüksek değerlerde başkalarının seni duyması için daha yüksek sesle konuşman gerekir",

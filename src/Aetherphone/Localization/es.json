@@ -1147,6 +1147,8 @@
   "changelog.r1400.37": "Se añadió el modo Recorte a Cámara, que captura cualquier parte de la pantalla con un marco que puedes mover y redimensionar, contribuido por t3sco",
   "changelog.r1400.38": "Corregido que las listas de seguidores y seguidos que no cargaban no dejaran volver a intentarlo: ahora ofrecen Reintentar, igual que una búsqueda en ellas que se detiene a medias, contribuido por hellovvn",
   "changelog.r1400.39": "Se añadió un botón Responder bajo los comentarios que empieza tu comentario con su @nombre de usuario, contribuido por hellovvn",
+  "changelog.r1400.40": "Se cambiaron los iconos de las barras de pestañas y de las cabeceras a un mismo tamaño óptico, para que los iconos rellenos y de contorno se vean parejos, contribuido por t3sco",
+  "changelog.r1400.41": "Se corrigió que los iconos quedaran ligeramente descentrados en sus botones y temblaran al pasar el cursor, contribuido por t3sco",
   "changelog.r1400.5": "Se añadió ocultar los mensajes de las personas que bloqueaste en los chats de grupo de ChocoChat: cada uno aparece como una fila breve que puedes tocar para leer, y ya no te notifican",
   "changelog.r1400.6": "Corregido que los mensajes de voz grabados con Ganancia automática se distorsionaran al alzar la voz y quedaran bajos después",
   "changelog.r1400.7": "Se añadió un control Umbral del micrófono con medidor de nivel en directo y Probar micrófono: en 0 pasa cualquier sonido y los valores más altos necesitan hablar más fuerte para que te oigan",
