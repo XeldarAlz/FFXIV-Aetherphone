@@ -639,8 +639,14 @@ internal sealed partial class PrismApp
         var area = EmptyArea(left, width, top, scale);
         if (showSaved)
         {
-            return DrawEmpty(drawList, area, PhoneIcons.Photo, Loc.T(L.Prism.Saved), Loc.T(L.Prism.SavedEmptyHint),
-                string.Empty, ButtonStyle.Solid, scale, out _);
+            var saved = DrawEmpty(drawList, area, PhoneIcons.Bookmark, Loc.T(L.Prism.Saved),
+                Loc.T(L.Prism.SavedEmptyHint), Loc.T(L.Prism.TabDiscover), ButtonStyle.Tinted, scale, out var browse);
+            if (browse)
+            {
+                OpenTab(PrismTab.Discover);
+            }
+
+            return saved;
         }
 
         if (!mine)
