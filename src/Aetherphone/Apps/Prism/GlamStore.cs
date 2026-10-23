@@ -195,12 +195,16 @@ internal sealed class GlamStore : IDisposable
     public void LoadMore(GlamScope scope)
     {
         var lane = discover[(int)scope];
-        var cursor = lane.Cursor;
-        if (!session.IsSignedIn || cursor is null || lane.Loading || lane.LoadingMore)
+        if (!session.IsSignedIn || lane.Cursor is not { } cursor || lane.Loading || lane.LoadingMore)
         {
             return;
         }
 
+        StartMore(scope, lane, cursor);
+    }
+
+    private void StartMore(GlamScope scope, FeedLane<GlamDto> lane, string cursor)
+    {
         var key = ScopeKeys[(int)scope];
         var daily = scope == GlamScope.Today;
         var only = daily ? null : vanillaOnly;
@@ -310,13 +314,17 @@ internal sealed class GlamStore : IDisposable
 
     public void LoadMoreList()
     {
-        var cursor = list.Cursor;
-        var fetch = listFetch;
-        if (fetch is null || cursor is null || list.Loading || list.LoadingMore)
+        if (listFetch is not { } fetch || list.Cursor is not { } cursor || list.Loading || list.LoadingMore)
         {
             return;
         }
 
+        StartMoreList(fetch, cursor);
+    }
+
+    private void StartMoreList(Func<string?, CancellationToken, Action<AepFailure>?, Task<GlamPage?>> fetch,
+        string cursor)
+    {
         var key = listKey;
         list.LoadingMore = true;
         work.Run("list more", async token =>
