@@ -31,6 +31,9 @@ public sealed class GlamWireContractTests
         Assert.Equal("/prism/mods/glams?name=Cute%20Coat&author=Bea&cursor=x",
             GlamClient.ModGlamsPath("Cute Coat", "Bea", "x"));
         Assert.Equal("/prism/tags/summer%20goth/glams?cursor=x", GlamClient.TagGlamsPath("summer goth", "x"));
+        Assert.Equal("/prism/weeks/2026-W43/glams?track=modded", GlamClient.WeekGlamsPath("2026-W43", "modded", null));
+        Assert.Equal("/prism/weeks/2026-W43/glams?track=vanilla&race=8&gender=1&cursor=c%2F1",
+            GlamClient.WeekGlamsPath("2026-W43", "vanilla", "c/1", 8, 1));
     }
 
     [Fact]

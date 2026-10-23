@@ -350,6 +350,13 @@ internal sealed class GlamStore : IDisposable
     public void OpenTag(string tag) =>
         OpenList(TagKey(tag), (cursor, token, failure) => client.TagGlamsAsync(tag, cursor, token, failure));
 
+    public void OpenWeek(string weekId, string track)
+    {
+        var fits = body;
+        OpenList($"week:{weekId}|{track}|{fits.Race}|{fits.Gender}",
+            (cursor, token, failure) => client.WeekGlamsAsync(weekId, track, fits, cursor, token, failure));
+    }
+
     public void OpenMoreFrom(GlamDto glam)
     {
         if (moreFor == glam.Id || glam.Author is not { Id.Length: > 0 } author || !session.IsSignedIn)
