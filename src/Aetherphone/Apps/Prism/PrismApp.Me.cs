@@ -260,13 +260,29 @@ internal sealed partial class PrismApp
         }
 
         var items = lane.Items;
-        if (profileCover is not null || showSaved || lane.Loading || ReferenceEquals(items, coverItems))
+        if (showSaved || lane.Loading || ReferenceEquals(items, coverItems))
         {
             return;
         }
 
         coverItems = items;
-        profileCover = MostWorn(items);
+        if (profileCover is null || !Lists(items, profileCover.Id))
+        {
+            profileCover = MostWorn(items);
+        }
+    }
+
+    private static bool Lists(GlamDto[] items, string id)
+    {
+        for (var index = 0; index < items.Length; index++)
+        {
+            if (items[index].Id == id)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static GlamDto? MostWorn(GlamDto[] items)
