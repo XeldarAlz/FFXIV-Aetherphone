@@ -11,7 +11,6 @@ namespace Aetherphone.Apps.Prism;
 
 internal sealed partial class PrismApp
 {
-    private const float GuideCopyShare = 0.8f;
     private const int GuideCopyLines = 2;
     private const float GuideControlsDelay = 0.06f;
     private const float GuideCopyDelay = 0.12f;
@@ -113,8 +112,7 @@ internal sealed partial class PrismApp
         var title = Loc.T(GuideTitles[guidePage]);
         var copy = Loc.T(GuideBodies[guidePage]);
         var titleWidth = content.Width - tap - Metrics.Space.Md * scale;
-        var copyWidth = PrismType.BalancedWidth(copy, PrismType.Body, content.Width * GuideCopyShare);
-        var copyHeight = MathF.Max(Typography.MeasureWrappedBlock(copy, PrismType.Body, copyWidth).Y,
+        var copyHeight = MathF.Max(Typography.MeasureWrappedBlock(copy, PrismType.Body, titleWidth).Y,
             Typography.LineHeight(PrismType.Body) * GuideCopyLines);
         var titleHeight = PrismType.HeroHeight(title, titleWidth);
         var copyTop = content.Max.Y - PrismArt.BottomMargin(scale) - copyHeight;
@@ -126,7 +124,7 @@ internal sealed partial class PrismApp
 
         var text = PrismMotion.Mark(drawList);
         PrismType.DrawHero(drawList, new Vector2(left, titleTop), title, titleWidth, PrismArt.Fore);
-        Typography.DrawWrappedLeft(new Vector2(left, copyTop), copy, PrismArt.Muted, PrismType.Body, copyWidth);
+        Typography.DrawWrappedLeft(new Vector2(left, copyTop), copy, PrismArt.Muted, PrismType.Body, titleWidth);
         PrismMotion.Rise(drawList, text, PrismMotion.At(screenAge, GuideCopyDelay, Motion.PageSettle),
             PrismMotion.RiseUnits * scale);
         var last = guidePage == GuideTitles.Length - 1;
@@ -517,25 +515,34 @@ internal sealed partial class PrismApp
         var pixels = GuideNumeralUnits * scale;
         var numeralHeight = PrismType.Snap(PrismFace.Numerals, pixels);
         var numeralTop = stage.Max.Y - numeralHeight;
-        GuideShade(drawList, full, numeralTop - labelLine, scale);
+        GuideShade(drawList, full, numeralTop, scale);
         var left = stage.Min.X;
-        DrawWipe(drawList, new Vector2(left, numeralTop - labelLine), Loc.T(L.Prism.PlaceLabel), PrismFace.Label,
-            labelPixels, PrismMotion.At(screenAge, GuideControlsDelay, Motion.PageSettle), PrismArt.Muted);
         DrawWipe(drawList, new Vector2(left, numeralTop), Plain[place], PrismFace.Numerals, pixels,
             PrismMotion.At(screenAge, start, Motion.PageSettle), PrismArt.Fore);
+        var numeralWidth = 0f;
+        for (var rank = 1; rank <= GuideCountdown.Length; rank++)
+        {
+            numeralWidth = MathF.Max(numeralWidth, PrismType.Measure(Plain[rank], PrismFace.Numerals, pixels).X);
+        }
+
+        var columnLeft = left + numeralWidth + Metrics.Space.Lg * scale;
+        var prizeTop = numeralTop + numeralHeight - labelLine - Metrics.Space.Lg * scale;
+        var labelMark = PrismMotion.Mark(drawList);
+        PrismType.Draw(drawList, new Vector2(columnLeft, prizeTop - labelLine - Metrics.Space.Xxs * scale),
+            Loc.T(L.Prism.PlaceLabel), PrismArt.Muted, PrismFace.Label, labelPixels);
+        PrismMotion.Rise(drawList, labelMark, PrismMotion.At(screenAge, GuideControlsDelay, Motion.PageSettle),
+            PrismMotion.RiseUnits * scale);
         var prize = PrizeLine(store.Week?.Prizes?.Final, place - 1);
         if (prize.Length == 0)
         {
             return;
         }
 
-        var prizeLeft = left + PrismType.Measure(Plain[place], PrismFace.Numerals, pixels).X + Metrics.Space.Md * scale;
-        var prizeTop = numeralTop + numeralHeight - labelLine - Metrics.Space.Lg * scale;
         var glyph = labelLine * CurrencyGlyph.GlyphFraction;
         var mark = PrismMotion.Mark(drawList);
         CurrencyGlyph.Draw(drawList, CurrencyKind.Coins,
-            new Vector2(prizeLeft + glyph * 0.5f, prizeTop + labelLine * 0.5f), glyph);
-        PrismType.Draw(drawList, new Vector2(prizeLeft + CurrencyGlyph.Reserve(labelLine), prizeTop), prize,
+            new Vector2(columnLeft + glyph * 0.5f, prizeTop + labelLine * 0.5f), glyph);
+        PrismType.Draw(drawList, new Vector2(columnLeft + CurrencyGlyph.Reserve(labelLine), prizeTop), prize,
             PrismArt.Fore, PrismFace.Label, labelPixels);
         PrismMotion.Shift(drawList, mark, Vector2.Zero,
             PrismMotion.At(screenAge, start + GuidePhotoDelay, Motion.Appear));
