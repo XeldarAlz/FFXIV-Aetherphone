@@ -723,7 +723,7 @@ internal sealed partial class PrismApp
             return;
         }
 
-        var picked = glamMenu.Draw(full, ActionSheetStyle.From(followedTheme!),
+        var picked = glamMenu.Draw(full, ActionSheetStyle.From(ui),
             glamMenuItems.AsSpan(0, glamMenuCount), Loc.T(L.Common.Cancel), false);
         if (picked >= 0)
         {
