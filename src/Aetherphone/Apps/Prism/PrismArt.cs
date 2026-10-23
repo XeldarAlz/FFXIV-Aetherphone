@@ -70,10 +70,6 @@ internal static class PrismArt
     private const int IconCapSegments = 6;
     private const float ArcStepDegrees = 22.5f;
     private const float TileIconShare = 0.58f;
-    private const float TileDyeAlpha = 0.22f;
-    private const float TileDotShare = 0.08f;
-    private const float TileDotInsetShare = 0.18f;
-    private const float TileDotRingAlpha = 0.35f;
 
     public static readonly Vector4 Bone = new(0.957f, 0.945f, 0.918f, 1f);
     public static readonly Vector4 Ink = new(0.067f, 0.067f, 0.067f, 1f);
@@ -687,35 +683,12 @@ internal static class PrismArt
         }
     }
 
-    public static void SlotTile(ImDrawListPtr drawList, Rect tile, int slot, uint dyeRgb, float scale,
-        bool empty = false)
+    public static void SlotTile(ImDrawListPtr drawList, Rect tile, int slot, float scale)
     {
         var size = tile.Width;
-        var radius = size * Metrics.Radius.HomeTileFactor;
-        var iconSize = size * TileIconShare;
-        var level = Surfaces.Fill(themeInks.Fore, FillLevel.Primary);
-        if (empty)
-        {
-            drawList.AddRect(tile.Min, tile.Max, ImGui.GetColorU32(level), radius, ImDrawFlags.None,
-                Metrics.Stroke.Thin * scale);
-            SlotIcon(drawList, tile.Center, iconSize, slot, themeInks.Muted);
-            return;
-        }
-
-        var tint = Palette.FromRgb(dyeRgb);
-        drawList.AddRectFilled(tile.Min, tile.Max,
-            ImGui.GetColorU32(dyeRgb == 0 ? level : tint with { W = TileDyeAlpha }), radius);
-        SlotIcon(drawList, tile.Center, iconSize, slot, themeInks.Fore);
-        if (dyeRgb == 0)
-        {
-            return;
-        }
-
-        var dot = size * TileDotShare;
-        var dotCenter = tile.Max - new Vector2(size * TileDotInsetShare, size * TileDotInsetShare);
-        drawList.AddCircleFilled(dotCenter, dot + HairlineWidth(scale),
-            ImGui.GetColorU32(themeInks.Fore with { W = TileDotRingAlpha }));
-        drawList.AddCircleFilled(dotCenter, dot, ImGui.GetColorU32(tint));
+        drawList.AddRectFilled(tile.Min, tile.Max, ImGui.GetColorU32(Surfaces.Fill(themeInks.Fore, FillLevel.Primary)),
+            size * Metrics.Radius.HomeTileFactor);
+        SlotIcon(drawList, tile.Center, size * TileIconShare, slot, themeInks.Fore);
     }
 
     private readonly record struct IconStroke(Vector2[] Points, bool Closed);

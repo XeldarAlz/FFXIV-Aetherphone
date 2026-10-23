@@ -98,7 +98,6 @@ internal sealed partial class PrismApp : IResumableApp
     private PhoneTheme? followedTheme;
     private ControlInk controls;
     private ControlInk photoControls;
-    private SocialInk? tabInk;
     private string loadedWeek = string.Empty;
     private bool onPhoto;
     private float screenAge;
@@ -442,7 +441,6 @@ internal sealed partial class PrismApp : IResumableApp
         followedTheme = theme;
         controls = new ControlInk(PrismArt.Fore, PrismArt.Fore, PrismArt.Muted, theme.Danger);
         photoControls = new ControlInk(PrismArt.PhotoFore, PrismArt.PhotoFore, PrismArt.PhotoMuted, theme.Danger);
-        tabInk = new SocialInk(ui.Palette);
     }
 
     private float DrawBackHeader(ImDrawListPtr drawList, Rect content, string title, float scale)
@@ -547,25 +545,6 @@ internal sealed partial class PrismApp : IResumableApp
 
     private static TextStyle FitStyle(string text, float room, in TextStyle largest) =>
         new(Typography.FitScale(text, room, largest.Scale, PrismType.Caption.Scale, largest.Weight), largest.Weight);
-
-    private int DrawTabs(Rect row, ReadOnlySpan<string> labels, int active, ref Spring slide) =>
-        UnderlineTabs.Draw(row, labels, active, ref slide, tabInk!,
-            new UnderlineTabStyle(PrismType.Headline, PrismType.Headline, PrismArt.Fore, PrismArt.Muted,
-                PrismArt.Fore, Metrics.Stroke.Ring, 0f, Motion.Release));
-
-    private static bool TabsFit(ReadOnlySpan<string> labels, float width, float scale)
-    {
-        var room = width / MathF.Max(1, labels.Length) - UnderlineTabs.LabelPadUnits * scale;
-        for (var index = 0; index < labels.Length; index++)
-        {
-            if (Typography.Measure(labels[index], PrismType.Headline).X > room)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
 
     private static float GridLine(float scale) =>
         MathF.Max(GridLineUnits * scale, Typography.LineHeight(PrismType.Headline));
@@ -672,7 +651,7 @@ internal sealed partial class PrismApp : IResumableApp
     }
 
     private Rect DrawLook(ImDrawListPtr drawList, Rect rect, string url, bool contain, float alpha = 1f,
-        float zoom = 1f, Vector2? pivot = null, bool native = false, float focusY = ImageFit.CenterFocus)
+        float zoom = 1f, Vector2? pivot = null, bool native = false)
     {
         if (url.Length == 0)
         {
@@ -711,7 +690,7 @@ internal sealed partial class PrismApp : IResumableApp
         alpha *= fade;
         var (uv0, uv1) = contain
             ? (Vector2.Zero, Vector2.One)
-            : ImageFit.Cover(texture.Size.X, texture.Size.Y, rect.Width, rect.Height, focusY);
+            : ImageFit.Cover(texture.Size.X, texture.Size.Y, rect.Width, rect.Height);
         var anchor = pivot ?? frame.Center;
         var drawn = zoom == 1f ? frame : new Rect(anchor + (frame.Min - anchor) * zoom, anchor + (frame.Max - anchor) * zoom);
         if (zoom != 1f)
