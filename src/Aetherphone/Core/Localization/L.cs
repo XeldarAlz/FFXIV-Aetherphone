@@ -11025,6 +11025,7 @@ internal static class L
             "We can't trade on the Chinese servers, so winners there get extra Aether Coin instead of gil.");
         public static readonly LocString WhatWinnersGet = new("prism.whatWinnersGet", "What winners get");
         public static readonly LocString NoPodium = new("prism.noPodium", "Too few glams were entered this week for a podium.");
+        public static readonly LocString NoPodiumTitle = new("prism.noPodiumTitle", "No podium this time");
         public static readonly LocString YourGear = new("prism.yourGear", "Your gear");
         public static readonly LocString GearNote = new("prism.gearNote",
             "Add each piece in your photo and pick its dyes. Everyone who sees your entry sees this list.");

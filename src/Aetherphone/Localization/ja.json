@@ -5809,6 +5809,7 @@
   "prism.gilChinese": "中国サーバーではトレードができないため、そちらの受賞者にはギルの代わりにAether Coinを追加でお贈りします。",
   "prism.whatWinnersGet": "賞品を見る",
   "prism.noPodium": "今週は表彰台を決めるのに十分なミラプリが集まりませんでした。",
+  "prism.noPodiumTitle": "今回は表彰台なし",
   "prism.yourGear": "あなたの装備",
   "prism.gearNote": "写真に写っている装備を1つずつ追加し、染色を選んでください。このリストはエントリーを見た全員に表示されます。",
   "prism.yourMods": "あなたのMod",
