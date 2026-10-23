@@ -52,9 +52,6 @@ internal enum PrismScreen : byte
 internal sealed partial class PrismApp : IResumableApp
 {
     private const float RefreshSeconds = 120f;
-    private const float NoticeMaxUnits = PrismType.TitleUnits;
-    private const float NoticeMinUnits = PrismType.HeadingUnits;
-    private const int NoticeLines = 3;
     private const int LoadedAtLimit = 512;
     private const int GuideVersion = 2;
     private const float CoverFocus = 0.25f;

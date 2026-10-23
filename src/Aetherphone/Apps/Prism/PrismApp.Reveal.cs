@@ -216,7 +216,7 @@ internal sealed partial class PrismApp
         var reach = new Vector2(Metrics.Size.TapTarget * 0.5f * scale, Metrics.Size.TapTarget * 0.5f * scale);
         HoverTooltip.Show("prism.reveal.close", new Rect(close - reach, close + reach),
             Loc.T(L.Common.Close));
-        if (PrismArt.Icon(drawList, close, PhoneIcons.X, false, scale))
+        if (PrismArt.Icon(drawList, close, PhoneIcons.X, scale))
         {
             Go(PrismScreen.Cover, -1);
         }
@@ -379,15 +379,6 @@ internal sealed partial class PrismApp
 
         cursor += tap + PrismArt.BottomMargin(scale);
         ImGui.Dummy(new Vector2(width, cursor - origin.Y));
-    }
-
-    private static float DrawSectionTitle(ImDrawListPtr drawList, float left, float top, float width, string title,
-        float scale)
-    {
-        var pixels = PrismType.Fit(title, PrismFace.Headline, width, NoticeMaxUnits * scale, NoticeMinUnits * scale,
-            NoticeLines, out var lines);
-        return top + PrismType.DrawLines(drawList, new Vector2(left, top), lines, PrismArt.Fore,
-            PrismFace.Headline, pixels) + Metrics.Space.Xl * scale;
     }
 
     private float DrawPodium(ImDrawListPtr drawList, float left, float top, float width, float scale)

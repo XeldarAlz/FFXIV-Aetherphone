@@ -31,13 +31,7 @@ internal static class PrismArt
     public const float TryOnSeconds = 1.45f;
     public const float ChipUnits = 28f;
 
-    private const float IconDotUnits = 4f;
-    private const float IconDotRimUnits = 1.5f;
-    private const float IconDotShare = 0.4f;
-
     private const float LabelUnits = 13f;
-    private const float ScorePitchLow = 0.84f;
-    private const float ScorePitchStep = 0.08f;
     private const float StoryBarUnits = 2f;
     private const float StoryBarSpacingUnits = 4f;
     private const float ShadeShare = 0.78f;
@@ -164,26 +158,19 @@ internal static class PrismArt
         drawList.AddLine(new Vector2(left, y), new Vector2(right, y), ImGui.GetColorU32(color), HairlineWidth(scale));
 
     public static bool Link(ImDrawListPtr drawList, Vector2 topLeft, string label, Vector4 color, float scale,
-        float rowHeight = 0f, string icon = "", bool overlay = false)
+        bool overlay = false)
     {
         var pixels = LabelPixels();
         var size = PrismType.Measure(label, PrismFace.Label, pixels);
-        var lead = icon.Length > 0 ? size.Y + Metrics.Space.Xs * scale : 0f;
         var tap = Metrics.Size.TapTarget * scale;
-        var padY = MathF.Max(0f, ((rowHeight > 0f ? rowHeight : tap) - size.Y) * 0.5f);
-        var padX = MathF.Max(0f, (tap - size.X - lead) * 0.5f);
+        var padY = MathF.Max(0f, (tap - size.Y) * 0.5f);
+        var padX = MathF.Max(0f, (tap - size.X) * 0.5f);
         var min = new Vector2(topLeft.X - padX, topLeft.Y - padY);
-        var max = new Vector2(topLeft.X + lead + size.X + padX, topLeft.Y + size.Y + padY);
+        var max = new Vector2(topLeft.X + size.X + padX, topLeft.Y + size.Y + padY);
         var hovered = overlay
             ? !UiInteract.InputBlocked && UiInteract.HoverWindowOnly(min, max)
             : UiInteract.Hover(min, max);
-        if (lead > 0f)
-        {
-            PhoneIcon.Draw(drawList, topLeft + new Vector2(size.Y * 0.5f, size.Y * 0.5f), icon, hovered ? Fore : color,
-                size.Y);
-        }
-
-        PrismType.Draw(drawList, topLeft + new Vector2(lead, 0f), label, hovered ? Fore : color, PrismFace.Label, pixels);
+        PrismType.Draw(drawList, topLeft, label, hovered ? Fore : color, PrismFace.Label, pixels);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -192,7 +179,7 @@ internal static class PrismArt
         return UiInteract.Click(min, max, hovered);
     }
 
-    public static bool Icon(ImDrawListPtr drawList, Vector2 center, string glyph, bool dot, float scale)
+    public static bool Icon(ImDrawListPtr drawList, Vector2 center, string glyph, float scale)
     {
         var size = HeaderIconUnits * scale;
         var half = MathF.Max(size, Metrics.Size.TapTarget * scale) * 0.5f;
@@ -200,13 +187,6 @@ internal static class PrismArt
         var max = center + new Vector2(half, half);
         var hovered = UiInteract.Hover(min, max);
         PhoneIcon.Draw(drawList, center, glyph, hovered ? Muted : Fore, size);
-        if (dot)
-        {
-            var dotCenter = center + new Vector2(size, -size) * IconDotShare;
-            drawList.AddCircleFilled(dotCenter, (IconDotUnits + IconDotRimUnits) * scale, ImGui.GetColorU32(Back));
-            drawList.AddCircleFilled(dotCenter, IconDotUnits * scale, ImGui.GetColorU32(Fore));
-        }
-
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
