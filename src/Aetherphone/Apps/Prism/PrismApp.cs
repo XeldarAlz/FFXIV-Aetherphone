@@ -107,6 +107,7 @@ internal sealed partial class PrismApp : IResumableApp
     private INavigator navigation = null!;
     private string? pendingSharedPhoto;
     private float sinceRefresh;
+    private Vector2 pressedTile = new(float.NaN);
 
     public PrismApp(AethernetSession session, AethernetApi api, RemoteImageCache images, PhotoLibrary library,
         WallpaperImageCache wallpaperImages, Configuration configuration, ConfirmService confirm,
@@ -584,10 +585,23 @@ internal sealed partial class PrismApp : IResumableApp
             return false;
         }
 
+        var mark = PrismMotion.Mark(drawList);
         DrawLook(drawList, photo, url, false);
         var hovered = HoverWash(drawList, tile, photo, 0f);
         DrawCountByline(drawList, photo.Min.X, photo.Max.X, (photo.Max.Y + tile.Max.Y) * 0.5f, label, avatarName,
             avatarUrl, glyph, count, PrismArt.Fore, PrismArt.Muted, PrismArt.Muted, scale);
+        var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left) && !DragScrollHost.AnyDragging;
+        if (pressed)
+        {
+            pressedTile = tile.Min;
+        }
+
+        if (tile.Min == pressedTile)
+        {
+            PrismMotion.Grow(drawList, mark, tile.Center,
+                PressFx.Scale(ImGui.GetID("prism.tilePress"), pressed, PressFx.CardPressedScale));
+        }
+
         return UiInteract.Click(tile.Min, tile.Max, hovered);
     }
 
