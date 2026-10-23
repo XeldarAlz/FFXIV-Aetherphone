@@ -972,22 +972,19 @@ internal sealed partial class PrismApp
         var gap = Metrics.Space.Xxs * scale;
         top = DrawSectionTitle(drawList, full.Min.X + Metrics.Space.Lg * scale, full.Max.X - Metrics.Space.Lg * scale,
             top, title, string.Empty, scale) + Metrics.Space.Sm * scale;
-        var column = (full.Width - gap * (GridColumns + 1)) / GridColumns;
-        var pitch = column / GlamStore.PhotoRatio + GridLine(scale) + Metrics.Space.Sm * scale;
+        var inner = full.Width - gap * 2f;
         for (var index = 0; index < more.Length; index++)
         {
             var item = more[index];
-            var min = new Vector2(full.Min.X + gap + index % GridColumns * (column + gap),
-                top + index / GridColumns * pitch);
-            var photo = new Rect(min, min + new Vector2(column, column / GlamStore.PhotoRatio));
-            if (DrawGridTile(drawList, photo, Cover(item), item.Title, string.Empty, null, PhoneIcons.Wand,
+            if (DrawGridTile(drawList, GridCell(full.Min.X + gap, top, inner, index, scale), Cover(item), item.Title,
+                    string.Empty, null, PhoneIcons.Wand,
                     item.TryOns > 0 ? NumberText.Compact(item.TryOns) : string.Empty, scale))
             {
                 OpenGlam(item);
             }
         }
 
-        return top + (more.Length + GridColumns - 1) / GridColumns * pitch;
+        return top + GridHeight(inner, more.Length, scale);
     }
 
     private string BodyLine(int race, int gender)

@@ -420,23 +420,18 @@ internal sealed partial class PrismApp
     private float DrawGlamGrid(ImDrawListPtr drawList, float left, float top, float width, GlamDto[] items, float scale,
         int first = 0)
     {
-        var gap = Metrics.Space.Xxs * scale;
-        var column = (width - gap * (GridColumns - 1)) / GridColumns;
-        var photoHeight = column / GlamStore.PhotoRatio;
-        var pitch = photoHeight + GridLine(scale) + gap;
+        var line = GridLine(scale);
         var shown = Math.Max(0, items.Length - first);
         for (var index = 0; index < shown; index++)
         {
-            var x = left + index % GridColumns * (column + gap);
-            var y = top + index / GridColumns * pitch;
-            if (!ImGui.IsRectVisible(new Vector2(x, y), new Vector2(x + column, y + pitch)))
+            var photo = GridCell(left, top, width, index, scale);
+            if (!ImGui.IsRectVisible(photo.Min, new Vector2(photo.Max.X, photo.Max.Y + line)))
             {
                 continue;
             }
 
             var glam = items[first + index];
             var count = glam.TryOns > 0 ? NumberText.Compact(glam.TryOns) : string.Empty;
-            var photo = new Rect(new Vector2(x, y), new Vector2(x + column, y + photoHeight));
             if (DrawGridTile(drawList, photo, Cover(glam),
                     AuthorLine(glam.Author), AuthorName(glam.Author), glam.Author?.AvatarUrl, PhoneIcons.Wand, count,
                     scale))
@@ -447,28 +442,39 @@ internal sealed partial class PrismApp
             var countWidth = count.Length > 0
                 ? Typography.Measure(count, PrismType.Caption).X + (GridGlyphUnits + Metrics.Space.Sm) * scale
                 : 0f;
-            ClickProfile(new Rect(new Vector2(x, y + photoHeight), new Vector2(x + column - countWidth, y + pitch)),
-                glam.Author);
+            ClickProfile(new Rect(new Vector2(photo.Min.X, photo.Max.Y),
+                new Vector2(photo.Max.X - countWidth, photo.Max.Y + line)), glam.Author);
         }
 
-        return top + (shown + GridColumns - 1) / GridColumns * pitch;
+        return top + GridHeight(width, shown, scale);
+    }
+
+    private static Rect GridCell(float left, float top, float width, int index, float scale)
+    {
+        var gap = Metrics.Space.Xxs * scale;
+        var column = (width - gap * (GridColumns - 1)) / GridColumns;
+        var min = new Vector2(left + index % GridColumns * (column + gap),
+            top + index / GridColumns * GridPitch(width, scale));
+        return new Rect(min, min + new Vector2(column, column / GlamStore.PhotoRatio));
+    }
+
+    private static float GridHeight(float width, int count, float scale) =>
+        (count + GridColumns - 1) / GridColumns * GridPitch(width, scale);
+
+    private static float GridPitch(float width, float scale)
+    {
+        var gap = Metrics.Space.Xxs * scale;
+        return (width - gap * (GridColumns - 1)) / GridColumns / GlamStore.PhotoRatio + GridLine(scale) + gap;
     }
 
     private float DrawGridPlaceholders(ImDrawListPtr drawList, float left, float top, float width, float scale)
     {
-        var gap = Metrics.Space.Xxs * scale;
-        var column = (width - gap * (GridColumns - 1)) / GridColumns;
-        var photoHeight = column / GlamStore.PhotoRatio;
-        var pitch = photoHeight + GridLine(scale) + gap;
         for (var index = 0; index < PlaceholderRows * GridColumns; index++)
         {
-            var x = left + index % GridColumns * (column + gap);
-            var y = top + index / GridColumns * pitch;
-            PrismArt.Placeholder(drawList, new Rect(new Vector2(x, y), new Vector2(x + column, y + photoHeight)), false,
-                scale);
+            PrismArt.Placeholder(drawList, GridCell(left, top, width, index, scale), false, scale);
         }
 
-        return top + PlaceholderRows * pitch + PrismArt.BottomMargin(scale);
+        return top + GridHeight(width, PlaceholderRows * GridColumns, scale) + PrismArt.BottomMargin(scale);
     }
 
     private string LaneAction()
