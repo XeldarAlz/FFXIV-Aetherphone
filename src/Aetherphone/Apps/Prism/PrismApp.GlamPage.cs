@@ -767,17 +767,18 @@ internal sealed partial class PrismApp
         float scale)
     {
         var width = right - left;
-        if (!glamour.HasGlamourer)
-        {
-            top += Typography.DrawWrappedLeft(new Vector2(left, top), Loc.T(L.Prism.TryOnWithoutGlamourer),
-                PrismArt.Muted, PrismType.Caption, width) + Metrics.Space.Md * scale;
-        }
-
         top += PrismType.DrawHero(drawList, new Vector2(left, top), glam.Title, width, PrismArt.Fore) +
                Metrics.Space.Xs * scale;
         top = DrawByline(drawList, left, right, top, glam.Author, scale);
         top += Typography.DrawWrappedLeft(new Vector2(left, top), MetaLine(glam), PrismArt.Muted, PrismType.Caption,
             width);
+        if (!glamour.HasGlamourer)
+        {
+            top += Metrics.Space.Xs * scale + Typography.DrawWrappedLeft(
+                new Vector2(left, top + Metrics.Space.Xs * scale), Loc.T(L.Prism.TryOnWithoutGlamourer),
+                PrismArt.Muted, PrismType.Caption, width);
+        }
+
         if (glam.InspiredBy.Length > 0)
         {
             var tap = Metrics.Size.TapTarget * scale;
