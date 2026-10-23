@@ -22,14 +22,14 @@ internal static class RoundButton
         ButtonStyle style = ButtonStyle.Gray, string tooltip = "", HoverLabelSide side = HoverLabelSide.Above,
         bool enabled = true, bool overlay = false, Vector4? glyphInk = null)
     {
-        var clicked = Draw(drawList, ImGui.GetID(tooltip.Length > 0 ? tooltip : glyph), center, radius, ink, style,
-            enabled, overlay, out var face);
+        var key = ImGui.GetID(tooltip.Length > 0 ? tooltip : glyph);
+        var clicked = Draw(drawList, key, center, radius, ink, style, enabled, overlay, out var face);
         var color = glyphInk ?? face.LabelInk;
         PhoneIcon.Draw(drawList, center, glyph, color with { W = face.LabelInk.W }, radius * GlyphFraction *
             (face.Face.Width / MathF.Max(radius * 2f, 0.0001f)));
         if (enabled && tooltip.Length > 0)
         {
-            HoverTooltip.Show(new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius)),
+            HoverTooltip.Show(key, new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius)),
                 tooltip, face.Hovered, side);
         }
 
@@ -54,7 +54,7 @@ internal static class RoundButton
             glyphHeight * (face.Face.Width / MathF.Max(radius * 2f, 0.0001f)));
         if (enabled && tooltip.Length > 0)
         {
-            HoverTooltip.Show(new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius)),
+            HoverTooltip.Show(key, new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius)),
                 tooltip, face.Hovered, side);
         }
 

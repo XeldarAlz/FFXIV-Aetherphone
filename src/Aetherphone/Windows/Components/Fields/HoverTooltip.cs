@@ -7,8 +7,7 @@ namespace Aetherphone.Windows.Components;
 internal static class HoverTooltip
 {
     private const float MaxFrameSeconds = 0.1f;
-    private static readonly Dictionary<string, Spring> springs = new();
-    private static readonly Dictionary<long, Spring> positionSprings = new();
+    private static readonly Dictionary<uint, Spring> springs = new();
     private static readonly List<PendingLabel> pending = new();
     private static int frame = -1;
 
@@ -29,30 +28,20 @@ internal static class HoverTooltip
     }
 
     public static void Show(Rect target, string label, HoverLabelSide side = HoverLabelSide.Below) =>
-        Show(target, label, UiInteract.Hover(target.Min, target.Max), side);
+        Show(Key(target), target, label, UiInteract.Hover(target.Min, target.Max), side);
 
-    public static void Show(Rect target, string label, bool hovered, HoverLabelSide side)
+    public static void Show(string id, Rect target, string label, HoverLabelSide side = HoverLabelSide.Below) =>
+        Show((uint)StringComparer.Ordinal.GetHashCode(id), target, label, UiInteract.Hover(target.Min, target.Max),
+            side);
+
+    public static void Show(uint key, Rect target, string label, bool hovered, HoverLabelSide side)
     {
         if (string.IsNullOrEmpty(label))
         {
             return;
         }
 
-        Track(Step(positionSprings, Key(target), hovered), target, label, side);
-    }
-
-    public static void Show(string id, Rect target, string label, HoverLabelSide side = HoverLabelSide.Below)
-    {
-        if (string.IsNullOrEmpty(label))
-        {
-            return;
-        }
-
-        Track(Step(springs, id, UiInteract.Hover(target.Min, target.Max)), target, label, side);
-    }
-
-    private static void Track(float eased, Rect target, string label, HoverLabelSide side)
-    {
+        var eased = Step(key, hovered);
         if (eased <= 0.001f)
         {
             return;
@@ -150,11 +139,10 @@ internal static class HoverTooltip
         }
     }
 
-    private static float Step<TKey>(Dictionary<TKey, Spring> table, TKey id, bool hovered)
-        where TKey : notnull
+    private static float Step(uint key, bool hovered)
     {
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, MaxFrameSeconds);
-        if (!table.TryGetValue(id, out var spring))
+        if (!springs.TryGetValue(key, out var spring))
         {
             spring = default;
         }
@@ -163,18 +151,14 @@ internal static class HoverTooltip
         var value = Math.Clamp(spring.Value, 0f, 1f);
         if (!hovered && value <= 0.001f)
         {
-            table.Remove(id);
+            springs.Remove(key);
             return 0f;
         }
 
-        table[id] = spring;
+        springs[key] = spring;
         return value;
     }
 
-    private static long Key(Rect target)
-    {
-        var x = (int)MathF.Round(target.Center.X);
-        var y = (int)MathF.Round(target.Center.Y);
-        return ((long)x << 32) | (uint)y;
-    }
+    private static uint Key(Rect target) =>
+        (uint)HashCode.Combine((int)MathF.Round(target.Center.X), (int)MathF.Round(target.Center.Y));
 }
