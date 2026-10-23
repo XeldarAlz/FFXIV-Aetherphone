@@ -77,7 +77,7 @@ internal sealed record PrismOutfitRequest(GlamGearDto[]? Outfit);
 internal sealed record PrismLookDto(string Id = "", string ImageUrl = "", int Width = 0, int Height = 0);
 
 internal sealed record PrismBallotDto(string Id = "", string Stage = "", PrismLookDto[]? Looks = null,
-    string HeatLabel = "");
+    string HeatLabel = "", int HeatIndex = 0, int HeatCount = 0);
 
 internal sealed record PrismStarDto(string LookId, int Stars, int ViewedMs);
 

@@ -5669,6 +5669,7 @@
   "prism.replayReveal": "Açıklamayı yeniden izle",
   "prism.submitting": "Puanların gönderiliyor…",
   "prism.heatName": "Tur {0}",
+  "prism.heatOf": "Tur {0}/{1}",
   "prism.yourPlacing": "Sıralaman",
   "prism.tapHint": "Sonraki glam için dokun",
   "prism.inspectHint": "Yakından bakmak için basılı tut",

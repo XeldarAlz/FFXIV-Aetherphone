@@ -5669,6 +5669,7 @@
   "prism.replayReveal": "Replay the reveal",
   "prism.submitting": "Sending your scores…",
   "prism.heatName": "Heat {0}",
+  "prism.heatOf": "Heat {0} of {1}",
   "prism.yourPlacing": "Your placing",
   "prism.tapHint": "Tap for the next glam",
   "prism.inspectHint": "Hold to look closer",

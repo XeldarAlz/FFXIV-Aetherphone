@@ -766,13 +766,15 @@ internal sealed partial class PrismApp
 
     private string HeatTitle(PrismBallotDto ballot)
     {
-        var key = HashCode.Combine(ballot.Stage, ballot.HeatLabel, Loc.Current.Code);
+        var key = HashCode.Combine(ballot.Stage, ballot.HeatLabel, ballot.HeatIndex, ballot.HeatCount,
+            Loc.Current.Code);
         if (heatTitle.IsCurrent(key))
         {
             return heatTitle.Value;
         }
 
         var text = ballot.Stage == PrismPhases.StageFinal ? Loc.T(L.Prism.FinalTitle)
+            : ballot.HeatCount > 0 ? Loc.T(L.Prism.HeatOf, ballot.HeatIndex, ballot.HeatCount)
             : ballot.HeatLabel.Length > 0 ? Loc.T(L.Prism.HeatName, ballot.HeatLabel) : string.Empty;
         return heatTitle.Store(key, text);
     }

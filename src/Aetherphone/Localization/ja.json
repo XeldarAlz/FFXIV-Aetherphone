@@ -5669,6 +5669,7 @@
   "prism.replayReveal": "発表をもう一度見る",
   "prism.submitting": "評価を送信中…",
   "prism.heatName": "予選{0}",
+  "prism.heatOf": "予選{0}/{1}",
   "prism.yourPlacing": "あなたの順位",
   "prism.tapHint": "タップで次のミラプリ",
   "prism.inspectHint": "長押しで拡大",

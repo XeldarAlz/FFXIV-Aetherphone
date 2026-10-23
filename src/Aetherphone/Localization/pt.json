@@ -5669,6 +5669,7 @@
   "prism.replayReveal": "Rever a revelação",
   "prism.submitting": "Enviando suas notas…",
   "prism.heatName": "Rodada {0}",
+  "prism.heatOf": "Rodada {0} de {1}",
   "prism.yourPlacing": "Sua colocação",
   "prism.tapHint": "Toque para o próximo glamour",
   "prism.inspectHint": "Segure para ver de perto",

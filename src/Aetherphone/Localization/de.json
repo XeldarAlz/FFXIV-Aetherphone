@@ -5669,6 +5669,7 @@
   "prism.replayReveal": "Enthüllung noch einmal ansehen",
   "prism.submitting": "Deine Bewertungen werden gesendet…",
   "prism.heatName": "Runde {0}",
+  "prism.heatOf": "Runde {0} von {1}",
   "prism.yourPlacing": "Deine Platzierung",
   "prism.tapHint": "Tippen für die nächste Projektion",
   "prism.inspectHint": "Halten, um genauer hinzusehen",

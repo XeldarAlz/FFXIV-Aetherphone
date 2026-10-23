@@ -5669,6 +5669,7 @@
   "prism.replayReveal": "Revoir la révélation",
   "prism.submitting": "Envoi de vos notes…",
   "prism.heatName": "Manche {0}",
+  "prism.heatOf": "Manche {0} sur {1}",
   "prism.yourPlacing": "Votre classement",
   "prism.tapHint": "Touchez pour le mirage suivant",
   "prism.inspectHint": "Maintenez pour regarder de plus près",

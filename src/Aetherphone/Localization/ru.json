@@ -5669,6 +5669,7 @@
   "prism.replayReveal": "Посмотреть объявление снова",
   "prism.submitting": "Отправляем ваши оценки…",
   "prism.heatName": "Раунд {0}",
+  "prism.heatOf": "Раунд {0} из {1}",
   "prism.yourPlacing": "Ваше место",
   "prism.tapHint": "Нажмите, чтобы увидеть следующий гламур",
   "prism.inspectHint": "Удерживайте, чтобы рассмотреть",

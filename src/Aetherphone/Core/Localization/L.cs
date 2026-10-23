@@ -10869,6 +10869,7 @@ internal static class L
         public static readonly LocString ReplayReveal = new("prism.replayReveal", "Replay the reveal");
         public static readonly LocString Submitting = new("prism.submitting", "Sending your scores…");
         public static readonly LocString HeatName = new("prism.heatName", "Heat {0}");
+        public static readonly LocString HeatOf = new("prism.heatOf", "Heat {0} of {1}");
         public static readonly LocString YourPlacing = new("prism.yourPlacing", "Your placing");
         public static readonly LocString TapHint = new("prism.tapHint", "Tap for the next glam");
         public static readonly LocString InspectHint = new("prism.inspectHint", "Hold to look closer");

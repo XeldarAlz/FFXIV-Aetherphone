@@ -5669,6 +5669,7 @@
   "prism.replayReveal": "重看揭晓",
   "prism.submitting": "正在提交你的评分…",
   "prism.heatName": "第 {0} 组",
+  "prism.heatOf": "第 {0} 组，共 {1} 组",
   "prism.yourPlacing": "你的名次",
   "prism.tapHint": "点击查看下一套幻化",
   "prism.inspectHint": "长按放大查看",

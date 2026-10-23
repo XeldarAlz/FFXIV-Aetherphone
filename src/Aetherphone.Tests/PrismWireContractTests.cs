@@ -146,6 +146,13 @@ public sealed class PrismWireContractTests
         Assert.NotNull(empty);
         Assert.NotNull(empty.Looks);
         Assert.Empty(empty.Looks);
+        Assert.Equal(0, empty.HeatCount);
+
+        var heat = JsonSerializer.Deserialize("{\"id\":\"b_2\",\"stage\":\"heat\",\"looks\":[],\"heatLabel\":\"B\","
+            + "\"heatIndex\":2,\"heatCount\":5}", AethernetJsonContext.Default.PrismBallotDto);
+        Assert.NotNull(heat);
+        Assert.Equal(2, heat.HeatIndex);
+        Assert.Equal(5, heat.HeatCount);
 
         var results = JsonSerializer.Deserialize("{\"weekId\":\"w_0\",\"title\":\"Gold Saucer glam\","
             + "\"heatPodium\":[{\"rank\":1,\"imageUrl\":\"https://x/p.jpg\",\"displayName\":\"Ada Moon\","
