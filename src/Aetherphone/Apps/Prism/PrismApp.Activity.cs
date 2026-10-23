@@ -25,8 +25,8 @@ internal sealed partial class PrismApp
     private readonly PullToRefresh activityPull = new();
     private Action? refreshActivityNow;
 
-    private readonly record struct ActivityText(string Language, float Width, string First, string Second, long Minute,
-        string Time);
+    private readonly record struct ActivityText(string Language, int Fonts, float Width, string First, string Second,
+        long Minute, string Time);
 
     private void OpenActivity()
     {
@@ -225,7 +225,7 @@ internal sealed partial class PrismApp
     {
         var minute = now / SecondsPerMinute;
         if (activityText.TryGetValue(item.Id, out var cached) && cached.Language == Loc.Current.Code &&
-            cached.Width == width)
+            cached.Fonts == Plugin.Fonts.Generation && cached.Width == width)
         {
             if (cached.Minute == minute)
             {
@@ -243,7 +243,7 @@ internal sealed partial class PrismApp
                 2 => Typography.FitText(lines[1], width, PrismType.Body),
                 _ => Typography.FitText(string.Join(' ', lines, 1, lines.Length - 1), width, PrismType.Body),
             };
-            cached = new ActivityText(Loc.Current.Code, width,
+            cached = new ActivityText(Loc.Current.Code, Plugin.Fonts.Generation, width,
                 lines.Length > 0 ? Typography.FitText(lines[0], width, PrismType.Body) : string.Empty, second, minute,
                 TimeText.Short(item.CreatedAtUnix));
         }
