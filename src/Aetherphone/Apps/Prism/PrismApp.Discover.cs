@@ -16,8 +16,11 @@ internal sealed partial class PrismApp
     private const float TileShadeShare = 0.4f;
     private const float HeaderDotShare = 0.32f;
     private const float HeaderDotRimUnits = 1.5f;
-    private const float ContestRowUnits = 56f;
-    private const float ContestThumbUnits = 48f;
+    private const float ContestRowUnits = 120f;
+    private const float ContestThumbUnits = 88f;
+    private const float HeroPeekUnits = 28f;
+    private const float HeroShortestShare = 0.75f;
+    private const float HeroTallestShare = 2f;
     private const float EmptyGlyphUnits = 28f;
     private const float EmptyDiscUnits = 34f;
     private const float EmptyActionUnits = 132f;
@@ -67,7 +70,10 @@ internal sealed partial class PrismApp
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth();
         var outer = Metrics.Space.Xxs * scale;
-        var cursor = DrawDayHero(list, origin.X, origin.Y, width, scale, out var hero);
+        var below = (OpenContest() is null ? 0f : ContestRowUnits * scale) + outer + HeroPeekUnits * scale;
+        var heroHeight = Math.Clamp(body.Height - bottomChrome - below, width * HeroShortestShare,
+            width * HeroTallestShare);
+        var cursor = DrawDayHero(list, origin.X, origin.Y, width, heroHeight, scale, out var hero);
         cursor = DrawContestRow(list, origin.X, cursor, width, scale);
         var items = lane.Items;
         var first = hero is not null && items.Length > 0 && items[0].Id == hero.Id ? 1 : 0;
@@ -230,7 +236,7 @@ internal sealed partial class PrismApp
         }
     }
 
-    private float DrawDayHero(ImDrawListPtr drawList, float left, float top, float width, float scale,
+    private float DrawDayHero(ImDrawListPtr drawList, float left, float top, float width, float height, float scale,
         out GlamDto? hero)
     {
         hero = null;
@@ -248,7 +254,7 @@ internal sealed partial class PrismApp
             }
         }
 
-        var photo = new Rect(new Vector2(left, top), new Vector2(left + width, top + width / GlamStore.PhotoRatio));
+        var photo = new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
         if (today.Items.Length == 0)
         {
             PrismArt.Placeholder(drawList, photo, false, scale);
@@ -303,8 +309,7 @@ internal sealed partial class PrismApp
 
     private float DrawContestRow(ImDrawListPtr drawList, float left, float top, float width, float scale)
     {
-        if (store.Week is not { Id.Length: > 0 } week ||
-            week.Phase != PrismPhases.Entering && !PrismPhases.Judgeable(week.Phase))
+        if (OpenContest() is not { } week)
         {
             return top + Metrics.Space.Xxs * scale;
         }
@@ -324,6 +329,12 @@ internal sealed partial class PrismApp
         return row.Max.Y + Metrics.Space.Xxs * scale;
     }
 
+    private PrismWeekDto? OpenContest() =>
+        store.Week is { Id.Length: > 0 } week &&
+        (week.Phase == PrismPhases.Entering || PrismPhases.Judgeable(week.Phase))
+            ? week
+            : null;
+
     private void DrawContestRowFace(ImDrawListPtr drawList, Rect row, PrismWeekDto week, bool hovered, float scale)
     {
         var inset = Metrics.Space.Lg * scale;
@@ -341,25 +352,29 @@ internal sealed partial class PrismApp
             PhoneIcon.Draw(drawList, thumb.Center, PhoneIcons.Crown, PrismArt.Muted, GridGlyphUnits * scale);
         }
 
+        var entered = week.Phase == PrismPhases.Entering && week.MyEntry is not null;
         var label = Loc.T(week.Phase == PrismPhases.Final ? L.Prism.JudgeFinal
             : week.Phase != PrismPhases.Entering ? L.Prism.JudgeHeat
-            : week.MyEntry is null ? L.Prism.Enter : L.Prism.YourLook);
-        var labelWidth = ChipRail.WidthFor(Typography.Measure(label, ChipRail.LabelStyle).X,
-            ChipRail.DefaultLabelPadding, scale);
-        var chipHalf = ChipRail.ChipHeight * scale * 0.5f;
-        var right = row.Max.X - inset;
-        ChipRail.PaintChip(drawList, new Rect(new Vector2(right - labelWidth, row.Center.Y - chipHalf),
-            new Vector2(right, row.Center.Y + chipHalf)), label, false, hovered, controls);
+            : entered ? L.Prism.YourLook : L.Prism.Enter);
         var textLeft = thumb.Max.X + Metrics.Space.Md * scale;
-        var room = MathF.Max(1f, right - labelWidth - Metrics.Space.Md * scale - textLeft);
+        var room = MathF.Max(1f, row.Max.X - inset - textLeft);
         var captionHeight = Typography.LineHeight(PrismType.Caption);
-        var y = row.Center.Y - (captionHeight + Typography.LineHeight(PrismType.Headline)) * 0.5f;
+        var themeLine = Typography.LineHeight(PrismType.Title);
+        var pillHeight = Button.RegularHeight * scale;
+        var gap = Metrics.Space.Xxs * scale;
+        var y = row.Center.Y - (captionHeight + gap + themeLine + Metrics.Space.Sm * scale + pillHeight) * 0.5f;
         Typography.Draw(drawList, new Vector2(textLeft, y),
             Typography.FitText(ContestCaption(week), room, PrismType.Caption), PrismArt.Muted, PrismType.Caption);
-        var themeStyle = FitStyle(week.Title, room, PrismType.Headline);
-        var theme = Typography.FitText(week.Title, room, themeStyle);
-        Typography.Draw(drawList, new Vector2(textLeft, y + captionHeight + (Typography.LineHeight(PrismType.Headline) -
-            Typography.LineHeight(themeStyle)) * 0.5f), theme, PrismArt.Fore, themeStyle);
+        y += captionHeight + gap;
+        var themeStyle = FitStyle(week.Title, room, PrismType.Title);
+        Typography.Draw(drawList, new Vector2(textLeft, y + (themeLine - Typography.LineHeight(themeStyle)) * 0.5f),
+            Typography.FitText(week.Title, room, themeStyle), PrismArt.Fore, themeStyle);
+        y += themeLine + Metrics.Space.Sm * scale;
+        var pillWidth = MathF.Min(Typography.Measure(label, Button.LabelStyle(pillHeight)).X + pillHeight, room);
+        var pill = new Rect(new Vector2(textLeft, y), new Vector2(textLeft + pillWidth, y + pillHeight));
+        Button.DrawLabel(drawList, Button.Surface(drawList, pill, controls,
+            entered ? ButtonStyle.Gray : ButtonStyle.Solid, ButtonRole.Normal, true, hovered,
+            ImGui.GetID("prism.contestRow")), label);
     }
 
     private string ContestCover(PrismWeekDto week) =>
