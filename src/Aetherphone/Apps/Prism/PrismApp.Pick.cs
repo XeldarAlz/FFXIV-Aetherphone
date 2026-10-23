@@ -26,6 +26,7 @@ internal sealed partial class PrismApp
     {
         pickSession.Open(true);
         pickIntake.Discard();
+        entryOutcome = OutcomePending;
         pickReturn = screen == PrismScreen.Entry ? PrismScreen.Entry : PrismScreen.Cover;
         ResetEntryOutfit();
         Go(PrismScreen.Pick);
