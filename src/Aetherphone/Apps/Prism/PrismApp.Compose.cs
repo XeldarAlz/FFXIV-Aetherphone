@@ -19,7 +19,9 @@ internal sealed partial class PrismApp
     private const int TagsMaxLength = 80;
     private const int MaxTags = 6;
     private const double RecaptureSeconds = 1.0;
-    private const float HeaderSideShare = 0.3f;
+    private const double HeaderSweepMs = 900d;
+    private const float HeaderSweepArc = 1.6f;
+    private const float HeaderGlyphShare = 0.475f;
     private const float ComposePhotoShare = 0.5f;
     private const float ComposePhotoHeightShare = 0.36f;
     private const int ModNameMaxLength = 80;
@@ -89,9 +91,9 @@ internal sealed partial class PrismApp
             return;
         }
 
-        var next = Loc.T(L.Common.Next);
         var top = DrawActionHeader(drawList, content, PhoneIcons.X, Loc.T(L.Common.Cancel), Loc.T(L.Prism.PostGlam),
-            next, next, composeSession.HasSelection, UiSound.Tap, scale, out var advance) + Metrics.Space.Sm * scale;
+            PhoneIcons.ChevronRight, Loc.T(L.Common.Next), composeSession.HasSelection, string.Empty, UiSound.Tap,
+            scale, out var advance) + Metrics.Space.Sm * scale;
         if (advance)
         {
             if (AutoCapture)
@@ -120,45 +122,61 @@ internal sealed partial class PrismApp
     }
 
     private float DrawActionHeader(ImDrawListPtr drawList, Rect content, string leaveGlyph, string leave,
-        string heading, string action, string widestAction, bool enabled, UiSound tapSound, float scale,
+        string heading, string actionGlyph, string action, bool enabled, string busy, UiSound tapSound, float scale,
         out bool acted)
     {
-        var leading = Metrics.Size.TapTarget * scale;
-        var row = new Rect(content.Min, new Vector2(content.Max.X, content.Min.Y + leading));
-        if (IconButton(drawList, new Vector2(row.Min.X + leading * 0.5f, row.Center.Y), leaveGlyph, leave, scale,
+        var tap = Metrics.Size.TapTarget * scale;
+        var row = new Rect(content.Min, new Vector2(content.Max.X, content.Min.Y + tap));
+        if (IconButton(drawList, new Vector2(row.Min.X + tap * 0.5f, row.Center.Y), leaveGlyph, leave, scale,
                 HoverLabelSide.Below))
         {
             LeaveScreen();
         }
 
-        var trailing = ButtonWidth([action, widestAction], row.Width * HeaderSideShare, scale);
-        acted = DrawButton(drawList, new Rect(new Vector2(row.Max.X - trailing, row.Min.Y), row.Max), action,
-            ButtonStyle.Plain, scale, enabled: enabled, id: "prism.headerAction", tapSound: tapSound);
-        var gap = Metrics.Space.Sm * scale;
-        var centred = row.Width - (MathF.Max(leading, trailing) + gap) * 2f;
-        var between = row.Width - leading - trailing - gap * 2f;
-        if (between < Metrics.Size.TapTarget * scale)
-        {
-            return row.Max.Y;
-        }
-
-        var fits = Typography.Measure(heading, PrismType.Headline).X <= centred;
-        var room = fits ? centred : between;
+        acted = DrawHeaderAction(drawList, new Vector2(row.Max.X - tap * 0.5f, row.Center.Y), actionGlyph, action,
+            enabled, busy, tapSound, scale);
+        var room = MathF.Max(1f, row.Width - (tap + Metrics.Space.Sm * scale) * 2f);
         var style = FitStyle(heading, room, PrismType.Headline);
         var title = Typography.FitText(heading, room, style);
         var size = Typography.Measure(title, style);
-        var middle = fits ? row.Center.X : row.Min.X + leading + gap + between * 0.5f;
-        Typography.Draw(drawList, new Vector2(middle - size.X * 0.5f, row.Center.Y - size.Y * 0.5f), title,
+        Typography.Draw(drawList, new Vector2(row.Center.X - size.X * 0.5f, row.Center.Y - size.Y * 0.5f), title,
             PrismArt.Fore, style);
         return row.Max.Y;
     }
 
+    private bool DrawHeaderAction(ImDrawListPtr drawList, Vector2 center, string glyph, string label, bool enabled,
+        string busy, UiSound tapSound, float scale)
+    {
+        var radius = Metrics.Size.TapTarget * 0.5f * scale;
+        var reach = new Vector2(radius, radius);
+        var rect = new Rect(center - reach, center + reach);
+        if (enabled)
+        {
+            var key = ImGui.GetID(label);
+            var hovered = UiInteract.Hover(rect.Min, rect.Max);
+            var face = RoundButton.Surface(drawList, rect, controls, ButtonStyle.Prominent, true, hovered, key);
+            PhoneIcon.Draw(drawList, center, glyph, PrismArt.OnFore, face.Face.Width * HeaderGlyphShare);
+            HoverTooltip.Show(key, rect, label, hovered, HoverLabelSide.Below);
+            return UiInteract.Click(rect.Min, rect.Max, hovered, tapSound);
+        }
+
+        RoundButton.Icon(drawList, center, radius, glyph, controls, ButtonStyle.Plain, enabled: false);
+        if (busy.Length > 0)
+        {
+            ProgressRing.Sweep(center, radius - Metrics.Stroke.Ring * scale, Metrics.Stroke.Ring * scale,
+                PrismArt.Fore, HeaderSweepMs, HeaderSweepArc, 1f, drawList);
+        }
+
+        HoverTooltip.Show(rect, busy.Length > 0 ? busy : label, HoverLabelSide.Below);
+        return false;
+    }
+
     private void DrawComposeDetails(ImDrawListPtr drawList, Rect content, float scale)
     {
-        var label = Loc.T(glams.Posting ? L.Prism.Posting : L.Prism.Post);
         var ready = !string.IsNullOrWhiteSpace(glamTitle) && !glams.Posting;
         var top = DrawActionHeader(drawList, content, PhoneIcons.ChevronLeft, Loc.T(L.Prism.Back),
-            Loc.T(L.Prism.PostGlam), label, Loc.T(L.Prism.Posting), ready, UiSound.Shutter, scale, out var post) +
+            Loc.T(L.Prism.PostGlam), PhoneIcons.Check, Loc.T(L.Prism.Post), ready,
+            glams.Posting ? Loc.T(L.Prism.Posting) : string.Empty, UiSound.Shutter, scale, out var post) +
                   Metrics.Space.Sm * scale;
         if (post)
         {

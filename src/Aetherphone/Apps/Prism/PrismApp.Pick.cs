@@ -48,10 +48,10 @@ internal sealed partial class PrismApp
 
         pickIntake.AcceptDrop(content, library, PrismArt.Fore);
         var week = store.Week;
-        var enter = Loc.T(L.Prism.Enter);
         var ready = pickSession.HasSelection && !store.Busy && (!VanillaEntry || DraftPieces() > 0);
         var top = DrawActionHeader(drawList, content, PhoneIcons.X, Loc.T(L.Common.Cancel),
-            week?.Title ?? Loc.T(L.Prism.EnterLook), enter, enter, ready, UiSound.Shutter, scale, out var entered) +
+            week?.Title ?? Loc.T(L.Prism.EnterLook), PhoneIcons.Check, Loc.T(L.Prism.Enter), ready,
+            store.Busy ? Loc.T(L.Prism.Uploading) : string.Empty, UiSound.Shutter, scale, out var entered) +
                   Metrics.Space.Sm * scale;
         if (entered)
         {
