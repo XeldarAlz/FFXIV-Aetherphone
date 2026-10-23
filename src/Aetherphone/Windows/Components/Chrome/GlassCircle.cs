@@ -53,7 +53,7 @@ internal static class GlassCircle
     {
         var clicked = Draw(drawList, key, center, radius, scale, tone, tooltip, side, out var grow, null, enabled);
         var color = enabled ? ink : Palette.WithAlpha(ink, ink.W * DisabledAlpha);
-        PhoneIcon.Draw(drawList, center, glyph, color, glyphSize * grow);
+        PhoneIcon.Draw(drawList, center, glyph, color, glyphSize * grow, optical: true);
         return clicked;
     }
 }

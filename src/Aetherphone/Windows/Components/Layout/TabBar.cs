@@ -142,7 +142,7 @@ internal sealed class TabBar
             else
             {
                 PhoneIcon.Draw(drawList, iconCenter, item.GlyphFor(isActive), isActive ? ui.Accent : inactiveInk,
-                    TabBarLayout.IconSize * scale * itemScale);
+                    TabBarLayout.IconSize * scale * itemScale, optical: true);
             }
 
             if (item.Badge > 0)
@@ -240,7 +240,7 @@ internal sealed class TabBar
         var max = circle.Center + half;
         Material.ThemedGlass(drawList, min, max, half.Y, scale, backdrop, CurrentGlassOpacity);
         var ink = tone == GlassTone.Dark ? StrongOnDarkGlass : ui.Theme.TextStrong;
-        PhoneIcon.Draw(drawList, circle.Center, action.Glyph, ink, TabBarLayout.IconSize * scale * grow);
+        PhoneIcon.Draw(drawList, circle.Center, action.Glyph, ink, TabBarLayout.IconSize * scale * grow, optical: true);
         if (action.Badge > 0)
         {
             AppBadge.Draw(circle.Center + new Vector2(BadgeOffsetX, -BadgeOffsetY) * scale, action.Badge, ui.Theme,

@@ -340,18 +340,19 @@ internal sealed class FontService : IDisposable
 
     public FontToken PushDalamudIcon() => new(dalamudIconHandle.Push());
 
-    public Vector2 InkCentre(ImFontPtr font, char codepoint)
+    public IconInkMark InkMark(ImFontPtr font, char codepoint)
     {
         for (var sizeIndex = 0; sizeIndex < iconInk.Length; sizeIndex++)
         {
             var ink = Volatile.Read(ref iconInk[sizeIndex]);
             if (ink is not null && ink.Describes(font))
             {
-                return ink.Centre(codepoint);
+                var largest = Volatile.Read(ref iconInk[^1]) ?? ink;
+                return ink.Mark(codepoint) with { Scale = largest.Mark(codepoint).Scale };
             }
         }
 
-        return IconInk.BoxCentre;
+        return IconInk.Unmeasured;
     }
 
     public ImFontPtr DalamudIconFont
