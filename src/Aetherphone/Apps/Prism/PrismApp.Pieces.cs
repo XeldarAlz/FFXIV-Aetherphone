@@ -154,16 +154,18 @@ internal sealed partial class PrismApp
 
     private string PieceCountLine()
     {
-        return pieceCountText.IsCurrent(totalPieces)
+        var key = HashCode.Combine(totalPieces, Loc.Current.Code);
+        return pieceCountText.IsCurrent(key)
             ? pieceCountText.Value
-            : pieceCountText.Store(totalPieces, Loc.Plural(L.Prism.PieceCount, totalPieces));
+            : pieceCountText.Store(key, Loc.Plural(L.Prism.PieceCount, totalPieces));
     }
 
     private string ModCountLine()
     {
-        return modCountText.IsCurrent(totalMods)
+        var key = HashCode.Combine(totalMods, Loc.Current.Code);
+        return modCountText.IsCurrent(key)
             ? modCountText.Value
-            : modCountText.Store(totalMods, Loc.Plural(L.Prism.ModCount, totalMods));
+            : modCountText.Store(key, Loc.Plural(L.Prism.ModCount, totalMods));
     }
 
     private void DrawPiecesChip(ImDrawListPtr drawList, Rect photo, float scale)

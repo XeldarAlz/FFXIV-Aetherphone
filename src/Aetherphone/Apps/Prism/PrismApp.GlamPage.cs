@@ -867,7 +867,8 @@ internal sealed partial class PrismApp
     private string MetaLine(GlamDto glam)
     {
         var minute = DateTimeOffset.UtcNow.ToUnixTimeSeconds() / SecondsPerMinute;
-        var key = HashCode.Combine(glam.Vanilla, glam.Race, glam.Gender, glam.TryOns, glam.CreatedAtUnix, minute);
+        var key = HashCode.Combine(glam.Vanilla, glam.Race, glam.Gender, glam.TryOns, glam.CreatedAtUnix, minute,
+            Loc.Current.Code);
         if (metaText.IsCurrent(key))
         {
             return metaText.Value;
@@ -1015,9 +1016,10 @@ internal sealed partial class PrismApp
             return top;
         }
 
-        var owned = ownedCountText.IsCurrent(ownedPieces)
+        var ownedKey = HashCode.Combine(ownedPieces, Loc.Current.Code);
+        var owned = ownedCountText.IsCurrent(ownedKey)
             ? ownedCountText.Value
-            : ownedCountText.Store(ownedPieces, Loc.T(L.Prism.OwnedCount, ownedPieces));
+            : ownedCountText.Store(ownedKey, Loc.T(L.Prism.OwnedCount, ownedPieces));
         top = DrawSectionTitle(drawList, left, right, top, PieceCountLine(), owned, scale);
         if (ownedPieces < totalPieces && !statsStorage)
         {
@@ -1138,9 +1140,10 @@ internal sealed partial class PrismApp
         }
 
         var installed = totalMods - missingMods;
+        var installedKey = HashCode.Combine(installed, Loc.Current.Code);
         var caption = !glamour.HasPenumbra ? Loc.T(L.Prism.ModsNeedPenumbra)
-            : installedText.IsCurrent(installed) ? installedText.Value
-            : installedText.Store(installed, Loc.T(L.Prism.InstalledCount, installed));
+            : installedText.IsCurrent(installedKey) ? installedText.Value
+            : installedText.Store(installedKey, Loc.T(L.Prism.InstalledCount, installed));
         top = DrawSectionTitle(drawList, left, right, top, ModCountLine(), caption, scale) + Metrics.Space.Xs * scale;
         var drawn = 0;
         for (var orderIndex = 0; orderIndex <= pieceOrder.Length; orderIndex++)
