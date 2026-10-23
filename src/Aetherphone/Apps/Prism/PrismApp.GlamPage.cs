@@ -38,7 +38,6 @@ internal sealed partial class PrismApp
     private const float LikeHoldSeconds = 0.45f;
     private const float LikeStamp = 0.35f;
     private const float PostAvatarUnits = 24f;
-    private const float FactGlyphUnits = 16f;
     private const float GlamRowUnits = 56f;
     private const float PagerSlopUnits = 12f;
     private const float PagerSlopBias = 1.2f;
@@ -976,7 +975,7 @@ internal sealed partial class PrismApp
 
     private float DrawGlamFacts(ImDrawListPtr drawList, float right, float middle, GlamDto glam, float scale)
     {
-        var glyph = FactGlyphUnits * scale;
+        var glyph = PrismArt.RowIconUnits * scale;
         var pitch = glyph + Metrics.Space.Sm * scale;
         var x = right;
         var female = glam.Gender == 1;

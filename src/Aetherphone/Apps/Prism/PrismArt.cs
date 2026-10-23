@@ -23,6 +23,11 @@ internal static class PrismArt
     public const float StripUnits = 46f;
     public const float ButtonUnits = 30f;
     public const float IconUnits = 24f;
+    public const float HeaderIconUnits = Metrics.Size.TapTarget * 0.5f * RoundButton.GlyphFraction;
+    public const float GlassIconUnits = 18f;
+    public const float RowIconUnits = 16f;
+    public const float InlineIconUnits = 14f;
+    public const float EmptyIconUnits = 28f;
     public const int Stars = 5;
     public const int PodiumRanks = 3;
     public const float TryOnSeconds = 1.45f;
@@ -67,7 +72,6 @@ internal static class PrismArt
     private const int MedalSegments = 48;
     private const float SwatchShadeShare = 0.45f;
     private const float ScrimShare = 0.35f;
-    private const float ChipGlyphUnits = 13f;
     private const float FailedGlyphShare = 0.3f;
     private const float TryOnHoldSeconds = 0.9f;
     private const float TryOnDim = 0.45f;
@@ -263,7 +267,7 @@ internal static class PrismArt
 
     public static bool Icon(ImDrawListPtr drawList, Vector2 center, string glyph, bool dot, float scale)
     {
-        var size = IconUnits * scale;
+        var size = HeaderIconUnits * scale;
         var half = MathF.Max(size, Metrics.Size.TapTarget * scale) * 0.5f;
         var min = center - new Vector2(half, half);
         var max = center + new Vector2(half, half);
@@ -629,7 +633,7 @@ internal static class PrismArt
     private static Rect PillRect(Vector2 anchor, float maxWidth, string label, float scale, out string fitted)
     {
         var pixels = LabelPixels();
-        var chrome = (Metrics.Space.Md * 2f + ChipGlyphUnits + Metrics.Space.Xxs) * scale;
+        var chrome = (Metrics.Space.Md * 2f + InlineIconUnits + Metrics.Space.Xxs) * scale;
         fitted = PrismType.FitLabel(label, pixels, MathF.Max(1f, maxWidth - chrome));
         var width = chrome + PrismType.Measure(fitted, PrismFace.Label, pixels).X;
         var half = ChipUnits * scale * 0.5f;
@@ -649,7 +653,7 @@ internal static class PrismArt
         Vector4 ink, float scale)
     {
         var pixels = LabelPixels();
-        var glyphSize = ChipGlyphUnits * scale;
+        var glyphSize = InlineIconUnits * scale;
         var left = pill.Min.X + Metrics.Space.Md * scale;
         drawList.AddRectFilled(pill.Min, pill.Max, Palette.Pack(fill), pill.Height * 0.5f);
         PhoneIcon.Draw(drawList, new Vector2(left + glyphSize * 0.5f, pill.Center.Y), glyph, ink, glyphSize);

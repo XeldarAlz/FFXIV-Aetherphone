@@ -60,10 +60,8 @@ internal sealed partial class PrismApp : IResumableApp
     private const int GuideVersion = 2;
     private const float CoverFocus = 0.25f;
     private const float BackChevronUnits = 15f;
-    private const float PhotoGlyphUnits = 18f;
     private const int LabelWidthLimit = 64;
     private const float GridLineUnits = 28f;
-    private const float GridGlyphUnits = 14f;
 
     private readonly PrismStore store;
     private readonly GlamStore glams;
@@ -499,7 +497,7 @@ internal sealed partial class PrismApp : IResumableApp
         }
 
         var light = PrismArt.Light;
-        return GlassCircle.Icon(drawList, ImGui.GetID(glyph), center, radius, PhotoGlyphUnits * scale, glyph,
+        return GlassCircle.Icon(drawList, ImGui.GetID(glyph), center, radius, PrismArt.GlassIconUnits * scale, glyph,
             light ? PrismArt.Fore : PrismArt.PhotoFore, scale, light ? GlassTone.Light : GlassTone.Dark, tooltip,
             HoverLabelSide.Below, hitRadius: reach, reserve: true);
     }
@@ -602,7 +600,7 @@ internal sealed partial class PrismApp : IResumableApp
         var line = Typography.LineHeight(PrismType.Caption);
         var inset = Metrics.Space.Sm * scale;
         PrismArt.Scrim(drawList, photo, line + inset, scale);
-        var glyphSize = GridGlyphUnits * scale;
+        var glyphSize = PrismArt.InlineIconUnits * scale;
         var middle = photo.Max.Y - inset - line * 0.5f;
         PhoneIcon.Draw(drawList, new Vector2(photo.Min.X + inset + glyphSize * 0.5f, middle), glyph, PrismArt.PhotoFore,
             glyphSize);
@@ -621,7 +619,7 @@ internal sealed partial class PrismApp : IResumableApp
             right -= size.X + Metrics.Space.Xxs * scale;
             if (glyph.Length > 0)
             {
-                var glyphSize = GridGlyphUnits * scale;
+                var glyphSize = PrismArt.InlineIconUnits * scale;
                 PhoneIcon.Draw(drawList, new Vector2(right - glyphSize * 0.5f, middle), glyph, countInk, glyphSize);
                 right -= glyphSize;
             }

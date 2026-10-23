@@ -32,7 +32,6 @@ internal sealed partial class PrismApp
     private const float HeroPeekUnits = 28f;
     private const float HeroShortestShare = 0.75f;
     private const float HeroTallestShare = 2f;
-    private const float EmptyGlyphUnits = 28f;
     private const float EmptyDiscUnits = 34f;
     private const float EmptyActionUnits = 132f;
     private const float EmptyTextUnits = 300f;
@@ -495,7 +494,7 @@ internal sealed partial class PrismApp
         else
         {
             PrismArt.Placeholder(drawList, thumb, false, scale);
-            PhoneIcon.Draw(drawList, thumb.Center, PhoneIcons.Crown, PrismArt.Muted, GridGlyphUnits * scale);
+            PhoneIcon.Draw(drawList, thumb.Center, PhoneIcons.Crown, PrismArt.Muted, PrismArt.IconUnits * scale);
         }
 
         var entered = week.Phase == PrismPhases.Entering && week.MyEntry is not null;
@@ -690,7 +689,7 @@ internal sealed partial class PrismApp
         var center = area.Center.X;
         var discCenter = new Vector2(center, top + disc);
         drawList.AddCircleFilled(discCenter, disc, ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Tertiary)));
-        PhoneIcon.Draw(drawList, discCenter, glyph, PrismArt.Muted, EmptyGlyphUnits * scale);
+        PhoneIcon.Draw(drawList, discCenter, glyph, PrismArt.Muted, PrismArt.EmptyIconUnits * scale);
         top += disc * 2f + Metrics.Space.Md * scale;
         if (title.Length > 0)
         {

@@ -9,12 +9,12 @@ internal static class RoundButton
 {
     public const float SmallRadius = 15f;
     public const float RegularRadius = Metrics.Size.GlassButton * 0.5f;
+    public const float GlyphFraction = 0.95f;
 
     private const float DisabledAlpha = 0.4f;
     private const float TintedAlpha = 0.20f;
     private const float TintedHoverAlpha = 0.28f;
     private const float RimLightAlpha = 0.5f;
-    private const float GlyphFraction = 0.95f;
     private const float ProminentHoverLift = 0.10f;
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
 

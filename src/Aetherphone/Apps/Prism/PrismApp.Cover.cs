@@ -123,8 +123,8 @@ internal sealed partial class PrismApp
             ? PrismArt.Button(drawList, new Vector2(content.Max.X - gutter - PrismArt.ButtonWidth(action, scale),
                 buttonTop), action, scale, out _)
             : icon.Length > 0 && PrismArt.Icon(drawList,
-                new Vector2(content.Max.X - gutter - PrismArt.IconUnits * scale * 0.5f, (top + nameBottom) * 0.5f),
-                icon, dot, scale);
+                new Vector2(content.Max.X - gutter - PrismArt.HeaderIconUnits * scale * 0.5f,
+                    (top + nameBottom) * 0.5f), icon, dot, scale);
 
         var rule = top + PrismType.LineHeight(PrismFace.Headline, pixels) + HeaderGapUnits * scale;
         var gap = rule - nameBottom;

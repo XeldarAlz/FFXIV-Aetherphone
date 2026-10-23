@@ -15,7 +15,6 @@ internal sealed partial class PrismApp
     private const int QueryMaxLength = 60;
     private const int TagTiles = 3;
     private const int SearchScrollId = 1;
-    private const float SearchGlyphUnits = 16f;
     private const float CancelShare = 0.4f;
     private const double SearchFetchSeconds = 0.35;
     private const double TagRetrySeconds = 5;
@@ -65,7 +64,7 @@ internal sealed partial class PrismApp
             new Vector2(cancelRect.Min.X - Metrics.Space.Sm * scale, top + tap));
         SearchBar.Surface(drawList, field, controls);
         var inset = Metrics.Space.Md * scale;
-        var glyph = SearchGlyphUnits * scale;
+        var glyph = PrismArt.RowIconUnits * scale;
         PhoneIcon.Draw(drawList, new Vector2(field.Min.X + inset + glyph * 0.5f, field.Center.Y), PhoneIcons.Search,
             PrismArt.Muted, glyph);
         if (searchFocus)
@@ -209,7 +208,7 @@ internal sealed partial class PrismApp
                 new Vector2(origin.X + inset + icon, row.Center.Y + icon * 0.5f));
             Squircle.Fill(list, tile.Min, tile.Max, Metrics.Radius.Sm * scale,
                 ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Tertiary)));
-            PhoneIcon.Draw(list, tile.Center, PhoneIcons.Hash, PrismArt.Fore, SearchGlyphUnits * scale);
+            PhoneIcon.Draw(list, tile.Center, PhoneIcons.Hash, PrismArt.Fore, PrismArt.RowIconUnits * scale);
             top = DrawTagStrip(list, origin.X, row.Max.Y, width, scale);
         }
 
