@@ -54,8 +54,8 @@ internal sealed partial class PrismApp
     private readonly bool[] scopeActive = new bool[ScopeNames.Length];
     private readonly Spring[] filterFill = new Spring[FilterFacts.Length];
     private readonly Spring[] filterHover = new Spring[FilterFacts.Length];
-    private readonly ActionSheet raceSheet = new();
-    private readonly ActionSheet.Item[] raceItems = new ActionSheet.Item[RaceCount + 1];
+    private readonly DropdownMenu raceMenu = new() { FadeOnClose = true, Compact = true };
+    private readonly DropdownMenu.Item[] raceItems = new DropdownMenu.Item[RaceCount + 1];
     private GlamScope discoverScope = GlamScope.New;
     private bool fitsMe;
     private bool todayResolved;
@@ -77,11 +77,11 @@ internal sealed partial class PrismApp
             return;
         }
 
-        raceSheet.Gate();
+        raceMenu.Gate();
         var top = DrawDiscoverHeader(drawList, content, scale);
         top = DrawFilterRow(drawList, content, top, scale) + Metrics.Space.Xs * scale;
         DrawDiscoverFeed(new Rect(new Vector2(content.Min.X, top), content.Max), scale);
-        DrawRaceSheet(full);
+        DrawRaceMenu(full);
     }
 
     private void DrawDiscoverFeed(Rect body, float scale)
@@ -155,6 +155,7 @@ internal sealed partial class PrismApp
         var first = content.Min.X + Metrics.Space.Lg * scale + size * 0.5f;
         var pitch = (content.Max.X - tap * 0.5f - first) / (FilterFacts.Length - 1);
         var tapped = -1;
+        var tappedHit = default(Rect);
         for (var index = 0; index < FilterFacts.Length; index++)
         {
             var center = new Vector2(first + pitch * index, top + tap * 0.5f);
@@ -169,7 +170,7 @@ internal sealed partial class PrismApp
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             }
 
-            if (hover > 0.02f)
+            if (hover > 0.02f && !raceMenu.Open)
             {
                 HoverTooltip.Enqueue(new Rect(center - extent, center + extent), FilterLabel((DiscoverFilter)index),
                     hover, HoverLabelSide.Below);
@@ -178,12 +179,13 @@ internal sealed partial class PrismApp
             if (UiInteract.Click(hit.Min, hit.Max, hovered))
             {
                 tapped = index;
+                tappedHit = hit;
             }
         }
 
         if (tapped >= 0)
         {
-            TapFilter((DiscoverFilter)tapped);
+            TapFilter((DiscoverFilter)tapped, tappedHit);
         }
 
         return top + tap;
@@ -211,7 +213,7 @@ internal sealed partial class PrismApp
         _ => Loc.T(L.Prism.FilterVanilla),
     };
 
-    private void TapFilter(DiscoverFilter filter)
+    private void TapFilter(DiscoverFilter filter, Rect anchor)
     {
         switch (filter)
         {
@@ -219,7 +221,7 @@ internal sealed partial class PrismApp
                 ToggleFitsMe();
                 break;
             case DiscoverFilter.Race:
-                OpenRaceSheet();
+                OpenRaceMenu(anchor);
                 return;
             case DiscoverFilter.Male:
             case DiscoverFilter.Female:
@@ -253,28 +255,26 @@ internal sealed partial class PrismApp
         }
     }
 
-    private void OpenRaceSheet()
+    private void OpenRaceMenu(Rect anchor)
     {
-        var female = glams.Gender == FemaleGender;
-        raceItems[0] = new ActionSheet.Item(Loc.T(L.Prism.AnyRace), Selected: glams.Race == 0, Checkable: true);
-        for (var race = 1; race <= RaceCount; race++)
-        {
-            raceItems[race] = new ActionSheet.Item(gameData.RaceName((uint)race, female), Selected: glams.Race == race,
-                Checkable: true);
-        }
-
-        raceSheet.Open();
+        FillRaceItems();
+        raceMenu.Header = Loc.T(L.Prism.FilterRace);
+        raceMenu.Toggle("prism.race", anchor);
     }
 
-    private void DrawRaceSheet(Rect full)
+    private void FillRaceItems()
     {
-        if (!raceSheet.CapturesPointer)
+        var female = glams.Gender == FemaleGender;
+        raceItems[0] = new DropdownMenu.Item(Loc.T(L.Prism.AnyRace), Selected: glams.Race == 0, DividerAfter: true);
+        for (var race = 1; race <= RaceCount; race++)
         {
-            return;
+            raceItems[race] = new DropdownMenu.Item(gameData.RaceName((uint)race, female), Selected: glams.Race == race);
         }
+    }
 
-        var picked = raceSheet.Draw(full, ActionSheetStyle.From(ui), raceItems, Loc.T(L.Common.Cancel), false,
-            Loc.T(L.Prism.FilterRace));
+    private void DrawRaceMenu(Rect full)
+    {
+        var picked = raceMenu.Draw(full, DropdownMenu.Style.From(ui), raceItems);
         if (picked < 0 || picked == glams.Race)
         {
             return;
@@ -282,6 +282,7 @@ internal sealed partial class PrismApp
 
         fitsMe = false;
         glams.SetBody(picked, glams.Gender);
+        FillRaceItems();
         RefreshFiltered();
     }
 
