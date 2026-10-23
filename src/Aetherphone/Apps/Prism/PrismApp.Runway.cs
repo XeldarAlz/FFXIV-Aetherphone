@@ -138,7 +138,7 @@ internal sealed partial class PrismApp
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         turnAge += delta;
         var look = looks[lookIndex];
-        if (!lookMenu.CapturesPointer && loadedAt.ContainsKey(look.ImageUrl))
+        if (chosen == 0 && !lookMenu.CapturesPointer && loadedAt.ContainsKey(look.ImageUrl))
         {
             lookSeconds += delta;
         }
