@@ -87,22 +87,15 @@ internal sealed partial class PrismApp
             bodyTop = chips.Max.Y + Metrics.Space.Sm * scale;
         }
 
-        ImGui.PushID(SearchScrollId);
-        try
+        using var id = UiScope.PushId(SearchScrollId);
+        var body = new Rect(new Vector2(content.Min.X, bodyTop), content.Max);
+        if (browsing)
         {
-            var body = new Rect(new Vector2(content.Min.X, bodyTop), content.Max);
-            if (browsing)
-            {
-                DrawSearchBrowse(body, scale);
-            }
-            else
-            {
-                DrawSearchBody(body, scale);
-            }
+            DrawSearchBrowse(body, scale);
         }
-        finally
+        else
         {
-            ImGui.PopID();
+            DrawSearchBody(body, scale);
         }
     }
 

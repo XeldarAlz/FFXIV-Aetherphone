@@ -229,12 +229,12 @@ internal sealed partial class PrismApp
         {
             return;
         }
+
         if (!sameGlam)
         {
             cardTile = -1;
             cardPiece = -1;
         }
-
 
         statsFor = key;
         statsGear = gear;
@@ -1052,14 +1052,15 @@ internal sealed partial class PrismApp
 
         DrawOwnedMark(drawList, iconMin + new Vector2(icon, icon) - new Vector2(radius, radius) * 0.5f,
             OwnedState(piece.ItemId), PrismArt.Fore, PrismArt.Back, scale);
-        ImGui.PushID(index);
-        if (RoundButton.Icon(drawList, wand, tap * 0.5f, PhoneIcons.Wand, controls, ButtonStyle.Plain,
-                Loc.T(L.Prism.TryOnPiece), HoverLabelSide.Below, glyphInk: PrismArt.Muted))
+        using (UiScope.PushId(index))
         {
-            TryOnPiece(piece, statsFor ?? string.Empty);
+            if (RoundButton.Icon(drawList, wand, tap * 0.5f, PhoneIcons.Wand, controls, ButtonStyle.Plain,
+                    Loc.T(L.Prism.TryOnPiece), HoverLabelSide.Below, glyphInk: PrismArt.Muted))
+            {
+                TryOnPiece(piece, statsFor ?? string.Empty);
+            }
         }
 
-        ImGui.PopID();
         var textLeft = iconMin.X + icon + Metrics.Space.Md * scale;
         DrawRowText(drawList, textLeft, hit.Max.X - Metrics.Space.Sm * scale, row.Center.Y, name, piece, null, scale);
         if (index < pieceOrder.Length - 1)
