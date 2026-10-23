@@ -63,7 +63,6 @@ internal sealed partial class PrismApp : IResumableApp
     private const float PhotoGlyphUnits = 18f;
     private const int LabelWidthLimit = 64;
     private const float GridLineUnits = 28f;
-    private const float GridAvatarUnits = 20f;
     private const float GridGlyphUnits = 14f;
 
     private readonly PrismStore store;
@@ -570,51 +569,53 @@ internal sealed partial class PrismApp : IResumableApp
     private static float GridLine(float scale) =>
         MathF.Max(GridLineUnits * scale, Typography.LineHeight(PrismType.Headline));
 
-    private bool DrawGridTile(ImDrawListPtr drawList, Rect photo, string url, string label, string avatarName,
-        string? avatarUrl, string glyph, string count, float scale) =>
-        DrawGridTile(drawList, PrismMotion.Mark(drawList), photo, url, label, avatarName, avatarUrl, glyph, count,
-            scale);
-
-    private bool DrawGridTile(ImDrawListPtr drawList, int mark, Rect photo, string url, string label,
-        string avatarName, string? avatarUrl, string glyph, string count, float scale)
+    private static Rect GridBand(Rect photo, float scale)
     {
-        var tile = new Rect(photo.Min, new Vector2(photo.Max.X, photo.Max.Y + GridLine(scale)));
-        if (!ImGui.IsRectVisible(tile.Min, tile.Max))
+        var inset = Metrics.Space.Lg * scale;
+        return new Rect(new Vector2(photo.Min.X + inset, photo.Max.Y - inset - GridLine(scale)),
+            new Vector2(photo.Max.X - inset, photo.Max.Y - inset));
+    }
+
+    private bool DrawGridTile(ImDrawListPtr drawList, Rect photo, string url, string label, string glyph, string count,
+        float scale) =>
+        DrawGridTile(drawList, PrismMotion.Mark(drawList), photo, url, label, glyph, count, scale);
+
+    private bool DrawGridTile(ImDrawListPtr drawList, int mark, Rect photo, string url, string label, string glyph,
+        string count, float scale)
+    {
+        if (!ImGui.IsRectVisible(photo.Min, photo.Max))
         {
             return false;
         }
 
         DrawLook(drawList, photo, url, false);
-        var hovered = HoverWash(drawList, tile, photo, 0f);
-        DrawCountByline(drawList, photo.Min.X, photo.Max.X, (photo.Max.Y + tile.Max.Y) * 0.5f, label, avatarName,
-            avatarUrl, glyph, count, PrismArt.Fore, PrismArt.Muted, PrismArt.Muted, scale);
+        var hovered = HoverWash(drawList, photo);
+        if (label.Length > 0 || count.Length > 0)
+        {
+            var band = GridBand(photo, scale);
+            PrismArt.Scrim(drawList, photo, band.Height, scale);
+            DrawCountByline(drawList, band.Min.X, band.Max.X, band.Center.Y, label, glyph, count, PrismArt.PhotoFore,
+                PrismArt.PhotoFore, scale);
+        }
+
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left) && !DragScrollHost.AnyDragging;
         if (pressed)
         {
-            pressedTile = tile.Min;
+            pressedTile = photo.Min;
             tilePressed = true;
         }
 
-        if (tile.Min == pressedTile)
+        if (photo.Min == pressedTile)
         {
-            PrismMotion.Grow(drawList, mark, tile.Center, tileScale);
+            PrismMotion.Grow(drawList, mark, photo.Center, tileScale);
         }
 
-        return UiInteract.Click(tile.Min, tile.Max, hovered);
+        return UiInteract.Click(photo.Min, photo.Max, hovered);
     }
 
     private float DrawCountByline(ImDrawListPtr drawList, float left, float right, float middle, string label,
-        string avatarName, string? avatarUrl, string glyph, string count, Vector4 ink, Vector4 countInk,
-        Vector4 avatarInk, float scale)
+        string glyph, string count, Vector4 ink, Vector4 countInk, float scale)
     {
-        if (avatarName.Length > 0)
-        {
-            var radius = GridAvatarUnits * scale * 0.5f;
-            AvatarView.Draw(drawList, new Vector2(left + radius, middle), radius, avatarInk, Initials.Of(avatarName),
-                TextStyles.Caption2.Scale, images.Avatar(avatarUrl, radius * 2f), AvatarSegments);
-            left += radius * 2f + Metrics.Space.Xs * scale;
-        }
-
         if (count.Length > 0)
         {
             var size = Typography.Measure(count, PrismType.Caption);

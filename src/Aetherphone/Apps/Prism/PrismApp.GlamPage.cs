@@ -977,8 +977,7 @@ internal sealed partial class PrismApp
         {
             var item = more[index];
             if (DrawGridTile(drawList, GridCell(full.Min.X + gap, top, inner, index, scale), Cover(item), item.Title,
-                    string.Empty, null, PhoneIcons.Wand,
-                    item.TryOns > 0 ? NumberText.Compact(item.TryOns) : string.Empty, scale))
+                    PhoneIcons.Heart, item.Likes > 0 ? NumberText.Compact(item.Likes) : string.Empty, scale))
             {
                 OpenGlam(item);
             }

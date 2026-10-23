@@ -256,7 +256,7 @@ internal sealed partial class PrismApp
         var textLeft = left + inset;
         var textWidth = width - inset * 2f;
         var caption = Typography.LineHeight(PrismType.Caption);
-        var byline = MathF.Max(GridAvatarUnits * scale, Typography.LineHeight(PrismType.Headline));
+        var byline = Typography.LineHeight(PrismType.Headline);
         var block = caption + gap + PrismType.HeroHeight(glam.Title, textWidth) + gap + byline;
         PrismArt.Scrim(drawList, photo, block, scale);
         var y = photo.Max.Y - inset - block;
@@ -267,9 +267,8 @@ internal sealed partial class PrismApp
         y += PrismType.DrawHero(drawList, new Vector2(textLeft, y), glam.Title, textWidth, PrismArt.PhotoFore) + gap;
         var bylineMiddle = y + byline * 0.5f;
         var handleEnd = DrawCountByline(drawList, textLeft, textLeft + textWidth, bylineMiddle, AuthorLine(glam.Author),
-            AuthorName(glam.Author), glam.Author?.AvatarUrl, PhoneIcons.Wand,
-            glam.TryOns > 0 ? NumberText.Compact(glam.TryOns) : string.Empty, PrismArt.PhotoFore, PrismArt.PhotoFore,
-            PrismArt.PhotoMuted, scale);
+            PhoneIcons.Heart, glam.Likes > 0 ? NumberText.Compact(glam.Likes) : string.Empty, PrismArt.PhotoFore,
+            PrismArt.PhotoFore, scale);
         if (UiInteract.Click(photo.Min, photo.Max, HoverWash(drawList, photo)))
         {
             OpenGlam(glam);
@@ -417,21 +416,18 @@ internal sealed partial class PrismApp
     private float DrawGlamGrid(ImDrawListPtr drawList, float left, float top, float width, GlamDto[] items, float scale,
         int first = 0)
     {
-        var line = GridLine(scale);
         var shown = Math.Max(0, items.Length - first);
         for (var index = 0; index < shown; index++)
         {
             var photo = GridCell(left, top, width, index, scale);
-            if (!ImGui.IsRectVisible(photo.Min, new Vector2(photo.Max.X, photo.Max.Y + line)))
+            if (!ImGui.IsRectVisible(photo.Min, photo.Max))
             {
                 continue;
             }
 
             var glam = items[first + index];
-            var count = glam.TryOns > 0 ? NumberText.Compact(glam.TryOns) : string.Empty;
-            if (DrawGridTile(drawList, photo, Cover(glam),
-                    AuthorLine(glam.Author), AuthorName(glam.Author), glam.Author?.AvatarUrl, PhoneIcons.Wand, count,
-                    scale))
+            var count = glam.Likes > 0 ? NumberText.Compact(glam.Likes) : string.Empty;
+            if (DrawGridTile(drawList, photo, Cover(glam), AuthorLine(glam.Author), PhoneIcons.Heart, count, scale))
             {
                 OpenGlam(glam);
             }
@@ -439,8 +435,8 @@ internal sealed partial class PrismApp
             var countWidth = count.Length > 0
                 ? Typography.Measure(count, PrismType.Caption).X + (GridGlyphUnits + Metrics.Space.Sm) * scale
                 : 0f;
-            ClickProfile(new Rect(new Vector2(photo.Min.X, photo.Max.Y),
-                new Vector2(photo.Max.X - countWidth, photo.Max.Y + line)), glam.Author);
+            var band = GridBand(photo, scale);
+            ClickProfile(new Rect(band.Min, new Vector2(band.Max.X - countWidth, photo.Max.Y)), glam.Author);
         }
 
         return top + GridHeight(width, shown, scale);
@@ -461,7 +457,7 @@ internal sealed partial class PrismApp
     private static float GridPitch(float width, float scale)
     {
         var gap = Metrics.Space.Xxs * scale;
-        return (width - gap * (GridColumns - 1)) / GridColumns / GlamStore.PhotoRatio + GridLine(scale) + gap;
+        return (width - gap * (GridColumns - 1)) / GridColumns / GlamStore.PhotoRatio + gap;
     }
 
     private float DrawGridPlaceholders(ImDrawListPtr drawList, float left, float top, float width, float scale)
