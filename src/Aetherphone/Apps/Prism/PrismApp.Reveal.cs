@@ -509,18 +509,7 @@ internal sealed partial class PrismApp
 
     private void TapForProfile(Vector2 min, Vector2 max, PrismPlacingDto placing)
     {
-        if (placing.GlamId.Length == 0)
-        {
-            return;
-        }
-
-        var hovered = UiInteract.Hover(min, max);
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        if (UiInteract.Click(min, max, hovered))
+        if (placing.GlamId.Length > 0 && UiInteract.HoverClick(min, max))
         {
             profileGlamId = placing.GlamId;
             glams.Open(new GlamDto(placing.GlamId));

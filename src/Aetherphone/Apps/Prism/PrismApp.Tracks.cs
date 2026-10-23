@@ -112,12 +112,7 @@ internal sealed partial class PrismApp
         var page = Math.Clamp((int)MathF.Round(scroll), 0, count - 1);
         DrawTrackDots(drawList, photo, count, page,
             CoverPlacing(store.LastWeekResults(tracks[page].Id)) is null ? PrismArt.Fore : PrismArt.PhotoFore, scale);
-        var inset = PhotoInset(full, content);
-        if (DrawPhotoButton(drawList, photo, inset, 0, PhoneIcons.ChevronLeft, Loc.T(L.Prism.Back), scale))
-        {
-            LeaveScreen();
-        }
-
+        DrawPhotoBack(drawList, photo, PhotoInset(full, content), scale);
         if (DrawButton(drawList, button, TrackAction(page, tracks[page]), ButtonStyle.Solid, scale,
                 id: TrackActionId))
         {
@@ -171,13 +166,7 @@ internal sealed partial class PrismApp
         PhotoCarousel.DrawDots(drawList, center, count, page, photo.Width, ink);
         var hit = new Rect(new Vector2(center.X - tap * count * 0.5f, photo.Max.Y - tap),
             new Vector2(center.X + tap * count * 0.5f, photo.Max.Y));
-        var hovered = UiInteract.Hover(hit.Min, hit.Max);
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        if (UiInteract.Click(hit.Min, hit.Max, hovered))
+        if (UiInteract.HoverClick(hit.Min, hit.Max))
         {
             trackPager.AnimateTo(ImGui.GetMousePos().X >= center.X ? page + 1 : page - 1, count);
         }

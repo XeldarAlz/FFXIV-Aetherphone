@@ -92,14 +92,8 @@ internal sealed partial class PrismApp
         var tap = Metrics.Size.TapTarget * scale;
         var hit = new Rect(new Vector2(content.Max.X - tap, content.Min.Y),
             new Vector2(content.Max.X, content.Min.Y + tap));
-        var hovered = UiInteract.Hover(hit.Min, hit.Max);
         PhoneIcon.Draw(drawList, hit.Center, PhoneIcons.Dots, PrismArt.Fore, PhotoGlyphUnits * scale);
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        return UiInteract.Click(hit.Min, hit.Max, hovered);
+        return UiInteract.HoverClick(hit.Min, hit.Max);
     }
 
     private void OpenEntrySheet(bool retry)
