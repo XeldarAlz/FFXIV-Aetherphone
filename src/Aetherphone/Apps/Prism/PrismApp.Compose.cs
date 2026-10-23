@@ -184,7 +184,7 @@ internal sealed partial class PrismApp
             return UiInteract.Click(rect.Min, rect.Max, hovered, tapSound);
         }
 
-        RoundButton.Icon(drawList, center, radius, glyph, controls, ButtonStyle.Plain, enabled: false);
+        RoundButton.Icon(drawList, center, radius, glyph, controls, ButtonStyle.Bare, enabled: false);
         if (busy.Length > 0)
         {
             ProgressRing.Sweep(center, radius - Metrics.Stroke.Ring * scale, Metrics.Stroke.Ring * scale,
@@ -465,7 +465,7 @@ internal sealed partial class PrismApp
             ImGui.PushID(index);
             var removed = RoundButton.Icon(drawList,
                 new Vector2(left + width - removeWidth * 0.5f, top + rowHeight * 0.5f), removeWidth * 0.5f,
-                PhoneIcons.X, controls, ButtonStyle.Plain, Loc.T(L.Prism.RemovePiece), glyphInk: PrismArt.Muted);
+                PhoneIcons.X, controls, ButtonStyle.Bare, Loc.T(L.Prism.RemovePiece), glyphInk: PrismArt.Muted);
             ImGui.PopID();
             top += rowHeight;
             if (removed)

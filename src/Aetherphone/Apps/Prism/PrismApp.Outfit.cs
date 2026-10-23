@@ -384,7 +384,7 @@ internal sealed partial class PrismApp
             ImGui.PushID(index);
             var removed = itemId != 0 && RoundButton.Icon(drawList,
                 new Vector2(left + width - tap * 0.5f, top + head * 0.5f), tap * 0.5f, PhoneIcons.X, controls,
-                ButtonStyle.Plain, Loc.T(L.Prism.RemovePiece), glyphInk: PrismArt.Muted);
+                ButtonStyle.Bare, Loc.T(L.Prism.RemovePiece), glyphInk: PrismArt.Muted);
             ImGui.PopID();
             if (removed)
             {
