@@ -180,7 +180,7 @@ internal sealed partial class PrismApp
             Squircle.Fill(list, tile.Min, tile.Max, Metrics.Radius.Sm * scale,
                 ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Tertiary)));
             PhoneIcon.Draw(list, tile.Center, PhoneIcons.Hash, PrismArt.Fore, SearchGlyphUnits * scale);
-            top = row.Max.Y;
+            top = DrawTagStrip(list, origin.X, row.Max.Y, width, scale);
         }
 
         if (searchFound.Count > 0)
@@ -214,7 +214,6 @@ internal sealed partial class PrismApp
                 Loc.T(marketIndex.Ready ? L.Prism.NoMatches : L.Common.Loading));
         }
 
-        top = DrawTagStrip(list, origin.X, top, width, scale);
         ImGui.Dummy(new Vector2(width, top - origin.Y + PrismArt.BottomMargin(scale)));
     }
 
@@ -238,12 +237,12 @@ internal sealed partial class PrismApp
 
     private float DrawTagStrip(ImDrawListPtr drawList, float left, float top, float width, float scale)
     {
-        if (searchTag.Length == 0 || tagGlamsFor != searchTag || tagGlams.Length == 0)
+        if (tagGlamsFor != searchTag || tagGlams.Length == 0)
         {
             return top;
         }
 
-        top = DrawSearchCaption(drawList, left + Metrics.Space.Lg * scale, top + Metrics.Space.Lg * scale,
+        top = DrawSearchCaption(drawList, left + Metrics.Space.Lg * scale, top + Metrics.Space.Md * scale,
             searchTagTitle) + Metrics.Space.Xs * scale;
         var gap = Metrics.Space.Xxs * scale;
         var tile = (width - gap * (TagTiles + 1)) / TagTiles;
