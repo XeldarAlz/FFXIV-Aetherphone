@@ -34,11 +34,6 @@ internal sealed partial class PrismApp
     private const int GlamsTab = 0;
     private const int SavedTab = 1;
     private const int PlacingsTab = 2;
-    private const int TipEditProfile = 0;
-    private const int TipMore = 1;
-    private const int TipSave = 2;
-    private const int TipFavourite = 3;
-    private const int TipEdit = 4;
 
     private readonly string[] profileTabs = new string[3];
     private readonly int[] profileTabKinds = new int[3];
@@ -424,7 +419,7 @@ internal sealed partial class PrismApp
         if (mine)
         {
             var reach = Metrics.Size.TapTarget * scale;
-            if (IconButton(drawList, new Vector2(right - reach * 0.5f, middle), PhoneIcons.Pencil, TipEditProfile,
+            if (IconButton(drawList, new Vector2(right - reach * 0.5f, middle), PhoneIcons.Pencil,
                     Loc.T(L.Prism.EditProfile), scale))
             {
                 navigation.Open(SettingsAppId);
@@ -676,15 +671,10 @@ internal sealed partial class PrismApp
         return glams.List.LoadingMore && shown > 0 ? DrawLoadingRowBelow(left, width, bottom) : bottom;
     }
 
-    private bool IconButton(ImDrawListPtr drawList, Vector2 center, string glyph, int tip, string tooltip, float scale,
-        Vector4? glyphInk = null)
-    {
-        ImGui.PushID(tip);
-        var clicked = RoundButton.Icon(drawList, center, Metrics.Size.TapTarget * 0.5f * scale, glyph, controls,
-            ButtonStyle.Plain, tooltip, glyphInk: glyphInk);
-        ImGui.PopID();
-        return clicked;
-    }
+    private bool IconButton(ImDrawListPtr drawList, Vector2 center, string glyph, string tooltip, float scale,
+        HoverLabelSide side = HoverLabelSide.Above) =>
+        RoundButton.Icon(drawList, center, Metrics.Size.TapTarget * 0.5f * scale, glyph, controls, ButtonStyle.Bare,
+            tooltip, side);
 
     private float DrawLaneState(ImDrawListPtr drawList, float left, float width, float top, FeedLane<GlamDto> lane,
         float scale)

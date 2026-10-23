@@ -121,12 +121,12 @@ internal sealed partial class PrismApp
         var left = content.Min.X + Metrics.Space.Lg * scale;
         DrawScopeTabs(drawList, new Rect(new Vector2(left, top),
             new Vector2(search.X - radius - Metrics.Space.Xs * scale, top + tap)), scale);
-        if (DrawHeaderIcon(drawList, search, radius, PhoneIcons.Search, Loc.T(L.Common.Search)))
+        if (IconButton(drawList, search, PhoneIcons.Search, Loc.T(L.Common.Search), scale, HoverLabelSide.Below))
         {
             OpenSearch();
         }
 
-        if (DrawHeaderIcon(drawList, heart, radius, PhoneIcons.Heart, Loc.T(L.Prism.Activity)))
+        if (IconButton(drawList, heart, PhoneIcons.Heart, Loc.T(L.Prism.Activity), scale, HoverLabelSide.Below))
         {
             OpenActivity();
         }
@@ -298,9 +298,6 @@ internal sealed partial class PrismApp
         pendingScroll = 0f;
         glams.Refresh(discoverScope);
     }
-
-    private bool DrawHeaderIcon(ImDrawListPtr drawList, Vector2 center, float radius, string glyph, string tip) =>
-        RoundButton.Icon(drawList, center, radius, glyph, controls, ButtonStyle.Bare, tip, HoverLabelSide.Below);
 
     private void DrawScopeTabs(ImDrawListPtr drawList, Rect row, float scale)
     {

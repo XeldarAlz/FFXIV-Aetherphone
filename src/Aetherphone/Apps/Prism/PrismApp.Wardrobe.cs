@@ -112,8 +112,7 @@ internal sealed partial class PrismApp
         var canShuffle = wardrobe.Outfits.Length > 1;
         if (canImport || canShuffle)
         {
-            if (IconButton(drawList, new Vector2(right - height * 0.5f, middle), PhoneIcons.Dots, TipMore,
-                    Loc.T(L.Prism.More), scale))
+            if (IconButton(drawList, new Vector2(right - height * 0.5f, middle), PhoneIcons.Dots, Loc.T(L.Prism.More), scale))
             {
                 sheetCount = 0;
                 AddSheetAction(canImport, WardrobeAction.Import);
@@ -133,7 +132,7 @@ internal sealed partial class PrismApp
         var saved = labelled
             ? DrawButton(drawList, new Rect(new Vector2(saveLeft, top), new Vector2(right, top + height)), save,
                 ButtonStyle.Solid, scale)
-            : IconButton(drawList, new Vector2(right - height * 0.5f, middle), PhoneIcons.Plus, TipSave, save, scale);
+            : IconButton(drawList, new Vector2(right - height * 0.5f, middle), PhoneIcons.Plus, save, scale);
         if (saved)
         {
             SaveWearing();
@@ -436,14 +435,13 @@ internal sealed partial class PrismApp
         }
 
         if (IconButton(drawList, new Vector2(right - reach * 1.5f, middle),
-                outfit.Favourite ? PhoneIcons.StarFilled : PhoneIcons.Star, TipFavourite,
+                outfit.Favourite ? PhoneIcons.StarFilled : PhoneIcons.Star,
                 Loc.T(outfit.Favourite ? L.Prism.Unfavourite : L.Prism.Favourite), scale))
         {
             wardrobe.Update(outfit with { Favourite = !outfit.Favourite });
         }
 
-        if (IconButton(drawList, new Vector2(right - reach * 0.5f, middle), PhoneIcons.Pencil, TipEdit,
-                Loc.T(L.Prism.Edit), scale))
+        if (IconButton(drawList, new Vector2(right - reach * 0.5f, middle), PhoneIcons.Pencil, Loc.T(L.Prism.Edit), scale))
         {
             OpenFitSheet(outfit);
         }
