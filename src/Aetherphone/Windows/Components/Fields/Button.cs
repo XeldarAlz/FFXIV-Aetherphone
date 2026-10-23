@@ -11,6 +11,7 @@ internal enum ButtonStyle : byte
     Tinted,
     Gray,
     Plain,
+    Bare,
     Solid,
 }
 
@@ -143,6 +144,9 @@ internal static class Button
                 Squircle.Fill(drawList, face.Min, face.Max, radius, ImGui.GetColorU32(Palette.Mix(tone, labelInk,
                     SolidHoverMix * pose.Hover + SolidPressMix * pose.Press) with { W = alpha }));
                 break;
+            case ButtonStyle.Bare:
+                labelInk = toneInk;
+                break;
             default:
                 if (pose.Hover > 0.001f)
                 {
@@ -155,7 +159,7 @@ internal static class Button
                 break;
         }
 
-        if (style is not ButtonStyle.Plain and not ButtonStyle.Solid)
+        if (style is not ButtonStyle.Plain and not ButtonStyle.Bare and not ButtonStyle.Solid)
         {
             MotionButton.RimLight(drawList, face, radius, pose.Hover * RimLightAlpha * alpha);
         }

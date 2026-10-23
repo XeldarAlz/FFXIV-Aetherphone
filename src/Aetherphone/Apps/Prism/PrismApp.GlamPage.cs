@@ -496,7 +496,7 @@ internal sealed partial class PrismApp
             drawList.AddRectFilled(bar.Min, bar.Max, ImGui.GetColorU32(PrismArt.Back));
             var backMark = PrismMotion.Mark(drawList);
             if (RoundButton.Icon(drawList, new Vector2(left + radius * 0.5f, top + radius), radius,
-                    PhoneIcons.ChevronLeft, controls, ButtonStyle.Plain, Loc.T(L.Prism.Back), HoverLabelSide.Below,
+                    PhoneIcons.ChevronLeft, controls, ButtonStyle.Bare, Loc.T(L.Prism.Back), HoverLabelSide.Below,
                     overlay: true) && !UiInteract.InputBlocked)
             {
                 LeaveScreen();
@@ -519,7 +519,7 @@ internal sealed partial class PrismApp
             var save = new Vector2(left + saveOffset, top + radius);
             var own = glam.Author?.Id == glams.MyId;
             if (!own && RoundButton.Icon(drawList, save, radius,
-                    glam.Saved ? PhoneIcons.BookmarkFilled : PhoneIcons.Bookmark, controls, ButtonStyle.Plain,
+                    glam.Saved ? PhoneIcons.BookmarkFilled : PhoneIcons.Bookmark, controls, ButtonStyle.Bare,
                     Loc.T(glam.Saved ? L.Prism.Saved : L.Prism.Save), HoverLabelSide.Below, overlay: pinned) &&
                 !(pinned && UiInteract.InputBlocked))
             {
@@ -548,7 +548,7 @@ internal sealed partial class PrismApp
         var liked = glam.Liked;
         var mark = PrismMotion.Mark(drawList);
         if (RoundButton.Icon(drawList, center, radius, liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart, controls,
-                ButtonStyle.Plain, Loc.T(L.Prism.Like), HoverLabelSide.Below, overlay: overlay) &&
+                ButtonStyle.Bare, Loc.T(L.Prism.Like), HoverLabelSide.Below, overlay: overlay) &&
             !(overlay && UiInteract.InputBlocked))
         {
             glams.ToggleLike(glam);
@@ -1068,7 +1068,7 @@ internal sealed partial class PrismApp
             OwnedState(piece.ItemId), PrismArt.Fore, PrismArt.Back, scale);
         using (UiScope.PushId(index))
         {
-            if (RoundButton.Icon(drawList, wand, tap * 0.5f, PhoneIcons.Wand, controls, ButtonStyle.Plain,
+            if (RoundButton.Icon(drawList, wand, tap * 0.5f, PhoneIcons.Wand, controls, ButtonStyle.Bare,
                     Loc.T(L.Prism.TryOnPiece), HoverLabelSide.Below, glyphInk: PrismArt.Muted))
             {
                 TryOnPiece(piece, statsFor ?? string.Empty);

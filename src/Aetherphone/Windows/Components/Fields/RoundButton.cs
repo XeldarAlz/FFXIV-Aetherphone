@@ -114,6 +114,9 @@ internal static class RoundButton
                     Squircle.Fill(drawList, face.Min, face.Max, radius, ImGui.GetColorU32(gray with { W = gray.W * alpha }));
                     labelInk = ink.Ink;
                     break;
+                case ButtonStyle.Bare:
+                    labelInk = ink.Ink;
+                    break;
                 default:
                     if (pose.Hover > 0.001f)
                     {
@@ -127,7 +130,7 @@ internal static class RoundButton
             }
         }
 
-        if (style != ButtonStyle.Plain)
+        if (style is not ButtonStyle.Plain and not ButtonStyle.Bare)
         {
             MotionButton.RimLight(drawList, face, radius, pose.Hover * RimLightAlpha * alpha);
         }

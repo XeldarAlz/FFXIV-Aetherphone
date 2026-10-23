@@ -302,7 +302,7 @@ internal sealed partial class PrismApp
     }
 
     private bool DrawHeaderIcon(ImDrawListPtr drawList, Vector2 center, float radius, string glyph, string tip) =>
-        RoundButton.Icon(drawList, center, radius, glyph, controls, ButtonStyle.Plain, tip, HoverLabelSide.Below);
+        RoundButton.Icon(drawList, center, radius, glyph, controls, ButtonStyle.Bare, tip, HoverLabelSide.Below);
 
     private void DrawScopeTabs(ImDrawListPtr drawList, Rect row, float scale)
     {
