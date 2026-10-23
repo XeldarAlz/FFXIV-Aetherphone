@@ -27,12 +27,9 @@ internal sealed partial class PrismApp
     private const float PlacingMedalUnits = 14f;
     private const float ListIconUnits = 56f;
     private const float EmptyStateUnits = 150f;
-    private const int TileColumns = 2;
-    private const int SkeletonTileRows = 2;
     private const long CompactFrom = 10000;
     private const string MarketAppId = "market";
     private const string SettingsAppId = "settings";
-    private const string MetaSeparator = " · ";
     private const double UserRetrySeconds = 5d;
     private const int GlamsTab = 0;
     private const int SavedTab = 1;
@@ -68,7 +65,6 @@ internal sealed partial class PrismApp
     private string listTitle = string.Empty;
     private CachedText profileStatsText;
     private CachedText profileRankText;
-    private CachedText profileHandleText;
     private CachedText listCountText;
     private CachedText vendorText;
     private bool listOwned;
@@ -309,31 +305,15 @@ internal sealed partial class PrismApp
         return glam.Likes != than.Likes ? glam.Likes > than.Likes : glam.CreatedAtUnix > than.CreatedAtUnix;
     }
 
-    private static string FirstPhoto(GlamDto glam) =>
-        glam.Photos is { Length: > 0 } photos ? photos[0].Url : string.Empty;
-
-    private static string ProfileName(GlamAuthorDto? author) =>
-        author is null ? string.Empty : author.DisplayName.Length > 0 ? author.DisplayName : author.Handle;
-
-    private string ProfileHandle(GlamAuthorDto? author)
-    {
-        if (author is not { Handle.Length: > 0 } named)
-        {
-            return string.Empty;
-        }
-
-        var key = named.Handle.GetHashCode(StringComparison.Ordinal);
-        return profileHandleText.IsCurrent(key)
-            ? profileHandleText.Value
-            : profileHandleText.Store(key, string.Concat("@", named.Handle));
-    }
+    private string ProfileHandle(GlamAuthorDto? author) =>
+        author is { Handle.Length: > 0 } ? AuthorLine(author) : string.Empty;
 
     private void DrawProfileCover(ImDrawListPtr drawList, Rect photo, float topInset, GlamProfileDto? profile,
         bool mine, float scale)
     {
         if (profileCover is { } cover)
         {
-            DrawLook(drawList, photo, FirstPhoto(cover), false, native: true, focusY: CoverFocus);
+            DrawLook(drawList, photo, Cover(cover), false, native: true, focusY: CoverFocus);
             if (UiInteract.Click(photo.Min, photo.Max, UiInteract.Hover(photo.Min, photo.Max)))
             {
                 OpenGlam(cover);
@@ -359,7 +339,7 @@ internal sealed partial class PrismApp
         var followWidth = mine || author is null ? 0f : ButtonWidth([Loc.T(L.Prism.Follow), Loc.T(L.Prism.Following)],
             (right - left) * 0.5f, scale);
         var heroRight = followWidth > 0f ? right - followWidth - Metrics.Space.Sm * scale : right;
-        var name = ProfileName(author);
+        var name = AuthorName(author);
         var heroHeight = PrismType.HeroHeight(name, heroRight - left);
         PrismArt.Scrim(drawList, photo, heroHeight + handleHeight, scale);
         PrismType.DrawHero(drawList, new Vector2(left, bottom - handleHeight - heroHeight), name, heroRight - left,
@@ -453,7 +433,7 @@ internal sealed partial class PrismApp
             right -= reach + Metrics.Space.Sm * scale;
         }
 
-        var name = ProfileName(author);
+        var name = AuthorName(author);
         AvatarView.Draw(drawList, new Vector2(left + avatar * 0.5f, middle), avatar * 0.5f, PrismArt.Muted,
             Initials.Of(name), TextStyles.Title3.Scale, images.Avatar(author?.AvatarUrl, avatar), ProfileAvatarSegments);
         var textLeft = left + avatar + Metrics.Space.Md * scale;
@@ -479,8 +459,8 @@ internal sealed partial class PrismApp
         var key = HashCode.Combine(stats.GlamCount, stats.TryOnsReceived, stats.LikesReceived, Loc.Current.Code);
         var line = profileStatsText.IsCurrent(key)
             ? profileStatsText.Value
-            : profileStatsText.Store(key, string.Concat(Loc.Plural(L.Prism.GlamCount, stats.GlamCount), MetaSeparator,
-                Loc.Plural(L.Prism.TriedOnTotal, Clamp(stats.TryOnsReceived)), MetaSeparator,
+            : profileStatsText.Store(key, string.Concat(Loc.Plural(L.Prism.GlamCount, stats.GlamCount), GlamMetaSeparator,
+                Loc.Plural(L.Prism.TriedOnTotal, Clamp(stats.TryOnsReceived)), GlamMetaSeparator,
                 Loc.Plural(L.Prism.LikeCount, Clamp(stats.LikesReceived))));
         if (mine && glams.Season is { Me: { Rank: > 0 } standing })
         {
@@ -669,7 +649,7 @@ internal sealed partial class PrismApp
     {
         var gap = Metrics.Space.Xxs * scale;
         var tileLeft = left + gap;
-        var column = (width - gap * (TileColumns + 1)) / TileColumns;
+        var column = (width - gap * (GridColumns + 1)) / GridColumns;
         var height = column / GlamStore.PhotoRatio;
         var pitch = height + GridLine(scale) + gap;
         var shown = 0;
@@ -681,30 +661,19 @@ internal sealed partial class PrismApp
                 continue;
             }
 
-            var x = tileLeft + shown % TileColumns * (column + gap);
-            var y = top + shown / TileColumns * pitch;
+            var x = tileLeft + shown % GridColumns * (column + gap);
+            var y = top + shown / GridColumns * pitch;
             shown++;
             var photo = new Rect(new Vector2(x, y), new Vector2(x + column, y + height));
-            var opened = DrawGridTile(drawList, photo, FirstPhoto(glam), placings ? PlacingLabel(glam) : glam.Title,
-                string.Empty, null, PhoneIcons.Wand, glam.TryOns > 0 ? CountLabel(glam.TryOns) : string.Empty, scale);
-            if (opened)
+            if (DrawGridTile(drawList, photo, Cover(glam), placings ? PlacingLabel(glam) : glam.Title,
+                    string.Empty, null, PhoneIcons.Wand, glam.TryOns > 0 ? CountLabel(glam.TryOns) : string.Empty, scale))
             {
                 OpenGlam(glam);
             }
         }
 
-        var bottom = top + (shown + TileColumns - 1) / TileColumns * pitch;
-        if (!glams.List.LoadingMore || shown == 0)
-        {
-            return bottom;
-        }
-
-        var resume = ImGui.GetCursorScreenPos();
-        ImGui.SetCursorScreenPos(new Vector2(left, bottom));
-        InfiniteScroll.DrawLoadingRow(left + width * 0.5f, PrismArt.Muted);
-        bottom = ImGui.GetCursorScreenPos().Y;
-        ImGui.SetCursorScreenPos(resume);
-        return bottom;
+        var bottom = top + (shown + GridColumns - 1) / GridColumns * pitch;
+        return glams.List.LoadingMore && shown > 0 ? DrawLoadingRowBelow(left, width, bottom) : bottom;
     }
 
     private bool IconButton(ImDrawListPtr drawList, Vector2 center, string glyph, int tip, string tooltip, float scale,
@@ -720,19 +689,10 @@ internal sealed partial class PrismApp
     private float DrawLaneState(ImDrawListPtr drawList, float left, float width, float top, FeedLane<GlamDto> lane,
         float scale)
     {
-        var gap = Metrics.Space.Xxs * scale;
-        var column = (width - gap * (TileColumns + 1)) / TileColumns;
-        var height = column / GlamStore.PhotoRatio;
-        var pitch = height + GridLine(scale) + gap;
         if (!lane.Failed)
         {
-            for (var index = 0; index < SkeletonTileRows * TileColumns; index++)
-            {
-                var min = new Vector2(left + gap + index % TileColumns * (column + gap), top + index / TileColumns * pitch);
-                PrismArt.Placeholder(drawList, new Rect(min, min + new Vector2(column, height)), false, scale);
-            }
-
-            return top + SkeletonTileRows * pitch;
+            var gap = Metrics.Space.Xxs * scale;
+            return DrawGridPlaceholders(drawList, left + gap, top, width - gap * 2f, scale);
         }
 
         var inset = Metrics.Space.Lg * scale;
@@ -744,15 +704,7 @@ internal sealed partial class PrismApp
             new Vector2(left + inset + ButtonWidth([label], width, scale), top + Button.LargeHeight * scale));
         if (DrawButton(drawList, retry, label, ButtonStyle.Plain, scale))
         {
-            lane.ClearFailure();
-            if (screen == PrismScreen.GlamList)
-            {
-                OpenList();
-            }
-            else if (glams.Profile?.User is { } author)
-            {
-                glams.OpenProfile(author, showSaved);
-            }
+            RetryLane(lane);
         }
 
         return retry.Max.Y;

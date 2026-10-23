@@ -199,12 +199,12 @@ internal sealed partial class PrismApp
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth();
         var gap = Metrics.Space.Xxs * scale;
-        var column = (width - gap * (TileColumns + 1)) / TileColumns;
+        var column = (width - gap * (GridColumns + 1)) / GridColumns;
         var height = column / GlamStore.PhotoRatio;
         var pitch = height + GridLine(scale) + gap;
         var outfits = wardrobe.Outfits;
         var busy = wardrobe.Loading || wardrobe.Importing;
-        var count = busy ? SkeletonTileRows * TileColumns : outfits.Length;
+        var count = busy ? PlaceholderRows * GridColumns : outfits.Length;
         var shown = 0;
         for (var index = 0; index < count; index++)
         {
@@ -213,7 +213,7 @@ internal sealed partial class PrismApp
                 continue;
             }
 
-            var min = new Vector2(origin.X + gap + shown % TileColumns * (column + gap), origin.Y + shown / TileColumns * pitch);
+            var min = new Vector2(origin.X + gap + shown % GridColumns * (column + gap), origin.Y + shown / GridColumns * pitch);
             var photo = new Rect(min, min + new Vector2(column, height));
             shown++;
             if (!ImGui.IsRectVisible(photo.Min, new Vector2(photo.Max.X, photo.Max.Y + GridLine(scale))))
@@ -246,7 +246,7 @@ internal sealed partial class PrismApp
         }
 
         ImGui.Dummy(new Vector2(width,
-            (shown + TileColumns - 1) / TileColumns * pitch + PrismArt.BottomMargin(scale)));
+            (shown + GridColumns - 1) / GridColumns * pitch + PrismArt.BottomMargin(scale)));
     }
 
     private void OpenOutfit(string id)
@@ -463,9 +463,9 @@ internal sealed partial class PrismApp
         fitLanguage = Loc.Current.Code;
         var saved = Loc.T(L.Prism.SavedOn, TimeText.MonthDay(outfit.CreatedAtUnix));
         fitMeta = totalPieces == 0 && totalMods == 0 ? saved
-            : totalMods == 0 ? string.Concat(PieceCountLine(), MetaSeparator, saved)
-            : totalPieces == 0 ? string.Concat(ModCountLine(), MetaSeparator, saved)
-            : string.Concat(PieceCountLine(), MetaSeparator, ModCountLine(), MetaSeparator, saved);
+            : totalMods == 0 ? string.Concat(PieceCountLine(), GlamMetaSeparator, saved)
+            : totalPieces == 0 ? string.Concat(ModCountLine(), GlamMetaSeparator, saved)
+            : string.Concat(PieceCountLine(), GlamMetaSeparator, ModCountLine(), GlamMetaSeparator, saved);
     }
 
     private float DrawOutfitName(ImDrawListPtr drawList, float left, float right, float top, WardrobeOutfit outfit,

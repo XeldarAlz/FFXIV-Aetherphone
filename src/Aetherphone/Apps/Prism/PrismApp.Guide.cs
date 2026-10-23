@@ -185,7 +185,7 @@ internal sealed partial class PrismApp
     {
         var frame = Portrait(plate.Center.X, plate.Min.Y, plate.Height);
         var today = glams.Lane(GlamScope.Today).Items;
-        var photo = today.Length > 0 && today[0].Photos is { Length: > 0 } photos ? photos[0].Url : string.Empty;
+        var photo = today.Length > 0 ? Cover(today[0]) : string.Empty;
         var pad = Metrics.Space.Md * scale;
         var bar = frame.Height * PlateBarShare;
         var strip = new Rect(new Vector2(frame.Min.X + pad, frame.Max.Y - pad - bar * PlateStripBars),
