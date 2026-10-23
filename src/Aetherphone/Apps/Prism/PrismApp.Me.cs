@@ -353,15 +353,19 @@ internal sealed partial class PrismApp
         var heroRight = followWidth > 0f ? right - followWidth - Metrics.Space.Sm * scale : right;
         var name = AuthorName(author);
         var heroHeight = PrismType.HeroHeight(name, heroRight - left);
-        PrismArt.Scrim(drawList, photo, heroHeight + handleHeight, scale);
-        PrismType.DrawHero(drawList, new Vector2(left, bottom - handleHeight - heroHeight), name, heroRight - left,
+        var best = BestPlacing(profile);
+        var placingHeight = best is null ? 0f : MathF.Max(handleHeight, CoverMedalUnits * 2f * scale);
+        var handleTop = bottom - placingHeight - handleHeight;
+        PrismArt.Scrim(drawList, photo, heroHeight + handleHeight + placingHeight, scale);
+        PrismType.DrawHero(drawList, new Vector2(left, handleTop - heroHeight), name, heroRight - left,
             PrismArt.PhotoFore);
-        var handleRight = mine
-            ? DrawCoverPlacing(drawList, right, bottom - handleHeight * 0.5f, (right - left) * 0.5f, profile, scale)
-            : heroRight;
-        Typography.Draw(drawList, new Vector2(left, bottom - handleHeight),
-            Typography.FitText(ProfileHandle(author), MathF.Max(1f, handleRight - left), PrismType.Caption),
+        Typography.Draw(drawList, new Vector2(left, handleTop),
+            Typography.FitText(ProfileHandle(author), MathF.Max(1f, heroRight - left), PrismType.Caption),
             PrismArt.PhotoMuted, PrismType.Caption);
+        if (best is not null)
+        {
+            DrawCoverPlacing(drawList, left, bottom - placingHeight * 0.5f, heroRight - left, best, scale);
+        }
         if (mine)
         {
             if (DrawPhotoButton(drawList, photo, topInset, 1, PhoneIcons.Pencil, Loc.T(L.Prism.EditProfile), scale))
@@ -397,8 +401,7 @@ internal sealed partial class PrismApp
             : MathF.Max(0f, ProfileCoverFocus - topInset / MathF.Max(1f, photo.Height) * shown / (1f - shown));
     }
 
-    private float DrawCoverPlacing(ImDrawListPtr drawList, float right, float middle, float room,
-        GlamProfileDto? profile, float scale)
+    private static GlamPlacingDto? BestPlacing(GlamProfileDto? profile)
     {
         GlamPlacingDto? best = null;
         var placings = profile?.Placings ?? Array.Empty<GlamPlacingDto>();
@@ -410,19 +413,18 @@ internal sealed partial class PrismApp
             }
         }
 
-        if (best is null)
-        {
-            return right;
-        }
+        return best;
+    }
 
-        var title = Typography.FitText(best.Title, room, PrismType.Caption);
-        var titleSize = Typography.Measure(title, PrismType.Caption);
-        Typography.Draw(drawList, new Vector2(right - titleSize.X, middle - titleSize.Y * 0.5f), title,
-            PrismArt.PhotoFore, PrismType.Caption);
+    private void DrawCoverPlacing(ImDrawListPtr drawList, float left, float middle, float room, GlamPlacingDto best,
+        float scale)
+    {
         var radius = CoverMedalUnits * scale;
-        var center = new Vector2(right - titleSize.X - Metrics.Space.Xs * scale - radius, middle);
-        DrawPlacingMedal(drawList, center, radius, best.Rank, true, scale);
-        return center.X - radius - Metrics.Space.Sm * scale;
+        DrawPlacingMedal(drawList, new Vector2(left + radius, middle), radius, best.Rank, true, scale);
+        var textLeft = left + radius * 2f + Metrics.Space.Xs * scale;
+        var title = Typography.FitText(best.Title, MathF.Max(1f, left + room - textLeft), PrismType.Caption);
+        Typography.Draw(drawList, new Vector2(textLeft, middle - Typography.LineHeight(PrismType.Caption) * 0.5f),
+            title, PrismArt.PhotoFore, PrismType.Caption);
     }
 
     private void DrawPlacingMedal(ImDrawListPtr drawList, Vector2 center, float radius, int rank, bool onPhoto,
