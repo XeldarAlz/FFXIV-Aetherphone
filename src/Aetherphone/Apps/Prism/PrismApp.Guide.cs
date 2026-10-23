@@ -299,12 +299,51 @@ internal sealed partial class PrismApp
         var settling = guideWorn && tried < PrismArt.TryOnSeconds;
         var worn = guideWorn && !settling;
         var pill = new Rect(new Vector2(stage.Max.X - width, rowTop), new Vector2(stage.Max.X, rowTop + tap));
-        if (DrawPill(drawList, pill, worn ? wearing : tryOn, worn, false, settling, scale))
+        if (worn)
         {
-            guideWorn = !guideWorn;
-            guidePiecesOpen &= !guideWorn;
+            if (DrawWornLabel(drawList, pill, wearing,
+                    PrismMotion.At(tried, PrismArt.TryOnSeconds, Motion.Appear), scale))
+            {
+                guideWorn = false;
+                guideTriedAt = ImGui.GetTime();
+            }
+
+            return;
+        }
+
+        if (DrawPill(drawList, pill, tryOn, false, false, settling, scale))
+        {
+            guideWorn = true;
+            guidePiecesOpen = false;
             guideTriedAt = ImGui.GetTime();
         }
+    }
+
+    private static bool DrawWornLabel(ImDrawListPtr drawList, Rect rect, string label, float alpha, float scale)
+    {
+        var hovered = UiInteract.Hover(rect.Min, rect.Max);
+        var ink = hovered ? PrismArt.Muted : PrismArt.Fore;
+        var glyph = Typography.LineHeight(PrismType.Caption);
+        var gap = Metrics.Space.Xs * scale;
+        var fitted = Typography.FitText(label, MathF.Max(1f, rect.Width - glyph - gap), PrismType.Headline);
+        var size = Typography.Measure(fitted, PrismType.Headline);
+        var textLeft = rect.Max.X - size.X;
+        var mark = PrismMotion.Mark(drawList);
+        PhoneIcon.Draw(drawList, new Vector2(textLeft - gap - glyph * 0.5f, rect.Center.Y), PhoneIcons.Check, ink,
+            glyph);
+        Typography.Draw(drawList, new Vector2(textLeft, rect.Center.Y - size.Y * 0.5f), fitted, ink,
+            PrismType.Headline);
+        if (alpha < PrismMotion.Settled)
+        {
+            PrismMotion.Shift(drawList, mark, Vector2.Zero, alpha);
+        }
+
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
     private void DrawGuidePieces(ImDrawListPtr drawList, float left, float chipBottom, float width, float scale)
@@ -376,7 +415,7 @@ internal sealed partial class PrismApp
             stage.Max);
         GuideShade(drawList, full, panel.Min.Y, scale);
         var mark = PrismMotion.Mark(drawList);
-        Material.FrostedGlass(drawList, panel.Min, panel.Max, Metrics.Radius.Lg * scale, scale);
+        PrismArt.PhotoPanel(drawList, panel, Metrics.Radius.Lg * scale);
         DrawGearGrid(drawList, guideGear, panel.Min.X + pad, panel.Min.Y + pad, gridWidth, scale);
         for (var index = 0; index < GuideGear.Length; index++)
         {
@@ -404,7 +443,7 @@ internal sealed partial class PrismApp
             stage.Max);
         GuideShade(drawList, full, card.Min.Y, scale);
         var mark = PrismMotion.Mark(drawList);
-        Material.FrostedGlass(drawList, card.Min, card.Max, Metrics.Radius.Lg * scale, scale);
+        PrismArt.PhotoPanel(drawList, card, Metrics.Radius.Lg * scale);
         var left = card.Min.X + pad;
         var glyph = PrismArt.InlineIconUnits * scale;
         PhoneIcon.Draw(drawList, new Vector2(left + glyph * 0.5f, card.Min.Y + pad + captionLine * 0.5f),
@@ -456,7 +495,7 @@ internal sealed partial class PrismApp
             stage.Max);
         GuideShade(drawList, full, card.Min.Y, scale);
         var mark = PrismMotion.Mark(drawList);
-        Material.FrostedGlass(drawList, card.Min, card.Max, Metrics.Radius.Lg * scale, scale);
+        PrismArt.PhotoPanel(drawList, card, Metrics.Radius.Lg * scale);
         var room = card.Width - pad * 2f;
         Typography.Draw(drawList, card.Min + new Vector2(pad, pad),
             Typography.FitText(Loc.T(L.Prism.ThemeLabel), room, PrismType.Caption), PrismArt.Muted,

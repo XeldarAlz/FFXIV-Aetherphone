@@ -312,6 +312,9 @@ internal static class PrismArt
         drawList.AddRectFilledMultiColor(new Vector2(photo.Min.X, textTop), photo.Max, middle, middle, deep, deep);
     }
 
+    public static void PhotoPanel(ImDrawListPtr drawList, Rect panel, float radius) =>
+        Squircle.Fill(drawList, panel.Min, panel.Max, radius, ImGui.GetColorU32(ScrimDeep));
+
     public static void TopFog(ImDrawListPtr drawList, Rect photo, float scale)
     {
         var fog = ImGui.GetColorU32(PhotoInks.Fog);
@@ -513,6 +516,7 @@ internal static class PrismArt
         var level = Surfaces.Fill(themeInks.Fore, FillLevel.Primary);
         if (empty)
         {
+            drawList.AddRectFilled(tile.Min, tile.Max, ImGui.GetColorU32(inks.Fog), radius);
             drawList.AddRect(tile.Min, tile.Max, ImGui.GetColorU32(level), radius, ImDrawFlags.None,
                 Metrics.Stroke.Thin * scale);
             SlotIcon(drawList, tile.Center, iconSize, slot, themeInks.Muted);
