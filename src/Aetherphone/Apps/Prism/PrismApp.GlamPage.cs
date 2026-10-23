@@ -213,7 +213,7 @@ internal sealed partial class PrismApp
         if (glam.WeekId.Length > 0 && totalPieces > 0)
         {
             cursor += Typography.DrawWrappedLeft(new Vector2(left, cursor), Loc.T(L.Prism.OutfitCaveat),
-                PrismArt.Muted, PrismType.Caption, right - left);
+                PrismArt.Muted, PrismType.Caption, right - left) + Metrics.Space.Xl * scale;
         }
 
         cursor = DrawMoreFrom(drawList, full, cursor, glam, scale);
