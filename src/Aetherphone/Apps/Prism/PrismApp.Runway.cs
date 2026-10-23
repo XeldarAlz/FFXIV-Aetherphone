@@ -152,7 +152,7 @@ internal sealed partial class PrismApp
         var full = FullFrom(content, scale);
         var photoTop = PhotoTop(full, content);
         var photo = new Rect(new Vector2(full.Min.X, photoTop), new Vector2(full.Max.X,
-            MathF.Min(photoTop + full.Width / PrismStore.EntryRatio, content.Max.Y - below)));
+            MathF.Max(photoTop, MathF.Min(photoTop + full.Width / PrismStore.EntryRatio, content.Max.Y - below))));
         var captionTop = photo.Max.Y + Metrics.Space.Lg * scale;
         var questionTop = captionTop + captionLine + Metrics.Space.Xxs * scale;
         var rowTop = questionTop + questionHeight + Metrics.Space.Lg * scale;

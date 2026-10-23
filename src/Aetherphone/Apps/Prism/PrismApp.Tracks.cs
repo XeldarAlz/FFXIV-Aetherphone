@@ -86,7 +86,7 @@ internal sealed partial class PrismApp
         }
 
         var top = PhotoTop(full, content);
-        var height = MathF.Min(full.Width * CoverRatio, button.Min.Y - gap - trackBlock - gap - top);
+        var height = MathF.Max(0f, MathF.Min(full.Width * CoverRatio, button.Min.Y - gap - trackBlock - gap - top));
         var photo = new Rect(new Vector2(full.Min.X, top), new Vector2(full.Max.X, top + height));
         var area = new Rect(photo.Min, new Vector2(photo.Max.X, button.Min.Y - gap));
         DriveTrackPager(area, count, scale);

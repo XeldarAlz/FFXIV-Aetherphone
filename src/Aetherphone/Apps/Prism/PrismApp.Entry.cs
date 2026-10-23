@@ -56,8 +56,9 @@ internal sealed partial class PrismApp
             ? Typography.MeasureWrappedBlock(hint, PrismType.Body, width).Y + Metrics.Space.Sm * scale
             : 0f;
         var textTop = actions.Min.Y - Metrics.Space.Xl * scale - hintHeight - PrismType.HeroHeight(title, width);
-        var photo = new Rect(new Vector2(full.Min.X, top + Metrics.Space.Sm * scale),
-            new Vector2(full.Max.X, textTop - Metrics.Space.Xl * scale));
+        var photoTop = top + Metrics.Space.Sm * scale;
+        var photo = new Rect(new Vector2(full.Min.X, photoTop),
+            new Vector2(full.Max.X, MathF.Max(photoTop, textTop - Metrics.Space.Xl * scale)));
         if (store.Busy)
         {
             PrismArt.Placeholder(drawList, photo, false, scale);

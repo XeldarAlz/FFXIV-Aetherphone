@@ -63,8 +63,8 @@ internal sealed partial class PrismApp
             : Typography.MeasureWrappedBlock(hint, PrismType.Body, content.Width).Y;
         var top = PhotoTop(full, content);
         var bottom = content.Max.Y - bottomChrome - PrismArt.BottomMargin(scale);
-        var height = MathF.Min(full.Width * CoverRatio,
-            bottom - top - gap - strip - fact - gap - Button.LargeHeight * scale);
+        var height = MathF.Max(0f, MathF.Min(full.Width * CoverRatio,
+            bottom - top - gap - strip - fact - gap - Button.LargeHeight * scale));
         var photo = new Rect(new Vector2(full.Min.X, top), new Vector2(full.Max.X, top + height));
         DrawCoverPhoto(drawList, photo, url, cover, scale);
         DrawCoverTitle(drawList, photo, content, open ? week.Title : Loc.T(L.Prism.NoWeekTitle), open,
