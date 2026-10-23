@@ -53,7 +53,7 @@ internal sealed partial class PrismApp
     private readonly Dictionary<uint, (string Name, uint Icon)> itemRows = new();
     private readonly HashSet<uint> ownedIds = new();
     private readonly Dictionary<int, string> dyeLines = new();
-    private readonly Dictionary<GlamModDto, (string Line, bool Allowed, bool Installed)> modLines = new();
+    private readonly Dictionary<GlamModDto, (string Side, bool Allowed, bool Installed)> modLines = new();
     private readonly Dictionary<(GlamModDto Mod, int Slot), string> modBylines = new();
     private string? statsFor;
     private bool statsStale;
@@ -1180,8 +1180,7 @@ internal sealed partial class PrismApp
         var tile = new Rect(new Vector2(left, row.Center.Y - icon * 0.5f),
             new Vector2(left + icon, row.Center.Y + icon * 0.5f));
         PrismArt.SlotTile(drawList, tile, slot, 0, scale);
-        var (_, allowed, installed) = ModLine(mod);
-        var side = installed ? Loc.T(L.Prism.Installed) : allowed ? Loc.T(L.Prism.GetMod) : string.Empty;
+        var (side, allowed, installed) = ModLine(mod);
         var sideRight = right;
         if (side.Length > 0)
         {
@@ -1256,7 +1255,7 @@ internal sealed partial class PrismApp
         return line;
     }
 
-    private (string Line, bool Allowed, bool Installed) ModLine(GlamModDto mod)
+    private (string Side, bool Allowed, bool Installed) ModLine(GlamModDto mod)
     {
         if (!ReferenceEquals(linesLanguage, Loc.Current.Code))
         {
@@ -1268,8 +1267,10 @@ internal sealed partial class PrismApp
 
         if (!modLines.TryGetValue(mod, out var cached))
         {
-            cached = (mod.Author.Length > 0 ? Loc.T(L.Prism.ModBy, mod.Name, mod.Author) : mod.Name,
-                ModLinks.IsAllowed(mod.Link), glamour.HasMod(mod));
+            var allowed = ModLinks.IsAllowed(mod.Link);
+            var installed = glamour.HasMod(mod);
+            cached = (installed ? Loc.T(L.Prism.Installed) : allowed ? Loc.T(L.Prism.GetMod) : string.Empty, allowed,
+                installed);
             modLines[mod] = cached;
         }
 

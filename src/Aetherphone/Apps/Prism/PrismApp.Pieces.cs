@@ -572,8 +572,7 @@ internal sealed partial class PrismApp
     private void DrawCardModRow(ImDrawListPtr drawList, Rect row, GlamModDto mod, bool interactive)
     {
         var over = CardRowHover(drawList, row, interactive);
-        var (_, allowed, installed) = ModLine(mod);
-        var side = installed ? Loc.T(L.Prism.Installed) : allowed ? Loc.T(L.Prism.GetMod) : string.Empty;
+        var (side, allowed, installed) = ModLine(mod);
         var sideWidth = side.Length > 0 ? Typography.Measure(side, PrismType.Caption).X : 0f;
         if (side.Length > 0)
         {
