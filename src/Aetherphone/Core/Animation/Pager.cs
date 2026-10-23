@@ -35,7 +35,7 @@ internal sealed class Pager
         dragging = true;
         dragStartX = mouseX;
         dragStartValue = scroll.Value;
-        dragStartPage = page;
+        dragStartPage = (int)MathF.Round(scroll.Value);
         velocity = 0f;
     }
 
