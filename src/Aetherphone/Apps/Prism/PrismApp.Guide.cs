@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -27,6 +28,7 @@ internal sealed partial class PrismApp
     private const float GuideNumeralUnits = 120f;
     private const float GuideCountdownSeconds = 1.2f;
     private const float GuideTextShadeUnits = 300f;
+    private const float GuideAppIconUnits = 64f;
     private static readonly Vector4 GuideShadeBlack = new(0f, 0f, 0f, 0.85f);
     private const int GuideChosenScore = 4;
     private const long GuideLikes = 128;
@@ -125,6 +127,14 @@ internal sealed partial class PrismApp
         DrawGuideSlide(drawList, full, stage, scale);
 
         var text = PrismMotion.Mark(drawList);
+        if (guidePage == 0)
+        {
+            var icon = GuideAppIconUnits * scale;
+            var iconMax = new Vector2(left + icon, titleTop - Metrics.Space.Md * scale);
+            AppIconTile.TryDraw(drawList, Id, AppAccents.For(Id), iconMax - new Vector2(icon, icon), iconMax,
+                icon * Metrics.Radius.TileFactor, 1f, true, scale);
+        }
+
         PrismType.DrawHero(drawList, new Vector2(left, titleTop), title, titleWidth, PrismArt.Fore);
         Typography.DrawWrappedLeft(new Vector2(left, copyTop), copy, PrismArt.Muted, PrismType.Body, titleWidth);
         PrismMotion.Rise(drawList, text, PrismMotion.At(screenAge, GuideCopyDelay, Motion.PageSettle),
