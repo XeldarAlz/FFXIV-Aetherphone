@@ -1,10 +1,12 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Prism;
 
@@ -14,30 +16,17 @@ internal sealed partial class PrismApp
     private const float GuidePlateDelay = 0.04f;
     private const float GuideCopyDelay = 0.12f;
     private const float GuideFillDelay = 0.45f;
-    private const float PlateStripShare = 0.14f;
     private const float PlateRowShare = 0.18f;
     private const float PlatePitchShare = 1.2f;
     private const int PlateTiles = 4;
-    private const int PlatePieces = 4;
     private const float PlateHeatShare = 0.36f;
     private const float PlateLinkShare = 0.1f;
     private const float PlateSecondShare = 0.82f;
     private const float PlateThirdShare = 0.7f;
     private const float PlateNumeralShare = 0.4f;
-    private const float PlateBarShare = 0.06f;
-    private const float PlateBarFaint = 0.6f;
     private const int GuideChosenScore = 4;
     private const int PodiumPlaces = 3;
-    private const int PlateRows = 3;
-    private const float PlateIconShare = 0.62f;
-    private const float PlateBarShortShare = 0.55f;
     private const float PlatePhotoShare = 0.52f;
-    private const float PlateTileIconShare = 0.28f;
-    private const float PlateTilePadShare = 0.08f;
-    private const float PlateStripBars = 1.6f;
-    private const float PlateBylineShare = 0.45f;
-    private const float PlateTitleGapBars = 1.4f;
-    private const float PlateTitleShare = 0.8f;
 
     private static readonly LocString[] GuideTitles =
     {
@@ -51,10 +40,12 @@ internal sealed partial class PrismApp
         L.Prism.GuideEnterBody, L.Prism.GuideJudgeBody, L.Prism.GuideFinalBody, L.Prism.GuideRevealBody,
     };
 
-    private static readonly string[] HeatLetters = { "A", "B", "C" };
     private static readonly int[] PodiumSlots = { 2, 1, 3 };
 
+    private static readonly string PiecesGlyph = IconGlyph.Of(FontAwesomeIcon.LayerGroup);
+
     private readonly CachedText[] prizeTexts = new CachedText[PodiumPlaces];
+    private CachedText guidePiecesText;
     private int guidePage;
     private PrismTab guideReturn = PrismTab.Discover;
 
@@ -62,6 +53,11 @@ internal sealed partial class PrismApp
     {
         guidePage = 0;
         guideReturn = returnTab;
+        if (glams.IsSignedIn)
+        {
+            RefreshDiscover(false);
+        }
+
         Go(PrismScreen.Guide);
     }
 
@@ -181,102 +177,82 @@ internal sealed partial class PrismApp
         return new Rect(new Vector2(centerX - width * 0.5f, top), new Vector2(centerX + width * 0.5f, top + height));
     }
 
-    private void DrawCoverPlate(ImDrawListPtr drawList, Rect plate, float scale)
+    private GlamDto? GuideGlam(int index)
     {
-        var frame = Portrait(plate.Center.X, plate.Min.Y, plate.Height);
         var today = glams.Lane(GlamScope.Today).Items;
-        var photo = today.Length > 0 ? Cover(today[0]) : string.Empty;
-        var pad = Metrics.Space.Md * scale;
-        var bar = frame.Height * PlateBarShare;
-        var strip = new Rect(new Vector2(frame.Min.X + pad, frame.Max.Y - pad - bar * PlateStripBars),
-            new Vector2(frame.Max.X - pad, frame.Max.Y - pad));
-        var byline = strip.Min.Y - pad - bar * 0.5f;
-        var title = byline - bar * PlateTitleGapBars;
-        if (photo.Length > 0)
+        if (index < today.Length)
         {
-            DrawLook(drawList, frame, photo, false, focusY: CoverFocus);
-            PrismArt.Scrim(drawList, frame, frame.Max.Y - title, scale);
-        }
-        else
-        {
-            PrismArt.Placeholder(drawList, frame, false, scale);
+            return today[index];
         }
 
-        drawList.AddRectFilled(strip.Min, strip.Max, ImGui.GetColorU32(PrismArt.Fore), strip.Height * 0.5f);
-        drawList.AddRectFilled(new Vector2(strip.Min.X, byline),
-            new Vector2(strip.Min.X + strip.Width * PlateBylineShare, byline + bar * 0.5f),
-            ImGui.GetColorU32(Palette.WithAlpha(PrismArt.Fore, PlateBarFaint)));
-        drawList.AddRectFilled(new Vector2(strip.Min.X, title),
-            new Vector2(strip.Min.X + strip.Width * PlateTitleShare, title + bar), ImGui.GetColorU32(PrismArt.Fore));
+        var feed = glams.Lane(discoverScope).Items;
+        var next = index - today.Length;
+        return next < feed.Length ? feed[next] : null;
     }
 
-    private void DrawEnterPlate(ImDrawListPtr drawList, Rect plate, float scale)
+    private void DrawGuideLook(ImDrawListPtr drawList, Rect frame, int index, float alpha, float scale)
     {
-        var stripHeight = plate.Height * PlateStripShare;
-        var gap = Metrics.Space.Md * scale;
-        var frame = Portrait(plate.Center.X, plate.Min.Y, plate.Height - stripHeight - gap);
-        var fill = PrismMotion.At(screenAge, GuideFillDelay, Motion.Sheet);
-        PrismArt.Placeholder(drawList, frame, false, scale);
-        drawList.AddRectFilled(frame.Min, frame.Max, ImGui.GetColorU32(Palette.WithAlpha(PrismArt.Back, 1f - fill)));
-        drawList.AddRect(frame.Min, frame.Max, ImGui.GetColorU32(PrismArt.Faint), 0f,
-            ImDrawFlags.None, PrismArt.HairlineWidth(scale));
-        var plus = frame.Width * PlateNumeralShare;
-        var size = PrismType.Measure("+", PrismFace.Headline, plus);
-        PrismType.Draw(drawList, frame.Center - size * 0.5f, "+",
-            Palette.WithAlpha(PrismArt.Muted, PrismArt.Muted.W * (1f - fill)), PrismFace.Headline, plus);
-        DrawPlateStrip(drawList, new Rect(new Vector2(frame.Min.X, frame.Max.Y + gap), new Vector2(frame.Max.X, plate.Max.Y)),
-            Loc.T(L.Prism.Submit));
+        var url = GuideGlam(index) is { } glam ? Cover(glam) : string.Empty;
+        if (url.Length == 0)
+        {
+            PrismArt.Placeholder(drawList, frame, false, scale, alpha);
+            return;
+        }
+
+        DrawLook(drawList, frame, url, false, alpha);
     }
 
-    private static void DrawPlateStrip(ImDrawListPtr drawList, Rect strip, string label)
-    {
-        drawList.AddRectFilled(strip.Min, strip.Max, ImGui.GetColorU32(PrismArt.Fore), strip.Height * 0.5f);
-        var labelPixels = PrismArt.LabelPixels();
-        var fitted = PrismType.FitLabel(label, labelPixels, MathF.Max(1f, strip.Width - strip.Height));
-        PrismType.Draw(drawList, strip.Center - PrismType.Measure(fitted, PrismFace.Label, labelPixels) * 0.5f, fitted,
-            PrismArt.OnFore, PrismFace.Label, labelPixels);
-    }
-
-    private static void DrawPlateRow(ImDrawListPtr drawList, float left, float top, float width, float height, float bar)
-    {
-        var icon = height * PlateIconShare;
-        var iconTop = top + (height - icon) * 0.5f;
-        drawList.AddRect(new Vector2(left, iconTop), new Vector2(left + icon, iconTop + icon),
-            ImGui.GetColorU32(PrismArt.Faint), 0f, ImDrawFlags.None, PrismArt.HairlineWidth(UiScale.Current));
-        var barLeft = left + icon + height * PlateIconShare * 0.4f;
-        var barHeight = height * PlateBarShare * 2f;
-        var barTop = top + height * 0.5f - barHeight;
-        drawList.AddRectFilled(new Vector2(barLeft, barTop), new Vector2(barLeft + (left + width - barLeft) * bar,
-            barTop + barHeight), ImGui.GetColorU32(PrismArt.Fore));
-        drawList.AddRectFilled(new Vector2(barLeft, barTop + barHeight * 1.6f),
-            new Vector2(barLeft + (left + width - barLeft) * bar * PlateBarShortShare, barTop + barHeight * 2.4f),
-            ImGui.GetColorU32(PrismArt.Faint));
-    }
+    private void DrawCoverPlate(ImDrawListPtr drawList, Rect plate, float scale) =>
+        DrawGuideLook(drawList, Portrait(plate.Center.X, plate.Min.Y, plate.Height), 0, 1f, scale);
 
     private void DrawTryPlate(ImDrawListPtr drawList, Rect plate, float scale)
     {
-        var gap = Metrics.Space.Md * scale;
-        var stripHeight = plate.Height * PlateStripShare;
-        var height = plate.Height - stripHeight - gap;
-        var frameWidth = MathF.Min(height * PrismStore.EntryRatio, (plate.Width - gap) * 0.5f);
-        var groupLeft = plate.Center.X - frameWidth - gap * 0.5f;
-        var frame = new Rect(new Vector2(groupLeft, plate.Min.Y),
-            new Vector2(groupLeft + frameWidth, plate.Min.Y + frameWidth / PrismStore.EntryRatio));
-        var worn = PrismMotion.At(screenAge, GuideFillDelay, Motion.Sheet);
-        PrismArt.Placeholder(drawList, frame, false, scale);
-        drawList.AddRectFilled(frame.Min, frame.Max, ImGui.GetColorU32(Palette.WithAlpha(PrismArt.Back, 1f - worn)));
-        drawList.AddRect(frame.Min, frame.Max, ImGui.GetColorU32(PrismArt.Faint), 0f,
-            ImDrawFlags.None, PrismArt.HairlineWidth(scale));
-        var rowsLeft = frame.Max.X + gap;
-        var rowHeight = frame.Height / (PlateRows + 1);
-        for (var index = 0; index < PlateRows; index++)
+        var tap = Metrics.Size.TapTarget * scale;
+        var gap = Metrics.Space.Sm * scale;
+        var frame = Portrait(plate.Center.X, plate.Min.Y, plate.Height - tap - gap);
+        DrawGuideLook(drawList, frame, 1, 1f, scale);
+        var pieces = GuidePieces(GuideGlam(1));
+        var pad = Metrics.Space.Md * scale;
+        if (pieces.Length > 0)
         {
-            DrawPlateRow(drawList, rowsLeft, frame.Min.Y + rowHeight * (index + 0.5f), frameWidth, rowHeight,
-                1f - index * 0.18f);
+            PrismArt.PhotoPill(drawList, new Vector2(frame.Min.X + pad, frame.Max.Y - pad), frame.Width - pad * 2f,
+                PiecesGlyph, pieces, false, scale);
         }
 
-        DrawPlateStrip(drawList, new Rect(new Vector2(frame.Min.X, frame.Max.Y + gap),
-            new Vector2(rowsLeft + frameWidth, frame.Max.Y + gap + stripHeight)), Loc.T(L.Prism.TryOnGlam));
+        PrismArt.TryOnMoment(drawList, frame, PhoneIcons.Wand, Loc.T(L.Prism.OnYourCharacter),
+            screenAge - GuideFillDelay, scale);
+        var middle = frame.Max.Y + gap + tap * 0.5f;
+        var glyph = PrismArt.IconUnits * scale;
+        PhoneIcon.Draw(drawList, new Vector2(frame.Min.X + glyph * 0.5f, middle), PhoneIcons.Heart, PrismArt.Fore,
+            glyph);
+        PhoneIcon.Draw(drawList, new Vector2(frame.Min.X + glyph * 2f, middle), PhoneIcons.Bookmark, PrismArt.Fore,
+            glyph);
+        var label = Loc.T(L.Prism.TryOnGlam);
+        var pill = new Rect(
+            new Vector2(frame.Max.X - ButtonWidth([label], frame.Width * 0.5f, scale), middle - tap * 0.5f),
+            new Vector2(frame.Max.X, middle + tap * 0.5f));
+        DrawPillLabel(drawList, PillFace(drawList, pill, true, false, ImGui.GetID("prism.guide.tryOn"), 1f), label,
+            false, pill, 1f, scale);
+    }
+
+    private string GuidePieces(GlamDto? glam)
+    {
+        var count = 0;
+        var gear = glam?.Gear ?? Array.Empty<GlamGearDto>();
+        for (var index = 0; index < gear.Length; index++)
+        {
+            count += gear[index].ItemId != 0 ? 1 : 0;
+        }
+
+        if (count == 0)
+        {
+            return string.Empty;
+        }
+
+        var key = HashCode.Combine(count, Loc.Current.Code);
+        return guidePiecesText.IsCurrent(key)
+            ? guidePiecesText.Value
+            : guidePiecesText.Store(key, Loc.Plural(L.Prism.PieceCount, count));
     }
 
     private void DrawPostPlate(ImDrawListPtr drawList, Rect plate, float scale)
@@ -292,54 +268,63 @@ internal sealed partial class PrismApp
         for (var index = 0; index < GlamStore.MaxPhotos; index++)
         {
             var min = new Vector2(left + index * (photoWidth + gap), plate.Min.Y);
-            var frame = new Rect(min, min + new Vector2(photoWidth, photoHeight));
-            PrismArt.Placeholder(drawList, frame, false, scale);
-            var hidden = 1f - Math.Clamp(shown - index, 0f, 1f);
-            drawList.AddRectFilled(frame.Min, frame.Max, ImGui.GetColorU32(Palette.WithAlpha(PrismArt.Back, hidden)));
-            drawList.AddRect(frame.Min, frame.Max, ImGui.GetColorU32(PrismArt.Faint), 0f,
-                ImDrawFlags.None, PrismArt.HairlineWidth(scale));
+            DrawGuideLook(drawList, new Rect(min, min + new Vector2(photoWidth, photoHeight)), index,
+                Math.Clamp(shown - index, 0f, 1f), scale);
         }
 
-        var labelPixels = PrismArt.LabelPixels();
-        var rowHeight = (plate.Max.Y - plate.Min.Y - photoHeight - gap * 2f) / PlateRows;
-        var chevron = labelPixels;
-        for (var index = 0; index < PlateRows; index++)
+        var tilesTop = plate.Min.Y + photoHeight + gap * 2f;
+        var size = MathF.Min(plate.Max.Y - tilesTop, (rowWidth - gap * (BodySlots.Length - 1)) / BodySlots.Length);
+        var gear = GuideGlam(0)?.Gear ?? Array.Empty<GlamGearDto>();
+        var first = plate.Center.X - (size * BodySlots.Length + gap * (BodySlots.Length - 1)) * 0.5f + size * 0.5f;
+        for (var index = 0; index < BodySlots.Length; index++)
         {
-            var top = plate.Min.Y + photoHeight + gap * 2f + rowHeight * index;
-            DrawPlateRow(drawList, left, top, rowWidth - chevron - gap, rowHeight, 0.8f - index * 0.15f);
-            PhoneIcon.Draw(drawList, new Vector2(left + rowWidth - chevron * 0.5f, top + rowHeight * 0.5f),
-                PhoneIcons.ChevronRight, PrismArt.Muted, chevron);
+            DrawBoardSlot(drawList, new Vector2(first + index * (size + gap), tilesTop + size * 0.5f), size,
+                BodySlots[index], gear, true, scale);
         }
     }
 
-    private static void DrawWardrobePlate(ImDrawListPtr drawList, Rect plate, float scale)
+    private void DrawWardrobePlate(ImDrawListPtr drawList, Rect plate, float scale)
     {
         var gap = Metrics.Space.Sm * scale;
         var tileHeight = (plate.Height - gap) * 0.5f;
         var tileWidth = MathF.Min(tileHeight * PrismStore.EntryRatio, (plate.Width - gap) * 0.5f);
         tileHeight = tileWidth / PrismStore.EntryRatio;
         var left = plate.Center.X - tileWidth - gap * 0.5f;
-        var icon = tileWidth * PlateTileIconShare;
-        var pad = tileWidth * PlateTilePadShare;
         for (var index = 0; index < PlateTiles; index++)
         {
             var min = new Vector2(left + index % 2 * (tileWidth + gap), plate.Min.Y + index / 2 * (tileHeight + gap));
             var tile = new Rect(min, min + new Vector2(tileWidth, tileHeight));
-            PrismArt.Placeholder(drawList, tile, false, scale);
-            for (var piece = 0; piece < PlatePieces; piece++)
+            if (index is 0 or PlateTiles - 1)
             {
-                var iconMin = new Vector2(min.X + pad + piece % 2 * (icon + pad * 0.5f),
-                    min.Y + pad + piece / 2 * (icon + pad * 0.5f));
-                drawList.AddRect(iconMin, iconMin + new Vector2(icon, icon),
-                    ImGui.GetColorU32(Palette.WithAlpha(PrismArt.Fore, PlateBarFaint)), 0f,
-                        ImDrawFlags.None, PrismArt.HairlineWidth(scale));
+                DrawGuideLook(drawList, tile, index, 1f, scale);
+                continue;
             }
 
-            var barHeight = tileHeight * PlateBarShare * 0.6f;
-            drawList.AddRectFilled(new Vector2(min.X + pad, tile.Max.Y - pad - barHeight),
-                new Vector2(min.X + pad + (tileWidth - pad * 2f) * (0.7f - index * 0.1f), tile.Max.Y - pad),
-                ImGui.GetColorU32(PrismArt.Fore));
+            PrismArt.Placeholder(drawList, tile, false, scale);
+            DrawOutfitBoard(drawList, tile, tile, GuideGlam(index)?.Gear ?? Array.Empty<GlamGearDto>(), false, scale);
         }
+    }
+
+    private void DrawEnterPlate(ImDrawListPtr drawList, Rect plate, float scale)
+    {
+        var frame = Portrait(plate.Center.X, plate.Min.Y, plate.Height);
+        DrawGuideLook(drawList, frame, 2, 1f, scale);
+        if (store.Week is not { Title.Length: > 0 } week)
+        {
+            return;
+        }
+
+        var pad = Metrics.Space.Md * scale;
+        var caption = Typography.LineHeight(PrismType.Caption);
+        var headline = Typography.LineHeight(PrismType.Headline);
+        PrismArt.Scrim(drawList, frame, caption + headline, scale);
+        var room = frame.Width - pad * 2f;
+        var top = frame.Max.Y - pad - caption - headline;
+        Typography.Draw(drawList, new Vector2(frame.Min.X + pad, top),
+            Typography.FitText(Loc.T(L.Prism.ThemeLabel), room, PrismType.Caption), PrismArt.PhotoMuted,
+            PrismType.Caption);
+        Typography.Draw(drawList, new Vector2(frame.Min.X + pad, top + caption),
+            Typography.FitText(week.Title, room, PrismType.Headline), PrismArt.PhotoFore, PrismType.Headline);
     }
 
     private void DrawJudgePlate(ImDrawListPtr drawList, Rect plate, float scale)
@@ -349,7 +334,7 @@ internal sealed partial class PrismApp
         var gap = Metrics.Space.Md * scale;
         var rowHeight = plate.Height * PlateRowShare;
         var frame = Portrait(plate.Center.X, plate.Min.Y, plate.Height - rowHeight - labelLine - gap * 2f);
-        PrismArt.Placeholder(drawList, frame, false, scale);
+        DrawGuideLook(drawList, frame, 3, 1f, scale);
         var size = MathF.Min(rowHeight, plate.Width / (PrismArt.Stars * PlatePitchShare));
         var rowWidth = size * PrismArt.Stars * PlatePitchShare;
         var row = new Rect(new Vector2(plate.Center.X - rowWidth * 0.5f, frame.Max.Y + gap),
@@ -364,35 +349,27 @@ internal sealed partial class PrismApp
             PrismArt.Muted, PrismFace.Label, labelPixels);
     }
 
-    private static void DrawFinalPlate(ImDrawListPtr drawList, Rect plate, float scale)
+    private void DrawFinalPlate(ImDrawListPtr drawList, Rect plate, float scale)
     {
-        var labelPixels = PrismArt.LabelPixels();
-        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var minGap = Metrics.Space.Sm * scale;
         var heatWidth = MathF.Min(plate.Height * PlateHeatShare * PrismStore.EntryRatio,
-            (plate.Width - minGap * (HeatLetters.Length + 1)) / HeatLetters.Length);
+            (plate.Width - minGap * (PodiumPlaces + 1)) / PodiumPlaces);
         var heatHeight = heatWidth / PrismStore.EntryRatio;
-        var gap = (plate.Width - heatWidth * HeatLetters.Length) / (HeatLetters.Length + 1);
-        var finalTop = plate.Min.Y + heatHeight + labelLine + plate.Height * PlateLinkShare;
-        var final = Portrait(plate.Center.X, finalTop, plate.Max.Y - finalTop);
-        var link = ImGui.GetColorU32(PrismArt.Faint);
-        for (var index = 0; index < HeatLetters.Length; index++)
+        var gap = (plate.Width - heatWidth * PodiumPlaces) / (PodiumPlaces + 1);
+        for (var index = 0; index < PodiumPlaces; index++)
         {
             var x = plate.Min.X + gap + index * (heatWidth + gap);
-            var heat = new Rect(new Vector2(x, plate.Min.Y), new Vector2(x + heatWidth, plate.Min.Y + heatHeight));
-            PrismArt.Placeholder(drawList, heat, false, scale);
-            var letter = HeatLetters[index];
-            var size = PrismType.Measure(letter, PrismFace.Label, labelPixels);
-            PrismType.Draw(drawList, new Vector2(heat.Center.X - size.X * 0.5f, heat.Max.Y), letter, PrismArt.Muted,
-                PrismFace.Label, labelPixels);
-            drawList.AddLine(new Vector2(heat.Center.X, heat.Max.Y + labelLine),
-                new Vector2(final.Center.X, final.Min.Y), link, PrismArt.HairlineWidth(scale));
+            DrawGuideLook(drawList,
+                new Rect(new Vector2(x, plate.Min.Y), new Vector2(x + heatWidth, plate.Min.Y + heatHeight)), index,
+                1f, scale);
         }
 
-        PrismArt.Placeholder(drawList, final, false, scale);
+        var finalTop = plate.Min.Y + heatHeight + plate.Height * PlateLinkShare;
+        var final = Portrait(plate.Center.X, finalTop, plate.Max.Y - finalTop);
+        DrawGuideLook(drawList, final, PodiumPlaces, 1f, scale);
         var pad = Metrics.Space.Sm * scale;
-        PrismType.Draw(drawList, new Vector2(final.Min.X + pad, final.Max.Y - labelLine - pad),
-            Loc.T(L.Prism.FinalTitle), PrismArt.Fore, PrismFace.Label, labelPixels);
+        PrismArt.PhotoPill(drawList, new Vector2(final.Min.X + pad, final.Max.Y - pad), final.Width - pad * 2f,
+            PhoneIcons.Crown, Loc.T(L.Prism.FinalTitle), false, scale);
     }
 
     private void DrawRevealPlate(ImDrawListPtr drawList, Rect plate, float scale)
@@ -419,20 +396,20 @@ internal sealed partial class PrismApp
             var height = tallest * (place == 1 ? 1f : place == 2 ? PlateSecondShare : PlateThirdShare);
             var width = height * ratio;
             var frame = new Rect(new Vector2(x, bottom - height), new Vector2(x + width, bottom));
-            PrismArt.Placeholder(drawList, frame, false, scale);
+            DrawGuideLook(drawList, frame, place - 1, 1f, scale);
             var numeralPixels = width * PlateNumeralShare;
-            PrismType.Draw(drawList,
-                new Vector2(frame.Min.X + gap, frame.Max.Y - PrismType.Snap(PrismFace.Numerals, numeralPixels)),
-                Plain[place], PrismArt.Fore, PrismFace.Numerals, numeralPixels);
+            var numeralHeight = PrismType.Snap(PrismFace.Numerals, numeralPixels);
+            PrismArt.Scrim(drawList, frame, numeralHeight, scale);
+            PrismType.Draw(drawList, new Vector2(frame.Min.X + gap, frame.Max.Y - numeralHeight), Plain[place],
+                PrismArt.PhotoFore, PrismFace.Numerals, numeralPixels);
             var prize = PrizeLine(prizes, place - 1);
             if (prize.Length > 0)
             {
-                var line = PrismType.LineHeight(PrismFace.Label, labelPixels);
-                var glyph = line * CurrencyGlyph.GlyphFraction;
+                var glyph = labelLine * CurrencyGlyph.GlyphFraction;
                 CurrencyGlyph.Draw(drawList, CurrencyKind.Coins,
-                    new Vector2(frame.Min.X + glyph * 0.5f, bottom + gap + line * 0.5f), glyph);
-                PrismType.Draw(drawList, new Vector2(frame.Min.X + CurrencyGlyph.Reserve(line), bottom + gap), prize,
-                    PrismArt.Fore, PrismFace.Label, labelPixels);
+                    new Vector2(frame.Min.X + glyph * 0.5f, bottom + gap + labelLine * 0.5f), glyph);
+                PrismType.Draw(drawList, new Vector2(frame.Min.X + CurrencyGlyph.Reserve(labelLine), bottom + gap),
+                    prize, PrismArt.Fore, PrismFace.Label, labelPixels);
             }
 
             x += width + gap;
