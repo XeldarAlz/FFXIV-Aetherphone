@@ -8,6 +8,15 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Prism;
 
+internal enum PrismFact : byte
+{
+    Modded,
+    Vanilla,
+    Race,
+    Male,
+    Female,
+}
+
 internal static class PrismArt
 {
     public const float StripUnits = 46f;
@@ -131,6 +140,7 @@ internal static class PrismArt
     private static readonly string[] Digits = { "1", "2", "3", "4", "5" };
 
     private static readonly IconStroke[][] SlotIcons = BuildSlotIcons();
+    private static readonly IconStroke[][] FactIcons = BuildFactIcons();
     private static readonly float[] BandShape = BuildBandShape();
     private static string momentLabel = string.Empty;
     private static string momentFitted = string.Empty;
@@ -656,9 +666,15 @@ internal static class PrismArt
         return packed;
     }
 
-    public static void SlotIcon(ImDrawListPtr drawList, Vector2 center, float size, int slot, Vector4 ink)
+    public static void SlotIcon(ImDrawListPtr drawList, Vector2 center, float size, int slot, Vector4 ink) =>
+        DrawStrokes(drawList, center, size, SlotIcons[(uint)(slot + 1) < (uint)SlotIcons.Length ? slot + 1 : 0], ink);
+
+    public static void FactIcon(ImDrawListPtr drawList, Vector2 center, float size, PrismFact fact, Vector4 ink) =>
+        DrawStrokes(drawList, center, size, FactIcons[(int)fact], ink);
+
+    private static void DrawStrokes(ImDrawListPtr drawList, Vector2 center, float size, IconStroke[] strokes,
+        Vector4 ink)
     {
-        var strokes = SlotIcons[(uint)(slot + 1) < (uint)SlotIcons.Length ? slot + 1 : 0];
         var unit = size / IconUnits;
         var thickness = IconStrokeUnits * unit;
         var origin = center - new Vector2(size * 0.5f, size * 0.5f);
@@ -733,6 +749,34 @@ internal static class PrismArt
 
     private static IconStroke Oval(float centerX, float centerY, float radiusX, float radiusY) =>
         new IconPen().Arc(centerX, centerY, radiusX, radiusY, 0f, 360f - ArcStepDegrees).Closed();
+
+    private static IconStroke[][] BuildFactIcons()
+    {
+        IconStroke[] person =
+        [
+            Oval(12f, 8f, 4f, 4f),
+            new IconPen().Arc(12f, 21f, 7f, 6.5f, 180f, 360f).Open(),
+        ];
+        IconStroke[] leaf =
+        [
+            new IconPen().Through(5f, 19f, 4.8f, 12.5f, 7.5f, 8f, 12.5f, 5.5f, 19f, 5f, 18.8f, 11.5f, 16.5f, 16f, 12f,
+                18.6f).Closed(),
+            new IconPen().Through(5f, 19f, 13f, 11f).Open(),
+        ];
+        IconStroke[] male =
+        [
+            Oval(10f, 14f, 5.5f, 5.5f),
+            new IconPen().Through(14f, 10f, 19.5f, 4.5f).Open(),
+            new IconPen().Through(14.5f, 4.5f, 19.5f, 4.5f, 19.5f, 9.5f).Open(),
+        ];
+        IconStroke[] female =
+        [
+            Oval(12f, 9f, 5.5f, 5.5f),
+            new IconPen().Through(12f, 14.5f, 12f, 21f).Open(),
+            new IconPen().Through(9f, 18f, 15f, 18f).Open(),
+        ];
+        return [SlotIcons[0], leaf, person, male, female];
+    }
 
     private static IconStroke[][] BuildSlotIcons()
     {

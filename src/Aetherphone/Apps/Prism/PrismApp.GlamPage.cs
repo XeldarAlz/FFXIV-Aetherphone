@@ -38,6 +38,7 @@ internal sealed partial class PrismApp
     private const float LikeHoldSeconds = 0.45f;
     private const float LikeStamp = 0.35f;
     private const float PostAvatarUnits = 24f;
+    private const float FactGlyphUnits = 16f;
     private const float GlamRowUnits = 56f;
     private const float PagerSlopUnits = 12f;
     private const float PagerSlopBias = 1.2f;
@@ -65,7 +66,7 @@ internal sealed partial class PrismApp
     private GlamGearDto[]? statsGear;
     private bool statsStorage;
     private CachedText triedText;
-    private CachedText bodyText;
+    private CachedText raceText;
     private CachedText moreText;
     private CachedText getText;
     private CachedText metaText;
@@ -775,9 +776,12 @@ internal sealed partial class PrismApp
         var width = right - left;
         top += PrismType.DrawHero(drawList, new Vector2(left, top), glam.Title, width, PrismArt.Fore) +
                Metrics.Space.Xs * scale;
-        top = DrawByline(drawList, left, right, top, glam.Author, scale);
-        top += Typography.DrawWrappedLeft(new Vector2(left, top), MetaLine(glam), PrismArt.Muted, PrismType.Caption,
-            width);
+        top = DrawByline(drawList, left, right, top, glam, scale);
+        var meta = MetaLine(glam);
+        if (meta.Length > 0)
+        {
+            top += Typography.DrawWrappedLeft(new Vector2(left, top), meta, PrismArt.Muted, PrismType.Caption, width);
+        }
         if (!glamour.HasGlamourer)
         {
             top += Metrics.Space.Xs * scale + Typography.DrawWrappedLeft(
@@ -812,10 +816,9 @@ internal sealed partial class PrismApp
         return DrawTags(left, top, width, glam.Tags, scale) + Metrics.Space.Xl * scale;
     }
 
-    private float DrawByline(ImDrawListPtr drawList, float left, float right, float top, GlamAuthorDto? author,
-        float scale)
+    private float DrawByline(ImDrawListPtr drawList, float left, float right, float top, GlamDto glam, float scale)
     {
-        if (author is null)
+        if (glam.Author is not { } author)
         {
             return top;
         }
@@ -830,8 +833,9 @@ internal sealed partial class PrismApp
         followLabels[0] = Loc.T(L.Prism.Follow);
         followLabels[1] = Loc.T(L.Prism.Following);
         var followWidth = other ? ButtonWidth(followLabels, (right - handleLeft) * 0.5f, scale) : 0f;
+        var facts = DrawGlamFacts(drawList, right, middle, glam, scale);
         var handle = Typography.FitText(AuthorLine(author),
-            MathF.Max(1f, right - handleLeft - followWidth - Metrics.Space.Sm * scale), PrismType.Headline);
+            MathF.Max(1f, right - handleLeft - followWidth - facts - Metrics.Space.Sm * scale), PrismType.Headline);
         var handleWidth = Typography.Measure(handle, PrismType.Headline).X;
         Typography.Draw(drawList,
             new Vector2(handleLeft, middle - Typography.LineHeight(PrismType.Headline) * 0.5f), handle, PrismArt.Fore,
@@ -862,28 +866,17 @@ internal sealed partial class PrismApp
     private string MetaLine(GlamDto glam)
     {
         var minute = DateTimeOffset.UtcNow.ToUnixTimeSeconds() / SecondsPerMinute;
-        var key = HashCode.Combine(glam.Vanilla, glam.Race, glam.Gender, glam.TryOns, glam.CreatedAtUnix, minute,
-            Loc.Current.Code);
+        var key = HashCode.Combine(glam.TryOns, glam.CreatedAtUnix, minute, Loc.Current.Code);
         if (metaText.IsCurrent(key))
         {
             return metaText.Value;
         }
 
-        var line = Loc.T(glam.Vanilla ? L.Prism.VanillaStamp : L.Prism.ModdedStamp);
-        var body = BodyLine(glam.Race, glam.Gender);
-        if (body.Length > 0)
-        {
-            line = string.Concat(line, GlamMetaSeparator, body);
-        }
-
-        if (glam.TryOns > 0)
-        {
-            line = string.Concat(line, GlamMetaSeparator, TriedOnLine(glam.TryOns));
-        }
-
+        var line = glam.TryOns > 0 ? TriedOnLine(glam.TryOns) : string.Empty;
         if (glam.CreatedAtUnix > 0)
         {
-            line = string.Concat(line, GlamMetaSeparator, TimeText.Ago(glam.CreatedAtUnix));
+            var ago = TimeText.Ago(glam.CreatedAtUnix);
+            line = line.Length > 0 ? string.Concat(line, GlamMetaSeparator, ago) : ago;
         }
 
         return metaText.Store(key, line);
@@ -981,22 +974,44 @@ internal sealed partial class PrismApp
         return top + GridHeight(inner, more.Length, scale);
     }
 
-    private string BodyLine(int race, int gender)
+    private float DrawGlamFacts(ImDrawListPtr drawList, float right, float middle, GlamDto glam, float scale)
+    {
+        var glyph = FactGlyphUnits * scale;
+        var pitch = glyph + Metrics.Space.Sm * scale;
+        var x = right;
+        var female = glam.Gender == 1;
+        var race = RaceLabel(glam.Race, female);
+        if (race.Length > 0)
+        {
+            x = DrawFact(drawList, x, middle, female ? PrismFact.Female : PrismFact.Male,
+                Loc.T(female ? L.Prism.GenderFemale : L.Prism.GenderMale), glyph, pitch);
+            x = DrawFact(drawList, x, middle, PrismFact.Race, race, glyph, pitch);
+        }
+
+        x = DrawFact(drawList, x, middle, glam.Vanilla ? PrismFact.Vanilla : PrismFact.Modded,
+            Loc.T(glam.Vanilla ? L.Prism.VanillaStamp : L.Prism.ModdedStamp), glyph, pitch);
+        return right - x;
+    }
+
+    private static float DrawFact(ImDrawListPtr drawList, float right, float middle, PrismFact fact, string label,
+        float size, float pitch)
+    {
+        var center = new Vector2(right - pitch * 0.5f, middle);
+        PrismArt.FactIcon(drawList, center, size, fact, PrismArt.Muted);
+        var half = new Vector2(pitch * 0.5f, pitch * 0.5f);
+        HoverTooltip.Show(new Rect(center - half, center + half), label, HoverLabelSide.Above);
+        return right - pitch;
+    }
+
+    private string RaceLabel(int race, bool female)
     {
         if (race <= 0)
         {
             return string.Empty;
         }
 
-        var key = HashCode.Combine(race, gender, Loc.Current.Code);
-        if (bodyText.IsCurrent(key))
-        {
-            return bodyText.Value;
-        }
-
-        var name = gameData.RaceName((uint)race, gender == 1);
-        return bodyText.Store(key,
-            name.Length == 0 ? string.Empty : Loc.T(gender == 1 ? L.Prism.BodyFemale : L.Prism.BodyMale, name));
+        var key = HashCode.Combine(race, female, Loc.Current.Code);
+        return raceText.IsCurrent(key) ? raceText.Value : raceText.Store(key, gameData.RaceName((uint)race, female));
     }
 
     private float DrawPieceSection(ImDrawListPtr drawList, float left, float right, float top, GlamGearDto[] gear,
