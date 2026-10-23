@@ -586,8 +586,8 @@ internal sealed partial class PrismApp
 
         var row = new Rect(new Vector2(left, top), new Vector2(right, top + Metrics.Size.TapTarget * scale));
         var labels = new ReadOnlySpan<string>(profileTabs, 0, count);
-        var picked = TabsFit(labels, row.Width, scale)
-            ? DrawTabs(row, labels, active, ref profileTabSlide)
+        var picked = TabsFit(labels, row.Width, scale, out var tabStyle)
+            ? DrawTabs(row, labels, active, ref profileTabSlide, tabStyle)
             : profileTabRail.Draw(row, ui, labels, new ReadOnlySpan<bool>(profileTabActive, 0, count));
         if (picked >= 0 && picked != active)
         {
