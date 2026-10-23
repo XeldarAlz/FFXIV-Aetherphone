@@ -204,10 +204,6 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public long PrismShowcaseEndsAtUnix { get; set; }
     public bool PrismShowcaseOpened { get; set; }
     public bool PrismAutoCapture { get; set; }
-    public string PrismBannerUser { get; set; } = string.Empty;
-    public string PrismBannerGlamId { get; set; } = string.Empty;
-    public float PrismBannerFocusX { get; set; } = 0.5f;
-    public float PrismBannerFocusY { get; set; } = 0.5f;
     public float ScreenBrightness { get; set; } = 1f;
     public float PhoneScale { get; set; } = PhoneSizeCatalog.DefaultWidth / PhoneSizeCatalog.DesignWidth;
     public float PhoneWidth { get; set; }
