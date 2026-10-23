@@ -25,7 +25,6 @@ internal sealed partial class PrismApp
     private CachedText entryFactText;
     private CachedText noteText;
     private CachedText winnerText;
-    private CachedText clockText;
     private string[] trackLabels = Array.Empty<string>();
     private string coverShown = string.Empty;
     private string coverLeaving = string.Empty;
@@ -315,7 +314,7 @@ internal sealed partial class PrismApp
     {
         PrismPhases.Entering when week.MyEntry is { } entry => Loc.T(StatusName(entry.Status)),
         PrismPhases.Results => WinnerLine(),
-        PrismPhases.Tallying => ResultsClock(week.ResultsAtUnix),
+        PrismPhases.Tallying => TimeText.Clock(week.ResultsAtUnix),
         _ when EnteredJudging(week) => FactLine(ref factText, Loc.T(DeadlineLabel(week.Phase)), DeadlineValue(week)),
         _ => DeadlineValue(week),
     };
@@ -343,17 +342,6 @@ internal sealed partial class PrismApp
     {
         var key = HashCode.Combine(label, detail);
         return cache.IsCurrent(key) ? cache.Value : cache.Store(key, Loc.T(L.Prism.WithTrack, label, detail));
-    }
-
-    private string ResultsClock(long unix)
-    {
-        if (unix <= 0)
-        {
-            return string.Empty;
-        }
-
-        var key = HashCode.Combine(unix, Loc.Current.Code);
-        return clockText.IsCurrent(key) ? clockText.Value : clockText.Store(key, TimeText.Clock(unix));
     }
 
     private void DrawCoverActions(ImDrawListPtr drawList, Rect row, PrismWeekDto week, bool open, float scale)
