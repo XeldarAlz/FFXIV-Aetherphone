@@ -31,14 +31,13 @@ internal static class EmptyState
 
     public static bool Draw(Rect body, AppSkin ui, FontAwesomeIcon icon, string title, string hint,
         string actionLabel) =>
-        DrawWithAction(body, ui, IconGlyph.Of(icon), title, hint, actionLabel, 0f, ButtonStyle.Prominent);
+        DrawWithAction(body, ui, IconGlyph.Of(icon), title, hint, actionLabel, 0f);
 
-    public static bool Draw(Rect body, AppSkin ui, string glyph, string title, string hint, string actionLabel,
-        ButtonStyle actionStyle = ButtonStyle.Prominent) =>
-        DrawWithAction(body, ui, glyph, title, hint, actionLabel, PhoneGlyph, actionStyle);
+    public static bool Draw(Rect body, AppSkin ui, string glyph, string title, string hint, string actionLabel) =>
+        DrawWithAction(body, ui, glyph, title, hint, actionLabel, PhoneGlyph);
 
     private static bool DrawWithAction(Rect body, AppSkin ui, string glyph, string title, string hint,
-        string actionLabel, float glyphHeight, ButtonStyle actionStyle)
+        string actionLabel, float glyphHeight)
     {
         var bottom = DrawBody(body, ui, glyph, title, hint, glyphHeight);
         if (actionLabel.Length == 0)
@@ -52,7 +51,7 @@ internal static class EmptyState
         var top = bottom + ActionGap * scale;
         var rect = new Rect(new Vector2(body.Center.X - width * 0.5f, top),
             new Vector2(body.Center.X + width * 0.5f, top + ActionHeight * scale));
-        return Button.Draw(rect, actionLabel, ui.Ink, actionStyle, id: "emptyState.action");
+        return Button.Draw(rect, actionLabel, ui.Ink, id: "emptyState.action");
     }
 
     private static float DrawBody(Rect body, AppSkin ui, string glyph, string title, string hint, float glyphHeight)
