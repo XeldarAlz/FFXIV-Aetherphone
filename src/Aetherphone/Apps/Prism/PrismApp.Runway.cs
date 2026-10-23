@@ -25,7 +25,6 @@ internal sealed partial class PrismApp
     private const float PickPillUnits = 20f;
     private const float PickStarUnits = 11f;
     private const float PodiumLeadShare = 0.38f;
-    private const float PodiumMedalUnits = 14f;
     private const int OutcomePending = 0;
     private const int OutcomeSent = 1;
     private const int OutcomeFailed = 2;
@@ -630,7 +629,6 @@ internal sealed partial class PrismApp
         var lead = width * PodiumLeadShare;
         var side = (width - lead - gap * 2f) / 2f;
         var bottom = top + lead / PrismStore.EntryRatio;
-        var medal = PodiumMedalUnits * scale;
         var rounding = Metrics.Radius.Md * scale;
         for (var place = 1; place <= count; place++)
         {
@@ -644,14 +642,10 @@ internal sealed partial class PrismApp
             var photo = new Rect(new Vector2(columnLeft, bottom - columnWidth / PrismStore.EntryRatio),
                 new Vector2(columnLeft + columnWidth, bottom));
             DrawRoundedLook(drawList, photo, looks[pickOrder[place - 1]].ImageUrl, 1f, rounding);
-            var center = new Vector2(photo.Center.X, bottom);
-            PrismArt.Medal(drawList, center, medal, place, 0f, scale);
-            var digit = Plain[place];
-            Typography.Draw(drawList, center - Typography.Measure(digit, PrismType.Headline) * 0.5f, digit,
-                PrismArt.Fore, PrismType.Headline);
+            DrawStarPill(drawList, photo, StarsOf(pickOrder[place - 1]), scale);
         }
 
-        return bottom + medal;
+        return bottom;
     }
 
     private Rect ActionRect(Rect content, float scale, int fromBottom = 0)
