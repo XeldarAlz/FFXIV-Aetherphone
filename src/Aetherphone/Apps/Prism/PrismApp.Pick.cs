@@ -100,7 +100,7 @@ internal sealed partial class PrismApp
 
         var gridRect = new Rect(new Vector2(content.Min.X, pane.Max.Y + Metrics.Space.Md * scale),
             new Vector2(content.Max.X, gridBottom));
-        using (AppSurface.BeginEdgeToEdge(gridRect))
+        using (AppSurface.BeginEdgeToEdge(gridRect, smoothWheel: true))
         {
             if (pickSession.DrawPickGrid(gridRect, scale, PickStyle, false, Loc.T(L.Common.ImportFromPc),
                     Loc.T(L.Prism.EnterLook), pickIntake.ClipboardHasImage() ? Loc.T(L.Common.PasteImage) : null))

@@ -84,7 +84,7 @@ internal sealed partial class PrismApp
         composeSession.DrawPickPane(pane, scale, PickStyle, GlamStore.PhotoRatio, true, true, Loc.T(L.Prism.PostGlam));
         var gridRect = new Rect(new Vector2(content.Min.X, pane.Max.Y + Metrics.Space.Md * scale),
             new Vector2(content.Max.X, content.Max.Y - PrismArt.BottomMargin(scale)));
-        using (AppSurface.BeginEdgeToEdge(gridRect))
+        using (AppSurface.BeginEdgeToEdge(gridRect, smoothWheel: true))
         {
             composeSession.DrawPickGrid(gridRect, scale, PickStyle, true, Loc.T(L.Common.ImportFromPc),
                 Loc.T(L.Prism.PostGlam));
