@@ -287,7 +287,7 @@ internal sealed partial class PrismApp
             title = PrismTracks.Name(glam.Vanilla ? PrismTracks.Vanilla : PrismTracks.Modded);
         }
 
-        var key = HashCode.Combine(glam.Placing, title);
+        var key = HashCode.Combine(glam.Placing, title, Loc.Current.Code);
         return weekLineText.IsCurrent(key)
             ? weekLineText.Value
             : weekLineText.Store(key, Loc.T(L.Prism.PlacingLine, glam.Placing, title));
