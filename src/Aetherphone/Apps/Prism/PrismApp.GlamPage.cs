@@ -517,9 +517,10 @@ internal sealed partial class PrismApp
         {
             DrawLikeButton(drawList, new Vector2(left + radius * 0.5f, top + radius), radius, slot, glam, pinned, scale);
             var save = new Vector2(left + saveOffset, top + radius);
-            if (RoundButton.Icon(drawList, save, radius, glam.Saved ? PhoneIcons.BookmarkFilled : PhoneIcons.Bookmark,
-                    controls, ButtonStyle.Plain, Loc.T(glam.Saved ? L.Prism.Saved : L.Prism.Save), HoverLabelSide.Below,
-                    overlay: pinned) &&
+            var own = glam.Author?.Id == glams.MyId;
+            if (!own && RoundButton.Icon(drawList, save, radius,
+                    glam.Saved ? PhoneIcons.BookmarkFilled : PhoneIcons.Bookmark, controls, ButtonStyle.Plain,
+                    Loc.T(glam.Saved ? L.Prism.Saved : L.Prism.Save), HoverLabelSide.Below, overlay: pinned) &&
                 !(pinned && UiInteract.InputBlocked))
             {
                 glams.ToggleSave(glam);
