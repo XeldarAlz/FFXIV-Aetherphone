@@ -582,7 +582,12 @@ internal sealed partial class PrismApp : IResumableApp
         MathF.Max(GridLineUnits * scale, Typography.LineHeight(PrismType.Headline));
 
     private bool DrawGridTile(ImDrawListPtr drawList, Rect photo, string url, string label, string avatarName,
-        string? avatarUrl, string glyph, string count, float scale)
+        string? avatarUrl, string glyph, string count, float scale) =>
+        DrawGridTile(drawList, PrismMotion.Mark(drawList), photo, url, label, avatarName, avatarUrl, glyph, count,
+            scale);
+
+    private bool DrawGridTile(ImDrawListPtr drawList, int mark, Rect photo, string url, string label,
+        string avatarName, string? avatarUrl, string glyph, string count, float scale)
     {
         var tile = new Rect(photo.Min, new Vector2(photo.Max.X, photo.Max.Y + GridLine(scale)));
         if (!ImGui.IsRectVisible(tile.Min, tile.Max))
@@ -590,7 +595,6 @@ internal sealed partial class PrismApp : IResumableApp
             return false;
         }
 
-        var mark = PrismMotion.Mark(drawList);
         DrawLook(drawList, photo, url, false);
         var hovered = HoverWash(drawList, tile, photo, 0f);
         DrawCountByline(drawList, photo.Min.X, photo.Max.X, (photo.Max.Y + tile.Max.Y) * 0.5f, label, avatarName,
