@@ -33,7 +33,6 @@ internal enum PrismScreen : byte
     Guide,
     Rewards,
     Outfit,
-    Track,
     Discover,
     GlamDetail,
     Compose,
@@ -313,9 +312,6 @@ internal sealed partial class PrismApp : IResumableApp
                 break;
             case PrismScreen.DyePick:
                 DrawDyePick(drawList, content, scale);
-                break;
-            case PrismScreen.Track:
-                DrawTrackChoice(drawList, full, content, scale);
                 break;
             case PrismScreen.Discover:
                 DrawDiscover(drawList, full, content, scale);
