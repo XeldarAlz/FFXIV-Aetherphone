@@ -16,7 +16,7 @@ internal sealed partial class PrismApp
     private readonly CachedText[] trackCountTexts = new CachedText[MaxTracks];
     private readonly CachedText[] trackActionTexts = new CachedText[MaxTracks];
     private readonly CachedText[] trackWinnerTexts = new CachedText[MaxTracks];
-    private readonly Pager trackPager = new();
+    private readonly Pager trackPager = new(Motion.PageSettle);
     private CachedText trackCaptionText;
     private float trackBlock;
     private int trackBlockKey;
