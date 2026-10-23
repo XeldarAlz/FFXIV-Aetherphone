@@ -70,7 +70,8 @@ internal sealed partial class PrismApp
         for (var index = 0; index < items.Length; index++)
         {
             var item = items[index];
-            if (item.App != Id || SocialActivity.IsModerationNotice(item.Type))
+            if (item.App != Id || SocialActivity.IsModerationNotice(item.Type) ||
+                ActivityLines(item, now, ActivityTextWidth(item, width, scale)).First.Length == 0)
             {
                 continue;
             }
@@ -168,7 +169,7 @@ internal sealed partial class PrismApp
         }
 
         var textLeft = row.Min.X + inset + avatar + pad;
-        var text = ActivityLines(item, now, right - textLeft);
+        var text = ActivityLines(item, now, ActivityTextWidth(item, width, scale));
         var bodyLines = text.Second.Length > 0 ? 2 : text.First.Length > 0 ? 1 : 0;
         var textTop = middle - (nameLine + bodyLine * bodyLines) * 0.5f;
         var nameMiddle = textTop + nameLine * 0.5f;
@@ -212,6 +213,12 @@ internal sealed partial class PrismApp
         }
 
         return row.Max.Y;
+    }
+
+    private static float ActivityTextWidth(NotificationDto item, float width, float scale)
+    {
+        var thumb = string.IsNullOrEmpty(item.ImageUrl) ? 0f : (ActivityThumbUnits + Metrics.Space.Md) * scale;
+        return width - Metrics.Space.Lg * 2f * scale - ActivityAvatarUnits * scale - Metrics.Space.Md * scale - thumb;
     }
 
     private ActivityText ActivityLines(NotificationDto item, long now, float width)
