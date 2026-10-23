@@ -17,6 +17,7 @@ internal sealed class DisplayPage : ISettingsPage
         new(L.Settings.PhoneSize),
         new(L.Settings.TextSize),
         new(L.Settings.LiveGlass),
+        new(L.Settings.RealGlass),
         new(L.ControlCenter.LockPosition),
     };
 
@@ -33,6 +34,7 @@ internal sealed class DisplayPage : ISettingsPage
 #else
     private const int LiveGlassDetailRows = 1;
 #endif
+    private const int RealGlassDetailRows = 2;
     private static readonly LiveGlassSource[] SourceOrder = { LiveGlassSource.World, LiveGlassSource.Composite };
     private readonly string[] sourceLabels = new string[SourceOrder.Length];
     private LanguageInfo? sourceLabelsLanguage;
@@ -41,6 +43,8 @@ internal sealed class DisplayPage : ISettingsPage
     private LanguageInfo? widthReadoutLanguage;
     private string zoomReadout = string.Empty;
     private int zoomReadoutPercent = -1;
+    private string amountReadout = string.Empty;
+    private int amountReadoutPercent = -1;
 #if DEBUG
     private string liveGlassReadout = string.Empty;
     private int liveGlassReadoutTenths = -1;
@@ -65,6 +69,8 @@ internal sealed class DisplayPage : ISettingsPage
             DrawTextSizeCard(theme);
             ImGui.Dummy(new Vector2(0f, CardGap * scale));
             DrawLiveGlassCard(theme);
+            ImGui.Dummy(new Vector2(0f, CardGap * scale));
+            DrawRealGlassCard(theme);
             ImGui.Dummy(new Vector2(0f, CardGap * scale));
             DrawLockPositionCard(theme);
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
@@ -146,6 +152,37 @@ internal sealed class DisplayPage : ISettingsPage
         SettingsSection.Hint(Loc.T(L.Settings.LiveGlassHint), theme);
     }
 
+    private void DrawRealGlassCard(PhoneTheme theme)
+    {
+        var realGlassOn = configuration.RealGlass;
+        var card = GroupCard.Begin(theme, realGlassOn ? 1 + RealGlassDetailRows : 1);
+        var realGlass = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.RealGlass), configuration.RealGlass, theme);
+        if (realGlass != configuration.RealGlass)
+        {
+            configuration.RealGlass = realGlass;
+            configuration.Save();
+        }
+
+        if (realGlassOn)
+        {
+            var amount = Math.Clamp(configuration.GlassAmount, 0f, 1f);
+            SettingsRow.Info(card.NextRow(), Loc.T(L.Settings.GlassAmount), AmountReadout(amount), theme);
+            var slider = Slider.Draw("settings.glassAmount", card.NextRow(), amount, theme, 0f, 0f);
+            if ((slider.Dragging || slider.Released) && MathF.Abs(slider.Value - configuration.GlassAmount) > 0.001f)
+            {
+                configuration.GlassAmount = slider.Value;
+            }
+
+            if (slider.Released)
+            {
+                configuration.Save();
+            }
+        }
+
+        card.End();
+        SettingsSection.Hint(Loc.T(L.Settings.RealGlassHint), theme);
+    }
+
     private void DrawLockPositionCard(PhoneTheme theme)
     {
         var card = GroupCard.Begin(theme, 1);
@@ -187,6 +224,19 @@ internal sealed class DisplayPage : ISettingsPage
         zoomReadoutPercent = percent;
         zoomReadout = PercentLabel(percent);
         return zoomReadout;
+    }
+
+    private string AmountReadout(float amount)
+    {
+        var percent = (int)MathF.Round(amount * PercentScale);
+        if (percent == amountReadoutPercent)
+        {
+            return amountReadout;
+        }
+
+        amountReadoutPercent = percent;
+        amountReadout = PercentLabel(percent);
+        return amountReadout;
     }
 
     private string[] SourceLabels()

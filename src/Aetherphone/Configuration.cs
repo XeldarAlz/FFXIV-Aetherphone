@@ -238,6 +238,8 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public long HalloweenTreatDue { get; set; }
     public bool LiveGlass { get; set; }
     public LiveGlassSource LiveGlassSource { get; set; } = LiveGlassSource.World;
+    public bool RealGlass { get; set; }
+    public float GlassAmount { get; set; } = 0.5f;
     public string AccentName { get; set; } = "Violet";
     public string AccentCustomHex { get; set; } = string.Empty;
     public string PhoneCaseName { get; set; } = "Titanium";

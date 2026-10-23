@@ -2024,6 +2024,9 @@ internal static class L
         public static readonly LocString LiveGlassSourceWorld = new("settings.liveGlassSourceWorld", "Game world");
         public static readonly LocString LiveGlassSourceComposite = new("settings.liveGlassSourceComposite", "Whole screen");
         public static readonly LocString LiveGlassReadout = new("settings.liveGlassReadout", "Live glass pass");
+        public static readonly LocString RealGlass = new("settings.realGlass", "Real glass (GPU)");
+        public static readonly LocString RealGlassHint = new("settings.realGlassHint", "Glass is rendered on the GPU and refracts what is really behind it: the wallpaper, the app and the game. Uses a little GPU time every frame; turn it off if the game stutters.");
+        public static readonly LocString GlassAmount = new("settings.glassAmount", "Glass amount");
         public static readonly LocString Notifications = new("settings.notifications", "Notifications and Badges");
         public static readonly LocString DoNotDisturb = new("settings.doNotDisturb", "Do Not Disturb");
         public static readonly LocString Vibration = new("settings.vibration", "Vibration");
