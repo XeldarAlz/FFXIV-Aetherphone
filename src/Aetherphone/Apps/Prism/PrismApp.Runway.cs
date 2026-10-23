@@ -137,9 +137,13 @@ internal sealed partial class PrismApp
     {
         lookMenu.Gate();
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        lookSeconds += delta;
         turnAge += delta;
         var look = looks[lookIndex];
+        if (!lookMenu.CapturesPointer && loadedAt.ContainsKey(look.ImageUrl))
+        {
+            lookSeconds += delta;
+        }
+
         var left = content.Min.X;
         var width = content.Width;
         var captionLine = Typography.LineHeight(PrismType.Caption);
