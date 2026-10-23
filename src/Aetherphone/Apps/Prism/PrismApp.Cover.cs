@@ -118,10 +118,18 @@ internal sealed partial class PrismApp
         }
         else if (coverShown.Length == 0 || url.Length == 0 || images.Get(url) is not null || images.Failed(url))
         {
+            var reversing = coverLeaving.Length > 0 && url == coverLeaving;
             coverLeaving = coverShown;
             coverShown = url;
             coverCredit = credit;
-            coverFade = new Spring(coverLeaving.Length > 0 ? 0f : 1f);
+            if (reversing)
+            {
+                coverFade.Launch(1f - coverFade.Value, -coverFade.Velocity);
+            }
+            else
+            {
+                coverFade = new Spring(coverLeaving.Length > 0 ? 0f : 1f);
+            }
         }
 
         var fade = coverFade.Step(1f, Motion.Sheet,
