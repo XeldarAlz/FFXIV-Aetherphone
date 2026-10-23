@@ -25,7 +25,12 @@ internal sealed partial class PrismApp
     private const float PrintRiseUnits = 40f;
     private const float RevealZoom = 0.12f;
     private const float RevealDim = 0.6f;
-    private const float FlashAlpha = 0.5f;
+    private const float FlashAlpha = 0.25f;
+    private const float PodiumLightDelay = 0.26f;
+    private const float PodiumLightStagger = 0.18f;
+    private const float PodiumDimFloor = 0.26f;
+    private const float PodiumRimDelay = 0.95f;
+    private const float PlacedPearlAlpha = 0.42f;
     private const float NumeralDelay = 0.15f;
     private const float RevealPageSeconds = 5f;
     private const float RevealHoldSeconds = 0.25f;
@@ -50,6 +55,7 @@ internal sealed partial class PrismApp
     private PrismResultsDto? orderedFor;
     private string profileGlamId = string.Empty;
     private int revealIndex;
+    private double podiumLitAt = PrismMotion.LongAgo;
     private int soundedPage = -1;
     private float revealPageSeconds;
     private float revealHoldSeconds;
@@ -282,6 +288,7 @@ internal sealed partial class PrismApp
         configuration.PrismRevealedWeek = results.WeekId;
         configuration.PrismRevealedRevision = results.Revision;
         configuration.Save();
+        podiumLitAt = ImGui.GetTime();
         Go(PrismScreen.Final);
     }
 
@@ -385,11 +392,13 @@ internal sealed partial class PrismApp
         var nameLine = Typography.LineHeight(PrismType.Headline);
         var numeralPixels = PodiumNumeralUnits * scale;
         var count = Math.Min(PodiumSize, finalOrder.Count);
+        var age = (float)(ImGui.GetTime() - podiumLitAt);
         for (var index = 0; index < count; index++)
         {
             var placing = finalOrder[index];
             var x = left + index * (column + gap);
             var photo = new Rect(new Vector2(x, top), new Vector2(x + column, top + photoHeight));
+            var mark = PrismMotion.Mark(drawList);
             DrawLook(drawList, photo, placing.ImageUrl, false);
             TapForOutfit(photo.Min, photo.Max, placing);
             var shade = new Vector2(photo.Min.X, photo.Max.Y - photoHeight * PodiumShadeShare);
@@ -408,6 +417,21 @@ internal sealed partial class PrismApp
             Typography.Draw(drawList, new Vector2(x, creditTop + nameLine),
                 Typography.FitText(PlacingDetail(placing), column, PrismType.Caption), PrismArt.Muted,
                 PrismType.Caption);
+            var lit = PrismMotion.At(age, PodiumLightDelay + PodiumLightStagger * (count - 1 - index), Motion.Sheet);
+            if (lit < PrismMotion.Settled)
+            {
+                PrismMotion.Shift(drawList, mark, Vector2.Zero, PodiumDimFloor + (1f - PodiumDimFloor) * lit);
+            }
+
+            var rim = PrismMotion.At(age, PodiumRimDelay, Motion.Sheet);
+            if (placing.Rank == 1)
+            {
+                PrismLight.Edge(drawList, photo, 0f, PrismGlow.Spectrum, PrismLight.EdgeAlpha * rim, scale);
+            }
+            else if (placing.Rank is > 1 and <= PodiumSize)
+            {
+                PrismLight.Edge(drawList, photo, 0f, PrismGlow.Pearl, PlacedPearlAlpha * rim, scale);
+            }
         }
 
         return top + photoHeight + Metrics.Space.Sm * scale + nameLine + Typography.LineHeight(PrismType.Caption) +
