@@ -22,6 +22,7 @@ internal sealed partial class PrismApp
     private const float MedalRestScale = 0.82f;
     private const float RewardMonogramScale = 0.8f;
     private const int RewardAvatarSegments = 48;
+    private const float RewardPhotoShare = 0.5f;
 
     private static readonly LocString[] RewardTitles =
     {
@@ -43,6 +44,7 @@ internal sealed partial class PrismApp
     private int rewardFrameDays;
     private CachedText rewardDaysText;
     private CachedText monogramText;
+    private CachedText rewardWinnerText;
 
     private PrismPrizesDto? Prizes => store.Week?.Prizes ?? ShownResults()?.Prizes;
 
@@ -100,11 +102,12 @@ internal sealed partial class PrismApp
         var width = content.Width;
         var left = origin.X + content.Min.X - full.Min.X;
         var cursor = origin.Y + Metrics.Space.Sm * scale;
-        if (CoverPlacing(ShownResults()) is { ImageUrl.Length: > 0 } winner)
+        if (ShownResults() is { } results && CoverPlacing(results) is { ImageUrl.Length: > 0 } winner)
         {
             var photo = new Rect(new Vector2(origin.X, cursor), new Vector2(origin.X + full.Width,
-                cursor + full.Width * CoverShare));
-            DrawLook(list, photo, winner.ImageUrl, false, native: true);
+                cursor + full.Width * RewardPhotoShare));
+            DrawLook(list, photo, winner.ImageUrl, false, native: true, focusY: ProfileFocus(photo, 0f));
+            DrawRewardCredit(list, photo, left, width, results, winner, scale);
             cursor = photo.Max.Y + Metrics.Space.Lg * scale;
         }
 
@@ -129,6 +132,24 @@ internal sealed partial class PrismApp
         }
 
         ImGui.Dummy(new Vector2(width, cursor - origin.Y + PrismArt.BottomMargin(scale)));
+    }
+
+    private void DrawRewardCredit(ImDrawListPtr drawList, Rect photo, float left, float width,
+        PrismResultsDto results, PrismPlacingDto winner, float scale)
+    {
+        var line = Typography.LineHeight(PrismType.Caption);
+        PrismArt.Scrim(drawList, photo, line, scale);
+        var credit = results.WeekId == store.Week?.PreviousWeekId ? LastWeekCredit(winner) : CoverByLine(winner);
+        Typography.Draw(drawList, new Vector2(left, photo.Max.Y - Metrics.Space.Md * scale - line),
+            Typography.FitText(credit, width, PrismType.Caption), PrismArt.PhotoFore, PrismType.Caption);
+    }
+
+    private string LastWeekCredit(PrismPlacingDto winner)
+    {
+        var key = HashCode.Combine(winner.Handle, winner.DisplayName, Loc.Current.Code);
+        return rewardWinnerText.IsCurrent(key)
+            ? rewardWinnerText.Value
+            : rewardWinnerText.Store(key, Loc.T(L.Prism.LastWeekWinner, AtHandle(winner.Handle, winner.DisplayName)));
     }
 
     private float DrawRewardsHero(ImDrawListPtr drawList, float left, float top, float width, float scale)
