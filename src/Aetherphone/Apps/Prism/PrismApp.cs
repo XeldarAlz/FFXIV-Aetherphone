@@ -243,7 +243,7 @@ internal sealed partial class PrismApp : IResumableApp
         screenAge += MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         var enter = PrismMotion.At(screenAge, 0f, TransitionTiming.PresentSmoothTime);
         var bar = ShowsTabBar(screen);
-        var wearing = glamour.TryingOn && IsTabRoot(screen);
+        var wearing = glamour.TryingOn && bar;
         bottomChrome = bar
             ? TabBar.ContentInset(scale) + (wearing ? (WearingBarUnits + WearingGapUnits) * scale : 0f)
             : 0f;
