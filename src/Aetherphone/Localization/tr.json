@@ -5899,6 +5899,8 @@
   "prism.firstGlamTitle": "İlk glam'ını paylaş",
   "prism.firstGlamHint": "Bir kıyafetin en fazla dört fotoğrafı, artı giydiğin ekipman ve modlar.",
   "prism.editProfile": "Profili Düzenle",
+  "prism.editPicture": "Fotoğrafı düzenle",
+  "prism.bioLabel": "Biyografi",
   "prism.meSignInTitle": "Profilini görmek için giriş yap",
   "prism.meSignInHint": "Glamlara göz atmak, kendininkini paylaşmak ve oyuncuları takip etmek için Ayarlar'dan Aethernet'e giriş yap. Gardırobun giriş yapmadan da çalışır.",
   "prism.savedOn": "{0} kaydedildi",

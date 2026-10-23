@@ -5899,6 +5899,8 @@
   "prism.firstGlamTitle": "分享你的第一套幻化",
   "prism.firstGlamHint": "同一套服装最多四张照片，再加上你穿的装备和模组。",
   "prism.editProfile": "编辑个人资料",
+  "prism.editPicture": "编辑头像",
+  "prism.bioLabel": "简介",
   "prism.meSignInTitle": "登录以查看你的个人资料",
   "prism.meSignInHint": "在设置中登录 Aethernet，即可浏览幻化、发布自己的作品并关注玩家。衣橱无需登录也能使用。",
   "prism.savedOn": "保存于 {0}",

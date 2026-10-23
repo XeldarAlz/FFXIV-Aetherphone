@@ -31,7 +31,6 @@ internal sealed partial class PrismApp
     private const long CompactFrom = 10000;
     private const string MarketAppId = "market";
     private const string SettingsAppId = "settings";
-    private const double UserRetrySeconds = 5d;
     private const int GlamsTab = 0;
     private const int SavedTab = 1;
     private const int PlacingsTab = 2;
@@ -46,7 +45,6 @@ internal sealed partial class PrismApp
     private readonly Dictionary<string, string> placingLabels = new(StringComparer.Ordinal);
     private string? countLanguage;
     private Spring profileTabSlide;
-    private double nextUserRequest;
     private bool showSaved;
     private bool showPlacings;
     private string coverUser = string.Empty;
@@ -74,25 +72,13 @@ internal sealed partial class PrismApp
         }
 
         showPlacings = false;
-        if (store.CurrentUser is not { } me)
+        if (glams.Me is not { } me)
         {
-            RequestUser();
+            glams.EnsureMe();
             return;
         }
 
-        glams.OpenProfile(new GlamAuthorDto(me.Id, me.DisplayName, me.Handle, me.AvatarUrl ?? string.Empty), showSaved);
-    }
-
-    private void RequestUser()
-    {
-        var now = ImGui.GetTime();
-        if (now < nextUserRequest)
-        {
-            return;
-        }
-
-        nextUserRequest = now + UserRetrySeconds;
-        account.EnsureCurrentUser();
+        glams.OpenProfile(me, showSaved);
     }
 
     private bool ShowsOwnProfile() => glams.MyId.Length > 0 && glams.Profile?.User?.Id == glams.MyId;
@@ -173,9 +159,9 @@ internal sealed partial class PrismApp
         var mine = screen == PrismScreen.Me;
         if (mine && !ShowsOwnProfile())
         {
-            if (glams.MyId.Length == 0)
+            if (glams.Me is null)
             {
-                RequestUser();
+                glams.EnsureMe();
                 var loading = Loc.T(L.Common.Loading);
                 Typography.Draw(drawList, content.Center - Typography.Measure(loading, PrismType.Caption) * 0.5f,
                     loading, PrismArt.Muted, PrismType.Caption);
@@ -236,6 +222,7 @@ internal sealed partial class PrismApp
             cursor = DrawProfileIdentity(list, left, right, origin.Y + Metrics.Space.Sm * scale, author, mine, scale);
         }
 
+        cursor = DrawProfileBio(left, right, cursor, mine ? glams.Me : author, scale);
         cursor = DrawProfileTabs(left, right, cursor + Metrics.Space.Sm * scale, mine, scale);
         cursor = DrawProfileContent(list, origin.X, width, cursor + Metrics.Space.Xxs * scale, profile, mine, scale);
         ImGui.Dummy(new Vector2(width, cursor - origin.Y + PrismArt.BottomMargin(scale)));
@@ -387,7 +374,7 @@ internal sealed partial class PrismApp
         {
             if (DrawPhotoButton(drawList, photo, topInset, 1, PhoneIcons.Pencil, Loc.T(L.Prism.EditProfile), scale))
             {
-                navigation.Open(SettingsAppId);
+                OpenEditProfile();
             }
 
             return;
@@ -501,7 +488,7 @@ internal sealed partial class PrismApp
             if (IconButton(drawList, new Vector2(right - reach * 0.5f, middle), PhoneIcons.Pencil,
                     Loc.T(L.Prism.EditProfile), scale))
             {
-                navigation.Open(SettingsAppId);
+                OpenEditProfile();
             }
 
             right -= reach + Metrics.Space.Sm * scale;
@@ -519,6 +506,18 @@ internal sealed partial class PrismApp
         Typography.Draw(drawList, new Vector2(textLeft, textTop + heroHeight),
             Typography.FitText(ProfileHandle(author), textWidth, PrismType.Caption), PrismArt.Muted, PrismType.Caption);
         return top + MathF.Max(avatar, heroHeight + handleHeight);
+    }
+
+    private static float DrawProfileBio(float left, float right, float top, GlamAuthorDto? author, float scale)
+    {
+        if (author is not { Bio.Length: > 0 } person)
+        {
+            return top;
+        }
+
+        top += Metrics.Space.Xs * scale;
+        return top + Typography.DrawWrappedLeft(new Vector2(left, top), person.Bio, PrismArt.Fore, PrismType.Body,
+            right - left);
     }
 
     private float DrawProfileStats(ImDrawListPtr drawList, float left, float right, float top, GlamProfileDto? profile,

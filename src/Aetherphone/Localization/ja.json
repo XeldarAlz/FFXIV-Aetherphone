@@ -5899,6 +5899,8 @@
   "prism.firstGlamTitle": "最初のミラプリを投稿しよう",
   "prism.firstGlamHint": "1つの装いにつき写真は4枚まで。着ていた装備とModも追加できます。",
   "prism.editProfile": "プロフィールを編集",
+  "prism.editPicture": "写真を編集",
+  "prism.bioLabel": "自己紹介",
   "prism.meSignInTitle": "サインインしてプロフィールを表示",
   "prism.meSignInHint": "設定でAethernetにサインインすると、ミラプリを見たり、投稿したり、プレイヤーをフォローしたりできます。ワードローブはサインインなしでも使えます。",
   "prism.savedOn": "{0}に保存",

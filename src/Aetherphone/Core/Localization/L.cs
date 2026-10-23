@@ -11123,6 +11123,8 @@ internal static class L
         public static readonly LocString FirstGlamHint = new("prism.firstGlamHint",
             "Up to four photos of one outfit, plus the pieces and mods you wore.");
         public static readonly LocString EditProfile = new("prism.editProfile", "Edit profile");
+        public static readonly LocString EditPicture = new("prism.editPicture", "Edit picture");
+        public static readonly LocString BioLabel = new("prism.bioLabel", "Bio");
         public static readonly LocString MeSignInTitle = new("prism.meSignInTitle", "Sign in to see your profile");
         public static readonly LocString MeSignInHint = new("prism.meSignInHint",
             "Sign in to Aethernet in Settings to browse glams, post your own and follow players. Your wardrobe works without signing in.");

@@ -3,7 +3,6 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows;
@@ -682,14 +681,7 @@ internal sealed partial class PrismApp
             return;
         }
 
-        composeSession.ConsumePendingImport();
-        var top = DrawActionHeader(drawList, content, PhoneIcons.X, Loc.T(L.Common.Cancel), Loc.T(L.Prism.AddPhoto),
-            PhoneIcons.Check, Loc.T(L.Prism.UsePhoto), composeSession.HasSelection, string.Empty, UiSound.Tap, scale,
-            out var chosen) + Metrics.Space.Sm * scale;
-        var paneHeight = MathF.Min(content.Width, (content.Max.Y - top) * PickPaneFraction);
-        var pane = new Rect(new Vector2(content.Min.X, top), new Vector2(content.Max.X, top + paneHeight));
-        composeSession.DrawPickPane(pane, scale, PickStyle, GlamStore.PhotoRatio, false, true, Loc.T(L.Prism.AddPhoto));
-        if (chosen)
+        if (DrawPhotoPick(drawList, content, Loc.T(L.Prism.AddPhoto), GlamStore.PhotoRatio, scale))
         {
             var crop = composeSession.CropsArray()[0];
             wardrobe.Update(outfit with
@@ -697,15 +689,6 @@ internal sealed partial class PrismApp
                 Cover = new WardrobeCover(composeSession.FirstSelected, crop.Zoom, crop.CenterX, crop.CenterY),
             });
             GoBack();
-            return;
-        }
-
-        var gridRect = new Rect(new Vector2(content.Min.X, pane.Max.Y + Metrics.Space.Md * scale),
-            new Vector2(content.Max.X, content.Max.Y - PrismArt.BottomMargin(scale)));
-        using (AppSurface.BeginEdgeToEdge(gridRect, smoothWheel: true))
-        {
-            composeSession.DrawPickGrid(gridRect, scale, PickStyle, false, Loc.T(L.Common.ImportFromPc),
-                Loc.T(L.Prism.AddPhoto));
         }
     }
 

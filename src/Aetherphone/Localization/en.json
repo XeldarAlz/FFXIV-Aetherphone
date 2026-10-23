@@ -5899,6 +5899,8 @@
   "prism.firstGlamTitle": "Share your first glam",
   "prism.firstGlamHint": "Up to four photos of one outfit, plus the pieces and mods you wore.",
   "prism.editProfile": "Edit profile",
+  "prism.editPicture": "Edit picture",
+  "prism.bioLabel": "Bio",
   "prism.meSignInTitle": "Sign in to see your profile",
   "prism.meSignInHint": "Sign in to Aethernet in Settings to browse glams, post your own and follow players. Your wardrobe works without signing in.",
   "prism.savedOn": "saved {0}",

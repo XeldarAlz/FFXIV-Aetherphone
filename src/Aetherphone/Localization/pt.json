@@ -5899,6 +5899,8 @@
   "prism.firstGlamTitle": "Compartilhe seu primeiro glamour",
   "prism.firstGlamHint": "Até quatro fotos de um mesmo visual, mais o equipamento e os mods que você usou.",
   "prism.editProfile": "Editar perfil",
+  "prism.editPicture": "Editar foto",
+  "prism.bioLabel": "Bio",
   "prism.meSignInTitle": "Entre para ver seu perfil",
   "prism.meSignInHint": "Entre no Aethernet em Ajustes para ver glamours, publicar os seus e seguir jogadores. Seu guarda-roupa funciona sem entrar.",
   "prism.savedOn": "salvo em {0}",

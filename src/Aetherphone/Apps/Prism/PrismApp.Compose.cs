@@ -121,6 +121,30 @@ internal sealed partial class PrismApp
         }
     }
 
+    private bool DrawPhotoPick(ImDrawListPtr drawList, Rect content, string title, float aspect, float scale)
+    {
+        composeSession.ConsumePendingImport();
+        var top = DrawActionHeader(drawList, content, PhoneIcons.X, Loc.T(L.Common.Cancel), title, PhoneIcons.Check,
+            Loc.T(L.Prism.UsePhoto), composeSession.HasSelection, string.Empty, UiSound.Tap, scale, out var chosen) +
+                  Metrics.Space.Sm * scale;
+        var paneHeight = MathF.Min(content.Width, (content.Max.Y - top) * PickPaneFraction);
+        var pane = new Rect(new Vector2(content.Min.X, top), new Vector2(content.Max.X, top + paneHeight));
+        composeSession.DrawPickPane(pane, scale, PickStyle, aspect, false, true, title);
+        if (chosen)
+        {
+            return true;
+        }
+
+        var gridRect = new Rect(new Vector2(content.Min.X, pane.Max.Y + Metrics.Space.Md * scale),
+            new Vector2(content.Max.X, content.Max.Y - PrismArt.BottomMargin(scale)));
+        using (AppSurface.BeginEdgeToEdge(gridRect, smoothWheel: true))
+        {
+            composeSession.DrawPickGrid(gridRect, scale, PickStyle, false, Loc.T(L.Common.ImportFromPc), title);
+        }
+
+        return false;
+    }
+
     private float DrawActionHeader(ImDrawListPtr drawList, Rect content, string leaveGlyph, string leave,
         string heading, string actionGlyph, string action, bool enabled, string busy, UiSound tapSound, float scale,
         out bool acted)

@@ -241,8 +241,13 @@ internal sealed partial class PrismApp
     {
         var radius = MathF.Max(room / (1f + AvatarView.Reserve(rewardFrame, room) / room),
             AvatarView.MinFrameRadius * scale);
-        var user = store.CurrentUser;
-        var name = user?.DisplayName is { Length: > 0 } display ? display : user?.Name ?? string.Empty;
+        var user = glams.Me;
+        if (user is null)
+        {
+            glams.EnsureMe();
+        }
+
+        var name = AuthorName(user);
         var key = HashCode.Combine(name);
         var monogram = monogramText.IsCurrent(key) ? monogramText.Value : monogramText.Store(key, Initials.Of(name));
         AvatarView.Draw(drawList, center, radius, PrismArt.Muted, monogram, RewardMonogramScale,

@@ -5899,6 +5899,8 @@
   "prism.firstGlamTitle": "Partagez votre premier mirage",
   "prism.firstGlamHint": "Jusqu'à quatre photos d'une même tenue, avec l'équipement et les mods que vous portiez.",
   "prism.editProfile": "Modifier le profil",
+  "prism.editPicture": "Modifier la photo",
+  "prism.bioLabel": "Bio",
   "prism.meSignInTitle": "Connectez-vous pour voir votre profil",
   "prism.meSignInHint": "Connectez-vous à Aethernet dans les Réglages pour parcourir les mirages, publier les vôtres et suivre des joueurs. Votre garde-robe fonctionne sans connexion.",
   "prism.savedOn": "enregistrée le {0}",

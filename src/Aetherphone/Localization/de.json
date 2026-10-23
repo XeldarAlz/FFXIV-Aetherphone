@@ -5899,6 +5899,8 @@
   "prism.firstGlamTitle": "Poste deine erste Projektion",
   "prism.firstGlamHint": "Bis zu vier Fotos eines Outfits, dazu die Ausrüstung und Mods, die du getragen hast.",
   "prism.editProfile": "Profil bearbeiten",
+  "prism.editPicture": "Bild bearbeiten",
+  "prism.bioLabel": "Bio",
   "prism.meSignInTitle": "Melde dich an, um dein Profil zu sehen",
   "prism.meSignInHint": "Melde dich in den Einstellungen bei Aethernet an, um Projektionen zu entdecken, eigene zu posten und Spielern zu folgen. Deine Garderobe funktioniert auch ohne Anmeldung.",
   "prism.savedOn": "gespeichert am {0}",
