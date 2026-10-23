@@ -345,8 +345,10 @@ internal sealed partial class PrismApp
         var y = row.Center.Y - (captionHeight + Typography.LineHeight(PrismType.Headline)) * 0.5f;
         Typography.Draw(drawList, new Vector2(textLeft, y),
             Typography.FitText(ContestCaption(week), room, PrismType.Caption), PrismArt.Muted, PrismType.Caption);
-        Typography.Draw(drawList, new Vector2(textLeft, y + captionHeight),
-            Typography.FitText(week.Title, room, PrismType.Headline), PrismArt.Fore, PrismType.Headline);
+        var themeStyle = FitStyle(week.Title, room, PrismType.Headline);
+        var theme = Typography.FitText(week.Title, room, themeStyle);
+        Typography.Draw(drawList, new Vector2(textLeft, y + captionHeight + (Typography.LineHeight(PrismType.Headline) -
+            Typography.LineHeight(themeStyle)) * 0.5f), theme, PrismArt.Fore, themeStyle);
     }
 
     private string ContestCover(PrismWeekDto week) =>
