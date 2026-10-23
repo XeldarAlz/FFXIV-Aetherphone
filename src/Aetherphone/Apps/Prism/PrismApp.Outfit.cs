@@ -349,8 +349,9 @@ internal sealed partial class PrismApp
             }
 
             var textTop = top + (head - captionLine - nameLine) * 0.5f;
-            Typography.Draw(drawList, new Vector2(textLeft, textTop), Loc.T(SlotNames[index]), PrismArt.Muted,
-                PrismType.Caption);
+            Typography.Draw(drawList, new Vector2(textLeft, textTop),
+                Typography.FitText(Loc.T(SlotNames[index]), MathF.Max(1f, tapRight - textLeft), PrismType.Caption),
+                PrismArt.Muted, PrismType.Caption);
             var name = itemId == 0 ? Loc.T(L.Prism.AddPiece) : pick.Name ?? string.Empty;
             Typography.Draw(drawList, new Vector2(textLeft, textTop + captionLine),
                 Typography.FitText(name, MathF.Max(1f, tapRight - textLeft), PrismType.Headline),

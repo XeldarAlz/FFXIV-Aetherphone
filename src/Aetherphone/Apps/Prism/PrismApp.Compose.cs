@@ -212,7 +212,8 @@ internal sealed partial class PrismApp
     private float DrawField(ImDrawListPtr drawList, float left, float top, float width, string label, string hint,
         string id, ref string text, int maxLength, float scale)
     {
-        Typography.Draw(drawList, new Vector2(left, top), label, PrismArt.Muted, PrismType.Caption);
+        Typography.Draw(drawList, new Vector2(left, top), Typography.FitText(label, width, PrismType.Caption),
+            PrismArt.Muted, PrismType.Caption);
         top += Typography.LineHeight(PrismType.Caption) + Metrics.Space.Xxs * scale;
         return DrawInput(drawList, left, top, width, hint, id, ref text, maxLength, scale) + Metrics.Space.Md * scale;
     }
