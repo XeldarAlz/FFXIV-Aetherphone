@@ -71,6 +71,7 @@ internal sealed partial class PrismApp
     {
         heatDone = false;
         chosen = 0;
+        ballotOutcome = OutcomePending;
         if (!HeatInProgress)
         {
             ratingBallot = null;
@@ -388,7 +389,9 @@ internal sealed partial class PrismApp
         pickSwapAge += MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         var left = content.Min.X;
         var width = content.Width;
-        var top = DrawBackHeader(drawList, content, string.Empty, scale) + Metrics.Space.Sm * scale;
+        var top = (store.Busy
+            ? content.Min.Y + Metrics.Size.TapTarget * scale
+            : DrawBackHeader(drawList, content, string.Empty, scale)) + Metrics.Space.Sm * scale;
         var caption = PicksCaption(ballot);
         if (caption.Length > 0)
         {
