@@ -80,8 +80,9 @@ internal sealed partial class PrismApp
             if (itemBucket != bucket)
             {
                 cursor += (bucket < 0 ? Metrics.Space.Sm : Metrics.Space.Xl) * scale;
-                cursor = DrawSectionTitle(list, origin.X + inset, origin.X + width - inset, cursor,
-                    Loc.T(ActivityBuckets[itemBucket]), string.Empty, scale) + Metrics.Space.Xs * scale;
+                Typography.Draw(list, new Vector2(origin.X + inset, cursor), Loc.T(ActivityBuckets[itemBucket]),
+                    PrismArt.Fore, PrismType.Headline);
+                cursor += Typography.LineHeight(PrismType.Headline) + Metrics.Space.Xs * scale;
                 bucket = itemBucket;
             }
 
