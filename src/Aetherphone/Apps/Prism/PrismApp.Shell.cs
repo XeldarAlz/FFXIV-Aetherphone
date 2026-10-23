@@ -23,6 +23,7 @@ internal readonly record struct PrismStop(
     GlamDto? Glam,
     GlamAuthorDto? Author,
     bool Saved,
+    bool Placings,
     GlamListKind Kind,
     uint ItemId,
     GlamModDto? Mod,
@@ -199,8 +200,8 @@ internal sealed partial class PrismApp
             historyDepth--;
         }
 
-        history[historyDepth++] = new PrismStop(screen, glams.Detail, glams.Profile?.User, showSaved, listKind,
-            listItemId, listMod, listTag, listTitle, outfitId, bodyScreen == screen ? bodyScroll : 0f);
+        history[historyDepth++] = new PrismStop(screen, glams.Detail, glams.Profile?.User, showSaved, showPlacings,
+            listKind, listItemId, listMod, listTag, listTitle, outfitId, bodyScreen == screen ? bodyScroll : 0f);
 
         Go(next);
     }
@@ -258,6 +259,7 @@ internal sealed partial class PrismApp
                 break;
             case PrismScreen.Me or PrismScreen.Profile when stop.Author is not null:
                 showSaved = stop.Saved;
+                showPlacings = stop.Placings;
                 glams.OpenProfile(stop.Author, stop.Saved);
                 break;
             case PrismScreen.GlamList:
