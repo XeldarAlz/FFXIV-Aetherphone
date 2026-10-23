@@ -5739,6 +5739,7 @@
   "prism.changePhoto": "写真を変更",
   "prism.usePhoto": "写真を使う",
   "prism.rewards": "報酬",
+  "prism.noRewardsHint": "今週の賞品はまだ決まっていません。",
   "prism.rewardBadgeTitle": "表彰台バッジ",
   "prism.rewardBadgeBody": "表彰台に入るとバッジがプロフィールに加わり、Aetherphone全体で名前の横に表示されます。",
   "prism.rewardFrameTitle": "勝者のフレーム",

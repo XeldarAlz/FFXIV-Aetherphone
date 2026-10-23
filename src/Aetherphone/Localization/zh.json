@@ -5739,6 +5739,7 @@
   "prism.changePhoto": "更换照片",
   "prism.usePhoto": "使用照片",
   "prism.rewards": "奖励",
+  "prism.noRewardsHint": "本周奖品尚未确定。",
   "prism.rewardBadgeTitle": "领奖台徽章",
   "prism.rewardBadgeBody": "登上领奖台即可获得徽章，它会显示在你的资料里，并在整个 Aetherphone 中跟在你的名字旁。",
   "prism.rewardFrameTitle": "冠军头像框",

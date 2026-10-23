@@ -5739,6 +5739,7 @@
   "prism.changePhoto": "Trocar foto",
   "prism.usePhoto": "Usar foto",
   "prism.rewards": "Recompensas",
+  "prism.noRewardsHint": "Os prêmios desta semana ainda não foram definidos.",
   "prism.rewardBadgeTitle": "Emblemas de pódio",
   "prism.rewardBadgeBody": "Termine num pódio e um emblema entra no seu perfil, ao lado do seu nome em todo o Aetherphone.",
   "prism.rewardFrameTitle": "Moldura do vencedor",

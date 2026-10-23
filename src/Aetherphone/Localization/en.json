@@ -5739,6 +5739,7 @@
   "prism.changePhoto": "Change photo",
   "prism.usePhoto": "Use photo",
   "prism.rewards": "Rewards",
+  "prism.noRewardsHint": "This week's prizes aren't set yet.",
   "prism.rewardBadgeTitle": "Podium badges",
   "prism.rewardBadgeBody": "Finish on a podium and a badge joins your profile, worn next to your name across Aetherphone.",
   "prism.rewardFrameTitle": "Winner's frame",

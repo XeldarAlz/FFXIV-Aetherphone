@@ -101,8 +101,14 @@ internal sealed partial class PrismApp
     private void DrawRewards(ImDrawListPtr drawList, Rect full, Rect content, float scale)
     {
         SyncRewardArt();
-        var topInset = PhotoInset(full, content);
         var entering = store.Week is { Phase: PrismPhases.Entering, MyEntry: null };
+        if (rewardKindCount == 0)
+        {
+            DrawNoRewards(drawList, content, entering, scale);
+            return;
+        }
+
+        var topInset = PhotoInset(full, content);
         var button = ActionRect(content, scale);
         var area = new Rect(new Vector2(full.Min.X, PhotoTop(full, content)),
             new Vector2(full.Max.X, content.Max.Y - bottomChrome));
@@ -133,6 +139,18 @@ internal sealed partial class PrismApp
         DrawPhotoBack(drawList, area, topInset, scale);
         if (entering && DrawButton(drawList, button, EnterLabel(), ButtonStyle.Solid, scale, enabled: !store.Busy,
                 id: "prism.rewards.enter"))
+        {
+            StartPick();
+        }
+    }
+
+    private void DrawNoRewards(ImDrawListPtr drawList, Rect content, bool entering, float scale)
+    {
+        var top = DrawBackHeader(drawList, content, Loc.T(L.Prism.Rewards), scale);
+        var area = new Rect(new Vector2(content.Min.X, top), new Vector2(content.Max.X, content.Max.Y - bottomChrome));
+        DrawEmpty(drawList, area, RewardsGlyph, string.Empty, Loc.T(L.Prism.NoRewardsHint),
+            entering ? EnterLabel() : string.Empty, ButtonStyle.Solid, scale, out var enter);
+        if (enter && !store.Busy)
         {
             StartPick();
         }
