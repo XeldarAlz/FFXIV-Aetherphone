@@ -11131,6 +11131,13 @@ internal static class L
         public static readonly LocString FavouritesEmptyTitle = new("prism.favouritesEmptyTitle", "No favourites yet");
         public static readonly LocString Edit = new("prism.edit", "Edit");
         public static readonly LocString SeeWhoWon = new("prism.seeWhoWon", "See who won");
+        public static readonly LocString AllGlams = new("prism.allGlams", "All glams");
+        public static readonly LocString PlaceNumber = new("prism.placeNumber", "#{0}");
+        public static readonly LocString ResultsPendingTitle = new("prism.resultsPendingTitle", "Results aren't out yet");
+        public static readonly LocString ResultsPendingHint = new("prism.resultsPendingHint",
+            "Every glam from this week shows up here in placing order once the results are in.");
+        public static readonly LocString GalleryEmptyHint = new("prism.galleryEmptyHint",
+            "Nobody entered this contest that week.");
     }
 
     internal static class Announcements

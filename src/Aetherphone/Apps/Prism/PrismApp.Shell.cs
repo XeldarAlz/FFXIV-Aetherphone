@@ -30,6 +30,7 @@ internal readonly record struct PrismStop(
     string Tag,
     string Title,
     string OutfitId,
+    WeekGallery Gallery,
     float Scroll);
 
 internal sealed partial class PrismApp
@@ -67,11 +68,12 @@ internal sealed partial class PrismApp
 
     private static bool IsLibraryScreen(PrismScreen value) =>
         value is PrismScreen.GlamDetail or PrismScreen.Compose or PrismScreen.Profile or PrismScreen.GlamList
-            or PrismScreen.WardrobeOutfit or PrismScreen.WardrobeCover or PrismScreen.Rewards or PrismScreen.Activity;
+            or PrismScreen.WardrobeOutfit or PrismScreen.WardrobeCover or PrismScreen.Rewards or PrismScreen.Activity
+            or PrismScreen.Gallery;
 
     private static bool ShowsTabBar(PrismScreen value) =>
         IsTabRoot(value) || value is PrismScreen.GlamDetail or PrismScreen.Profile or PrismScreen.GlamList
-            or PrismScreen.WardrobeOutfit or PrismScreen.Rewards or PrismScreen.Activity;
+            or PrismScreen.WardrobeOutfit or PrismScreen.Rewards or PrismScreen.Activity or PrismScreen.Gallery;
 
     private bool Wearing(string key) => glamour.TryingOn && key.Length > 0 && wearingKey == key;
 
@@ -201,7 +203,8 @@ internal sealed partial class PrismApp
         }
 
         history[historyDepth++] = new PrismStop(screen, glams.Detail, glams.Profile?.User, showSaved, showPlacings,
-            listKind, listItemId, listMod, listTag, listTitle, outfitId, bodyScreen == screen ? bodyScroll : 0f);
+            listKind, listItemId, listMod, listTag, listTitle, outfitId, gallery,
+            bodyScreen == screen ? bodyScroll : 0f);
 
         Go(next);
     }
@@ -272,6 +275,10 @@ internal sealed partial class PrismApp
                 break;
             case PrismScreen.WardrobeOutfit:
                 outfitId = stop.OutfitId;
+                break;
+            case PrismScreen.Gallery:
+                gallery = stop.Gallery;
+                glams.OpenWeek(gallery.WeekId, gallery.Track);
                 break;
         }
     }

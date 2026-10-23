@@ -52,6 +52,7 @@ internal sealed class PrismStore : IDisposable
     private readonly FailureSlot weekFailure = new();
     private readonly FailureSlot actionFailure = new();
     private readonly ConcurrentDictionary<string, PrismResultsDto?> lastWeekResults = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<(string Week, string Code), string> weekTitles = new();
 
     private volatile PrismWeekDto? rawWeek;
     private volatile PrismWeekDto? week;
@@ -201,6 +202,29 @@ internal sealed class PrismStore : IDisposable
         lastWeekResults.TryGetValue(trackId, out var held) && held?.WeekId == current.PreviousWeekId
             ? held
             : null;
+
+    public string WeekTitle(string weekId)
+    {
+        var key = (weekId, Loc.Current.Code);
+        if (weekTitles.TryGetValue(key, out var title))
+        {
+            return title;
+        }
+
+        if (weekId.Length > 0 && IsSignedIn && weekTitles.TryAdd(key, string.Empty))
+        {
+            work.Run("week title", async token =>
+            {
+                var fetched = await client.ResultsAsync(weekId, key.Code, string.Empty, token).ConfigureAwait(false);
+                if (fetched is { Title.Length: > 0 })
+                {
+                    weekTitles[key] = fetched.Title;
+                }
+            });
+        }
+
+        return string.Empty;
+    }
 
     public void LoadLastWeekResults()
     {

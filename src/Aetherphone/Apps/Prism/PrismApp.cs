@@ -47,6 +47,7 @@ internal enum PrismScreen : byte
     Activity,
     GearSearch,
     DyePick,
+    Gallery,
 }
 
 internal sealed partial class PrismApp : IResumableApp
@@ -344,6 +345,9 @@ internal sealed partial class PrismApp : IResumableApp
                 break;
             case PrismScreen.Activity:
                 DrawActivity(drawList, full, content, scale);
+                break;
+            case PrismScreen.Gallery:
+                DrawGallery(drawList, full, content, scale);
                 break;
             default:
                 DrawCover(drawList, full, content, scale);

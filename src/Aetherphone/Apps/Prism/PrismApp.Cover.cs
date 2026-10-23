@@ -351,23 +351,29 @@ internal sealed partial class PrismApp
 
     private void DrawCoverActions(ImDrawListPtr drawList, Rect row, PrismWeekDto week, bool open, float scale)
     {
-        var lastWeek = Loc.T(L.Prism.LastWeek);
+        var published = open && week.Phase == PrismPhases.Results;
+        var secondaryLabel = Loc.T(published ? L.Prism.AllGlams : L.Prism.LastWeek);
         var primary = open ? PrimaryLabel(week) : string.Empty;
-        var secondary = open
-            ? week.Phase != PrismPhases.Results && week.PreviousWeekId.Length > 0
-            : ShowingResults();
+        var secondary = open ? published || week.PreviousWeekId.Length > 0 : ShowingResults();
         var gap = Metrics.Space.Sm * scale;
         var secondaryWidth = secondary
-            ? ButtonWidth([lastWeek], primary.Length > 0 ? (row.Width - gap) * 0.5f : row.Width, scale)
+            ? ButtonWidth([secondaryLabel], primary.Length > 0 ? (row.Width - gap) * 0.5f : row.Width, scale)
             : 0f;
         if (secondary)
         {
             var left = primary.Length > 0 ? row.Max.X - secondaryWidth : row.Min.X;
             if (DrawButton(drawList,
-                    new Rect(new Vector2(left, row.Min.Y), new Vector2(left + secondaryWidth, row.Max.Y)), lastWeek,
-                    ButtonStyle.Tinted, scale, enabled: ShowingResults()))
+                    new Rect(new Vector2(left, row.Min.Y), new Vector2(left + secondaryWidth, row.Max.Y)),
+                    secondaryLabel, ButtonStyle.Tinted, scale, enabled: ShowingResults()))
             {
-                OpenResults();
+                if (!published)
+                {
+                    OpenResults();
+                }
+                else if (ShownResults() is { } results)
+                {
+                    OpenGallery(results.WeekId, store.Track, results.Title);
+                }
             }
         }
 
