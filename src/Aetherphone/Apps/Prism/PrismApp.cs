@@ -54,6 +54,7 @@ internal enum PrismScreen : byte
 
 internal sealed partial class PrismApp : IResumableApp
 {
+    private const float ShardLifeSeconds = 0.45f;
     private const float RefreshSeconds = 120f;
     private const int LoadedAtLimit = 512;
     private const int GuideVersion = 2;
@@ -62,6 +63,7 @@ internal sealed partial class PrismApp : IResumableApp
     private const int LabelWidthLimit = 64;
     private const float GridLineUnits = 28f;
 
+    private readonly PrismShards shards = new();
     private readonly PrismStore store;
     private readonly GlamStore glams;
     private readonly GlamourService glamour;
@@ -265,6 +267,9 @@ internal sealed partial class PrismApp : IResumableApp
         {
             stage.Transform(PrismMotion.Stage(full, enter, enterDirection, scale));
         }
+
+        shards.Draw(ImGui.GetForegroundDrawList(), full,
+            MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds), scale);
 
         if (!bar || photoViewer.Active)
         {

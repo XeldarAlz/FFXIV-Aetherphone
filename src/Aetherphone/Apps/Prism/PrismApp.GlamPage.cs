@@ -28,6 +28,15 @@ internal sealed partial class PrismApp
 {
     private const string GlamMetaSeparator = " · ";
     private const string LikeSlotTemplate = "9.9K";
+    private const float LikeRingReach = 1.6f;
+    private const float LikeRingUnits = 1.5f;
+    private const float ButtonRingReach = 0.45f;
+    private const float ButtonRingPeak = 0.7f;
+    private const float ButtonRingUnits = 1.4f;
+    private const float TryOnShardShare = 0.42f;
+    private const float TryOnShardAngle = -1.785f;
+    private const float TryOnShardSpread = 0.53f;
+    private const float TryOnShardSpeed = 420f;
     private const int AvatarSegments = 32;
     private const int GlamMenuSize = 3;
     private const float LikeBloomSeconds = 0.9f;
@@ -77,6 +86,8 @@ internal sealed partial class PrismApp
     private bool likeBloomOnPhoto;
     private string tryOnKey = string.Empty;
     private double tryOnAt;
+    private double saveLightAt;
+    private string saveLightId = string.Empty;
     private Spring pinReveal;
     private double pillSwapAt;
     private string pillLabel = string.Empty;
@@ -460,18 +471,23 @@ internal sealed partial class PrismApp
         drawList.PopClipRect();
     }
 
-    private static void DrawLikeRing(ImDrawListPtr drawList, Vector2 center, float baseRadius, float age, float scale)
+    private static void DrawLikeRing(ImDrawListPtr drawList, Vector2 center, float baseRadius, float age,
+        float scale) =>
+        DrawLightRing(drawList, center, baseRadius, age, LikeRingReach, 1f, LikeRingUnits * scale);
+
+    private static void DrawLightRing(ImDrawListPtr drawList, Vector2 center, float baseRadius, float age, float reach,
+        float peak, float thickness)
     {
         var grow = PrismMotion.At(age, 0f, Motion.Sheet);
-        if (grow >= PrismMotion.Settled)
+        if (age <= 0f || grow >= PrismMotion.Settled)
         {
             return;
         }
 
         var mark = PrismMotion.Mark(drawList);
-        PrismArt.SpectrumRing(drawList, center, baseRadius * (1f + 1.6f * grow), grow * MathF.PI * 0.5f,
-            MathF.Max(1f, 1.5f * scale));
-        PrismMotion.Shift(drawList, mark, Vector2.Zero, 1f - grow);
+        PrismArt.SpectrumRing(drawList, center, baseRadius * (1f + reach * grow), grow * MathF.PI * 0.5f,
+            MathF.Max(1f, thickness));
+        PrismMotion.Shift(drawList, mark, Vector2.Zero, peak * (1f - grow));
     }
 
     private void DrawActionRow(ImDrawListPtr drawList, Rect full, float naturalTop, float pinTop, GlamDto glam,
@@ -522,7 +538,15 @@ internal sealed partial class PrismApp
                     Loc.T(glam.Saved ? L.Prism.Saved : L.Prism.Save), HoverLabelSide.Below, overlay: pinned) &&
                 !(pinned && UiInteract.InputBlocked))
             {
+                saveLightId = glam.Saved ? string.Empty : glam.Id;
+                saveLightAt = ImGui.GetTime();
                 glams.ToggleSave(glam);
+            }
+
+            if (!own && glam.Id == saveLightId)
+            {
+                DrawLightRing(drawList, save, radius * 0.5f, (float)(ImGui.GetTime() - saveLightAt), ButtonRingReach,
+                    ButtonRingPeak, ButtonRingUnits * scale);
             }
         }
 
@@ -605,7 +629,11 @@ internal sealed partial class PrismApp
         }
         else
         {
-            TryOnGlam(glam, key);
+            if (TryOnGlam(glam, key))
+            {
+                shards.Burst(new Vector2(rect.Min.X + rect.Width * TryOnShardShare, rect.Min.Y), TryOnShardAngle,
+                    TryOnShardSpread, TryOnShardSpeed, ShardLifeSeconds);
+            }
         }
     }
 
@@ -670,7 +698,7 @@ internal sealed partial class PrismApp
         }
     }
 
-    private void TryOnGlam(GlamDto glam, string key)
+    private bool TryOnGlam(GlamDto glam, string key)
     {
         glamour.TryOn(glam.Gear ?? Array.Empty<GlamGearDto>());
         StartWearing(key, glam.Title);
@@ -682,12 +710,13 @@ internal sealed partial class PrismApp
 
         if (!glamour.HasGlamourer || !glamour.TryingOn)
         {
-            return;
+            return false;
         }
 
         tryOnKey = key;
         tryOnAt = ImGui.GetTime();
         UiFeedback.Play(UiSound.Success);
+        return true;
     }
 
     private void AddToWardrobe(GlamDto glam, string key)

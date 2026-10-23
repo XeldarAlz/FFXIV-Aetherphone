@@ -45,11 +45,15 @@ internal static class PrismArt
     private const float ScrimShare = 0.35f;
     private const float FailedGlyphShare = 0.3f;
     private const float TryOnHoldSeconds = 0.9f;
-    private const float TryOnDim = 0.45f;
-    private const float TryOnBandShare = 0.35f;
-    private const float TryOnBandPeak = 0.3f;
+    private const float TryOnDim = 0.3f;
+    private const float TryOnDimDelay = 0.04f;
+    private const float TryOnBandDelay = 0.1f;
+    private const float TryOnBandSmooth = 0.32f;
+    private const float TryOnLabelDelay = 0.28f;
+    private const float TryOnBandShare = 0.42f;
+    private const float TryOnBandPeak = 0.22f;
     private const float RefractionBandShare = 0.6f;
-    private const float RefractionBandPeak = 0.45f;
+    private const float RefractionBandPeak = 0.25f;
     private const float IconStrokeUnits = 1.8f;
     private const int IconMaxPoints = 64;
     private const int IconCapSegments = 6;
@@ -250,6 +254,35 @@ internal static class PrismArt
         drawList.PopClipRect();
     }
 
+    private static void RisingBand(ImDrawListPtr drawList, Rect photo, float progress)
+    {
+        if (progress <= 0f || progress >= PrismMotion.Settled)
+        {
+            return;
+        }
+
+        var alpha = MathF.Sin(MathF.PI * progress) * TryOnBandPeak;
+        var band = photo.Height * TryOnBandShare;
+        var top = photo.Max.Y - progress * (photo.Height + band);
+        var bar = band / Spectrum.Length;
+        drawList.PushClipRect(photo.Min, photo.Max, true);
+        for (var index = 0; index < Spectrum.Length; index++)
+        {
+            var min = new Vector2(photo.Min.X, top + bar * index);
+            var max = new Vector2(photo.Max.X, min.Y + bar);
+            if (max.Y <= photo.Min.Y || min.Y >= photo.Max.Y)
+            {
+                continue;
+            }
+
+            var from = BandColor(index, alpha);
+            var to = BandColor(index + 1, alpha);
+            drawList.AddRectFilledMultiColor(min, max, from, from, to, to);
+        }
+
+        drawList.PopClipRect();
+    }
+
     private static uint BandColor(int stop, float alpha) =>
         (SpectrumPacked[Math.Min(stop, Spectrum.Length - 1)] & 0x00FFFFFFu) |
         ((uint)(alpha * BandShape[stop] * 255f + 0.5f) << 24);
@@ -348,10 +381,11 @@ internal static class PrismArt
             return;
         }
 
-        var sweep = PrismMotion.At(age, 0f, Motion.Sheet);
-        var show = sweep * (1f - PrismMotion.At(age, TryOnHoldSeconds, Motion.Appear));
-        drawList.AddRectFilled(photo.Min, photo.Max, Palette.Pack(ShadeClear with { W = TryOnDim * show }));
-        Bands(drawList, photo, sweep, TryOnBandShare, TryOnBandPeak);
+        var release = 1f - PrismMotion.At(age, TryOnHoldSeconds, Motion.Appear);
+        var dim = PrismMotion.At(age, TryOnDimDelay, Motion.Sheet) * release;
+        var show = PrismMotion.At(age, TryOnLabelDelay, Motion.Appear) * release;
+        drawList.AddRectFilled(photo.Min, photo.Max, Palette.Pack(ShadeClear with { W = TryOnDim * dim }));
+        RisingBand(drawList, photo, PrismMotion.At(age, TryOnBandDelay, TryOnBandSmooth));
         var line = Typography.LineHeight(PrismType.Headline);
         var gap = Metrics.Space.Xs * scale;
         var room = photo.Width - Metrics.Space.Lg * scale * 2f - line - gap;

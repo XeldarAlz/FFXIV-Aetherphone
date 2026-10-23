@@ -16,6 +16,14 @@ internal sealed partial class PrismApp
     private const float ScoreDone = 0.97f;
     private const float ScorePitchLow = 0.84f;
     private const float ScorePitchStep = 0.08f;
+    private const float ScoreReach = 0.3f;
+    private const float ScorePeak = 0.55f;
+    private const float ScoreRingUnits = 1.4f;
+    private const float TopScoreReach = 0.6f;
+    private const float TopScorePeak = 0.9f;
+    private const float TopScoreRingUnits = 2f;
+    private const float ScoreShardSpread = 1.8f;
+    private const float ScoreShardSpeed = 300f;
     private const float TurnShift = 0.35f;
     private const float TurnIdle = 10f;
     private const float DoneTextDelay = 0.12f;
@@ -55,6 +63,9 @@ internal sealed partial class PrismApp
     private float inspectHold;
     private Vector2 inspectFocus;
     private Spring scoreFill = new(0f);
+    private double scoreLightAt = PrismMotion.LongAgo;
+    private Vector2 scoreLightCenter;
+    private bool scoreLightTop;
     private long heatCoins;
     private CachedText lookCounter;
     private CachedText rateCaption;
@@ -302,9 +313,19 @@ internal sealed partial class PrismApp
             {
                 UiFeedback.PlayPitched(UiSound.Tap, ScorePitchLow + ScorePitchStep * index);
                 picked = index + 1;
+                scoreLightAt = ImGui.GetTime();
+                scoreLightCenter = center;
+                scoreLightTop = index == PrismArt.Stars - 1;
+                if (scoreLightTop)
+                {
+                    shards.Burst(center, -MathF.PI * 0.5f, ScoreShardSpread, ScoreShardSpeed, ShardLifeSeconds);
+                }
             }
         }
 
+        var age = (float)(ImGui.GetTime() - scoreLightAt);
+        DrawLightRing(drawList, scoreLightCenter, size * 0.5f, age, scoreLightTop ? TopScoreReach : ScoreReach,
+            scoreLightTop ? TopScorePeak : ScorePeak, (scoreLightTop ? TopScoreRingUnits : ScoreRingUnits) * scale);
         return picked;
     }
 
