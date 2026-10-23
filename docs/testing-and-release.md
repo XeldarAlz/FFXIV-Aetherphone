@@ -65,6 +65,7 @@ Guards are grep checks that need no compiler, so a mistake fails in seconds. The
 | No underscore fields | A private or protected field named with a leading underscore | src/Aetherphone, src/Aetherphone.Tests |
 | No byte order mark | A .cs file saved with a UTF-8 BOM | src/Aetherphone, src/Aetherphone.Tests |
 | Namespace matches folder | A missing file-scoped namespace, or one that differs from its folder path; all of Windows/Components uses Aetherphone.Windows.Components | src, except src/ManagedDoom |
+| No allocating ImRaii scopes | `ImRaii.PushColor`, `PushStyle`, `PushId` or `Disabled`; use `UiScope` | src/Aetherphone |
 
 System.Linq is not an implicit using in the plugin, so the using line is the whole LINQ surface. To use LINQ on a cold path, add the file to the allowlist in tools/guards/check and say why in the pull request.
 

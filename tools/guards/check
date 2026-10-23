@@ -14,7 +14,7 @@ export LC_ALL=C
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$root"
 
-all_guards="version-sync ui-scale em-dash async-void linq clock-format layering underscore-fields bom namespace"
+all_guards="version-sync ui-scale em-dash async-void linq clock-format layering underscore-fields bom namespace imraii-scopes"
 failed=0
 failure_code=1
 files=""
@@ -174,6 +174,14 @@ guard_namespace() {
     report "A file-scoped namespace must match the folder path, except under Windows/Components which is one flat namespace. Move the file or fix the namespace."
 }
 
+# Dalamud's ImRaii color, style, id and disabled scopes are classes, so each push allocates on the draw path.
+# UiScope takes the same arguments and returns structs. ImRaii.Child is already a struct and stays allowed.
+guard_imraii_scopes() {
+  pick '^src/Aetherphone/.*\.cs$' |
+    over grep -s -H -n -E 'ImRaii\.(PushColor|PushStyle|PushId|Disabled)\(' |
+    report "Push with UiScope, not ImRaii: its color, style, id and disabled scopes are classes and allocate on every push. UiScope takes the same arguments."
+}
+
 run_guard() {
   case "$1" in
     version-sync) guard_version_sync ;;
@@ -186,6 +194,7 @@ run_guard() {
     underscore-fields) guard_underscore_fields ;;
     bom) guard_bom ;;
     namespace) guard_namespace ;;
+    imraii-scopes) guard_imraii_scopes ;;
     *)
       echo "Unknown guard '$1'. Known guards: $all_guards" >&2
       exit 2
