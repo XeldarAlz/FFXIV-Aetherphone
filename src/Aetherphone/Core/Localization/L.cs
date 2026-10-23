@@ -13,6 +13,10 @@ internal static class L
         public static readonly LocString Cancel = new("common.cancel", "Cancel");
         public static readonly LocString Delete = new("common.delete", "Delete");
         public static readonly LocString Retry = new("common.retry", "Retry");
+        public static readonly LocString CountdownDays = new("common.countdownDays", "Days");
+        public static readonly LocString CountdownHours = new("common.countdownHours", "Hours");
+        public static readonly LocString CountdownMinutes = new("common.countdownMinutes", "Min");
+        public static readonly LocString CountdownSeconds = new("common.countdownSeconds", "Sec");
         public static readonly LocString Copied = new("common.copied", "Copied");
         public static readonly LocString LoadFailed = new("common.loadFailed", "Could not load");
         public static readonly LocString FileNotDownloaded =
@@ -11257,10 +11261,6 @@ internal static class L
         public static readonly LocString CountdownDays = new("loveisland.countdownDays", "{0}d {1}h {2:00}m");
         public static readonly LocString CountdownHours = new("loveisland.countdownHours", "{0}h {1:00}m {2:00}s");
         public static readonly LocString CountdownMinutes = new("loveisland.countdownMinutes", "{0}:{1:00}");
-        public static readonly LocString UnitDays = new("loveisland.unitDays", "Days");
-        public static readonly LocString UnitHours = new("loveisland.unitHours", "Hours");
-        public static readonly LocString UnitMinutes = new("loveisland.unitMinutes", "Min");
-        public static readonly LocString UnitSeconds = new("loveisland.unitSeconds", "Sec");
         public static readonly LocString HashtagCopied = new("loveisland.hashtagCopied", "Copied #{0}. Paste it in your post.");
         public static readonly LocString ReminderOn = new("loveisland.reminderOn", "Reminder set for {0} minutes before");
         public static readonly LocString ReminderOff = new("loveisland.reminderOff", "Reminder off");
