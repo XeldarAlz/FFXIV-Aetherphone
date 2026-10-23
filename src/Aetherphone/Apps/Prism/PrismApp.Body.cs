@@ -41,7 +41,8 @@ internal sealed partial class PrismApp
         var gap = Metrics.Space.Sm * scale;
         var split = row.Min.X + (row.Width - gap) * BodyRaceShare;
         var field = new Rect(row.Min, new Vector2(split, row.Max.Y));
-        SearchBar.Surface(drawList, field, controls);
+        Squircle.Fill(drawList, field.Min, field.Max, field.Height * 0.5f,
+            ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Tertiary)));
         var hovered = UiInteract.Hover(field.Min, field.Max);
         if (hovered)
         {
@@ -54,10 +55,11 @@ internal sealed partial class PrismApp
             PhoneIcons.ChevronDown, PrismArt.Muted, chevron);
         var room = MathF.Max(1f, field.Width - inset * 2f - chevron - Metrics.Space.Xs * scale);
         var label = race > 0 ? BodyRaceName(race, gender) : Loc.T(L.Prism.FilterRace);
-        var fitted = Typography.FitText(label, room, TextStyles.Body);
+        var style = new TextStyle(PrismType.Headline.Scale * TrackLabelShare, FontWeight.SemiBold);
+        var fitted = Typography.FitText(label, room, style);
         Typography.Draw(drawList,
-            new Vector2(field.Min.X + inset, field.Center.Y - Typography.LineHeight(TextStyles.Body) * 0.5f), fitted,
-            race > 0 ? PrismArt.Fore : PrismArt.Muted, TextStyles.Body);
+            new Vector2(field.Min.X + inset, field.Center.Y - Typography.LineHeight(style) * 0.5f), fitted,
+            race > 0 ? PrismArt.Fore : PrismArt.Muted, style);
         if (UiInteract.Click(field.Min, field.Max, hovered))
         {
             FillBodyRaceItems(race, gender);
