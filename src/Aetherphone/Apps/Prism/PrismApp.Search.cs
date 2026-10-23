@@ -107,7 +107,7 @@ internal sealed partial class PrismApp
         searchItems = query.Length > 0 && query[0] != '#';
         var word = query.TrimStart('#').Trim().ToLowerInvariant();
         searchTag = word.Length > 0 && (query[0] == '#' || word.IndexOf(' ') < 0) ? word : string.Empty;
-        searchTagKey = searchTag.Length > 0 ? "tag:" + searchTag : string.Empty;
+        searchTagKey = searchTag.Length > 0 ? GlamStore.TagKey(searchTag) : string.Empty;
         searchTagLabel = searchTag.Length > 0 ? "#" + searchTag : string.Empty;
         searchTagTitle = searchTag.Length > 0 ? Loc.T(L.Prism.GlamsTagged, searchTagLabel) : string.Empty;
         if (!searchItems)

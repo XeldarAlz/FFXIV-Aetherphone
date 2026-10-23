@@ -274,8 +274,10 @@ internal sealed class GlamStore : IDisposable
         });
     }
 
+    public static string TagKey(string tag) => "tag:" + tag;
+
     public void OpenTag(string tag) =>
-        OpenList("tag:" + tag, (cursor, token, failure) => client.TagGlamsAsync(tag, cursor, token, failure));
+        OpenList(TagKey(tag), (cursor, token, failure) => client.TagGlamsAsync(tag, cursor, token, failure));
 
     public void OpenMoreFrom(GlamDto glam)
     {
