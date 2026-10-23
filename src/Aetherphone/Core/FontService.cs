@@ -87,6 +87,7 @@ internal sealed class FontService : IDisposable
     private readonly GlyphCoverage sharedCoverage = new();
     private readonly GlyphCoverage iconCoverage = new();
     private readonly ImFontPtr[,] textFonts = new ImFontPtr[WeightFiles.Length, SizeMultipliers.Length];
+    private readonly IconInk?[] iconInk = new IconInk?[IconSizeMultipliers.Length];
     private readonly IFontHandle dalamudIconHandle;
     private IFontHandle? displayHandle;
     private ushort[] nativeRanges;
@@ -339,6 +340,20 @@ internal sealed class FontService : IDisposable
 
     public FontToken PushDalamudIcon() => new(dalamudIconHandle.Push());
 
+    public Vector2 InkCentre(ImFontPtr font, char codepoint)
+    {
+        for (var sizeIndex = 0; sizeIndex < iconInk.Length; sizeIndex++)
+        {
+            var ink = Volatile.Read(ref iconInk[sizeIndex]);
+            if (ink is not null && ink.Describes(font))
+            {
+                return ink.Centre(codepoint);
+            }
+        }
+
+        return IconInk.BoxCentre;
+    }
+
     public ImFontPtr DalamudIconFont
     {
         get
@@ -546,25 +561,30 @@ internal sealed class FontService : IDisposable
     {
         var pixels = baseSize * IconSizeMultipliers[sizeIndex];
         var tablerPath = Path.Combine(fontDirectory, TablerIconFile);
-        return atlas.NewDelegateFontHandle(e => e.OnPreBuild(tk =>
+        var primary = default(ImFontPtr);
+        return atlas.NewDelegateFontHandle(e =>
         {
-            var primary = tk.AddDalamudAssetFont(Dalamud.DalamudAsset.FontAwesomeFreeSolid,
-                new SafeFontConfig { SizePx = pixels, GlyphRanges = fontAwesomeRanges, });
-            if (!File.Exists(tablerPath))
+            e.OnPreBuild(tk =>
             {
-                return;
-            }
+                primary = tk.AddDalamudAssetFont(Dalamud.DalamudAsset.FontAwesomeFreeSolid,
+                    new SafeFontConfig { SizePx = pixels, GlyphRanges = fontAwesomeRanges, });
+                if (!File.Exists(tablerPath))
+                {
+                    return;
+                }
 
-            try
-            {
-                tk.AddFontFromFile(tablerPath,
-                    new SafeFontConfig { SizePx = pixels, GlyphRanges = TablerRanges, MergeFont = primary, });
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning(exception, $"[Fonts] skipped merging '{TablerIconFile}' at {pixels}px.");
-            }
-        }));
+                try
+                {
+                    tk.AddFontFromFile(tablerPath,
+                        new SafeFontConfig { SizePx = pixels, GlyphRanges = TablerRanges, MergeFont = primary, });
+                }
+                catch (Exception exception)
+                {
+                    AepLog.Warning(exception, $"[Fonts] skipped merging '{TablerIconFile}' at {pixels}px.");
+                }
+            });
+            e.OnPostBuild(tk => Volatile.Write(ref iconInk[sizeIndex], IconInk.Measure(tk, primary)));
+        });
     }
 
     public void SyncDisplay(bool wanted)

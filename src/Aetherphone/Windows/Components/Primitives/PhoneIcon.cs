@@ -26,8 +26,10 @@ internal static class PhoneIcon
             }
 
             var ratio = boxHeight / font.FontSize;
-            var pen = new Vector2(center.X - (found.X0 + found.X1) * 0.5f * ratio,
-                center.Y - (found.Y0 + found.Y1) * 0.5f * ratio);
+            var ink = Plugin.Fonts.InkCentre(font, glyph[0]);
+            // ImGui floors the text pen to whole pixels, which left every icon up to a pixel up and left of centre.
+            var pen = new Vector2(MathF.Round(center.X - float.Lerp(found.X0, found.X1, ink.X) * ratio),
+                MathF.Round(center.Y - float.Lerp(found.Y0, found.Y1, ink.Y) * ratio));
             drawList.AddText(font, boxHeight, pen, color, glyph);
         }
     }

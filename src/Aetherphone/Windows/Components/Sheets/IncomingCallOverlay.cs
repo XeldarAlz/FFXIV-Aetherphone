@@ -100,17 +100,7 @@ internal sealed class IncomingCallOverlay
         var hovered = live && UiInteract.Hover(center - extent, center + extent);
         var color = hovered ? Palette.Mix(fill, Ink, 0.14f) : fill;
         dl.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(color, alpha)), 40);
-        using (Plugin.Fonts.PushDalamudIcon())
-        {
-            var glyph = IconGlyph.Of(icon);
-            var size = ImGui.CalcTextSize(glyph);
-            ImGui.SetCursorScreenPos(center - size * 0.5f);
-            using (UiScope.PushColor(ImGuiCol.Text, Ink with { W = alpha }))
-            {
-                Typography.Plain(glyph);
-            }
-        }
-
+        AppSkin.Icon(dl, center, IconGlyph.Of(icon), Ink with { W = alpha }, 1f);
         Typography.DrawCentered(dl, new Vector2(center.X, center.Y + radius + 16f * scale), label,
             Palette.WithAlpha(theme.TextMuted, alpha), TextStyles.Caption1);
         if (hovered)
