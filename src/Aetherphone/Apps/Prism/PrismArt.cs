@@ -84,8 +84,7 @@ internal static class PrismArt
     private const int IconCapSegments = 6;
     private const float ArcStepDegrees = 22.5f;
     private const float TileIconShare = 0.58f;
-    private const float ToggleGlyphShare = 0.6f;
-    private const float ToggleFillFrom = 0.8f;
+    private const float ToggleRestAlpha = 0.7f;
 
     public static readonly Vector4 Bone = new(0.957f, 0.945f, 0.918f, 1f);
     public static readonly Vector4 Ink = new(0.067f, 0.067f, 0.067f, 1f);
@@ -148,6 +147,11 @@ internal static class PrismArt
 
     private static readonly IconStroke[][] SlotIcons = BuildSlotIcons();
     private static readonly IconStroke[][] FactIcons = BuildFactIcons();
+    private static readonly FactFill[] FactFills =
+    {
+        new(2, false, true), new(1, true, false), new(2, false, false), new(1, false, false), new(1, false, false),
+        new(2, false, false),
+    };
     private static readonly float[] BandShape = BuildBandShape();
     private static string momentLabel = string.Empty;
     private static string momentFitted = string.Empty;
@@ -679,31 +683,73 @@ internal static class PrismArt
     public static void FactIcon(ImDrawListPtr drawList, Vector2 center, float size, PrismFact fact, Vector4 ink) =>
         DrawStrokes(drawList, center, size, FactIcons[(int)fact], ink);
 
-    public static void FactToggle(ImDrawListPtr drawList, Vector2 center, float radius, PrismFact fact, float fill,
+    public static void FactToggle(ImDrawListPtr drawList, Vector2 center, float size, PrismFact fact, float fill,
         float hover)
     {
-        var ink = Vector4.Lerp(Fore, Muted, hover);
-        var size = radius * 2f * ToggleGlyphShare;
-        var thickness = IconStrokeUnits * size / IconUnits;
-        drawList.AddCircle(center, radius - thickness * 0.5f, ImGui.GetColorU32(ink), 0, thickness);
+        var rest = Muted with { W = Muted.W * ToggleRestAlpha };
+        var ink = Vector4.Lerp(rest, Fore, MathF.Max(hover, fill));
+        var strokes = FactIcons[(int)fact];
+        var shape = FactFills[(int)fact];
         if (fill > 0.001f)
         {
-            drawList.AddCircleFilled(center, radius * (ToggleFillFrom + (1f - ToggleFillFrom) * fill),
-                ImGui.GetColorU32(ink with { W = ink.W * fill }));
+            FillShapes(drawList, center, size, strokes, shape, ink with { W = ink.W * fill });
         }
 
-        FactIcon(drawList, center, size, fact, Vector4.Lerp(ink, OnFore, fill));
+        if (shape.Carve)
+        {
+            DrawStrokes(drawList, center, size, strokes, Vector4.Lerp(ink, Back, fill), shape.Shapes, strokes.Length);
+            DrawStrokes(drawList, center, size, strokes, ink, 0, shape.Shapes);
+            return;
+        }
+
+        DrawStrokes(drawList, center, size, strokes, ink);
+    }
+
+    private static void FillShapes(ImDrawListPtr drawList, Vector2 center, float size, IconStroke[] strokes,
+        FactFill shape, Vector4 ink)
+    {
+        var unit = size / IconUnits;
+        var origin = center - new Vector2(size * 0.5f, size * 0.5f);
+        var color = ImGui.GetColorU32(ink);
+        var flags = drawList.Flags;
+        drawList.Flags = flags & ~ImDrawListFlags.AntiAliasedFill;
+        Span<Vector2> points = stackalloc Vector2[IconMaxPoints];
+        for (var strokeIndex = 0; strokeIndex < shape.Shapes; strokeIndex++)
+        {
+            var outline = strokes[strokeIndex].Points;
+            var middle = Vector2.Zero;
+            for (var pointIndex = 0; pointIndex < outline.Length; pointIndex++)
+            {
+                points[pointIndex] = origin + outline[pointIndex] * unit;
+                middle += points[pointIndex];
+            }
+
+            if (!shape.Star)
+            {
+                drawList.AddConvexPolyFilled(ref points[0], outline.Length, color);
+                continue;
+            }
+
+            middle /= outline.Length;
+            for (var pointIndex = 0; pointIndex < outline.Length; pointIndex++)
+            {
+                drawList.AddTriangleFilled(middle, points[pointIndex], points[(pointIndex + 1) % outline.Length],
+                    color);
+            }
+        }
+
+        drawList.Flags = flags;
     }
 
     private static void DrawStrokes(ImDrawListPtr drawList, Vector2 center, float size, IconStroke[] strokes,
-        Vector4 ink)
+        Vector4 ink, int first = 0, int end = int.MaxValue)
     {
         var unit = size / IconUnits;
         var thickness = IconStrokeUnits * unit;
         var origin = center - new Vector2(size * 0.5f, size * 0.5f);
         var color = ImGui.GetColorU32(ink);
         Span<Vector2> points = stackalloc Vector2[IconMaxPoints];
-        for (var strokeIndex = 0; strokeIndex < strokes.Length; strokeIndex++)
+        for (var strokeIndex = first; strokeIndex < Math.Min(end, strokes.Length); strokeIndex++)
         {
             var stroke = strokes[strokeIndex];
             var count = stroke.Points.Length;
@@ -731,6 +777,8 @@ internal static class PrismArt
     }
 
     private readonly record struct IconStroke(Vector2[] Points, bool Closed);
+
+    private readonly record struct FactFill(int Shapes, bool Carve, bool Star);
 
     private sealed class IconPen
     {

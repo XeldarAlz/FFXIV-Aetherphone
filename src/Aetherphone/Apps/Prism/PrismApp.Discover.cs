@@ -35,7 +35,6 @@ internal sealed partial class PrismApp
     private const float EmptyDiscUnits = 34f;
     private const float EmptyActionUnits = 132f;
     private const float EmptyTextUnits = 300f;
-    private const float FilterDiscUnits = 34f;
     private const int RaceCount = 8;
     private const int MaleGender = 0;
     private const int FemaleGender = 1;
@@ -54,6 +53,7 @@ internal sealed partial class PrismApp
     private readonly string[] scopeLabels = new string[ScopeNames.Length];
     private readonly bool[] scopeActive = new bool[ScopeNames.Length];
     private readonly Spring[] filterFill = new Spring[FilterFacts.Length];
+    private readonly Spring[] filterHover = new Spring[FilterFacts.Length];
     private readonly ActionSheet raceSheet = new();
     private readonly ActionSheet.Item[] raceItems = new ActionSheet.Item[RaceCount + 1];
     private GlamScope discoverScope = GlamScope.New;
@@ -79,7 +79,7 @@ internal sealed partial class PrismApp
 
         raceSheet.Gate();
         var top = DrawDiscoverHeader(drawList, content, scale);
-        top = DrawFilterRow(drawList, content.Min.X + Metrics.Space.Lg * scale, top, scale) + Metrics.Space.Xs * scale;
+        top = DrawFilterRow(drawList, content, top, scale) + Metrics.Space.Xs * scale;
         DrawDiscoverFeed(new Rect(new Vector2(content.Min.X, top), content.Max), scale);
         DrawRaceSheet(full);
     }
@@ -145,49 +145,40 @@ internal sealed partial class PrismApp
         return top + tap;
     }
 
-    private float DrawFilterRow(ImDrawListPtr drawList, float left, float top, float scale)
+    private float DrawFilterRow(ImDrawListPtr drawList, Rect content, float top, float scale)
     {
         var tap = Metrics.Size.TapTarget * scale;
-        var radius = FilterDiscUnits * 0.5f * scale;
+        var size = PrismArt.HeaderIconUnits * scale;
         var reach = new Vector2(tap * 0.5f, tap * 0.5f);
+        var extent = new Vector2(size * 0.5f, size * 0.5f);
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        var key = (int)ImGui.GetID("prism.filter");
-        var x = left + radius;
+        var first = content.Min.X + Metrics.Space.Lg * scale + size * 0.5f;
+        var pitch = (content.Max.X - tap * 0.5f - first) / (FilterFacts.Length - 1);
         var tapped = -1;
         for (var index = 0; index < FilterFacts.Length; index++)
         {
-            if (index == (int)DiscoverFilter.Modded)
-            {
-                x += Metrics.Space.Md * scale;
-            }
-
-            var center = new Vector2(x, top + tap * 0.5f);
+            var center = new Vector2(first + pitch * index, top + tap * 0.5f);
             var hit = new Rect(center - reach, center + reach);
             var hovered = UiInteract.Hover(hit.Min, hit.Max);
-            var pose = MotionButton.Animate(hit, key + index, hovered,
-                hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left));
+            var hover = Math.Clamp(filterHover[index].Step(hovered ? 1f : 0f, Motion.HoverLift, delta), 0f, 1f);
             var target = FilterOn((DiscoverFilter)index) ? 1f : 0f;
             var fill = Math.Clamp(filterFill[index].Step(target, Motion.Appear, delta), 0f, 1f);
-            var face = radius * pose.Face.Width / hit.Width;
-            PrismArt.FactToggle(drawList, center, face, FilterFacts[index], fill, pose.Hover);
+            PrismArt.FactToggle(drawList, center, size, FilterFacts[index], fill, hover);
             if (hovered)
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             }
 
-            if (pose.Hover > 0.02f)
+            if (hover > 0.02f)
             {
-                var extent = new Vector2(face, face);
                 HoverTooltip.Enqueue(new Rect(center - extent, center + extent), FilterLabel((DiscoverFilter)index),
-                    pose.Hover, HoverLabelSide.Below);
+                    hover, HoverLabelSide.Below);
             }
 
             if (UiInteract.Click(hit.Min, hit.Max, hovered))
             {
                 tapped = index;
             }
-
-            x += tap;
         }
 
         if (tapped >= 0)
