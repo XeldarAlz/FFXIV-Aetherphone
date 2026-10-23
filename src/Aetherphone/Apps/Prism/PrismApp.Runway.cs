@@ -235,7 +235,7 @@ internal sealed partial class PrismApp
             return;
         }
 
-        if (lookMenu.Draw(full, ActionSheetStyle.From(followedTheme!), lookMenuItems, Loc.T(L.Common.Cancel),
+        if (lookMenu.Draw(full, ActionSheetStyle.From(ui), lookMenuItems, Loc.T(L.Common.Cancel),
                 false) == 0)
         {
             OpenReport(lookMenuId);

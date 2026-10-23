@@ -116,7 +116,7 @@ internal sealed partial class PrismApp
             return;
         }
 
-        var picked = entrySheet.Draw(full, ActionSheetStyle.From(followedTheme!),
+        var picked = entrySheet.Draw(full, ActionSheetStyle.From(ui),
             entrySheetItems.AsSpan(0, entrySheetCount), Loc.T(L.Common.Cancel), false);
         if (picked >= 0 && !store.Busy)
         {
