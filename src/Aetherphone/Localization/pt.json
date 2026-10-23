@@ -5765,6 +5765,8 @@
   "prism.capturedHeading": "Do seu personagem",
   "prism.capturedCounts": "Peças {0}, mods {1}",
   "prism.capturedNote": "Equipamento, tinturas e mods são lidos do seu personagem ao publicar, então use o glamour enquanto publica.",
+  "prism.autoCaptureLabel": "Preencher a partir do meu personagem",
+  "prism.autoCaptureHint": "Lê seu equipamento, tinturas e mods pelo Glamourer e pelo Penumbra.",
   "prism.post": "Publicar",
   "prism.posting": "Publicando…",
   "prism.savedEmptyHint": "Os glamours que você salvar aparecem aqui.",

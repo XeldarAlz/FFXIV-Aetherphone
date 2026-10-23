@@ -5765,6 +5765,8 @@
   "prism.capturedHeading": "From your character",
   "prism.capturedCounts": "Pieces {0}, mods {1}",
   "prism.capturedNote": "Gear, dyes and mods are read from your character when you post, so wear the glam while you post it.",
+  "prism.autoCaptureLabel": "Fill in from my character",
+  "prism.autoCaptureHint": "Reads your gear, dyes and mods through Glamourer and Penumbra.",
   "prism.post": "Post",
   "prism.posting": "Posting…",
   "prism.savedEmptyHint": "Glams you save show up here.",

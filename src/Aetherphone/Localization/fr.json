@@ -5765,6 +5765,8 @@
   "prism.capturedHeading": "De votre personnage",
   "prism.capturedCounts": "Pièces {0}, mods {1}",
   "prism.capturedNote": "L'équipement, les teintures et les mods sont lus sur votre personnage au moment de publier, alors portez le mirage en le publiant.",
+  "prism.autoCaptureLabel": "Remplir depuis mon personnage",
+  "prism.autoCaptureHint": "Lit votre équipement, vos teintures et vos mods via Glamourer et Penumbra.",
   "prism.post": "Publier",
   "prism.posting": "Publication…",
   "prism.savedEmptyHint": "Les mirages que vous enregistrez apparaissent ici.",

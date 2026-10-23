@@ -5765,6 +5765,8 @@
   "prism.capturedHeading": "С вашего персонажа",
   "prism.capturedCounts": "Вещей: {0}, модов: {1}",
   "prism.capturedNote": "Снаряжение, краски и моды считываются с персонажа при публикации, поэтому публикуйте гламур, когда он на вас.",
+  "prism.autoCaptureLabel": "Заполнить по моему персонажу",
+  "prism.autoCaptureHint": "Считывает снаряжение, краски и моды через Glamourer и Penumbra.",
   "prism.post": "Опубликовать",
   "prism.posting": "Публикуем…",
   "prism.savedEmptyHint": "Сохранённые гламуры появятся здесь.",

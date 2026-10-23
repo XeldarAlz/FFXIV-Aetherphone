@@ -203,6 +203,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public int PrismGuideVersion { get; set; }
     public long PrismShowcaseEndsAtUnix { get; set; }
     public bool PrismShowcaseOpened { get; set; }
+    public bool PrismAutoCapture { get; set; }
     public string PrismBannerUser { get; set; } = string.Empty;
     public string PrismBannerGlamId { get; set; } = string.Empty;
     public float PrismBannerFocusX { get; set; } = 0.5f;

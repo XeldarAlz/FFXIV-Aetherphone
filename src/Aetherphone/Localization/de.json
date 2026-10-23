@@ -5765,6 +5765,8 @@
   "prism.capturedHeading": "Von deinem Charakter",
   "prism.capturedCounts": "Teile {0}, Mods {1}",
   "prism.capturedNote": "Ausrüstung, Farben und Mods werden beim Posten von deinem Charakter gelesen. Trag die Projektion also, während du sie postest.",
+  "prism.autoCaptureLabel": "Von meinem Charakter übernehmen",
+  "prism.autoCaptureHint": "Liest Ausrüstung, Farben und Mods über Glamourer und Penumbra.",
   "prism.post": "Posten",
   "prism.posting": "Wird gepostet…",
   "prism.savedEmptyHint": "Gespeicherte Projektionen erscheinen hier.",

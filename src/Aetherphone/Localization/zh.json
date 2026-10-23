@@ -5765,6 +5765,8 @@
   "prism.capturedHeading": "来自你的角色",
   "prism.capturedCounts": "装备 {0} 件，模组 {1} 个",
   "prism.capturedNote": "发布时会从你的角色读取装备、染色和模组，所以发布时请穿着这套幻化。",
+  "prism.autoCaptureLabel": "从我的角色读取",
+  "prism.autoCaptureHint": "通过 Glamourer 和 Penumbra 读取你的装备、染色和模组。",
   "prism.post": "发布",
   "prism.posting": "正在发布…",
   "prism.savedEmptyHint": "你收藏的幻化会显示在这里。",

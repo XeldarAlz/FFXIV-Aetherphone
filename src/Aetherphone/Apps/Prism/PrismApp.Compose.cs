@@ -29,7 +29,7 @@ internal sealed partial class PrismApp
     private const string ComposeRaceId = "prism.composeRace";
     private const string ComposeGenderId = "prism.composeGender";
 
-    private static readonly bool AutoCapture = false;
+    private const string AutoCaptureToggleId = "prism.autoCapture";
 
     private readonly PhotoComposeSession composeSession;
     private readonly HashSet<string> droppedMods = new(StringComparer.Ordinal);
@@ -60,6 +60,8 @@ internal sealed partial class PrismApp
     private int postingDraft;
     private CachedText capturedText;
     private double recaptureAt;
+
+    private bool AutoCapture => configuration.PrismAutoCapture;
 
     private void StartCompose()
     {
@@ -271,6 +273,7 @@ internal sealed partial class PrismApp
             cursor = DrawTrackChoice(origin.X, cursor, bodyWidth, scale);
             cursor = DrawBodyField(list, origin.X, cursor, bodyWidth, ComposeRaceId, ComposeGenderId,
                 ref composeRace, ref composeGender, scale);
+            cursor = DrawAutoCaptureToggle(list, origin.X, cursor, bodyWidth, scale);
             cursor = AutoCapture
                 ? DrawCaptured(list, origin.X, cursor, bodyWidth, scale)
                 : DrawChosenGear(list, origin.X, cursor, bodyWidth, scale);
@@ -389,6 +392,33 @@ internal sealed partial class PrismApp
         }
 
         return top + tap + Metrics.Space.Lg * scale;
+    }
+
+    private float DrawAutoCaptureToggle(ImDrawListPtr drawList, float left, float top, float width, float scale)
+    {
+        var size = new Vector2(Metrics.Size.ToggleWidth, Metrics.Size.ToggleHeight) * scale;
+        var labelLine = Typography.LineHeight(PrismType.Headline);
+        var rowHeight = MathF.Max(size.Y, labelLine);
+        var toggleMin = new Vector2(left + width - size.X, top + (rowHeight - size.Y) * 0.5f);
+        var room = MathF.Max(1f, width - size.X - Metrics.Space.Md * scale);
+        Typography.Draw(drawList, new Vector2(left, top + (rowHeight - labelLine) * 0.5f),
+            Typography.FitText(Loc.T(L.Prism.AutoCaptureLabel), room, PrismType.Headline), PrismArt.Fore,
+            PrismType.Headline);
+        var on = Toggle.Draw(AutoCaptureToggleId, new Rect(toggleMin, toggleMin + size), AutoCapture, ui.Theme);
+        if (on != AutoCapture)
+        {
+            configuration.PrismAutoCapture = on;
+            configuration.Save();
+            if (on)
+            {
+                captured = glamour.Capture();
+            }
+        }
+
+        top += rowHeight + Metrics.Space.Xxs * scale;
+        top += Typography.DrawWrappedLeft(new Vector2(left, top), Loc.T(L.Prism.AutoCaptureHint), PrismArt.Muted,
+            PrismType.Caption, room);
+        return top + Metrics.Space.Lg * scale;
     }
 
     private float DrawCaptured(ImDrawListPtr drawList, float left, float top, float width, float scale)

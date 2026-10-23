@@ -5765,6 +5765,8 @@
   "prism.capturedHeading": "キャラクターから取得",
   "prism.capturedCounts": "装備{0}点、Mod{1}個",
   "prism.capturedNote": "装備、染色、Modは投稿時にキャラクターから読み取ります。投稿するミラプリを着た状態で投稿してください。",
+  "prism.autoCaptureLabel": "キャラクターから読み込む",
+  "prism.autoCaptureHint": "GlamourerとPenumbraから装備、染色、Modを読み込みます。",
   "prism.post": "投稿",
   "prism.posting": "投稿中…",
   "prism.savedEmptyHint": "保存したミラプリがここに表示されます。",

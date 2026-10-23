@@ -5765,6 +5765,8 @@
   "prism.capturedHeading": "Karakterinden",
   "prism.capturedCounts": "Parça {0}, mod {1}",
   "prism.capturedNote": "Ekipman, boyalar ve modlar paylaşırken karakterinden okunur, bu yüzden paylaşırken glamı giy.",
+  "prism.autoCaptureLabel": "Karakterimden doldur",
+  "prism.autoCaptureHint": "Ekipmanını, boyalarını ve modlarını Glamourer ve Penumbra üzerinden okur.",
   "prism.post": "Paylaş",
   "prism.posting": "Paylaşılıyor…",
   "prism.savedEmptyHint": "Kaydettiğin glamlar burada görünür.",
