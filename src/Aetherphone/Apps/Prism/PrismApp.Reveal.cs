@@ -33,7 +33,6 @@ internal sealed partial class PrismApp
     private const float RevealTapTopUnits = 56f;
     private const float StoryBarGapUnits = 8f;
     private const float StoryRowGapUnits = 12f;
-    private const float RuleRevealDelay = 0.25f;
     private const float CreditDelay = 0.3f;
     private const float CreditWorldShare = 0.4f;
     private const float RefractionDelay = 0.05f;
@@ -244,8 +243,6 @@ internal sealed partial class PrismApp
         var labelPixels = PrismArt.LabelPixels();
         var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
         var creditTop = content.Max.Y - PrismArt.BottomMargin(scale) - labelPixels - Metrics.Space.Lg * scale - labelLine;
-        PrismArt.Hairline(drawList, left, left + span * PrismMotion.At(screenAge, RuleRevealDelay, Motion.Sheet),
-            creditTop - Metrics.Space.Sm * scale, PrismArt.Fore, scale);
         var credit = PrismMotion.At(screenAge, CreditDelay, Motion.PageSettle);
         var world = PrismType.FitLabel(PlacingDetail(placing), labelPixels, span * CreditWorldShare);
         var worldWidth = PrismType.Measure(world, PrismFace.Label, labelPixels).X;
