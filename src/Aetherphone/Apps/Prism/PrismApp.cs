@@ -500,9 +500,10 @@ internal sealed partial class PrismApp : IResumableApp
             return false;
         }
 
+        var light = PrismArt.Light;
         return GlassCircle.Icon(drawList, ImGui.GetID(glyph), center, radius, PhotoGlyphUnits * scale, glyph,
-            PrismArt.Light ? PrismArt.Fore : PrismArt.PhotoFore, scale, GlassTone.Dark, tooltip, HoverLabelSide.Below,
-            hitRadius: reach, reserve: true);
+            light ? PrismArt.Fore : PrismArt.PhotoFore, scale, light ? GlassTone.Light : GlassTone.Dark, tooltip,
+            HoverLabelSide.Below, hitRadius: reach, reserve: true);
     }
 
     private void DrawPhotoBack(ImDrawListPtr drawList, Rect photo, float topInset, float scale)
