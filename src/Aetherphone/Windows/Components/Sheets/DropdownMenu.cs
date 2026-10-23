@@ -9,7 +9,21 @@ namespace Aetherphone.Windows.Components;
 internal sealed class DropdownMenu
 {
     public readonly record struct Item(string Label, string Glyph = "", bool Danger = false, bool Selected = false,
-        bool CanEdit = false, bool CanDelete = false);
+        bool CanEdit = false, bool CanDelete = false, bool DividerAfter = false);
+
+    public readonly record struct Style(SheetSkin Surface, Vector4 Ink, Vector4 Muted, Vector4 Accent, Vector4 Danger,
+        Vector4 Separator)
+    {
+        public static Style From(PhoneTheme theme) =>
+            new(SheetSkin.From(theme), theme.TextStrong, theme.TextMuted, theme.Accent, theme.Danger, theme.Separator);
+
+        public static Style From(AppSkin ui)
+        {
+            var sheet = ActionSheetStyle.From(ui);
+            return new Style(new SheetSkin(sheet.Panel with { W = AppPanelAlpha }, sheet.Stroke, sheet.Stroke, sheet.Ink),
+                sheet.Ink, ui.MutedInk, sheet.Accent, sheet.Danger, sheet.Hairline);
+        }
+    }
 
     public enum RowAction
     {
@@ -21,6 +35,8 @@ internal sealed class DropdownMenu
     private const float RowHeight = 36f;
     private const float HeaderHeight = 26f;
     private const float MinWidth = 168f;
+    private const float CompactMinWidth = 128f;
+    private const float AppPanelAlpha = 0.97f;
     private const float ActionSlotWidth = 24f;
     private const float ActionIconRadius = 11f;
     private const float ScreenMargin = 8f;
@@ -35,8 +51,13 @@ internal sealed class DropdownMenu
     private int openedFrame;
     private float scrollOffset;
     private bool revealSelected;
+    private bool closing;
 
     public bool Open => open;
+
+    public bool FadeOnClose { get; init; }
+
+    public bool Compact { get; init; }
 
     public bool IsOpenFor(string id) => open && ownerId == id;
 
@@ -51,7 +72,12 @@ internal sealed class DropdownMenu
         ownerId = id;
         anchor = anchorRect;
         open = true;
-        revealSpring.SnapTo(0f);
+        if (!closing)
+        {
+            revealSpring.SnapTo(0f);
+        }
+
+        closing = false;
         openedFrame = ImGui.GetFrameCount();
         scrollOffset = 0f;
         revealSelected = true;
@@ -59,6 +85,7 @@ internal sealed class DropdownMenu
 
     public void Close()
     {
+        closing = open && FadeOnClose;
         open = false;
         ownerId = string.Empty;
     }
@@ -71,7 +98,8 @@ internal sealed class DropdownMenu
         }
     }
 
-    public int Draw(Rect screen, PhoneTheme theme, ReadOnlySpan<Item> items) => Draw(screen, theme, items, out _);
+    public int Draw(Rect screen, PhoneTheme theme, ReadOnlySpan<Item> items) =>
+        Draw(screen, Style.From(theme), items, out _);
 
     public string Header { get; set; } = string.Empty;
 
@@ -79,26 +107,52 @@ internal sealed class DropdownMenu
 
     public bool Detached { get; set; }
 
-    public int Draw(Rect screen, PhoneTheme theme, ReadOnlySpan<Item> items, out RowAction action)
+    public int Draw(Rect screen, PhoneTheme theme, ReadOnlySpan<Item> items, out RowAction action) =>
+        Draw(screen, Style.From(theme), items, out action);
+
+    public int Draw(Rect screen, in Style style, ReadOnlySpan<Item> items) => Draw(screen, style, items, out _);
+
+    public int Draw(Rect screen, in Style style, ReadOnlySpan<Item> items, out RowAction action)
     {
         action = RowAction.Select;
-        if (!open || items.Length == 0)
+        if ((!open && !closing) || items.Length == 0)
         {
+            closing = false;
             return -1;
+        }
+
+        if (open)
+        {
+            if (UiInteract.WindowFocused)
+            {
+                ImGui.SetNextFrameWantCaptureKeyboard(true);
+            }
+
+            if (ImGui.IsKeyPressed(ImGuiKey.Escape))
+            {
+                Close();
+            }
         }
 
         var scale = UiScale.Current;
         var drawList = ImGui.GetForegroundDrawList();
         var revealDelta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        var reveal = Math.Clamp(revealSpring.Step(1f, Motion.Appear, revealDelta), 0f, 1f);
-        var alpha = Math.Clamp(reveal / 0.7f, 0f, 1f);
+        var reveal = Math.Clamp(revealSpring.Step(open ? 1f : 0f, open ? Motion.Appear : Motion.PressIn, revealDelta),
+            0f, 1f);
+        if (!open && revealSpring.Arrive(0f))
+        {
+            closing = false;
+            return -1;
+        }
+
+        var alpha = open ? Math.Clamp(reveal / 0.7f, 0f, 1f) : reveal;
         var padX = 14f * scale;
         var padY = 6f * scale;
-        var rowHeight = RowHeight * scale;
+        var rowHeight = (Compact ? Metrics.Space.Xxl : RowHeight) * scale;
         var glyphReserve = 26f * scale;
         var checkReserve = 22f * scale;
         var actionSlot = ActionSlotWidth * scale;
-        var width = MinWidth * scale;
+        var width = (Compact ? CompactMinWidth : MinWidth) * scale;
         var anyGlyph = false;
         var anySelected = false;
         var anyEdit = false;
@@ -153,14 +207,19 @@ internal sealed class DropdownMenu
 
         var topLimit = screen.Min.Y + margin;
         top = Math.Clamp(top, topLimit, MathF.Max(topLimit, screen.Max.Y - margin - height));
-        scrollOffset = Scroll(items, rowHeight, height - padY * 2f - headerHeight, maxScroll, new Vector2(left, top),
-            new Vector2(left + width, top + height));
+        var restMin = new Vector2(left, top);
+        var restMax = new Vector2(left + width, top + height);
+        if (open)
+        {
+            scrollOffset = Scroll(items, rowHeight, height - padY * 2f - headerHeight, maxScroll, restMin, restMax);
+        }
+
         var pivot = new Vector2(Math.Clamp(anchor.Center.X, left, left + width), top < anchor.Min.Y ? top + height : top);
         var revealScale = 0.94f + 0.06f * reveal;
-        var min = pivot + (new Vector2(left, top) - pivot) * revealScale;
-        var max = pivot + (new Vector2(left + width, top + height) - pivot) * revealScale;
-        PopoverSurface.Draw(drawList, min, max, 14f * scale, theme, scale, alpha);
-        if (Detached && ImGui.IsMouseHoveringRect(min, max, false))
+        var min = Scaled(restMin, pivot, revealScale);
+        var max = Scaled(restMax, pivot, revealScale);
+        PopoverSurface.Draw(drawList, min, max, 14f * scale, style.Surface, scale, alpha);
+        if (open && Detached && ImGui.IsMouseHoveringRect(restMin, restMax, false))
         {
             ImGui.SetNextFrameWantCaptureMouse(true);
         }
@@ -172,29 +231,31 @@ internal sealed class DropdownMenu
         {
             var headerCenter = new Vector2((min.X + max.X) * 0.5f, min.Y + padY * revealScale + headerOffset * 0.5f);
             Typography.DrawCentered(drawList, headerCenter, Typography.FitText(Header, max.X - min.X - padX, TextStyles.Footnote),
-                Palette.WithAlpha(theme.TextMuted, alpha), TextStyles.Footnote);
+                Palette.WithAlpha(style.Muted, style.Muted.W * alpha), TextStyles.Footnote);
             var ruleY = min.Y + padY * revealScale + headerOffset - 1f * scale;
             drawList.AddLine(new Vector2(min.X + padY, ruleY), new Vector2(max.X - padY, ruleY),
-                ImGui.GetColorU32(Palette.WithAlpha(theme.Separator, alpha)), 1f);
+                ImGui.GetColorU32(Palette.WithAlpha(style.Separator, style.Separator.W * alpha)), 1f);
         }
 
-        var viewportMin = new Vector2(min.X, min.Y + padY * revealScale + headerOffset);
-        var viewportMax = new Vector2(max.X, max.Y - padY * revealScale);
+        var restViewportMin = new Vector2(left, top + padY + headerHeight);
+        var restViewportMax = new Vector2(left + width, top + height - padY);
+        var viewportMin = Scaled(restViewportMin, pivot, revealScale);
+        var viewportMax = Scaled(restViewportMax, pivot, revealScale);
         drawList.PushClipRect(viewportMin, viewportMax, true);
         for (var index = 0; index < items.Length; index++)
         {
             var item = items[index];
-            var rowMin = new Vector2(min.X + padY,
-                viewportMin.Y + (index * rowHeight - scrollOffset) * revealScale);
-            var rowMax = new Vector2(max.X - padY, rowMin.Y + rowHeight * revealScale);
+            var restRowMin = new Vector2(left + padY, restViewportMin.Y + index * rowHeight - scrollOffset);
+            var restRowMax = new Vector2(left + width - padY, restRowMin.Y + rowHeight);
+            var rowMin = Scaled(restRowMin, pivot, revealScale);
+            var rowMax = Scaled(restRowMax, pivot, revealScale);
             if (rowMax.Y <= viewportMin.Y || rowMin.Y >= viewportMax.Y)
             {
                 continue;
             }
 
             var centerY = (rowMin.Y + rowMax.Y) * 0.5f;
-
-            var cursorRight = rowMax.X - 10f * scale;
+            var cursorRight = restRowMax.X - 10f * scale;
             if (anySelected)
             {
                 cursorRight -= checkReserve;
@@ -203,17 +264,17 @@ internal sealed class DropdownMenu
             Rect? editRect = null;
             if (anyEdit)
             {
-                var center = new Vector2(cursorRight - actionSlot * 0.5f, centerY);
+                var center = new Vector2(cursorRight - actionSlot * 0.5f, (restRowMin.Y + restRowMax.Y) * 0.5f);
                 editRect = new Rect(center - new Vector2(ActionIconRadius * scale), center + new Vector2(ActionIconRadius * scale));
-                cursorRight -= actionSlot;
             }
 
-            var rowHovered = Hovering(rowMin, rowMax, true) && Hovering(viewportMin, viewportMax, false);
-            var editHovered = item.CanEdit && editRect is { } er && Hovering(er.Min, er.Max, true);
+            var rowHovered = open && Hovering(restRowMin, restRowMax, true) &&
+                Hovering(restViewportMin, restViewportMax, false);
+            var editHovered = open && item.CanEdit && editRect is { } er && Hovering(er.Min, er.Max, true);
             if (rowHovered)
             {
                 Squircle.Fill(drawList, rowMin, rowMax, 9f * scale,
-                    ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.07f * alpha)));
+                    ImGui.GetColorU32(Palette.WithAlpha(style.Ink, 0.07f * alpha)));
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                 if (item.CanDelete && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
                 {
@@ -227,7 +288,7 @@ internal sealed class DropdownMenu
                 }
             }
 
-            var ink = item.Danger ? theme.Danger : item.Selected ? theme.Accent : theme.TextStrong;
+            var ink = item.Danger ? style.Danger : item.Selected ? style.Accent : style.Ink;
             var textLeft = rowMin.X + padX - padY;
             if (anyGlyph)
             {
@@ -245,20 +306,27 @@ internal sealed class DropdownMenu
                 Palette.WithAlpha(ink, ink.W * alpha), 0.9f, FontWeight.Medium);
             if (item.Selected)
             {
-                DrawCheck(drawList, new Vector2(rowMax.X - 16f * scale, centerY), theme.Accent, alpha, scale);
+                DrawCheck(drawList, new Vector2(rowMax.X - 16f * scale, centerY), style.Accent, alpha, scale);
             }
 
             if (item.CanEdit && editRect is { } editIconRect)
             {
-                var tint = editHovered ? theme.Accent : Palette.WithAlpha(theme.TextMuted, theme.TextMuted.W * alpha);
-                AppSkin.Icon(drawList, editIconRect.Center, IconGlyph.Of(FontAwesomeIcon.Pen), tint, 0.7f);
+                var tint = editHovered ? style.Accent : Palette.WithAlpha(style.Muted, style.Muted.W * alpha);
+                AppSkin.Icon(drawList, Scaled(editIconRect.Center, pivot, revealScale), IconGlyph.Of(FontAwesomeIcon.Pen),
+                    tint, 0.7f);
+            }
+
+            if (item.DividerAfter && index < items.Length - 1)
+            {
+                drawList.AddLine(new Vector2(rowMin.X, rowMax.Y), new Vector2(rowMax.X, rowMax.Y),
+                    ImGui.GetColorU32(Palette.WithAlpha(style.Separator, style.Separator.W * alpha)), 1f);
             }
         }
 
         drawList.PopClipRect();
         if (maxScroll > 0f)
         {
-            DrawScrollThumb(drawList, viewportMin, viewportMax, maxScroll, theme, alpha, scale);
+            DrawScrollThumb(drawList, viewportMin, viewportMax, maxScroll, style.Ink, alpha, scale);
         }
 
         if (clicked >= 0)
@@ -272,7 +340,7 @@ internal sealed class DropdownMenu
             return clicked;
         }
 
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !Hovering(min, max, false) &&
+        if (open && ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !Hovering(restMin, restMax, false) &&
             ImGui.GetFrameCount() != openedFrame)
         {
             Close();
@@ -280,6 +348,8 @@ internal sealed class DropdownMenu
 
         return -1;
     }
+
+    private static Vector2 Scaled(Vector2 point, Vector2 pivot, float factor) => pivot + (point - pivot) * factor;
 
     private float Scroll(ReadOnlySpan<Item> items, float rowHeight, float viewportHeight, float maxScroll,
         Vector2 min, Vector2 max)
@@ -314,7 +384,7 @@ internal sealed class DropdownMenu
     }
 
     private void DrawScrollThumb(ImDrawListPtr drawList, Vector2 viewportMin, Vector2 viewportMax, float maxScroll,
-        PhoneTheme theme, float alpha, float scale)
+        Vector4 ink, float alpha, float scale)
     {
         var track = viewportMax.Y - viewportMin.Y;
         var thumbHeight = MathF.Max(ScrollThumbMinHeight * scale, track * track / (track + maxScroll));
@@ -323,7 +393,7 @@ internal sealed class DropdownMenu
         var thumbMin = new Vector2(right - ScrollThumbWidth * scale, thumbTop);
         var thumbMax = new Vector2(right, thumbTop + thumbHeight);
         drawList.AddRectFilled(thumbMin, thumbMax,
-            ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, ScrollThumbAlpha * alpha)), ScrollThumbWidth * scale);
+            ImGui.GetColorU32(Palette.WithAlpha(ink, ScrollThumbAlpha * alpha)), ScrollThumbWidth * scale);
     }
 
     private bool Hovering(Vector2 min, Vector2 max, bool clip) =>
