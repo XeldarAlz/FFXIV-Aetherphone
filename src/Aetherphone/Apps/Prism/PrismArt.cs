@@ -572,8 +572,7 @@ internal static class PrismArt
         string label, bool selected, float scale)
     {
         var half = ChipUnits * scale * 0.5f;
-        var chip = PillRect(new Vector2(bottomLeft.X, bottomLeft.Y - half), maxWidth, label, false, scale,
-            out var fitted);
+        var chip = PillRect(new Vector2(bottomLeft.X, bottomLeft.Y - half), maxWidth, label, scale, out var fitted);
         var reach = MathF.Max(half, Metrics.Size.TapTarget * scale * 0.5f) - half;
         var hit = new Rect(new Vector2(chip.Min.X, chip.Min.Y - reach), new Vector2(chip.Max.X, chip.Max.Y + reach));
         var hovered = UiInteract.HoverOverlay(hit);
@@ -618,24 +617,21 @@ internal static class PrismArt
             PrismType.Headline);
     }
 
-    private static Rect PillRect(Vector2 anchor, float maxWidth, string label, bool centered, float scale,
-        out string fitted)
+    private static Rect PillRect(Vector2 anchor, float maxWidth, string label, float scale, out string fitted)
     {
         var pixels = LabelPixels();
         var chrome = (Metrics.Space.Md * 2f + ChipGlyphUnits + Metrics.Space.Xxs) * scale;
         fitted = PrismType.FitLabel(label, pixels, MathF.Max(1f, maxWidth - chrome));
         var width = chrome + PrismType.Measure(fitted, PrismFace.Label, pixels).X;
-        var left = centered ? anchor.X - width * 0.5f : anchor.X;
         var half = ChipUnits * scale * 0.5f;
-        return new Rect(new Vector2(left, anchor.Y - half), new Vector2(left + width, anchor.Y + half));
+        return new Rect(new Vector2(anchor.X, anchor.Y - half), new Vector2(anchor.X + width, anchor.Y + half));
     }
 
     public static void PhotoPill(ImDrawListPtr drawList, Vector2 bottomCorner, float maxWidth, string glyph,
         string label, bool fromRight, float scale)
     {
         var half = ChipUnits * scale * 0.5f;
-        var pill = PillRect(new Vector2(bottomCorner.X, bottomCorner.Y - half), maxWidth, label, false, scale,
-            out var fitted);
+        var pill = PillRect(new Vector2(bottomCorner.X, bottomCorner.Y - half), maxWidth, label, scale, out var fitted);
         var shift = new Vector2(fromRight ? pill.Width : 0f, 0f);
         PaintPill(drawList, new Rect(pill.Min - shift, pill.Max - shift), glyph, fitted, ChipFill, White, scale);
     }
