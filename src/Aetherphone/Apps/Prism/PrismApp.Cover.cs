@@ -308,9 +308,7 @@ internal sealed partial class PrismApp
         }
 
         var label = Loc.T(DeadlineLabel(week.Phase));
-        return PrismPhases.Judgeable(week.Phase) && week.BallotsCast > 0
-            ? FactLine(ref factText, label, JudgedLine(week.BallotsCast))
-            : label;
+        return PrismPhases.Judgeable(week.Phase) ? FactLine(ref factText, label, JudgedLine(week.BallotsCast)) : label;
     }
 
     private string FactValue(PrismWeekDto week) => week.Phase switch
