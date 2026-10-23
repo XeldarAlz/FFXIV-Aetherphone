@@ -475,6 +475,10 @@ internal sealed partial class PrismApp
         {
             Go(PrismScreen.Entry);
         }
+        else if (HasTracks)
+        {
+            OpenTab(PrismTab.Week);
+        }
         else
         {
             StartPick();
