@@ -20,8 +20,8 @@ internal sealed class PrismCountdown
     public static long Deadline(PrismWeekDto week) => week.Phase switch
     {
         PrismPhases.Entering when week.MyEntry is null => week.EntriesCloseAtUnix,
-        PrismPhases.Judging when week.MyEntry is null => week.JudgingCloseAtUnix,
-        PrismPhases.Final when week.MyEntry is null => week.FinalCloseAtUnix,
+        PrismPhases.Judging => week.JudgingCloseAtUnix,
+        PrismPhases.Final => week.FinalCloseAtUnix,
         PrismPhases.Tallying => week.ResultsAtUnix,
         _ => 0L,
     };
