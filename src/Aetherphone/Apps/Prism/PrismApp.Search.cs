@@ -21,7 +21,6 @@ internal sealed partial class PrismApp
 
     private readonly List<MarketItemRef> searchHits = new();
     private readonly List<MarketItemRef> searchFound = new();
-    private readonly List<string> searchCaptions = new();
     private string discoverQuery = string.Empty;
     private string searchedFor = string.Empty;
     private string searchTag = string.Empty;
@@ -104,7 +103,6 @@ internal sealed partial class PrismApp
         searchIndexed = marketIndex.Ready;
         searchLanguage = Loc.Current.Code;
         searchFound.Clear();
-        searchCaptions.Clear();
         var query = discoverQuery.Trim();
         searchItems = query.Length > 0 && query[0] != '#';
         var word = query.TrimStart('#').Trim().ToLowerInvariant();
@@ -119,7 +117,6 @@ internal sealed partial class PrismApp
 
         marketIndex.EnsureBuilt();
         marketIndex.Search(query, searchHits, SearchScan);
-        var tradeable = Loc.T(L.Collections.Tradeable);
         for (var index = 0; index < searchHits.Count && searchFound.Count < SearchLimit; index++)
         {
             var hit = searchHits[index];
@@ -129,7 +126,6 @@ internal sealed partial class PrismApp
             }
 
             searchFound.Add(hit);
-            searchCaptions.Add(hit.Category.Length > 0 ? Loc.T(L.Prism.WithTrack, hit.Category, tradeable) : tradeable);
         }
     }
 
@@ -198,7 +194,7 @@ internal sealed partial class PrismApp
                 continue;
             }
 
-            if (DrawSearchRow(list, row, textLeft, item.Name, searchCaptions[index], scale))
+            if (DrawSearchRow(list, row, textLeft, item.Name, item.Category, scale))
             {
                 OpenItemGlams(item.Id);
             }
