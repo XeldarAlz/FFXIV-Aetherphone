@@ -11128,6 +11128,7 @@ internal static class L
         public static readonly LocString WardrobeEmptyTitle = new("prism.wardrobeEmptyTitle", "No outfits yet");
         public static readonly LocString FavouritesEmptyTitle = new("prism.favouritesEmptyTitle", "No favourites yet");
         public static readonly LocString Edit = new("prism.edit", "Edit");
+        public static readonly LocString SeeWhoWon = new("prism.seeWhoWon", "See who won");
     }
 
     internal static class Announcements

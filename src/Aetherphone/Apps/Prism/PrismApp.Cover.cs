@@ -23,6 +23,8 @@ internal sealed partial class PrismApp
     private CachedText coverByText;
     private CachedText factText;
     private CachedText entryFactText;
+    private CachedText noteText;
+    private CachedText winnerText;
     private CachedText clockText;
     private string[] trackLabels = Array.Empty<string>();
     private string coverShown = string.Empty;
@@ -61,7 +63,8 @@ internal sealed partial class PrismApp
         var strip = open && HasTracks ? tap + gap : 0f;
         var hint = open ? string.Empty : Loc.T(L.Prism.NoWeekHint);
         var fact = open
-            ? Typography.LineHeight(PrismType.Caption) + Typography.LineHeight(PrismType.Title)
+            ? Typography.LineHeight(PrismType.Caption) * (FactNote(week).Length > 0 ? 2f : 1f) +
+              Typography.LineHeight(PrismType.Title)
             : Typography.MeasureWrappedBlock(hint, PrismType.Body, content.Width).Y;
         var top = PhotoTop(full, content);
         var bottom = content.Max.Y - bottomChrome - PrismArt.BottomMargin(scale);
@@ -98,7 +101,8 @@ internal sealed partial class PrismApp
                     scale);
             }
 
-            DrawFact(drawList, new Vector2(content.Min.X, y), room, FactCaption(week), FactValue(week));
+            DrawFact(drawList, new Vector2(content.Min.X, y), room, FactCaption(week), FactValue(week),
+                FactNote(week));
         }
         else
         {
@@ -233,12 +237,19 @@ internal sealed partial class PrismApp
         }
     }
 
-    private static void DrawFact(ImDrawListPtr drawList, Vector2 topLeft, float width, string caption, string value)
+    private static void DrawFact(ImDrawListPtr drawList, Vector2 topLeft, float width, string caption, string value,
+        string note)
     {
+        var line = Typography.LineHeight(PrismType.Caption);
         Typography.Draw(drawList, topLeft, Typography.FitText(caption, width, PrismType.Caption), PrismArt.Muted,
             PrismType.Caption);
-        Typography.Draw(drawList, topLeft + new Vector2(0f, Typography.LineHeight(PrismType.Caption)),
-            Typography.FitText(value, width, PrismType.Title), PrismArt.Fore, PrismType.Title);
+        Typography.Draw(drawList, topLeft + new Vector2(0f, line), Typography.FitText(value, width, PrismType.Title),
+            PrismArt.Fore, PrismType.Title);
+        if (note.Length > 0)
+        {
+            Typography.Draw(drawList, topLeft + new Vector2(0f, line + Typography.LineHeight(PrismType.Title)),
+                Typography.FitText(note, width, PrismType.Caption), PrismArt.Muted, PrismType.Caption);
+        }
     }
 
     private string EnterLabel() => Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.EnterThisWeek);
@@ -293,8 +304,7 @@ internal sealed partial class PrismApp
 
         if (week.Phase == PrismPhases.Results)
         {
-            var next = DeadlineValue(week);
-            return next.Length > 0 ? FactLine(ref factText, Loc.T(L.Prism.NextTheme), next) : string.Empty;
+            return Loc.T(L.Prism.ResultsOut);
         }
 
         var label = Loc.T(DeadlineLabel(week.Phase));
@@ -306,11 +316,30 @@ internal sealed partial class PrismApp
     private string FactValue(PrismWeekDto week) => week.Phase switch
     {
         PrismPhases.Entering when week.MyEntry is { } entry => Loc.T(StatusName(entry.Status)),
-        PrismPhases.Results => Loc.T(L.Prism.ResultsOut),
+        PrismPhases.Results => WinnerLine(),
         PrismPhases.Tallying => ResultsClock(week.ResultsAtUnix),
         _ when EnteredJudging(week) => FactLine(ref factText, Loc.T(DeadlineLabel(week.Phase)), DeadlineValue(week)),
         _ => DeadlineValue(week),
     };
+
+    private string FactNote(PrismWeekDto week)
+    {
+        var next = week.Phase == PrismPhases.Results ? DeadlineValue(week) : string.Empty;
+        return next.Length > 0 ? FactLine(ref noteText, Loc.T(L.Prism.NextTheme), next) : string.Empty;
+    }
+
+    private string WinnerLine()
+    {
+        if (CoverPlacing(ShownResults()) is not { } winner)
+        {
+            return Loc.T(L.Prism.SeeWhoWon);
+        }
+
+        var key = HashCode.Combine(winner.Handle, winner.DisplayName);
+        return winnerText.IsCurrent(key)
+            ? winnerText.Value
+            : winnerText.Store(key, AtHandle(winner.Handle, winner.DisplayName));
+    }
 
     private static string FactLine(ref CachedText cache, string label, string detail)
     {
