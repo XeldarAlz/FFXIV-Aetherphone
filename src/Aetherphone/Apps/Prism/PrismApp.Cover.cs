@@ -150,7 +150,7 @@ internal sealed partial class PrismApp
 
         if (coverShown.Length == 0)
         {
-            PrismArt.Placeholder(drawList, photo, false, scale);
+            PrismArt.Placeholder(drawList, photo, false, scale, coverLeaving.Length > 0 ? fade : 1f);
         }
         else
         {
