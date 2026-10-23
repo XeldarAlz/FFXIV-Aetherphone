@@ -82,6 +82,7 @@ internal sealed partial class PrismApp
     private bool likeBloomOnPhoto;
     private string tryOnKey = string.Empty;
     private double tryOnAt;
+    private Spring pinReveal;
     private string linesLanguage = string.Empty;
     private string[]? tagRailFor;
     private string[] tagRailLabels = Array.Empty<string>();
@@ -97,6 +98,7 @@ internal sealed partial class PrismApp
     {
         glams.Open(glam);
         photoPager.SnapTo(0, 1);
+        pinReveal.SnapTo(0f);
         statsFor = null;
         photoTap.Cancel();
         ResetPieces();
@@ -466,7 +468,10 @@ internal sealed partial class PrismApp
         var tap = Metrics.Size.TapTarget * scale;
         var radius = tap * 0.5f;
         var pinned = naturalTop < pinTop;
+        var reveal = Math.Clamp(pinReveal.Step(pinned ? 1f : 0f, Motion.Appear,
+            MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds)), 0f, 1f);
         var top = pinned ? pinTop : naturalTop;
+        var slide = (pinned ? reveal - 1f : reveal) * tap;
         var start = full.Min.X + Metrics.Space.Lg * scale;
         var right = full.Max.X - Metrics.Space.Lg * scale;
         var left = start;
@@ -476,6 +481,7 @@ internal sealed partial class PrismApp
                 new Vector2(full.Max.X, top + tap + Metrics.Space.Sm * scale));
             UiInteract.HoverOverlay(bar);
             drawList.AddRectFilled(bar.Min, bar.Max, ImGui.GetColorU32(PrismArt.Back));
+            var backMark = PrismMotion.Mark(drawList);
             if (RoundButton.Icon(drawList, new Vector2(left + radius * 0.5f, top + radius), radius,
                     PhoneIcons.ChevronLeft, controls, ButtonStyle.Plain, Loc.T(L.Prism.Back), HoverLabelSide.Below,
                     overlay: true) && !UiInteract.InputBlocked)
@@ -483,11 +489,17 @@ internal sealed partial class PrismApp
                 LeaveScreen();
             }
 
+            if (reveal < PrismMotion.Settled)
+            {
+                PrismMotion.Shift(drawList, backMark, new Vector2(slide, 0f), reveal);
+            }
+
             left += tap;
         }
 
         var slot = Typography.Measure(LikeSlotTemplate, PrismType.Body).X;
         var saveOffset = radius * 1.5f + Metrics.Space.Xs * 2f * scale + slot;
+        var iconsMark = PrismMotion.Mark(drawList);
         if (glam.Id.Length > 0)
         {
             DrawLikeButton(drawList, new Vector2(left + radius * 0.5f, top + radius), radius, slot, glam, pinned, scale);
@@ -499,6 +511,11 @@ internal sealed partial class PrismApp
             {
                 glams.ToggleSave(glam);
             }
+        }
+
+        if (MathF.Abs(slide) > PrismMotion.GrowEpsilon)
+        {
+            PrismMotion.Shift(drawList, iconsMark, new Vector2(slide, 0f), 1f);
         }
 
         pillLabels[0] = Loc.T(L.Prism.TryOnGlam);
