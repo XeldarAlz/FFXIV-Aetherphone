@@ -783,7 +783,8 @@ internal sealed partial class PrismApp
             var tap = Metrics.Size.TapTarget * scale;
             var label = Loc.T(L.Prism.InspiredBy);
             var size = Typography.Measure(label, PrismType.Caption);
-            var row = new Rect(new Vector2(left, top), new Vector2(left + MathF.Min(size.X, width), top + tap));
+            var row = new Rect(new Vector2(left, top),
+                new Vector2(left + MathF.Max(MathF.Min(size.X, width), tap), top + tap));
             var hovered = UiInteract.Hover(row.Min, row.Max);
             Typography.Draw(drawList, new Vector2(left, row.Center.Y - size.Y * 0.5f),
                 Typography.FitText(label, width, PrismType.Caption), hovered ? PrismArt.Muted : PrismArt.Fore,
