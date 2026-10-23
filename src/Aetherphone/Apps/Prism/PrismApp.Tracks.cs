@@ -21,7 +21,6 @@ internal sealed partial class PrismApp
     private readonly CachedText[] trackCreditTexts = new CachedText[MaxTracks];
     private readonly CachedText[] trackEntryTexts = new CachedText[MaxTracks];
     private readonly Pager trackPager = new(Motion.PageSettle);
-    private CachedText trackCaptionText;
     private CachedText phaseText;
     private PrismWeekDto? lastWeekAsked;
     private int trackPage = -1;
@@ -144,43 +143,44 @@ internal sealed partial class PrismApp
         var entry = PageEntry(track, week, open);
         var tap = Metrics.Size.TapTarget * scale;
         var line = Typography.LineHeight(PrismType.Caption);
-        var phaseLine = Typography.LineHeight(PrismType.Body);
-        var rowGap = Metrics.Space.Xs * scale;
-        var caption = !open ? string.Empty : track is null ? Loc.T(L.Prism.ThemeLabel) : TrackCaption(week.Title);
-        var title = !open ? Loc.T(L.Prism.NoWeekTitle) : track is null ? week.Title : PrismTracks.Name(track.Id);
+        var rowGap = Metrics.Space.Xxs * scale;
+        var title = open ? week.Title : Loc.T(L.Prism.NoWeekTitle);
         var action = open ? ContestAction(index, track, week.Phase, entry is not null) : string.Empty;
         var phase = open ? PhaseLine(week) : string.Empty;
         var mine = entry is not null ? EntryLine(index, entry) : string.Empty;
         var lastWeek = results?.WeekId == week.PreviousWeekId;
         var credit = winner is not null ? CreditLine(index, winner, lastWeek) : string.Empty;
-        var body = !open ? Loc.T(L.Prism.NoWeekHint) : track is null ? string.Empty : TrackRule(track.Id);
-        var note = open && track is not null ? Loc.T(L.Prism.TrackMovedNote) : string.Empty;
-        var titleWidth = action.Length > 0 ? width - tap - Metrics.Space.Sm * scale : width;
-        var heroHeight = PrismType.HeroHeight(title, titleWidth);
-        var titleHeight = action.Length > 0 ? MathF.Max(heroHeight, tap) : heroHeight;
-        var bodyHeight = body.Length > 0 ? Typography.MeasureWrappedBlock(body, PrismType.Body, width).Y : 0f;
-        var noteHeight = note.Length > 0 ? Typography.MeasureWrappedBlock(note, PrismType.Caption, width).Y : 0f;
-        var textHeight = (caption.Length > 0 ? line + Metrics.Space.Xxs * scale : 0f) + titleHeight +
-                         (phase.Length > 0 ? rowGap + phaseLine : 0f) + (mine.Length > 0 ? rowGap + line : 0f) +
-                         (credit.Length > 0 ? rowGap + line : 0f) +
-                         (bodyHeight > 0f ? Metrics.Space.Sm * scale + bodyHeight : 0f) +
-                         (noteHeight > 0f ? rowGap + noteHeight : 0f);
-        var y = bottom - textHeight;
+        var copy = !open ? Loc.T(L.Prism.NoWeekHint) : track is null ? string.Empty : TrackRule(track.Id);
+        var copyWidth = width - tap - Metrics.Space.Md * scale;
+        var titleHeight = PrismType.HeroHeight(title, copyWidth);
+        var labelHeight = track is not null ? line + Metrics.Space.Xs * scale : 0f;
+        var phaseHeight = phase.Length > 0 ? Metrics.Space.Xs * scale + PhaseLineHeight(scale) : 0f;
+        var copyGap = phase.Length > 0 ? rowGap : Metrics.Space.Xs * scale;
+        var copyHeight = copy.Length > 0
+            ? copyGap + Typography.MeasureWrappedBlock(copy, PrismType.Body, copyWidth).Y
+            : 0f;
+        var rows = (mine.Length > 0 ? 1 : 0) + (credit.Length > 0 ? 1 : 0);
+        var rowsHeight = rows > 0 ? Metrics.Space.Md * scale + rows * line + (rows - 1) * rowGap : 0f;
+        var y = bottom - labelHeight - titleHeight - phaseHeight - copyHeight - rowsHeight;
         if (photo)
         {
-            PrismArt.Scrim(drawList, page, page.Max.Y - y, scale);
+            PrismArt.Scrim(drawList, page, page.Max.Y - y + Metrics.Space.Xl * scale, scale);
         }
 
         PrismArt.OverPhoto(photo);
-        if (caption.Length > 0)
+        if (track is not null)
         {
-            Typography.Draw(drawList, new Vector2(left, y), Typography.FitText(caption, width, PrismType.Caption),
-                PrismArt.Muted, PrismType.Caption);
-            y += line + Metrics.Space.Xxs * scale;
+            var glyph = PrismArt.InlineIconUnits * scale;
+            PrismArt.FactIcon(drawList, new Vector2(left + glyph * 0.5f, y + line * 0.5f), glyph,
+                track.Id == PrismTracks.Vanilla ? PrismFact.Vanilla : PrismFact.Modded, PrismArt.Fore);
+            var labelLeft = left + glyph + Metrics.Space.Xs * scale;
+            Typography.Draw(drawList, new Vector2(labelLeft, y),
+                Typography.FitText(PrismTracks.Name(track.Id), MathF.Max(1f, copyWidth - labelLeft + left),
+                    PrismType.Caption), PrismArt.Fore, PrismType.Caption);
+            y += labelHeight;
         }
 
-        PrismType.DrawHero(drawList, new Vector2(left, y + (titleHeight - heroHeight) * 0.5f), title, titleWidth,
-            PrismArt.Fore);
+        PrismType.DrawHero(drawList, new Vector2(left, y), title, copyWidth, PrismArt.Fore);
         if (action.Length > 0)
         {
             DrawContestAction(drawList, new Vector2(left + width - tap * 0.5f, y + titleHeight * 0.5f), action, track,
@@ -190,43 +190,35 @@ internal sealed partial class PrismApp
         y += titleHeight;
         if (phase.Length > 0)
         {
-            DrawPhaseLine(drawList, new Vector2(left, y + rowGap), width, phase);
-            y += rowGap + phaseLine;
+            y = DrawPhaseLine(drawList, new Vector2(left, y + Metrics.Space.Xs * scale), copyWidth, phase, scale);
         }
 
+        if (copy.Length > 0)
+        {
+            Typography.DrawWrappedLeft(new Vector2(left, y + copyGap), copy, PrismArt.Muted, PrismType.Body,
+                copyWidth);
+            y += copyHeight;
+        }
+
+        y += rows > 0 ? Metrics.Space.Md * scale : 0f;
         if (mine.Length > 0)
         {
-            y += rowGap;
-            var end = DrawGlyphCaption(drawList, new Vector2(left, y), left + width, StatusGlyph(entry!.Status), mine,
-                PrismArt.Muted, scale);
+            var end = DrawGlyphCaption(drawList, new Vector2(left, y), left + copyWidth, StatusGlyph(entry!.Status),
+                mine, PrismArt.Muted, scale);
             if (UiInteract.HoverClick(new Vector2(left, y + line - tap), new Vector2(end, y + line)))
             {
                 SelectPage(track);
                 Go(PrismScreen.Entry);
             }
 
-            y += line;
+            y += line + rowGap;
         }
 
         if (credit.Length > 0)
         {
-            y += rowGap;
-            var end = DrawGlyphCaption(drawList, new Vector2(left, y), left + width,
+            var end = DrawGlyphCaption(drawList, new Vector2(left, y), left + copyWidth,
                 lastWeek ? PhoneIcons.Crown : PhoneIcons.Photo, credit, PrismArt.Muted, scale);
             TapForOutfit(new Vector2(left, y + line - tap), new Vector2(end, y + line), winner!);
-            y += line;
-        }
-
-        if (bodyHeight > 0f)
-        {
-            y += Metrics.Space.Sm * scale;
-            Typography.DrawWrappedLeft(new Vector2(left, y), body, PrismArt.Muted, PrismType.Body, width);
-            y += bodyHeight;
-        }
-
-        if (noteHeight > 0f)
-        {
-            Typography.DrawWrappedLeft(new Vector2(left, y + rowGap), note, PrismArt.Muted, PrismType.Caption, width);
         }
 
         PrismArt.OverPhoto(false);
@@ -240,9 +232,15 @@ internal sealed partial class PrismApp
         drawList.AddRectFilledMultiColor(page.Min, page.Max, top, top, bottom, bottom);
     }
 
-    private static void DrawPhaseLine(ImDrawListPtr drawList, Vector2 topLeft, float width, string phase) =>
-        Typography.Draw(drawList, topLeft, Typography.FitText(phase, width, PrismType.Body), PrismArt.Fore,
+    private static float PhaseLineHeight(float scale) => Typography.LineHeight(PrismType.Body);
+
+    private static float DrawPhaseLine(ImDrawListPtr drawList, Vector2 topLeft, float width, string phase,
+        float scale)
+    {
+        Typography.Draw(drawList, topLeft, Typography.FitText(phase, width, PrismType.Body), PrismArt.Muted,
             PrismType.Body);
+        return topLeft.Y + PhaseLineHeight(scale);
+    }
 
     private void DrawContestAction(ImDrawListPtr drawList, Vector2 center, string label, PrismTrackDto? track,
         string phase, PrismEntryDto? entry, bool photo, float scale)
@@ -251,12 +249,11 @@ internal sealed partial class PrismApp
         var busy = store.Busy && entering && entry is null && (track is null || track.Id == store.Track)
             ? Loc.T(L.Prism.Uploading)
             : string.Empty;
-        var glyph = !entering || entry is null ? PhoneIcons.ChevronRight
+        var glyph = !entering || entry is null ? NextGlyph
             : entry.Status is PrismPhases.StatusRejected or PrismPhases.StatusMoved ? StatusGlyph(entry.Status)
-            : PhoneIcons.Check;
+            : DoneGlyph;
         var enabled = phase == PrismPhases.Results ? ShowingResults() : !store.Busy;
-        if (!DrawHeaderAction(drawList, center, glyph, label, enabled, busy, UiSound.Tap, scale,
-                photo ? photoControls : controls, HoverLabelSide.Above))
+        if (!DrawRoundAction(drawList, center, glyph, label, enabled, busy, photo ? photoControls : controls, scale))
         {
             return;
         }
@@ -435,5 +432,4 @@ internal sealed partial class PrismApp
                 AtHandle(winner.Handle, winner.DisplayName)));
     }
 
-    private string TrackCaption(string title) => FactLine(ref trackCaptionText, Loc.T(L.Prism.ThemeLabel), title);
 }

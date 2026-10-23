@@ -169,7 +169,7 @@ internal sealed partial class PrismApp
     }
 
     private bool DrawHeaderAction(ImDrawListPtr drawList, Vector2 center, string glyph, string label, bool enabled,
-        string busy, UiSound tapSound, float scale, ControlInk? ink = null, HoverLabelSide side = HoverLabelSide.Below)
+        string busy, UiSound tapSound, float scale)
     {
         var radius = Metrics.Size.TapTarget * 0.5f * scale;
         var reach = new Vector2(radius, radius);
@@ -178,20 +178,20 @@ internal sealed partial class PrismApp
         {
             var key = ImGui.GetID(label);
             var hovered = UiInteract.Hover(rect.Min, rect.Max);
-            var face = RoundButton.Surface(drawList, rect, ink ?? controls, ButtonStyle.Prominent, true, hovered, key);
+            var face = RoundButton.Surface(drawList, rect, controls, ButtonStyle.Prominent, true, hovered, key);
             PhoneIcon.Draw(drawList, center, glyph, PrismArt.OnFore, face.Face.Width * HeaderGlyphShare);
-            HoverTooltip.Show(key, rect, label, hovered, side);
+            HoverTooltip.Show(key, rect, label, hovered, HoverLabelSide.Below);
             return UiInteract.Click(rect.Min, rect.Max, hovered, tapSound);
         }
 
-        RoundButton.Icon(drawList, center, radius, glyph, ink ?? controls, ButtonStyle.Bare, enabled: false);
+        RoundButton.Icon(drawList, center, radius, glyph, controls, ButtonStyle.Bare, enabled: false);
         if (busy.Length > 0)
         {
             ProgressRing.Sweep(center, radius - Metrics.Stroke.Ring * scale, Metrics.Stroke.Ring * scale,
                 PrismArt.Fore, HeaderSweepMs, HeaderSweepArc, 1f, drawList);
         }
 
-        HoverTooltip.Show(rect, busy.Length > 0 ? busy : label, side);
+        HoverTooltip.Show(rect, busy.Length > 0 ? busy : label, HoverLabelSide.Below);
         return false;
     }
 

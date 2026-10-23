@@ -18,6 +18,7 @@ internal sealed partial class PrismApp
     private const float GuidePhotoDelay = 0.18f;
     private const float GuideZoom = 0.06f;
     private const float GuideArrowGlyphShare = 0.4f;
+    private const float ArrowHoverShare = 0.15f;
     private const float GuideDiptychGapUnits = 2f;
     private const float GuidePieceUnits = 32f;
     private const float GuidePiecesShare = 0.72f;
@@ -49,7 +50,6 @@ internal sealed partial class PrismApp
     private static readonly string PiecesGlyph = IconGlyph.Of(FontAwesomeIcon.LayerGroup);
     private static readonly string NextGlyph = IconGlyph.Of(FontAwesomeIcon.ArrowRight);
     private static readonly string DoneGlyph = IconGlyph.Of(FontAwesomeIcon.Check);
-    private static readonly Vector4 ArrowHover = new(0.86f, 0.86f, 0.86f, 1f);
 
     private readonly CachedText[] prizeTexts = new CachedText[PrismArt.PodiumRanks];
     private readonly GearDraft guideGear = new();
@@ -160,19 +160,29 @@ internal sealed partial class PrismApp
         }
     }
 
-    private bool DrawGuideArrow(ImDrawListPtr drawList, Vector2 center, bool last, float scale)
+    private bool DrawGuideArrow(ImDrawListPtr drawList, Vector2 center, bool last, float scale) =>
+        DrawRoundAction(drawList, center, last ? DoneGlyph : NextGlyph,
+            Loc.T(last ? L.Prism.GetStarted : L.Common.Next), true, string.Empty, photoControls, scale);
+
+    private bool DrawRoundAction(ImDrawListPtr drawList, Vector2 center, string glyph, string label, bool enabled,
+        string busy, in ControlInk ink, float scale)
     {
         var radius = Metrics.Size.TapTarget * 0.5f * scale;
         var rect = new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
-        var key = ImGui.GetID("prism.guide.next");
-        var hovered = UiInteract.Hover(rect.Min, rect.Max);
-        var face = RoundButton.Surface(drawList, rect, photoControls, ButtonStyle.Solid, true, hovered, key,
-            hovered ? ArrowHover : PrismArt.PhotoFore);
-        PhoneIcon.Draw(drawList, face.Face.Center, last ? DoneGlyph : NextGlyph, PrismArt.Ink,
-            face.Face.Width * GuideArrowGlyphShare);
-        HoverTooltip.Show(key, rect, Loc.T(last ? L.Prism.GetStarted : L.Common.Next), hovered,
-            HoverLabelSide.Above);
-        return UiInteract.Click(rect.Min, rect.Max, hovered);
+        var key = ImGui.GetID(label);
+        var over = UiInteract.Hover(rect.Min, rect.Max);
+        var hovered = enabled && over;
+        var face = RoundButton.Surface(drawList, rect, ink, ButtonStyle.Solid, enabled, hovered, key,
+            hovered ? Vector4.Lerp(PrismArt.Fore, PrismArt.OnFore, ArrowHoverShare) : PrismArt.Fore);
+        PhoneIcon.Draw(drawList, face.Face.Center, glyph, PrismArt.OnFore, face.Face.Width * GuideArrowGlyphShare);
+        if (busy.Length > 0)
+        {
+            ProgressRing.Sweep(center, radius - Metrics.Stroke.Ring * scale, Metrics.Stroke.Ring * scale,
+                PrismArt.OnFore, HeaderSweepMs, HeaderSweepArc, 1f, drawList);
+        }
+
+        HoverTooltip.Show(key, rect, busy.Length > 0 ? busy : label, over, HoverLabelSide.Above);
+        return hovered && UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
     private void DrawGuideSlide(ImDrawListPtr drawList, Rect full, Rect stage, float scale)

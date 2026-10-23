@@ -11051,11 +11051,9 @@ internal static class L
         public static readonly LocString TrackVanilla = new("prism.trackVanilla", "Vanilla");
         public static readonly LocString TrackModded = new("prism.trackModded", "Modded");
         public static readonly LocString TrackVanillaRule = new("prism.trackVanillaRule",
-            "In-game gear, dyes and poses only. No Penumbra, Glamourer or other mods.");
+            "In-game gear, dyes and poses only. Glams reported for mods move to Modded.");
         public static readonly LocString TrackModdedRule = new("prism.trackModdedRule",
             "Mods welcome, as long as it's your character.");
-        public static readonly LocString TrackMovedNote = new("prism.trackMovedNote",
-            "A reported Vanilla glam that uses mods gets moved to Modded.");
         public static readonly LocString WithTrack = new("prism.withTrack", "{0} · {1}");
         public static readonly LocString StatusMoved = new("prism.statusMoved", "Moved");
         public static readonly LocString StatusMovedTitle = new("prism.statusMovedTitle",
