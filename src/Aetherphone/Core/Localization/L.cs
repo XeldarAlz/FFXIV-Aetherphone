@@ -10927,6 +10927,9 @@ internal static class L
         public static readonly LocString InWardrobe = new("prism.inWardrobe", "In your wardrobe");
         public static readonly LocString GenderFemale = new("prism.genderFemale", "Female");
         public static readonly LocString GenderMale = new("prism.genderMale", "Male");
+        public static readonly LocString BodyLabel = new("prism.bodyLabel", "Race and gender");
+        public static readonly LocString BodyNeeded = new("prism.bodyNeeded",
+            "Choose the race and gender in your photo.");
         public static readonly LocString MoreFrom = new("prism.moreFrom", "More from {0}");
         public static readonly LocString InspiredBy = new("prism.inspiredBy", "Inspired by another glam");
         public static readonly LocString FitsMe = new("prism.fitsMe", "Fits me");

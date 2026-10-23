@@ -5722,6 +5722,8 @@
   "prism.inWardrobe": "Gardırobunda",
   "prism.genderFemale": "Kadın",
   "prism.genderMale": "Erkek",
+  "prism.bodyLabel": "Irk ve cinsiyet",
+  "prism.bodyNeeded": "Fotoğraftaki ırkı ve cinsiyeti seç.",
   "prism.moreFrom": "{0} kullanıcısından daha fazlası",
   "prism.inspiredBy": "Başka bir glamdan ilham alındı",
   "prism.fitsMe": "Bana uyan",

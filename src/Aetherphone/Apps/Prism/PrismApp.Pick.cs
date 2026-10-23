@@ -15,6 +15,8 @@ internal sealed partial class PrismApp
     private const float PickPaneFraction = 0.52f;
 
     private const float PickFillAlpha = 0.08f;
+    private const string EntryRaceId = "prism.entryRace";
+    private const string EntryGenderId = "prism.entryGender";
 
     private static PhotoComposeStyle PickStyle =>
         new(PrismArt.Fore, PrismArt.Muted, Palette.WithAlpha(PrismArt.Fore, PickFillAlpha), PrismArt.Faint, false);
@@ -27,6 +29,8 @@ internal sealed partial class PrismApp
         pickSession.Open(true);
         pickIntake.Discard();
         entryOutcome = OutcomePending;
+        entryRace = 0;
+        entryGender = NoGender;
         pickReturn = screen == PrismScreen.Entry ? PrismScreen.Entry : PrismScreen.Cover;
         ResetEntryOutfit();
         Go(PrismScreen.Pick);
@@ -34,6 +38,7 @@ internal sealed partial class PrismApp
 
     private void DrawPick(ImDrawListPtr drawList, Rect content, float scale)
     {
+        bodyRaceMenu.Gate();
         ConsumeEntryOutcome();
         pickSession.ConsumePendingImport();
         while (pickIntake.TryTake(out var taken))
@@ -48,16 +53,16 @@ internal sealed partial class PrismApp
 
         pickIntake.AcceptDrop(content, library, PrismArt.Fore);
         var week = store.Week;
-        var ready = pickSession.HasSelection && !store.Busy && (!VanillaEntry || DraftPieces() > 0);
+        var bodyChosen = BodyChosen(entryRace, entryGender);
+        var ready = pickSession.HasSelection && !store.Busy && (!VanillaEntry || DraftPieces() > 0) && bodyChosen;
         var top = DrawActionHeader(drawList, content, PhoneIcons.X, Loc.T(L.Common.Cancel),
             week?.Title ?? Loc.T(L.Prism.EnterLook), PhoneIcons.Check, Loc.T(L.Prism.Enter), ready,
             store.Busy ? Loc.T(L.Prism.Uploading) : string.Empty, UiSound.Shutter, scale, out var entered) +
                   Metrics.Space.Sm * scale;
         if (entered)
         {
-            var (race, gender) = WornBody();
             RememberEntryDrops();
-            store.Enter(pickSession.FirstSelected, pickSession.CropsArray()[0], EntryOutfit(), race, gender,
+            store.Enter(pickSession.FirstSelected, pickSession.CropsArray()[0], EntryOutfit(), entryRace, entryGender,
                 entrySettled);
         }
 
@@ -86,10 +91,15 @@ internal sealed partial class PrismApp
             gridBottom = linkRect.Min.Y - Metrics.Space.Lg * scale;
         }
 
+        var tap = Metrics.Size.TapTarget * scale;
+        var bodyRow = new Rect(new Vector2(row.Min.X, gridBottom - tap), new Vector2(row.Max.X, gridBottom));
+        DrawBodyPicker(drawList, bodyRow, EntryRaceId, EntryGenderId, ref entryRace, ref entryGender, scale);
+        gridBottom = bodyRow.Min.Y - Metrics.Space.Md * scale;
         var notice = store.Busy ? Loc.T(L.Prism.Uploading)
             : store.Failed(PrismAction.Enter) ? store.ActionFailureText is { Length: > 0 } reason
                 ? reason
                 : Loc.T(L.Common.LoadFailedHint)
+            : pickSession.HasSelection && !bodyChosen ? Loc.T(L.Prism.BodyNeeded)
             : string.Empty;
         if (notice.Length > 0)
         {
@@ -109,6 +119,8 @@ internal sealed partial class PrismApp
                 pickIntake.Paste(library);
             }
         }
+
+        DrawBodyRaceMenu(content, ref entryRace);
     }
 
     private string OutfitLink()

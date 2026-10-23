@@ -5722,6 +5722,8 @@
   "prism.inWardrobe": "已在衣橱中",
   "prism.genderFemale": "女性",
   "prism.genderMale": "男性",
+  "prism.bodyLabel": "种族与性别",
+  "prism.bodyNeeded": "请选择照片中的种族和性别。",
   "prism.moreFrom": "{0} 的更多幻化",
   "prism.inspiredBy": "灵感来自另一套幻化",
   "prism.fitsMe": "适合我",

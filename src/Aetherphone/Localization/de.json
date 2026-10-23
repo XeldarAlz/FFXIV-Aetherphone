@@ -5722,6 +5722,8 @@
   "prism.inWardrobe": "In deiner Garderobe",
   "prism.genderFemale": "Weiblich",
   "prism.genderMale": "Männlich",
+  "prism.bodyLabel": "Volk und Geschlecht",
+  "prism.bodyNeeded": "Wähle Volk und Geschlecht aus deinem Foto.",
   "prism.moreFrom": "Mehr von {0}",
   "prism.inspiredBy": "Inspiriert von einer anderen Projektion",
   "prism.fitsMe": "Passt zu mir",

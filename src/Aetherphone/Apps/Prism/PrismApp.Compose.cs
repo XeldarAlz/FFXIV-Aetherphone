@@ -26,6 +26,8 @@ internal sealed partial class PrismApp
     private const float ComposePhotoHeightShare = 0.36f;
     private const int ModNameMaxLength = 80;
     private const int MaxNamedMods = 20;
+    private const string ComposeRaceId = "prism.composeRace";
+    private const string ComposeGenderId = "prism.composeGender";
 
     private static readonly bool AutoCapture = false;
 
@@ -73,6 +75,8 @@ internal sealed partial class PrismApp
         namedModSlots.Clear();
         modSlot = GearSlots.None;
         composeVanilla = !glamour.HasPenumbra;
+        composeRace = 0;
+        composeGender = NoGender;
         glamTitle = string.Empty;
         glamTags = string.Empty;
         modName = string.Empty;
@@ -197,7 +201,9 @@ internal sealed partial class PrismApp
 
     private void DrawComposeDetails(ImDrawListPtr drawList, Rect content, float scale)
     {
-        var ready = !string.IsNullOrWhiteSpace(glamTitle) && !glams.Posting;
+        bodyRaceMenu.Gate();
+        var bodyChosen = BodyChosen(composeRace, composeGender);
+        var ready = !string.IsNullOrWhiteSpace(glamTitle) && !glams.Posting && bodyChosen;
         var top = DrawActionHeader(drawList, content, PhoneIcons.ChevronLeft, Loc.T(L.Prism.Back),
             Loc.T(L.Prism.PostGlam), PhoneIcons.Check, Loc.T(L.Prism.Post), ready,
             glams.Posting ? Loc.T(L.Prism.Posting) : string.Empty, UiSound.Shutter, scale, out var post) +
@@ -217,13 +223,22 @@ internal sealed partial class PrismApp
 
         var bottom = content.Max.Y - PrismArt.BottomMargin(scale);
         var failureHeight = 0f;
+        var notice = string.Empty;
         if (glams.PostFailed && !glams.Posting && postingDraft == composeDraft)
         {
             var reason = glams.PostFailureText;
-            var failure = reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint);
-            failureHeight = Typography.MeasureWrappedBlock(failure, PrismType.Body, width).Y;
+            notice = reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint);
+        }
+        else if (!bodyChosen)
+        {
+            notice = Loc.T(L.Prism.BodyNeeded);
+        }
+
+        if (notice.Length > 0)
+        {
+            failureHeight = Typography.MeasureWrappedBlock(notice, PrismType.Body, width).Y;
             Typography.DrawWrappedLeft(new Vector2(left, bottom - failureHeight),
-                failure, PrismArt.Muted, PrismType.Body, width);
+                notice, PrismArt.Muted, PrismType.Body, width);
             failureHeight += Metrics.Space.Lg * scale;
         }
 
@@ -246,12 +261,16 @@ internal sealed partial class PrismApp
                 "##glamTitle", ref glamTitle, TitleMaxLength, scale);
             cursor = DrawField(list, origin.X, cursor, bodyWidth, Loc.T(L.Prism.TagsLabel), Loc.T(L.Prism.TagsHint),
                 "##glamTags", ref glamTags, TagsMaxLength, scale);
+            cursor = DrawBodyField(list, origin.X, cursor, bodyWidth, ComposeRaceId, ComposeGenderId,
+                ref composeRace, ref composeGender, scale);
             cursor = AutoCapture
                 ? DrawCaptured(list, origin.X, cursor, bodyWidth, scale)
                 : DrawChosenGear(list, origin.X, cursor, bodyWidth, scale);
             ImGui.SetCursorScreenPos(origin);
             ImGui.Dummy(new Vector2(bodyWidth, cursor - origin.Y));
         }
+
+        DrawBodyRaceMenu(content, ref composeRace);
     }
 
     private float DrawComposePhotos(ImDrawListPtr drawList, float left, float top, float width, float maxHeight,
@@ -590,18 +609,15 @@ internal sealed partial class PrismApp
 
     private void PostGlam()
     {
-        int race;
-        int gender;
         GlamGearDto[] gear;
         if (AutoCapture)
         {
-            captured = glamour.Capture(out race, out gender);
+            captured = glamour.Capture();
             capturedVanilla = GlamourService.IsVanilla(captured);
             gear = PostedMods.Without(captured, droppedMods);
         }
         else
         {
-            (race, gender) = WornBody();
             gear = ChosenGear();
             capturedVanilla = composeVanilla;
         }
@@ -615,15 +631,10 @@ internal sealed partial class PrismApp
             photos[index] = new GlamPhotoDraft(paths[index], index < crops.Length ? crops[index] : default);
         }
 
-        if (race == 0)
-        {
-            (race, gender) = Appearance();
-        }
-
         postOutcome = OutcomePending;
         postingDraft = composeDraft;
         postingCover = count > 0 ? photos[0].Path : string.Empty;
-        glams.Post(photos, gear, glamTitle.Trim(), SplitTags(glamTags), race, gender, capturedVanilla,
+        glams.Post(photos, gear, glamTitle.Trim(), SplitTags(glamTags), composeRace, composeGender, capturedVanilla,
             glamour.TryingOn ? wearingGlamId : string.Empty, postSettled);
     }
 

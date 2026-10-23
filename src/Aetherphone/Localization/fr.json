@@ -5722,6 +5722,8 @@
   "prism.inWardrobe": "Dans votre garde-robe",
   "prism.genderFemale": "Féminin",
   "prism.genderMale": "Masculin",
+  "prism.bodyLabel": "Race et genre",
+  "prism.bodyNeeded": "Choisissez la race et le genre de votre photo.",
   "prism.moreFrom": "Plus de {0}",
   "prism.inspiredBy": "Inspiré d'un autre mirage",
   "prism.fitsMe": "Pour moi",

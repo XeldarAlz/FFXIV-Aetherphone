@@ -5722,6 +5722,8 @@
   "prism.inWardrobe": "ワードローブにあります",
   "prism.genderFemale": "女性",
   "prism.genderMale": "男性",
+  "prism.bodyLabel": "種族と性別",
+  "prism.bodyNeeded": "写真に写っている種族と性別を選んでください。",
   "prism.moreFrom": "{0}のほかのミラプリ",
   "prism.inspiredBy": "別のミラプリから着想",
   "prism.fitsMe": "自分に合う",
