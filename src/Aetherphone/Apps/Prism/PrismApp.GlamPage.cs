@@ -83,6 +83,11 @@ internal sealed partial class PrismApp
     private string tryOnKey = string.Empty;
     private double tryOnAt;
     private Spring pinReveal;
+    private double pillSwapAt;
+    private string pillLabel = string.Empty;
+    private string pillLeaving = string.Empty;
+    private bool pillSaved;
+    private bool pillLeavingSaved;
     private string linesLanguage = string.Empty;
     private string[]? tagRailFor;
     private string[] tagRailLabels = Array.Empty<string>();
@@ -99,6 +104,7 @@ internal sealed partial class PrismApp
         glams.Open(glam);
         photoPager.SnapTo(0, 1);
         pinReveal.SnapTo(0f);
+        pillLabel = string.Empty;
         statsFor = null;
         photoTap.Cancel();
         ResetPieces();
@@ -569,8 +575,7 @@ internal sealed partial class PrismApp
         var settling = wearing && tryOnKey == key && ImGui.GetTime() - tryOnAt < PrismArt.TryOnSeconds;
         var saved = wearing && !settling && !wardrobe.Loading ? wardrobe.FindByGlam(key) : null;
         var label = !wearing || settling ? pillLabels[0] : saved is null ? pillLabels[1] : pillLabels[2];
-        if (!DrawPill(drawList, rect, label, saved is null ? ButtonStyle.Solid : ButtonStyle.Tinted,
-                saved is null ? string.Empty : PhoneIcons.Check, overlay, scale) || settling ||
+        if (!DrawPill(drawList, rect, label, saved is not null, overlay, scale) || settling ||
             wearing && wardrobe.Loading || overlay && UiInteract.InputBlocked)
         {
             return;
@@ -592,13 +597,47 @@ internal sealed partial class PrismApp
         }
     }
 
-    private bool DrawPill(ImDrawListPtr drawList, Rect rect, string label, ButtonStyle style, string glyph,
-        bool overlay, float scale)
+    private bool DrawPill(ImDrawListPtr drawList, Rect rect, string label, bool saved, bool overlay, float scale)
     {
+        if (label != pillLabel)
+        {
+            pillLeaving = pillLabel;
+            pillLeavingSaved = pillSaved;
+            pillLabel = label;
+            pillSaved = saved;
+            pillSwapAt = ImGui.GetTime();
+        }
+
+        var age = (float)(ImGui.GetTime() - pillSwapAt);
+        var arrive = pillLeaving.Length > 0 ? PrismMotion.At(age, 0f, Motion.Appear) : 1f;
+        var crossing = arrive < PrismMotion.Settled;
+        var restyled = crossing && pillLeavingSaved != saved;
         var hovered = overlay ? UiInteract.HoverWindowOnly(rect.Min, rect.Max) : UiInteract.Hover(rect.Min, rect.Max);
-        var face = Button.Surface(drawList, rect, controls, style, ButtonRole.Normal, true, hovered,
-            ImGui.GetID("prism.tryOn"));
-        var glyphSize = glyph.Length > 0 ? Typography.LineHeight(PrismType.Caption) : 0f;
+        var key = ImGui.GetID("prism.tryOn");
+        var leaving = restyled ? PillFace(drawList, rect, pillLeavingSaved, hovered, key, 1f - arrive) : default;
+        var face = PillFace(drawList, rect, saved, hovered, key, restyled ? arrive : 1f);
+        var lift = Metrics.Space.Xs * scale;
+        if (crossing)
+        {
+            DrawPillLabel(drawList, restyled ? leaving : face, pillLeaving, pillLeavingSaved, rect,
+                1f - PrismMotion.At(age, 0f, Motion.PressIn), -lift * arrive, scale);
+        }
+
+        DrawPillLabel(drawList, face, label, saved, rect, crossing ? arrive : 1f, crossing ? lift * (1f - arrive) : 0f,
+            scale);
+        return UiInteract.Click(rect.Min, rect.Max, hovered);
+    }
+
+    private ButtonFace PillFace(ImDrawListPtr drawList, Rect rect, bool saved, bool hovered, uint key, float opacity) =>
+        Button.Surface(drawList, rect, controls, saved ? ButtonStyle.Tinted : ButtonStyle.Solid, ButtonRole.Normal,
+            true, hovered, key, opacity);
+
+    private static void DrawPillLabel(ImDrawListPtr drawList, in ButtonFace face, string label, bool saved, Rect rect,
+        float alpha, float lift, float scale)
+    {
+        var mark = PrismMotion.Mark(drawList);
+        var ink = face.LabelInk with { W = 1f };
+        var glyphSize = saved ? Typography.LineHeight(PrismType.Caption) : 0f;
         var lead = glyphSize > 0f ? glyphSize + Metrics.Space.Xs * scale : 0f;
         var room = MathF.Max(1f, rect.Width - Metrics.Space.Lg * scale - lead);
         var labelStyle = FitStyle(label, room, Button.LabelStyle(rect.Height));
@@ -607,13 +646,16 @@ internal sealed partial class PrismApp
         var textLeft = face.Face.Center.X - (size.X + lead) * 0.5f;
         if (glyphSize > 0f)
         {
-            PhoneIcon.Draw(drawList, new Vector2(textLeft + glyphSize * 0.5f, face.Face.Center.Y), glyph,
-                face.LabelInk, glyphSize);
+            PhoneIcon.Draw(drawList, new Vector2(textLeft + glyphSize * 0.5f, face.Face.Center.Y), PhoneIcons.Check,
+                ink, glyphSize);
         }
 
         Typography.Draw(drawList, new Vector2(textLeft + lead, face.Face.Center.Y - size.Y * 0.5f), fitted,
-            face.LabelInk, labelStyle);
-        return UiInteract.Click(rect.Min, rect.Max, hovered);
+            ink, labelStyle);
+        if (alpha < 1f || lift != 0f)
+        {
+            PrismMotion.Shift(drawList, mark, new Vector2(0f, lift), alpha);
+        }
     }
 
     private void TryOnGlam(GlamDto glam, string key)
