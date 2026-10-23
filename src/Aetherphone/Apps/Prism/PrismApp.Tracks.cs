@@ -13,6 +13,8 @@ namespace Aetherphone.Apps.Prism;
 internal sealed partial class PrismApp
 {
     private const int MaxTracks = 3;
+    private const float BackdropMarkUnits = 84f;
+    private const float BackdropMarkShare = 0.3f;
 
     private static readonly string ResultsGlyph = IconGlyph.Of(FontAwesomeIcon.Trophy);
     private static readonly string GalleryGlyph = IconGlyph.Of(FontAwesomeIcon.Th);
@@ -137,7 +139,7 @@ internal sealed partial class PrismApp
         }
         else
         {
-            DrawContestBackdrop(drawList, page);
+            DrawContestBackdrop(drawList, page, week.Id, scale);
         }
 
         var entry = PageEntry(track, week, open);
@@ -224,13 +226,9 @@ internal sealed partial class PrismApp
         PrismArt.OverPhoto(false);
     }
 
-    private static void DrawContestBackdrop(ImDrawListPtr drawList, Rect page)
-    {
-        var fill = Surfaces.Fill(PrismArt.Fore, FillLevel.Tertiary);
-        var top = ImGui.GetColorU32(fill);
-        var bottom = ImGui.GetColorU32(fill with { W = 0f });
-        drawList.AddRectFilledMultiColor(page.Min, page.Max, top, top, bottom, bottom);
-    }
+    private static void DrawContestBackdrop(ImDrawListPtr drawList, Rect page, string weekId, float scale) =>
+        PrismLight.Week(drawList, page, weekId, PrismArt.Page, PrismArt.Fore, BackdropMarkUnits * scale,
+            BackdropMarkShare);
 
     private static float PhaseLineHeight(float scale) => Typography.LineHeight(PrismType.Body);
 
