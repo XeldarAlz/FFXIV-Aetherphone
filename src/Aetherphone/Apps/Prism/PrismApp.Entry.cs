@@ -16,7 +16,6 @@ internal enum EntryChoice : byte
 
 internal sealed partial class PrismApp
 {
-    private const string EntryPrimaryId = "prism.entry.primary";
     private const int EntryChoiceCount = 3;
 
     private readonly ActionSheet entrySheet = new();
@@ -79,7 +78,7 @@ internal sealed partial class PrismApp
         }
 
         if (DrawButton(drawList, actions, Loc.T(retry ? L.Common.ChangePhoto : L.Prism.Done), ButtonStyle.Solid,
-                scale, enabled: !retry || !store.Busy, id: EntryPrimaryId))
+                scale, enabled: !retry || !store.Busy, id: "prism.entry.primary"))
         {
             ActOnEntry(retry ? EntryChoice.ChangePhoto : EntryChoice.Done);
         }

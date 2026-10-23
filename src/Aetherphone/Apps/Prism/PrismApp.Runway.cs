@@ -26,7 +26,6 @@ internal sealed partial class PrismApp
     private const float PickStarUnits = 11f;
     private const float PodiumLeadShare = 0.38f;
     private const float PodiumMedalUnits = 14f;
-    private const string SendPicksId = "prism.sendPicks";
     private const int OutcomePending = 0;
     private const int OutcomeSent = 1;
     private const int OutcomeFailed = 2;
@@ -416,7 +415,7 @@ internal sealed partial class PrismApp
 
         DrawPickGrid(drawList, new Rect(new Vector2(left, top), new Vector2(content.Max.X, gridBottom)), looks, scale);
         if (DrawButton(drawList, send, Loc.T(store.Busy ? L.Prism.Submitting : L.Prism.SendPicks), ButtonStyle.Solid,
-                scale, enabled: !store.Busy, id: SendPicksId))
+                scale, enabled: !store.Busy, id: "prism.sendPicks"))
         {
             ballotOutcome = OutcomePending;
             heatCoins = 0;

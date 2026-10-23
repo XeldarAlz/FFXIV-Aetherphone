@@ -11,8 +11,6 @@ namespace Aetherphone.Apps.Prism;
 internal sealed partial class PrismApp
 {
     private const int MaxTracks = 3;
-    private const float SwipeUnits = 12f;
-    private const string TrackActionId = "prism.track.action";
 
     private readonly CachedText[] trackTabTexts = new CachedText[MaxTracks];
     private readonly CachedText[] trackCountTexts = new CachedText[MaxTracks];
@@ -114,7 +112,7 @@ internal sealed partial class PrismApp
             CoverPlacing(store.LastWeekResults(tracks[page].Id)) is null ? PrismArt.Fore : PrismArt.PhotoFore, scale);
         DrawPhotoBack(drawList, photo, PhotoInset(full, content), scale);
         if (DrawButton(drawList, button, TrackAction(page, tracks[page]), ButtonStyle.Solid, scale,
-                id: TrackActionId))
+                id: "prism.track.action"))
         {
             ChooseTrack(tracks[page].Id);
         }
@@ -149,7 +147,7 @@ internal sealed partial class PrismApp
         }
 
         var move = mouse - trackPress;
-        if (MathF.Abs(move.X) <= SwipeUnits * scale || MathF.Abs(move.X) <= MathF.Abs(move.Y))
+        if (MathF.Abs(move.X) <= PagerSlopUnits * scale || MathF.Abs(move.X) <= MathF.Abs(move.Y))
         {
             return;
         }

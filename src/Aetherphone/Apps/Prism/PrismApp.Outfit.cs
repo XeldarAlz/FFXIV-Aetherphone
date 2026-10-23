@@ -17,7 +17,6 @@ internal sealed partial class PrismApp
     private const float DyeSwatchUnits = 6f;
     private const int DyeSegments = 16;
     private const int DyeChannels = 2;
-    private const string OutfitPrimaryId = "prism.outfit.primary";
 
     private static readonly LocString[] SlotNames =
     {
@@ -272,7 +271,7 @@ internal sealed partial class PrismApp
         var editing = EditingEntryOutfit;
         var ready = !store.Busy && (!vanilla || !editing || DraftPieces() > 0);
         if (DrawButton(drawList, row, Loc.T(editing ? L.Prism.Save : L.Prism.Done), ButtonStyle.Solid, scale,
-                enabled: ready, id: OutfitPrimaryId))
+                enabled: ready, id: "prism.outfit.primary"))
         {
             if (editing)
             {

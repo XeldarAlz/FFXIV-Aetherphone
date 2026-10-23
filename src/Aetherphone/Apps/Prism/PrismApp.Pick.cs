@@ -15,7 +15,6 @@ internal sealed partial class PrismApp
     private const float PickPaneFraction = 0.52f;
 
     private const float PickFillAlpha = 0.08f;
-    private const string PickPrimaryId = "prism.pick.primary";
 
     private static PhotoComposeStyle PickStyle =>
         new(PrismArt.Fore, PrismArt.Muted, Palette.WithAlpha(PrismArt.Fore, PickFillAlpha), PrismArt.Faint, false);
@@ -64,7 +63,7 @@ internal sealed partial class PrismApp
         var row = ActionRect(content, scale);
         var label = Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.EnterThisLook);
         var ready = pickSession.HasSelection && !store.Busy && (!VanillaEntry || DraftPieces() > 0);
-        if (DrawButton(drawList, row, label, ButtonStyle.Solid, scale, enabled: ready, id: PickPrimaryId,
+        if (DrawButton(drawList, row, label, ButtonStyle.Solid, scale, enabled: ready, id: "prism.pick.primary",
                 tapSound: UiSound.Shutter))
         {
             var (race, gender) = WornBody();

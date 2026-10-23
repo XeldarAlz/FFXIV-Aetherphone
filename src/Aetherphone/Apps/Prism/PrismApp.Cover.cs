@@ -15,7 +15,6 @@ internal sealed partial class PrismApp
     private const float CoverRatio = 4f / 3f;
     private const float CreditGlyphShare = 0.8f;
     private const float TrackLabelShare = 0.88f;
-    private const string CoverPrimaryId = "prism.cover.primary";
 
     private static readonly string RewardsGlyph = IconGlyph.Of(FontAwesomeIcon.Gift);
 
@@ -350,7 +349,7 @@ internal sealed partial class PrismApp
         var right = secondary ? row.Max.X - secondaryWidth - gap : row.Max.X;
         var enabled = week.Phase == PrismPhases.Results ? ShowingResults() : !store.Busy;
         if (!DrawButton(drawList, new Rect(row.Min, new Vector2(right, row.Max.Y)), primary, ButtonStyle.Solid, scale,
-                enabled: enabled, id: CoverPrimaryId))
+                enabled: enabled, id: "prism.cover.primary"))
         {
             return;
         }
