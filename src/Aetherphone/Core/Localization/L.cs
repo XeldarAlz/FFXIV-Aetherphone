@@ -11105,8 +11105,6 @@ internal static class L
         public static readonly LocString EnterThisWeek = new("prism.enterThisWeek", "Enter this week");
         public static readonly LocString SeeYourGlam = new("prism.seeYourGlam", "See your glam");
         public static readonly LocString SeeResults = new("prism.seeResults", "See the results");
-        public static readonly LocPlural EnteredThisWeek =
-            new("prism.enteredThisWeek", "{0:N0} entered this week", "{0:N0} entered this week");
         public static readonly LocString EnterTrack = new("prism.enterTrack", "Enter {0}");
         public static readonly LocString JudgeTrack = new("prism.judgeTrack", "Judge {0}");
         public static readonly LocString LastWeekWinner = new("prism.lastWeekWinner", "Last week's winner, {0}");

@@ -5879,8 +5879,6 @@
   "prism.enterThisWeek": "参加本周比赛",
   "prism.seeYourGlam": "查看你的幻化",
   "prism.seeResults": "查看结果",
-  "prism.enteredThisWeek.one": "本周 {0:N0} 人参赛",
-  "prism.enteredThisWeek.other": "本周 {0:N0} 人参赛",
   "prism.enterTrack": "参加{0}",
   "prism.judgeTrack": "评审{0}",
   "prism.lastWeekWinner": "上周冠军：{0}",

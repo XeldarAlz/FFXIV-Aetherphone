@@ -5879,8 +5879,6 @@
   "prism.enterThisWeek": "今週にエントリー",
   "prism.seeYourGlam": "あなたのミラプリを見る",
   "prism.seeResults": "結果を見る",
-  "prism.enteredThisWeek.one": "今週のエントリー {0:N0}件",
-  "prism.enteredThisWeek.other": "今週のエントリー {0:N0}件",
   "prism.enterTrack": "{0}にエントリー",
   "prism.judgeTrack": "{0}を審査",
   "prism.lastWeekWinner": "先週の優勝：{0}",

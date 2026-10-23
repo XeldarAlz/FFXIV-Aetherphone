@@ -2,6 +2,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
@@ -13,13 +14,10 @@ internal sealed partial class PrismApp
     private const int MaxTracks = 3;
 
     private readonly CachedText[] trackTabTexts = new CachedText[MaxTracks];
-    private readonly CachedText[] trackCountTexts = new CachedText[MaxTracks];
     private readonly CachedText[] trackActionTexts = new CachedText[MaxTracks];
     private readonly CachedText[] trackWinnerTexts = new CachedText[MaxTracks];
     private readonly Pager trackPager = new(Motion.PageSettle);
     private CachedText trackCaptionText;
-    private float trackBlock;
-    private int trackBlockKey;
     private Vector2 trackPress;
     private bool trackPressed;
     private bool trackJudging;
@@ -71,50 +69,37 @@ internal sealed partial class PrismApp
         }
 
         var count = Math.Min(tracks.Length, MaxTracks);
-        var button = ActionRect(content, scale);
-        var gap = Metrics.Space.Lg * scale;
-        var blockKey = HashCode.Combine(Loc.Current.Code, content.Width, Plugin.Fonts.Generation, count);
-        if (blockKey != trackBlockKey)
-        {
-            trackBlockKey = blockKey;
-            trackBlock = 0f;
-            for (var index = 0; index < count; index++)
-            {
-                trackBlock = MathF.Max(trackBlock, TrackBlockHeight(tracks[index].Id, content.Width, scale));
-            }
-        }
-
-        var top = PhotoTop(full, content);
-        var height = MathF.Max(0f, MathF.Min(full.Width * CoverRatio, button.Min.Y - gap - trackBlock - gap - top));
-        var photo = new Rect(new Vector2(full.Min.X, top), new Vector2(full.Max.X, top + height));
-        var area = new Rect(photo.Min, new Vector2(photo.Max.X, button.Min.Y - gap));
+        var area = new Rect(new Vector2(full.Min.X, PhotoTop(full, content)), full.Max);
+        var dots = content.Max.Y - bottomChrome;
+        var bottom = dots - Metrics.Size.TapTarget * scale;
         DrivePager(trackPager, area, count, ref trackPressed, ref trackPress, scale);
         var scroll = trackPager.Value;
         var first = Math.Clamp((int)MathF.Floor(scroll), 0, count - 1);
         var last = Math.Clamp((int)MathF.Ceiling(scroll), 0, count - 1);
+        var page = Math.Clamp((int)MathF.Round(scroll), 0, count - 1);
         drawList.PushClipRect(area.Min, area.Max, true);
         for (var index = first; index <= last; index++)
         {
             var offset = new Vector2((index - scroll) * full.Width, 0f);
-            DrawTrackPage(drawList, new Rect(photo.Min + offset, photo.Max + offset), content.Min.X + offset.X,
-                content.Width, index, tracks[index], week, scale);
+            DrawTrackPage(drawList, new Rect(area.Min + offset, area.Max + offset), content.Min.X + offset.X,
+                content.Width, bottom, index, tracks[index], week, scale);
         }
 
         drawList.PopClipRect();
-        if (!PrismArt.Light)
+        for (var index = 0; index < count; index++)
         {
-            PrismArt.TopFog(drawList, photo, scale);
+            onPhoto |= TrackWinner(tracks[index].Id) is not null;
         }
 
-        var page = Math.Clamp((int)MathF.Round(scroll), 0, count - 1);
-        DrawPagerDots(drawList, trackPager, photo, count, page,
-            CoverPlacing(store.LastWeekResults(tracks[page].Id)) is null ? PrismArt.Fore : PrismArt.PhotoFore, scale);
-        DrawPhotoBack(drawList, photo, PhotoInset(full, content), scale);
-        if (DrawButton(drawList, button, TrackAction(page, tracks[page]), ButtonStyle.Solid, scale,
-                id: "prism.track.action"))
+        PrismArt.OverPhoto(TrackWinner(tracks[page].Id) is not null);
+        if (!PrismArt.Light)
         {
-            ChooseTrack(tracks[page].Id);
+            PrismArt.TopFog(drawList, area, scale);
         }
+
+        DrawPagerDots(drawList, trackPager, new Rect(area.Min, new Vector2(area.Max.X, dots)), count, page,
+            PrismArt.Fore, scale);
+        DrawPhotoBack(drawList, area, PhotoInset(full, content), scale);
     }
 
     private static void DrivePager(Pager pager, Rect area, int count, ref bool pressed, ref Vector2 press,
@@ -171,56 +156,83 @@ internal sealed partial class PrismApp
         }
     }
 
-    private float TrackBlockHeight(string id, float width, float scale) =>
-        Typography.LineHeight(PrismType.Headline) + Metrics.Space.Xxs * scale +
-        Typography.MeasureWrappedBlock(TrackRule(id), PrismType.Body, width).Y + Metrics.Space.Sm * scale +
-        Typography.MeasureWrappedBlock(Loc.T(L.Prism.TrackMovedNote), PrismType.Caption, width).Y;
+    private PrismPlacingDto? TrackWinner(string id) => CoverPlacing(store.LastWeekResults(id));
 
-    private void DrawTrackPage(ImDrawListPtr drawList, Rect photo, float left, float width, int index,
+    private void DrawTrackPage(ImDrawListPtr drawList, Rect page, float left, float width, float bottom, int index,
         PrismTrackDto track, PrismWeekDto week, float scale)
     {
-        var winner = CoverPlacing(store.LastWeekResults(track.Id));
+        var winner = TrackWinner(track.Id);
         if (winner is null)
         {
-            PrismArt.Placeholder(drawList, photo, false, scale);
+            DrawTrackBackdrop(drawList, page);
         }
         else
         {
-            DrawLook(drawList, photo, winner.ImageUrl, false, native: true);
+            DrawLook(drawList, page, winner.ImageUrl, false, native: true);
         }
 
+        var tap = Metrics.Size.TapTarget * scale;
         var line = Typography.LineHeight(PrismType.Caption);
         var name = PrismTracks.Name(track.Id);
-        var winnerHeight = winner is not null || week.PreviousWeekId.Length > 0 ? Metrics.Space.Xs * scale + line : 0f;
-        var textHeight = line + Metrics.Space.Xxs * scale + PrismType.HeroHeight(name, width) + winnerHeight;
-        var bottom = photo.Max.Y - Metrics.Size.TapTarget * scale;
+        var titleWidth = width - tap - Metrics.Space.Sm * scale;
+        var titleHeight = MathF.Max(PrismType.HeroHeight(name, titleWidth), tap);
+        var rule = TrackRule(track.Id);
+        var note = Loc.T(L.Prism.TrackMovedNote);
+        var creditHeight = winner is not null ? Metrics.Space.Xs * scale + line : 0f;
+        var textHeight = line + Metrics.Space.Xxs * scale + titleHeight + creditHeight + Metrics.Space.Sm * scale +
+                         Typography.MeasureWrappedBlock(rule, PrismType.Body, width).Y + Metrics.Space.Xs * scale +
+                         Typography.MeasureWrappedBlock(note, PrismType.Caption, width).Y;
+        var y = bottom - textHeight;
         if (winner is not null)
         {
-            PrismArt.Scrim(drawList, photo, photo.Max.Y - bottom + textHeight, scale);
+            PrismArt.Scrim(drawList, page, page.Max.Y - y, scale);
         }
 
-        var ink = winner is null ? PrismArt.Fore : PrismArt.PhotoFore;
-        var muted = winner is null ? PrismArt.Muted : PrismArt.PhotoMuted;
-        var y = bottom - textHeight;
+        PrismArt.OverPhoto(winner is not null);
         Typography.Draw(drawList, new Vector2(left, y),
-            Typography.FitText(TrackCaption(week.Title), width, PrismType.Caption), muted, PrismType.Caption);
+            Typography.FitText(TrackCaption(week.Title), width, PrismType.Caption), PrismArt.Muted, PrismType.Caption);
         y += line + Metrics.Space.Xxs * scale;
-        y += PrismType.DrawHero(drawList, new Vector2(left, y), name, width, ink);
+        var heroHeight = PrismType.HeroHeight(name, titleWidth);
+        PrismType.DrawHero(drawList, new Vector2(left, y + (titleHeight - heroHeight) * 0.5f), name, titleWidth,
+            PrismArt.Fore);
+        DrawTrackAction(drawList, new Vector2(left + width - tap * 0.5f, y + titleHeight * 0.5f), index, track,
+            winner is not null, scale);
+        y += titleHeight;
         if (winner is not null)
         {
             DrawGlyphCaption(drawList, new Vector2(left, y + Metrics.Space.Xs * scale), left + width,
-                PhoneIcons.Crown, TrackWinner(index, winner), muted, winner, scale);
+                PhoneIcons.Crown, TrackWinnerLine(index, winner), PrismArt.Muted, winner, scale);
         }
 
-        y = photo.Max.Y + Metrics.Space.Lg * scale;
-        Typography.Draw(drawList, new Vector2(left, y),
-            Typography.FitText(TrackCount(index, track.EntryCount), width, PrismType.Headline), PrismArt.Fore,
-            PrismType.Headline);
-        y += Typography.LineHeight(PrismType.Headline) + Metrics.Space.Xxs * scale;
-        y += Typography.DrawWrappedLeft(new Vector2(left, y), TrackRule(track.Id), PrismArt.Muted, PrismType.Body,
-            width) + Metrics.Space.Sm * scale;
-        Typography.DrawWrappedLeft(new Vector2(left, y), Loc.T(L.Prism.TrackMovedNote), PrismArt.Muted,
-            PrismType.Caption, width);
+        y += creditHeight + Metrics.Space.Sm * scale;
+        y += Typography.DrawWrappedLeft(new Vector2(left, y), rule, PrismArt.Muted, PrismType.Body, width) +
+             Metrics.Space.Xs * scale;
+        Typography.DrawWrappedLeft(new Vector2(left, y), note, PrismArt.Muted, PrismType.Caption, width);
+        PrismArt.OverPhoto(false);
+    }
+
+    private void DrawTrackAction(ImDrawListPtr drawList, Vector2 center, int index, PrismTrackDto track, bool photo,
+        float scale)
+    {
+        var mine = !trackJudging && track.MyEntry is not null;
+        var busy = store.Busy && !trackJudging && track.Id == store.Track ? Loc.T(L.Prism.Uploading) : string.Empty;
+        var glyph = !mine ? PhoneIcons.ChevronRight
+            : track.MyEntry!.Status is PrismPhases.StatusRejected or PrismPhases.StatusMoved
+                ? StatusGlyph(track.MyEntry.Status)
+                : PhoneIcons.Check;
+        if (DrawHeaderAction(drawList, center, glyph, TrackAction(index, track), !store.Busy, busy, UiSound.Tap, scale, photo ? photoControls : controls,
+                HoverLabelSide.Above))
+        {
+            ChooseTrack(track.Id);
+        }
+    }
+
+    private static void DrawTrackBackdrop(ImDrawListPtr drawList, Rect page)
+    {
+        var fill = Surfaces.Fill(PrismArt.Fore, FillLevel.Tertiary);
+        var top = ImGui.GetColorU32(fill);
+        var bottom = ImGui.GetColorU32(fill with { W = 0f });
+        drawList.AddRectFilledMultiColor(page.Min, page.Max, top, top, bottom, bottom);
     }
 
     private static string TrackRule(string id) => id switch
@@ -239,14 +251,6 @@ internal sealed partial class PrismApp
                 string.Concat(PrismTracks.Name(track.Id), " ", track.EntryCount.ToString("N0", Loc.Culture)));
     }
 
-    private string TrackCount(int index, int count)
-    {
-        var key = HashCode.Combine(count, Loc.Current.Code);
-        return trackCountTexts[index].IsCurrent(key)
-            ? trackCountTexts[index].Value
-            : trackCountTexts[index].Store(key, Loc.Plural(L.Prism.EnteredThisWeek, count));
-    }
-
     private string TrackAction(int index, PrismTrackDto track)
     {
         var mine = !trackJudging && track.MyEntry is not null;
@@ -262,7 +266,7 @@ internal sealed partial class PrismApp
             : Loc.T(trackJudging ? L.Prism.JudgeTrack : L.Prism.EnterTrack, name));
     }
 
-    private string TrackWinner(int index, PrismPlacingDto winner)
+    private string TrackWinnerLine(int index, PrismPlacingDto winner)
     {
         var key = HashCode.Combine(winner.Handle, winner.DisplayName, Loc.Current.Code);
         return trackWinnerTexts[index].IsCurrent(key)
