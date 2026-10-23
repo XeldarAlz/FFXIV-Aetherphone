@@ -224,16 +224,21 @@ internal sealed partial class PrismApp
             }
         }
 
-        var track = Surfaces.Fill(PrismArt.Fore, FillLevel.Tertiary);
-        var under = Vector4.Lerp(PrismArt.Page, PrismArt.Fore, track.W);
-        var thumb = Vector4.Lerp(under, PrismArt.Fore, Surfaces.Fill(PrismArt.Fore, FillLevel.Primary).W)
-            with { W = 1f };
-        var picked = SegmentStrip.Draw("prism.tracks", row, trackLabels, selected, track, thumb, PrismArt.Muted,
-            PrismArt.Fore, Metrics.Size.TapTarget, PrismType.Headline.Scale * TrackLabelShare);
+        var picked = DrawSegments("prism.tracks", row, trackLabels, selected);
         if (picked != selected)
         {
             store.SelectTrack(tracks[picked].Id);
         }
+    }
+
+    private static int DrawSegments(string id, Rect row, IReadOnlyList<string> labels, int selected)
+    {
+        var track = Surfaces.Fill(PrismArt.Fore, FillLevel.Tertiary);
+        var under = Vector4.Lerp(PrismArt.Page, PrismArt.Fore, track.W);
+        var thumb = Vector4.Lerp(under, PrismArt.Fore, Surfaces.Fill(PrismArt.Fore, FillLevel.Primary).W)
+            with { W = 1f };
+        return SegmentStrip.Draw(id, row, labels, selected, track, thumb, PrismArt.Muted, PrismArt.Fore,
+            Metrics.Size.TapTarget, PrismType.Headline.Scale * TrackLabelShare);
     }
 
     private static void DrawFact(ImDrawListPtr drawList, Vector2 topLeft, float width, string caption, string value,
