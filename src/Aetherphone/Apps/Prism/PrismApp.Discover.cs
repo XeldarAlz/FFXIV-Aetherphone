@@ -330,7 +330,8 @@ internal sealed partial class PrismApp
             PhoneIcon.Draw(drawList, thumb.Center, PhoneIcons.Crown, PrismArt.Muted, GridGlyphUnits * scale);
         }
 
-        var label = Loc.T(week.Phase != PrismPhases.Entering ? L.Prism.JudgeHeat
+        var label = Loc.T(week.Phase == PrismPhases.Final ? L.Prism.JudgeFinal
+            : week.Phase != PrismPhases.Entering ? L.Prism.JudgeHeat
             : week.MyEntry is null ? L.Prism.Enter : L.Prism.YourLook);
         var labelWidth = ChipRail.WidthFor(Typography.Measure(label, ChipRail.LabelStyle).X,
             ChipRail.DefaultLabelPadding, scale);
