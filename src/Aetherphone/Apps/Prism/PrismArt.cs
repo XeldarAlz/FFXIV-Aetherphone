@@ -16,6 +16,7 @@ internal static class PrismArt
     public const int Stars = 5;
     public const int PodiumRanks = 3;
     public const float TryOnSeconds = 1.45f;
+    public const float ChipUnits = 28f;
 
     private const float IconDotUnits = 4f;
     private const float IconDotRimUnits = 1.5f;
@@ -56,7 +57,6 @@ internal static class PrismArt
     private const int MedalSegments = 48;
     private const float SwatchShadeShare = 0.45f;
     private const float ScrimShare = 0.35f;
-    private const float ChipUnits = 28f;
     private const float ChipGlyphUnits = 13f;
     private const float FailedGlyphShare = 0.3f;
     private const float TryOnHoldSeconds = 0.9f;
@@ -687,7 +687,7 @@ internal static class PrismArt
 
         var dot = size * TileDotShare;
         var dotCenter = tile.Max - new Vector2(size * TileDotInsetShare, size * TileDotInsetShare);
-        drawList.AddCircleFilled(dotCenter, dot + MathF.Max(1f, Metrics.Stroke.Hairline * scale),
+        drawList.AddCircleFilled(dotCenter, dot + HairlineWidth(scale),
             ImGui.GetColorU32(themeInks.Fore with { W = TileDotRingAlpha }));
         drawList.AddCircleFilled(dotCenter, dot, ImGui.GetColorU32(tint));
     }

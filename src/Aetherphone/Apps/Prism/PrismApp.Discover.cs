@@ -357,22 +357,10 @@ internal sealed partial class PrismApp
             Typography.FitText(week.Title, room, PrismType.Headline), PrismArt.Fore, PrismType.Headline);
     }
 
-    private string ContestCover(PrismWeekDto week)
-    {
-        var podium = store.Results?.FinalPodium;
-        if (podium is not null)
-        {
-            for (var index = 0; index < podium.Length; index++)
-            {
-                if (podium[index].Rank == 1 && podium[index].ImageUrl.Length > 0)
-                {
-                    return podium[index].ImageUrl;
-                }
-            }
-        }
-
-        return week.MyEntry?.ImageUrl ?? string.Empty;
-    }
+    private string ContestCover(PrismWeekDto week) =>
+        CoverPlacing(store.Results) is { ImageUrl.Length: > 0 } winner
+            ? winner.ImageUrl
+            : week.MyEntry?.ImageUrl ?? string.Empty;
 
     private string ContestCaption(PrismWeekDto week)
     {

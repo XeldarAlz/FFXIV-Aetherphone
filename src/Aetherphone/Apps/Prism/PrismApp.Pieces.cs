@@ -37,7 +37,6 @@ internal sealed partial class PrismApp
     private const float PieceSlideUnits = 6f;
     private const float PieceDim = 0.45f;
     private const float PieceCardUnits = 236f;
-    private const float ChipHeightUnits = 28f;
     private const float SwatchUnits = 5f;
     private const float OwnedDotUnits = 4f;
     private const float BadgeUnits = 16f;
@@ -264,7 +263,7 @@ internal sealed partial class PrismApp
         var cardMark = PrismMotion.Mark(drawList);
         var limits = new Rect(new Vector2(photo.Min.X + Metrics.Space.Md * scale, photo.Min.Y + topInset),
             new Vector2(columnLeft - Metrics.Space.Xs * scale,
-                photo.Max.Y - (Metrics.Space.Md + ChipHeightUnits + Metrics.Space.Sm) * scale));
+                photo.Max.Y - (Metrics.Space.Md + PrismArt.ChipUnits + Metrics.Space.Sm) * scale));
         DrawPieceCard(drawList, limits, anchor, pieceTiles[cardTile], gear, cardReady, scale);
         if (cardShow * reveal < PrismMotion.Settled)
         {
@@ -286,7 +285,7 @@ internal sealed partial class PrismApp
         var text = Typography.FitText(name, width, PrismType.Caption);
         var size = Typography.Measure(text, PrismType.Caption);
         var pad = Metrics.Space.Sm * scale;
-        var half = ChipHeightUnits * scale * 0.5f;
+        var half = PrismArt.ChipUnits * scale * 0.5f;
         var min = new Vector2(rightCenter.X - size.X - pad * 2f, rightCenter.Y - half);
         drawList.AddRectFilled(min, new Vector2(rightCenter.X, rightCenter.Y + half), ImGui.GetColorU32(CardFill), half);
         Typography.Draw(drawList, new Vector2(min.X + pad, rightCenter.Y - size.Y * 0.5f), text, PrismArt.PhotoFore,
@@ -376,7 +375,7 @@ internal sealed partial class PrismApp
     private static void DrawSwatch(ImDrawListPtr drawList, Vector2 center, uint rgb, Vector4 ring, float scale)
     {
         var radius = SwatchUnits * scale;
-        drawList.AddCircleFilled(center, radius + MathF.Max(1f, Metrics.Stroke.Hairline * scale),
+        drawList.AddCircleFilled(center, radius + PrismArt.HairlineWidth(scale),
             ImGui.GetColorU32(ring), RoundSegments);
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.FromRgb(rgb)), RoundSegments);
     }

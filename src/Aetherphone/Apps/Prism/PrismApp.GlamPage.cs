@@ -265,8 +265,8 @@ internal sealed partial class PrismApp
         }
 
         DrawPhotoTaps(photo, glam, count);
-        DrawPublished(drawList, photo, glam, count > 0 ? photos[0].Url : string.Empty, scale);
-        var dots = new Vector2(photo.Center.X, photo.Max.Y - (Metrics.Space.Md + ChipHeightUnits * 0.5f) * scale);
+        DrawPublished(drawList, photo, glam, Cover(glam), scale);
+        var dots = new Vector2(photo.Center.X, photo.Max.Y - (Metrics.Space.Md + PrismArt.ChipUnits * 0.5f) * scale);
         PhotoCarousel.DrawDots(drawList, dots, count, Math.Clamp((int)MathF.Round(scroll), 0, Math.Max(0, count - 1)),
             photo.Width * DotsShare, PrismArt.PhotoFore);
         DrawDotTaps(dots, photo.Width, count, scale);
@@ -812,7 +812,7 @@ internal sealed partial class PrismApp
 
     private string MetaLine(GlamDto glam)
     {
-        var minute = DateTimeOffset.UtcNow.ToUnixTimeSeconds() / 60;
+        var minute = DateTimeOffset.UtcNow.ToUnixTimeSeconds() / SecondsPerMinute;
         var key = HashCode.Combine(glam.Vanilla, glam.Race, glam.Gender, glam.TryOns, glam.CreatedAtUnix, minute);
         if (metaText.IsCurrent(key))
         {
@@ -917,22 +917,22 @@ internal sealed partial class PrismApp
         var gap = Metrics.Space.Xxs * scale;
         top = DrawSectionTitle(drawList, full.Min.X + Metrics.Space.Lg * scale, full.Max.X - Metrics.Space.Lg * scale,
             top, title, string.Empty, scale) + Metrics.Space.Sm * scale;
-        var column = (full.Width - gap * 3f) * 0.5f;
+        var column = (full.Width - gap * (GridColumns + 1)) / GridColumns;
         var pitch = column / GlamStore.PhotoRatio + GridLine(scale) + Metrics.Space.Sm * scale;
         for (var index = 0; index < more.Length; index++)
         {
             var item = more[index];
-            var min = new Vector2(full.Min.X + gap + index % 2 * (column + gap), top + index / 2 * pitch);
+            var min = new Vector2(full.Min.X + gap + index % GridColumns * (column + gap),
+                top + index / GridColumns * pitch);
             var photo = new Rect(min, min + new Vector2(column, column / GlamStore.PhotoRatio));
-            if (DrawGridTile(drawList, photo, item.Photos is { Length: > 0 } photos ? photos[0].Url : string.Empty,
-                    item.Title, string.Empty, null, PhoneIcons.Wand,
+            if (DrawGridTile(drawList, photo, Cover(item), item.Title, string.Empty, null, PhoneIcons.Wand,
                     item.TryOns > 0 ? NumberText.Compact(item.TryOns) : string.Empty, scale))
             {
                 OpenGlam(item);
             }
         }
 
-        return top + (more.Length + 1) / 2 * pitch;
+        return top + (more.Length + GridColumns - 1) / GridColumns * pitch;
     }
 
     private string BodyLine(int race, int gender)
