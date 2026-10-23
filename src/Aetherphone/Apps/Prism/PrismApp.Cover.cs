@@ -67,18 +67,6 @@ internal sealed partial class PrismApp
 
     private string EnterLabel() => Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.EnterThisWeek);
 
-    private void StartEntry()
-    {
-        if (HasTracks)
-        {
-            OpenTab(PrismTab.Week);
-        }
-        else
-        {
-            StartPick();
-        }
-    }
-
     private static string FactLine(ref CachedText cache, string label, string detail)
     {
         var key = HashCode.Combine(label, detail);

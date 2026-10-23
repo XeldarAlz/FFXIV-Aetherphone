@@ -134,7 +134,7 @@ internal sealed partial class PrismApp
         if (entering && DrawButton(drawList, button, EnterLabel(), ButtonStyle.Solid, scale, enabled: !store.Busy,
                 id: "prism.rewards.enter"))
         {
-            StartEntry();
+            StartPick();
         }
     }
 
