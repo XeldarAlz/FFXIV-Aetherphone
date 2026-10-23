@@ -936,8 +936,7 @@ internal sealed partial class PrismApp
             new Vector2(left + ButtonWidth([tryLabel], (right - left) * 0.5f, scale), top + height));
         if (DrawButton(drawList, tryOn, tryLabel, ButtonStyle.Solid, scale))
         {
-            glamour.TryOnPiece(new GlamGearDto(gameData.EquipSlot(listItemId), listItemId));
-            StartWearing(string.Empty, listTitle);
+            TryOnPiece(new GlamGearDto(gameData.EquipSlot(listItemId), listItemId), string.Empty);
         }
 
         var marketLabel = Loc.T(L.Prism.CheckMarket);
