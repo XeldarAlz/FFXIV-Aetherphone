@@ -108,18 +108,19 @@ internal static class ProgressRing
         }
     }
 
-    public static void CenterIcon(ImDrawListPtr dl, Vector2 c, FontAwesomeIcon icon, Vector4 col, float targetHeight) =>
-        PhoneIcon.Draw(dl, c, IconGlyph.Of(icon), col, targetHeight);
+    public static void CenterIcon(ImDrawListPtr drawList, Vector2 center, FontAwesomeIcon icon, Vector4 color,
+        float targetHeight) =>
+        PhoneIcon.Draw(drawList, center, IconGlyph.Of(icon), color, targetHeight);
 
-    public static void CenterIcon(Vector2 c, FontAwesomeIcon icon, Vector4 col, float targetHeight)
+    public static void CenterIcon(Vector2 center, FontAwesomeIcon icon, Vector4 color, float targetHeight)
     {
         var glyph = IconGlyph.Of(icon);
-        PhoneIcon.Draw(ImGui.GetWindowDrawList(), c, glyph, col, targetHeight);
+        PhoneIcon.Draw(ImGui.GetWindowDrawList(), center, glyph, color, targetHeight);
         using (Plugin.Fonts.PushIcon(targetHeight, glyph))
         {
             var measured = ImGui.CalcTextSize(glyph);
             var size = measured.Y > 0f ? measured * (targetHeight / measured.Y) : measured;
-            ImGui.SetCursorScreenPos(c - size * 0.5f);
+            ImGui.SetCursorScreenPos(center - size * 0.5f);
             ImGui.Dummy(size);
         }
     }

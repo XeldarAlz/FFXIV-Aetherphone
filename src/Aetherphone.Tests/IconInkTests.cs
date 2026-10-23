@@ -8,29 +8,29 @@ namespace Aetherphone.Tests;
 public sealed class IconInkTests
 {
     [Fact]
-    public void CentresASymmetricGlyphOnItsBox()
+    public void CentersASymmetricGlyphOnItsBox()
     {
-        var centre = Find(
+        var center = Find(
             "......",
             ".####.",
             ".####.",
             "......");
 
-        Assert.Equal(0.5f, centre.X, 3);
-        Assert.Equal(0.5f, centre.Y, 3);
+        Assert.Equal(0.5f, center.X, 3);
+        Assert.Equal(0.5f, center.Y, 3);
     }
 
     [Fact]
-    public void FollowsInkThatSitsOffCentre()
+    public void FollowsInkThatSitsOffCenter()
     {
-        var centre = Find(
+        var center = Find(
             "....##",
             "....##",
             "......",
             "......");
 
-        Assert.Equal(5f / 6f, centre.X, 3);
-        Assert.Equal(0.25f, centre.Y, 3);
+        Assert.Equal(5f / 6f, center.X, 3);
+        Assert.Equal(0.25f, center.Y, 3);
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public sealed class IconInkTests
         };
 
         Assert.True(IconInk.TryMeasure(pixels, 1, 5, 0, 0, 5, 1, Vector2.One, out var box));
-        Assert.Equal((1.498f + 4f) * 0.5f / 5f, box.Centre.X, 3);
+        Assert.Equal((1.498f + 4f) * 0.5f / 5f, box.Center.X, 3);
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public sealed class IconInkTests
         var pixels = new byte[16];
 
         Assert.False(IconInk.TryMeasure(pixels, 1, 4, 0, 0, 4, 4, Vector2.One, out var box));
-        Assert.Equal(IconInk.BoxCentre, box.Centre);
+        Assert.Equal(IconInk.BoxCenter, box.Center);
     }
 
     [Fact]
@@ -65,8 +65,8 @@ public sealed class IconInkTests
 
         Assert.True(IconInk.TryMeasure(MemoryMarshal.AsBytes(pixels.AsSpan()), 4, 3, 0, 0, 3, 2, Vector2.One,
             out var box));
-        Assert.Equal(2.5f / 3f, box.Centre.X, 3);
-        Assert.Equal(0.5f, box.Centre.Y, 3);
+        Assert.Equal(2.5f / 3f, box.Center.X, 3);
+        Assert.Equal(0.5f, box.Center.Y, 3);
     }
 
     [Fact]
@@ -82,8 +82,8 @@ public sealed class IconInkTests
         };
 
         Assert.True(IconInk.TryMeasure(Pixels(rows), 1, rows[0].Length, 1, 1, 5, 3, Vector2.One, out var box));
-        Assert.Equal(3.5f / 5f, box.Centre.X, 3);
-        Assert.Equal(0.5f, box.Centre.Y, 3);
+        Assert.Equal(3.5f / 5f, box.Center.X, 3);
+        Assert.Equal(0.5f, box.Center.Y, 3);
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public sealed class IconInkTests
     [Fact]
     public void LeavesATablerOutlineAtItsDesignedSize()
     {
-        var box = new IconInkBox(IconInk.BoxCentre, new Vector2(20f / 24f), Outline(20f / 24f, 2f / 24f),
+        var box = new IconInkBox(IconInk.BoxCenter, new Vector2(20f / 24f), Outline(20f / 24f, 2f / 24f),
             OutlineEdge(20f / 24f, 2f / 24f));
 
         Assert.Equal(1f, IconInk.OpticalScale(box, true), 3);
@@ -113,7 +113,7 @@ public sealed class IconInkTests
     [Fact]
     public void ScalesAnOversizedGlyphToTheTablerOpticalSize()
     {
-        var box = new IconInkBox(IconInk.BoxCentre, new Vector2(1f), Outline(1f, 2f / 24f), OutlineEdge(1f, 2f / 24f));
+        var box = new IconInkBox(IconInk.BoxCenter, new Vector2(1f), Outline(1f, 2f / 24f), OutlineEdge(1f, 2f / 24f));
 
         Assert.Equal(IconInk.OpticalSize, IconInk.OpticalScale(box, false), 3);
     }
@@ -121,7 +121,7 @@ public sealed class IconInkTests
     [Fact]
     public void KeepsAWideGlyphInsideTheTablerGrid()
     {
-        var box = new IconInkBox(IconInk.BoxCentre, new Vector2(1.25f, 0.5f), Outline(0.5f, 2f / 24f),
+        var box = new IconInkBox(IconInk.BoxCenter, new Vector2(1.25f, 0.5f), Outline(0.5f, 2f / 24f),
             OutlineEdge(0.5f, 2f / 24f) * 2f);
 
         Assert.Equal(IconInk.MaximumExtent / 1.25f, IconInk.OpticalScale(box, false), 3);
@@ -130,7 +130,7 @@ public sealed class IconInkTests
     [Fact]
     public void NeverGrowsASmallGlyph()
     {
-        var box = new IconInkBox(IconInk.BoxCentre, new Vector2(0.5f), Outline(0.5f, 2f / 24f),
+        var box = new IconInkBox(IconInk.BoxCenter, new Vector2(0.5f), Outline(0.5f, 2f / 24f),
             OutlineEdge(0.5f, 2f / 24f));
 
         Assert.Equal(1f, IconInk.OpticalScale(box, false), 3);
@@ -140,7 +140,7 @@ public sealed class IconInkTests
     public void DrawsASolidGlyphSlightlySmaller()
     {
         var side = 20f / 24f;
-        var box = new IconInkBox(IconInk.BoxCentre, new Vector2(side), side * side, 4f * side);
+        var box = new IconInkBox(IconInk.BoxCenter, new Vector2(side), side * side, 4f * side);
 
         Assert.Equal(1f - IconInk.SolidAllowance, IconInk.OpticalScale(box, true), 3);
     }
@@ -148,7 +148,7 @@ public sealed class IconInkTests
     [Fact]
     public void ReadsAThinBarAsAStrokeNotASolid()
     {
-        var box = new IconInkBox(IconInk.BoxCentre, new Vector2(16f / 24f, 2f / 24f), 32f / 576f, 36f / 24f);
+        var box = new IconInkBox(IconInk.BoxCenter, new Vector2(16f / 24f, 2f / 24f), 32f / 576f, 36f / 24f);
 
         Assert.Equal(1f, IconInk.OpticalScale(box, true), 3);
     }
@@ -163,7 +163,7 @@ public sealed class IconInkTests
     }
 
     [Fact]
-    public void ScaledGlyphKeepsItsInkCentreStill()
+    public void ScaledGlyphKeepsItsInkCenterStill()
     {
         var center = new Vector2(100.3f, 50.7f);
         var inkOffset = new Vector2(11.25f, 9.5f);
@@ -171,9 +171,9 @@ public sealed class IconInkTests
         for (var step = 0; step <= 20; step++)
         {
             var ratio = 0.9f + step * 0.01f;
-            var inkCentre = IconInk.Pen(center, inkOffset, ratio) + inkOffset * ratio;
-            Assert.Equal(rest.X, inkCentre.X, 4);
-            Assert.Equal(rest.Y, inkCentre.Y, 4);
+            var inkCenter = IconInk.Pen(center, inkOffset, ratio) + inkOffset * ratio;
+            Assert.Equal(rest.X, inkCenter.X, 4);
+            Assert.Equal(rest.Y, inkCenter.Y, 4);
         }
 
         Assert.True(Vector2.Distance(rest, center) <= MathF.Sqrt(0.5f) + 0.0001f);
@@ -183,7 +183,7 @@ public sealed class IconInkTests
 
     private static float OutlineEdge(float side, float stroke) => 4f * side + 4f * (side - 2f * stroke);
 
-    private static Vector2 Find(params string[] rows) => Measure(1f, rows).Centre;
+    private static Vector2 Find(params string[] rows) => Measure(1f, rows).Center;
 
     private static IconInkBox Measure(float texel, params string[] rows)
     {

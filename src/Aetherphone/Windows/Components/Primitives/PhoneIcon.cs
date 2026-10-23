@@ -28,8 +28,8 @@ internal static class PhoneIcon
 
             var ink = Plugin.Fonts.InkMark(font, glyph[0]);
             var size = optical ? boxHeight * ink.Scale : boxHeight;
-            var inkOffset = new Vector2(float.Lerp(found.X0, found.X1, ink.Centre.X),
-                float.Lerp(found.Y0, found.Y1, ink.Centre.Y));
+            var inkOffset = new Vector2(float.Lerp(found.X0, found.X1, ink.Center.X),
+                float.Lerp(found.Y0, found.Y1, ink.Center.Y));
             var pen = IconInk.Pen(center, inkOffset, size / font.FontSize);
             // ImGui floors the text pen to whole pixels, so a scaled glyph's vertices carry the rest of its pen and
             // it grows or shrinks around one fixed point instead of stepping a pixel at a time.

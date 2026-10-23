@@ -3,15 +3,15 @@ using Dalamud.Interface.ManagedFontAtlas;
 
 namespace Aetherphone.Core;
 
-internal readonly record struct IconInkBox(Vector2 Centre, Vector2 Size, float Area, float Edge);
+internal readonly record struct IconInkBox(Vector2 Center, Vector2 Size, float Area, float Edge);
 
-internal readonly record struct IconInkMark(Vector2 Centre, float Scale);
+internal readonly record struct IconInkMark(Vector2 Center, float Scale);
 
 internal sealed class IconInk
 {
-    public static readonly Vector2 BoxCentre = new(0.5f, 0.5f);
+    public static readonly Vector2 BoxCenter = new(0.5f, 0.5f);
 
-    public static readonly IconInkMark Unmeasured = new(BoxCentre, 1f);
+    public static readonly IconInkMark Unmeasured = new(BoxCenter, 1f);
 
     // Tabler's ink boxes average 0.8 of the box (geometric mean of width and height), its star reaches 22 of 24
     // units, and its stroke is 2 units.
@@ -82,7 +82,7 @@ internal sealed class IconInk
             }
 
             var tabler = codepoint >= IconPlan.FirstTablerCodepoint && codepoint <= IconPlan.LastTablerCodepoint;
-            marks[(char)codepoint] = new IconInkMark(box.Centre, OpticalScale(box, tabler));
+            marks[(char)codepoint] = new IconInkMark(box.Center, OpticalScale(box, tabler));
         }
 
         return new IconInk((nint)font.Handle, marks);
@@ -107,7 +107,7 @@ internal sealed class IconInk
     public static bool TryMeasure(ReadOnlySpan<byte> pixels, int bytesPerPixel, int stride, int left, int top,
         int columns, int rows, Vector2 texel, out IconInkBox box)
     {
-        box = new IconInkBox(BoxCentre, Vector2.Zero, 0f, 0f);
+        box = new IconInkBox(BoxCenter, Vector2.Zero, 0f, 0f);
         if (columns <= 0 || rows <= 0 || columns > MaximumSpan || rows > MaximumSpan)
         {
             return false;
