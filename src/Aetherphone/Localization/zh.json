@@ -5724,6 +5724,7 @@
   "prism.bodyLabel": "种族与性别",
   "prism.bodyNeeded": "请选择照片中的种族和性别。",
   "prism.trackNeeded": "请选择使用模组或原版。",
+  "prism.gearNeeded": "请添加照片中的每件装备。",
   "prism.moreFrom": "{0} 的更多幻化",
   "prism.inspiredBy": "灵感来自另一套幻化",
   "prism.fitsMe": "适合我",

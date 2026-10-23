@@ -240,7 +240,7 @@ internal sealed partial class PrismApp
         }
         else if (!gearReady)
         {
-            notice = Loc.T(L.Prism.AddYourGear);
+            notice = Loc.T(L.Prism.GearNeeded);
         }
 
         if (notice.Length > 0)

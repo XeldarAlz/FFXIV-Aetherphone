@@ -5724,6 +5724,7 @@
   "prism.bodyLabel": "種族と性別",
   "prism.bodyNeeded": "写真に写っている種族と性別を選んでください。",
   "prism.trackNeeded": "Mod使用かバニラを選んでください。",
+  "prism.gearNeeded": "写真に写っている装備を追加してください。",
   "prism.moreFrom": "{0}のほかのミラプリ",
   "prism.inspiredBy": "別のミラプリから着想",
   "prism.fitsMe": "自分に合う",

@@ -5724,6 +5724,7 @@
   "prism.bodyLabel": "Раса и пол",
   "prism.bodyNeeded": "Выберите расу и пол персонажа на фото.",
   "prism.trackNeeded": "Выберите «С модами» или «Без модов».",
+  "prism.gearNeeded": "Добавьте каждую вещь с фото.",
   "prism.moreFrom": "Ещё от {0}",
   "prism.inspiredBy": "Вдохновлено другим гламуром",
   "prism.fitsMe": "Подходит мне",
