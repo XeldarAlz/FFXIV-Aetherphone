@@ -579,8 +579,8 @@ internal sealed partial class PrismApp
         var settling = wearing && tryOnKey == key && ImGui.GetTime() - tryOnAt < PrismArt.TryOnSeconds;
         var saved = wearing && !settling && !wardrobe.Loading ? wardrobe.FindByGlam(key) : null;
         var label = !wearing || settling ? pillLabels[0] : saved is null ? pillLabels[1] : pillLabels[2];
-        if (!DrawPill(drawList, rect, label, saved is not null, overlay, scale) || settling ||
-            wearing && wardrobe.Loading || overlay && UiInteract.InputBlocked)
+        var locked = settling || wearing && wardrobe.Loading || overlay && UiInteract.InputBlocked;
+        if (!DrawPill(drawList, rect, label, saved is not null, overlay, locked, scale))
         {
             return;
         }
@@ -601,7 +601,8 @@ internal sealed partial class PrismApp
         }
     }
 
-    private bool DrawPill(ImDrawListPtr drawList, Rect rect, string label, bool saved, bool overlay, float scale)
+    private bool DrawPill(ImDrawListPtr drawList, Rect rect, string label, bool saved, bool overlay, bool locked,
+        float scale)
     {
         if (label != pillLabel)
         {
@@ -616,7 +617,8 @@ internal sealed partial class PrismApp
         var arrive = pillLeaving.Length > 0 ? PrismMotion.At(age, 0f, Motion.Appear) : 1f;
         var crossing = arrive < PrismMotion.Settled;
         var restyled = crossing && pillLeavingSaved != saved;
-        var hovered = overlay ? UiInteract.HoverWindowOnly(rect.Min, rect.Max) : UiInteract.Hover(rect.Min, rect.Max);
+        var hovered = !locked &&
+                      (overlay ? UiInteract.HoverWindowOnly(rect.Min, rect.Max) : UiInteract.Hover(rect.Min, rect.Max));
         var key = ImGui.GetID("prism.tryOn");
         var leaving = restyled ? PillFace(drawList, rect, pillLeavingSaved, hovered, key, 1f - arrive) : default;
         var face = PillFace(drawList, rect, saved, hovered, key, restyled ? arrive : 1f);
