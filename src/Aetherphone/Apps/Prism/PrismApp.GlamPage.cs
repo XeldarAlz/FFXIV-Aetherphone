@@ -43,6 +43,7 @@ internal sealed partial class PrismApp
     private const float PagerSlopBias = 1.2f;
     private const float DotsShare = 0.3f;
     private const float DotPitchUnits = 12f;
+    private const float PillHandoverSeconds = 0.18f;
 
     private readonly DoubleTapLike photoLike = new();
     private readonly DeferredTap photoTap = new();
@@ -614,7 +615,7 @@ internal sealed partial class PrismApp
         }
 
         var age = (float)(ImGui.GetTime() - pillSwapAt);
-        var arrive = pillLeaving.Length > 0 ? PrismMotion.At(age, 0f, Motion.Appear) : 1f;
+        var arrive = pillLeaving.Length > 0 ? PrismMotion.At(age, PillHandoverSeconds, Motion.Appear) : 1f;
         var crossing = arrive < PrismMotion.Settled;
         var restyled = crossing && pillLeavingSaved != saved;
         var hovered = !locked &&
@@ -622,15 +623,13 @@ internal sealed partial class PrismApp
         var key = ImGui.GetID("prism.tryOn");
         var leaving = restyled ? PillFace(drawList, rect, pillLeavingSaved, hovered, key, 1f - arrive) : default;
         var face = PillFace(drawList, rect, saved, hovered, key, restyled ? arrive : 1f);
-        var lift = Metrics.Space.Xs * scale;
         if (crossing)
         {
             DrawPillLabel(drawList, restyled ? leaving : face, pillLeaving, pillLeavingSaved, rect,
-                1f - PrismMotion.At(age, 0f, Motion.PressIn), -lift * arrive, scale);
+                1f - PrismMotion.At(age, 0f, Motion.PressIn), scale);
         }
 
-        DrawPillLabel(drawList, face, label, saved, rect, crossing ? arrive : 1f, crossing ? lift * (1f - arrive) : 0f,
-            scale);
+        DrawPillLabel(drawList, face, label, saved, rect, crossing ? arrive : 1f, scale);
         return UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
@@ -639,7 +638,7 @@ internal sealed partial class PrismApp
             true, hovered, key, opacity);
 
     private static void DrawPillLabel(ImDrawListPtr drawList, in ButtonFace face, string label, bool saved, Rect rect,
-        float alpha, float lift, float scale)
+        float alpha, float scale)
     {
         var mark = PrismMotion.Mark(drawList);
         var ink = face.LabelInk with { W = 1f };
@@ -658,9 +657,9 @@ internal sealed partial class PrismApp
 
         Typography.Draw(drawList, new Vector2(textLeft + lead, face.Face.Center.Y - size.Y * 0.5f), fitted,
             ink, labelStyle);
-        if (alpha < 1f || lift != 0f)
+        if (alpha < 1f)
         {
-            PrismMotion.Shift(drawList, mark, new Vector2(0f, lift), alpha);
+            PrismMotion.Shift(drawList, mark, Vector2.Zero, alpha);
         }
     }
 
