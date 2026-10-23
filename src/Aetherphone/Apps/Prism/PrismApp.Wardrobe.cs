@@ -34,6 +34,7 @@ internal sealed partial class PrismApp
     private const int BoardWeaponRow = 1;
     private const float BoardFill = 0.9f;
     private const int SheetCapacity = 4;
+    private const float SaveGlyphUnits = 14f;
 
     private static readonly int[] BodySlots =
     {
@@ -130,14 +131,36 @@ internal sealed partial class PrismApp
 
         var save = Loc.T(L.Prism.SaveWearing);
         var heading = Loc.T(L.Prism.TabWardrobe);
-        var saveWidth = ButtonWidth([save], float.MaxValue, scale);
+        var pillHeight = Button.RegularHeight * scale;
+        var labelStyle = Button.LabelStyle(pillHeight);
+        var glyph = SaveGlyphUnits * scale;
+        var gap = Metrics.Space.Xs * scale;
+        var textWidth = Typography.Measure(save, labelStyle).X;
+        var saveWidth = glyph + gap + textWidth + Metrics.Space.Md * 2f * scale;
         var labelled = left + Typography.Measure(heading, PrismType.Title).X + Metrics.Space.Md * scale <=
                        right - saveWidth;
         var saveLeft = labelled ? right - saveWidth : right - height;
-        var saved = labelled
-            ? DrawButton(drawList, new Rect(new Vector2(saveLeft, top), new Vector2(right, top + height)), save,
-                ButtonStyle.Solid, scale)
-            : IconButton(drawList, new Vector2(right - height * 0.5f, middle), PhoneIcons.Plus, save, scale);
+        bool saved;
+        if (labelled)
+        {
+            var hit = new Rect(new Vector2(saveLeft, top), new Vector2(right, top + height));
+            var hovered = UiInteract.Hover(hit.Min, hit.Max);
+            var pill = new Rect(new Vector2(saveLeft, middle - pillHeight * 0.5f),
+                new Vector2(right, middle + pillHeight * 0.5f));
+            var face = Button.Surface(drawList, pill, controls, ButtonStyle.Solid, ButtonRole.Normal, true, hovered,
+                ImGui.GetID("prism.saveWearing"));
+            var x = face.Face.Center.X - (glyph + gap + textWidth) * 0.5f;
+            PhoneIcon.Draw(drawList, new Vector2(x + glyph * 0.5f, face.Face.Center.Y), PhoneIcons.Plus, face.LabelInk,
+                glyph);
+            Typography.Draw(drawList,
+                new Vector2(x + glyph + gap, face.Face.Center.Y - Typography.LineHeight(labelStyle) * 0.5f), save,
+                face.LabelInk, labelStyle);
+            saved = UiInteract.Click(hit.Min, hit.Max, hovered);
+        }
+        else
+        {
+            saved = IconButton(drawList, new Vector2(right - height * 0.5f, middle), PhoneIcons.Plus, save, scale);
+        }
         if (saved)
         {
             SaveWearing();
