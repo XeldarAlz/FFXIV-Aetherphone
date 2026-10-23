@@ -15,11 +15,14 @@ internal sealed class GearDraft
     public byte[] Stain0 { get; } = new byte[GearSlots.All.Length];
     public byte[] Stain1 { get; } = new byte[GearSlots.All.Length];
 
+    public bool[] Shown { get; } = new bool[GearSlots.All.Length];
+
     public void Clear()
     {
         Array.Clear(Items);
         Array.Clear(Stain0);
         Array.Clear(Stain1);
+        Array.Clear(Shown);
     }
 }
 
@@ -31,6 +34,7 @@ internal sealed partial class PrismApp
     private const float DyeSwatchUnits = 6f;
     private const int DyeSegments = 16;
     private const int DyeChannels = 2;
+    private const int GearGridColumns = 6;
 
     private static readonly LocString[] SlotNames =
     {
@@ -323,9 +327,15 @@ internal sealed partial class PrismApp
         var removeWidth = ButtonWidth([remove], width * 0.5f, scale);
         var captionLine = Typography.LineHeight(PrismType.Caption);
         var nameLine = Typography.LineHeight(PrismType.Headline);
+        top = DrawGearGrid(drawList, left, top, width, scale) + Metrics.Space.Md * scale;
         for (var index = 0; index < Draft.Items.Length; index++)
         {
             var itemId = Draft.Items[index];
+            if (itemId == 0 && !Draft.Shown[index])
+            {
+                continue;
+            }
+
             var pick = default(GearPick);
             var known = itemId != 0 && gearCatalog.TryGet(itemId, out pick);
             if (!known && itemId != 0 && GearItem(itemId, out var itemName, out var itemIcon))
@@ -380,9 +390,7 @@ internal sealed partial class PrismApp
             ImGui.PopID();
             if (removed)
             {
-                Draft.Items[index] = 0;
-                Draft.Stain0[index] = 0;
-                Draft.Stain1[index] = 0;
+                ClearDraftSlot(index);
             }
 
             var dyeWidth = (left + width - textLeft) / DyeChannels;
@@ -398,6 +406,57 @@ internal sealed partial class PrismApp
         }
 
         return top;
+    }
+
+    private float DrawGearGrid(ImDrawListPtr drawList, float left, float top, float width, float scale)
+    {
+        var count = Draft.Items.Length;
+        var gap = Metrics.Space.Sm * scale;
+        var size = (width - gap * (GearGridColumns - 1)) / GearGridColumns;
+        var radius = size * Metrics.Radius.HomeTileFactor;
+        for (var index = 0; index < count; index++)
+        {
+            var min = new Vector2(left + index % GearGridColumns * (size + gap),
+                top + index / GearGridColumns * (size + gap));
+            var tile = new Rect(min, min + new Vector2(size, size));
+            var itemId = Draft.Items[index];
+            var on = itemId != 0 || Draft.Shown[index];
+            if (itemId != 0 && GearItem(itemId, out _, out var iconId))
+            {
+                GameIconTile.Draw(drawList, textures, iconId, tile.Min, tile.Max, radius, scale);
+            }
+            else
+            {
+                PrismArt.SlotTile(drawList, tile, (int)GearSlots.All[index], 0u, scale, !on);
+            }
+
+            var hovered = HoverWash(drawList, tile, tile, radius);
+            HoverTooltip.Show(tile, Loc.T(SlotNames[index]), HoverLabelSide.Above);
+            if (!UiInteract.Click(tile.Min, tile.Max, hovered))
+            {
+                continue;
+            }
+
+            if (on)
+            {
+                ClearDraftSlot(index);
+            }
+            else
+            {
+                Draft.Shown[index] = true;
+            }
+        }
+
+        var rows = (count + GearGridColumns - 1) / GearGridColumns;
+        return top + rows * size + (rows - 1) * gap;
+    }
+
+    private void ClearDraftSlot(int index)
+    {
+        Draft.Items[index] = 0;
+        Draft.Stain0[index] = 0;
+        Draft.Stain1[index] = 0;
+        Draft.Shown[index] = false;
     }
 
     private void DrawDyeTarget(ImDrawListPtr drawList, Rect target, int slot, int channel, float scale)
