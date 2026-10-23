@@ -172,7 +172,7 @@ Aethernet opened on 2 July 2026. By the end of the season, players on 113 worlds
 
 ## Built like the phone in your pocket
 
-**Lives in your HUD.** Drag it anywhere, resize it, or shrink it to a mini phone with the clock, widgets, music, calls and an optional FPS counter. Keep it on screen through Group Pose and cutscenes if it lives on a second monitor.
+**Lives in your HUD.** Drag it anywhere, resize it, or shrink it to a mini phone with the clock, widgets, music, calls and an optional FPS counter. Lock the mini phone in place, or let other windows sit over it. Keep it on screen through Group Pose and cutscenes if it lives on a second monitor.
 
 **In the server info bar.** The phone sits in the game's server info bar with your unread count, and a click opens it. Settings → General → Server info bar picks its style and renames the label.
 

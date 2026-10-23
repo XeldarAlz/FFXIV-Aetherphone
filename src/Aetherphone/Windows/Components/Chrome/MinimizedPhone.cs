@@ -199,7 +199,9 @@ internal sealed partial class MinimizedPhone : IDisposable
     {
         var scale = Scale;
         var geometry = ChassisGeometry.Puck(body, theme.CaseKind);
-        var drawList = ImGui.GetForegroundDrawList();
+        var drawList = LayerDrawList();
+        var viewport = ImGui.GetMainViewport();
+        drawList.PushClipRect(viewport.Pos, viewport.Pos + viewport.Size, false);
         var glassBody = !ShowsMinimap && liveBackdrop.TryRecordFor(body);
         if (glassBody)
         {
@@ -217,8 +219,12 @@ internal sealed partial class MinimizedPhone : IDisposable
             CoachmarkOverlay.DrawMiniCue(drawList, body, geometry.BodyRadius, scale);
         }
 
+        drawList.PopClipRect();
         return clicked;
     }
+
+    public ImDrawListPtr LayerDrawList() =>
+        configuration.MinimizedAlwaysOnTop ? ImGui.GetForegroundDrawList() : ImGui.GetWindowDrawList();
 
     public bool DrawFace(ImDrawListPtr drawList, in ChassisGeometry geometry, PhoneTheme theme, float delta,
         bool interactive, float alpha, bool glassBody = false)
@@ -621,7 +627,7 @@ internal sealed partial class MinimizedPhone : IDisposable
                     dragging = true;
                 }
 
-                if (dragging)
+                if (dragging && !configuration.LockMinimizedPosition)
                 {
                     dragDelta += ImGui.GetIO().MouseDelta;
                 }
@@ -630,7 +636,7 @@ internal sealed partial class MinimizedPhone : IDisposable
             {
                 if (dragging)
                 {
-                    dragReleased = true;
+                    dragReleased = !configuration.LockMinimizedPosition;
                 }
                 else if (bodyHovered)
                 {

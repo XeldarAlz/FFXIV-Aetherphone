@@ -10366,6 +10366,10 @@ internal static class L
         public static readonly LocString MinimapZoomHint = new("minimized.minimapZoomHint", "Scroll the wheel over the map to zoom, or use the plus and minus buttons that fade in when you hover it.");
         public static readonly LocString NoMap = new("minimized.noMap", "No map here");
         public static readonly LocString ResizeHint = new("minimized.resizeHint", "Drag its bottom right corner to make the minimized phone bigger or smaller.");
+        public static readonly LocString Placement = new("minimized.placement", "Placement");
+        public static readonly LocString LockPosition = new("minimized.lockPosition", "Lock position");
+        public static readonly LocString AlwaysOnTop = new("minimized.alwaysOnTop", "Always on top");
+        public static readonly LocString PlacementHint = new("minimized.placementHint", "Lock position keeps the mini phone where it is, and taps still open it. Turn off Always on top to let other windows sit over it.");
         public static readonly LocString DemoCaller = new("minimized.demoCaller", "Raid leader");
     }
 

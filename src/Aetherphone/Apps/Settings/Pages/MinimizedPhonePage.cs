@@ -50,6 +50,8 @@ internal sealed class MinimizedPhonePage : ISettingsPage
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
             SettingsSection.Hint(Loc.T(L.Minimized.ResizeHint), theme);
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Xl * scale));
+            DrawPlacementSettings(theme, scale);
+            ImGui.Dummy(new Vector2(0f, Metrics.Space.Xl * scale));
             if (configuration.MinimizedShape == MinimizedShape.Minimap)
             {
                 DrawMinimapSettings(theme, scale);
@@ -96,6 +98,27 @@ internal sealed class MinimizedPhonePage : ISettingsPage
         }
 
         configuration.MinimizedShape = (MinimizedShape)picked;
+        configuration.Save();
+    }
+
+    private void DrawPlacementSettings(PhoneTheme theme, float scale)
+    {
+        SettingsSection.Header(Loc.T(L.Minimized.Placement), theme);
+        var card = GroupCard.Begin(theme, 2);
+        var locked = SettingsRow.Bool(card.NextRow(), Loc.T(L.Minimized.LockPosition),
+            configuration.LockMinimizedPosition, theme, "minimized.lockPosition");
+        var onTop = SettingsRow.Bool(card.NextRow(), Loc.T(L.Minimized.AlwaysOnTop),
+            configuration.MinimizedAlwaysOnTop, theme, "minimized.alwaysOnTop");
+        card.End();
+        ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
+        SettingsSection.Hint(Loc.T(L.Minimized.PlacementHint), theme);
+        if (locked == configuration.LockMinimizedPosition && onTop == configuration.MinimizedAlwaysOnTop)
+        {
+            return;
+        }
+
+        configuration.LockMinimizedPosition = locked;
+        configuration.MinimizedAlwaysOnTop = onTop;
         configuration.Save();
     }
 

@@ -66,7 +66,7 @@ internal sealed class MinimizeMorphView
         RevealMorphContent(DeviceChrome.Chassis(device, theme), theme, geometry, eased, device.IsLandscape());
 
         var faceAlpha = Easing.Segment(eased, FaceFadeStart, FaceFadeEnd);
-        minimizedPhone.DrawFace(ImGui.GetForegroundDrawList(), geometry, theme, delta, false, faceAlpha);
+        minimizedPhone.DrawFace(minimizedPhone.LayerDrawList(), geometry, theme, delta, false, faceAlpha);
     }
 
     private static void DrawRailButtons(ImDrawListPtr dl, in ChassisGeometry geometry, PhoneTheme theme, float scale,

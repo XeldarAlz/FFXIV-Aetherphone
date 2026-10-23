@@ -140,6 +140,8 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public int MinimizedMapZoom { get; set; } = MinimizedShapes.DefaultMapZoom;
     public bool MinimizedWallpaper { get; set; } = true;
     public float MinimizedScale { get; set; } = 1f;
+    public bool LockMinimizedPosition { get; set; }
+    public bool MinimizedAlwaysOnTop { get; set; } = true;
     public bool DoNotDisturb { get; set; }
     public bool QuietWhileBusy { get; set; } = true;
     public bool Vibration { get; set; } = true;
