@@ -802,19 +802,17 @@ internal sealed partial class PrismApp
             return label;
         }
 
-        var week = glam.Title;
         for (var index = 0; index < placings.Length; index++)
         {
             if (Placed(glam, placings[index]))
             {
-                week = placings[index].Title;
-                break;
+                label = Loc.T(L.Prism.PlacingLine, glam.Placing, placings[index].Title);
+                placingLabels[glam.Id] = label;
+                return label;
             }
         }
 
-        label = Loc.T(L.Prism.PlacingLine, glam.Placing, week);
-        placingLabels[glam.Id] = label;
-        return label;
+        return glam.Title;
     }
 
     private void SyncLabelLanguage()
