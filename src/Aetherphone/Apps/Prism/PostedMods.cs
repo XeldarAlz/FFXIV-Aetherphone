@@ -6,6 +6,21 @@ internal static class PostedMods
 {
     public static string Key(GlamModDto mod) => string.Concat(mod.Name, "|", mod.Author);
 
+    public static GlamGearDto[] Unmodded(GlamGearDto[] gear)
+    {
+        var kept = new List<GlamGearDto>(gear.Length);
+        for (var index = 0; index < gear.Length; index++)
+        {
+            var piece = gear[index];
+            if (piece.ItemId != 0)
+            {
+                kept.Add(piece.Mods is null ? piece : piece with { Mods = null });
+            }
+        }
+
+        return kept.ToArray();
+    }
+
     public static GlamGearDto[] Without(GlamGearDto[] gear, HashSet<string> dropped)
     {
         if (dropped.Count == 0)
