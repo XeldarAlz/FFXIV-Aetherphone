@@ -640,7 +640,7 @@ internal sealed partial class PrismApp
 
         if (items.Length > 0)
         {
-            return DrawGlamTiles(drawList, left, width, top, items, false, scale);
+            return DrawGlamTiles(drawList, left, width, top, items, null, scale);
         }
 
         if (showSaved)
@@ -668,9 +668,9 @@ internal sealed partial class PrismApp
     private float DrawPlacings(ImDrawListPtr drawList, float left, float width, float top, GlamDto[] items,
         GlamProfileDto? profile, float scale)
     {
-        var bottom = DrawGlamTiles(drawList, left, width, top, items, true, scale);
-        var inset = Metrics.Space.Lg * scale;
         var placings = profile?.Placings ?? Array.Empty<GlamPlacingDto>();
+        var bottom = DrawGlamTiles(drawList, left, width, top, items, placings, scale);
+        var inset = Metrics.Space.Lg * scale;
         var radius = PlacingMedalUnits * scale;
         var pitch = MathF.Max(Metrics.Size.TapTarget * scale, Typography.LineHeight(PrismType.Headline));
         var textLeft = left + inset + radius * 2f + Metrics.Space.Md * scale;
@@ -678,7 +678,7 @@ internal sealed partial class PrismApp
         for (var index = 0; index < placings.Length; index++)
         {
             var placing = placings[index];
-            if (HasPlacedGlam(items, placing))
+            if (PlacedGlam(items, placing))
             {
                 continue;
             }
@@ -705,11 +705,11 @@ internal sealed partial class PrismApp
         return DrawEmpty(left + inset, right, top, PhoneIcons.Crown, Loc.T(L.Prism.NoPlacings), string.Empty, scale);
     }
 
-    private static bool HasPlacedGlam(GlamDto[] items, GlamPlacingDto placing)
+    private static bool PlacedGlam(GlamDto[] items, GlamPlacingDto placing)
     {
         for (var index = 0; index < items.Length; index++)
         {
-            if (items[index].Placing == placing.Rank && items[index].WeekId == placing.WeekId)
+            if (Placed(items[index], placing))
             {
                 return true;
             }
@@ -718,8 +718,12 @@ internal sealed partial class PrismApp
         return false;
     }
 
+    private static bool Placed(GlamDto glam, GlamPlacingDto placing) =>
+        glam.Placing == placing.Rank && glam.WeekId == placing.WeekId &&
+        (placing.Track.Length == 0 || (placing.Track == PrismTracks.Vanilla) == glam.Vanilla);
+
     private float DrawGlamTiles(ImDrawListPtr drawList, float left, float width, float top, GlamDto[] items,
-        bool placings, float scale)
+        GlamPlacingDto[]? placings, float scale)
     {
         var gap = Metrics.Space.Xxs * scale;
         var tileLeft = left + gap;
@@ -730,7 +734,7 @@ internal sealed partial class PrismApp
         for (var index = 0; index < items.Length; index++)
         {
             var glam = items[index];
-            if (placings && glam.Placing <= 0)
+            if (placings is not null && glam.Placing <= 0)
             {
                 continue;
             }
@@ -739,7 +743,7 @@ internal sealed partial class PrismApp
             var y = top + shown / GridColumns * pitch;
             shown++;
             var photo = new Rect(new Vector2(x, y), new Vector2(x + column, y + height));
-            if (DrawGridTile(drawList, photo, Cover(glam), placings ? PlacingLabel(glam) : glam.Title,
+            if (DrawGridTile(drawList, photo, Cover(glam), placings is null ? glam.Title : PlacingLabel(glam, placings),
                     string.Empty, null, PhoneIcons.Wand, glam.TryOns > 0 ? CountLabel(glam.TryOns) : string.Empty, scale))
             {
                 OpenGlam(glam);
@@ -812,15 +816,26 @@ internal sealed partial class PrismApp
     private static string CountLabel(long value) =>
         value >= CompactFrom ? NumberText.Compact(value) : NumberText.Group(value);
 
-    private string PlacingLabel(GlamDto glam)
+    private string PlacingLabel(GlamDto glam, GlamPlacingDto[] placings)
     {
         SyncLabelLanguage();
-        if (!placingLabels.TryGetValue(glam.Id, out var label))
+        if (placingLabels.TryGetValue(glam.Id, out var label))
         {
-            label = Loc.T(L.Prism.PlacingLine, glam.Placing, glam.Title);
-            placingLabels[glam.Id] = label;
+            return label;
         }
 
+        var week = glam.Title;
+        for (var index = 0; index < placings.Length; index++)
+        {
+            if (Placed(glam, placings[index]))
+            {
+                week = placings[index].Title;
+                break;
+            }
+        }
+
+        label = Loc.T(L.Prism.PlacingLine, glam.Placing, week);
+        placingLabels[glam.Id] = label;
         return label;
     }
 
@@ -861,7 +876,7 @@ internal sealed partial class PrismApp
         }
         else
         {
-            cursor = DrawGlamTiles(list, origin.X, width, cursor, lane.Items, false, scale);
+            cursor = DrawGlamTiles(list, origin.X, width, cursor, lane.Items, null, scale);
         }
 
         ImGui.Dummy(new Vector2(width, cursor - origin.Y + PrismArt.BottomMargin(scale)));
