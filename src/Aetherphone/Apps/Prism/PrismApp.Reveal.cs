@@ -405,10 +405,10 @@ internal sealed partial class PrismApp
             var creditTop = photo.Max.Y + Metrics.Space.Sm * scale;
             var names = new Rect(new Vector2(x, photo.Max.Y), new Vector2(x + column,
                 creditTop + nameLine + Typography.LineHeight(PrismType.Caption) + Metrics.Space.Sm * scale));
-            HoverWash(drawList, names.Min, names.Max, placing, scale);
-            TapForProfile(names.Min, names.Max, placing);
+            TapForProfile(drawList, names, placing, scale);
             Typography.Draw(drawList, new Vector2(x, creditTop),
-                Typography.FitText(placing.DisplayName, column, PrismType.Headline), PrismArt.Fore, PrismType.Headline);
+                Typography.FitText(placing.DisplayName, column, PrismType.Headline), NameInk(placing),
+                PrismType.Headline);
             Typography.Draw(drawList, new Vector2(x, creditTop + nameLine),
                 Typography.FitText(PlacingDetail(placing), column, PrismType.Caption), PrismArt.Muted,
                 PrismType.Caption);
@@ -474,7 +474,6 @@ internal sealed partial class PrismApp
         var pad = Metrics.Space.Sm * scale;
         var bottom = top + thumbHeight + pad * 2f;
         var middle = (top + bottom) * 0.5f;
-        HoverWash(drawList, new Vector2(left, top), new Vector2(left + width, bottom), placing, scale);
         var rank = Plain[Math.Clamp(placing.Rank, 0, Plain.Length - 1)];
         Typography.Draw(drawList, new Vector2(left, middle - Typography.LineHeight(PrismType.Headline) * 0.5f), rank,
             PrismArt.Fore, PrismType.Headline);
@@ -483,38 +482,41 @@ internal sealed partial class PrismApp
             new Rect(new Vector2(thumbLeft, top + pad), new Vector2(thumbLeft + thumbWidth, bottom - pad)),
             placing.ImageUrl, false);
         var textLeft = thumbLeft + thumbWidth + Metrics.Space.Md * scale;
-        TapForOutfit(new Vector2(left, top), new Vector2(thumbLeft + thumbWidth, bottom), placing);
-        TapForProfile(new Vector2(thumbLeft + thumbWidth, top), new Vector2(left + width, bottom), placing);
+        var outfit = new Rect(new Vector2(left, top), new Vector2(thumbLeft + thumbWidth, bottom));
+        if (HasOutfit(placing.Outfit) || placing.GlamId.Length > 0)
+        {
+            HoverWash(drawList, outfit, outfit, Metrics.Radius.Sm * scale);
+        }
+
+        TapForOutfit(outfit.Min, outfit.Max, placing);
+        TapForProfile(drawList, new Rect(new Vector2(outfit.Max.X, top), new Vector2(left + width, bottom)), placing,
+            scale);
         var room = MathF.Max(1f, left + width - textLeft);
         var nameLine = Typography.LineHeight(PrismType.Headline);
         var textTop = middle - (nameLine + Typography.LineHeight(PrismType.Caption)) * 0.5f;
         Typography.Draw(drawList, new Vector2(textLeft, textTop),
-            Typography.FitText(placing.DisplayName, room, PrismType.Headline), PrismArt.Fore, PrismType.Headline);
+            Typography.FitText(placing.DisplayName, room, PrismType.Headline), NameInk(placing), PrismType.Headline);
         Typography.Draw(drawList, new Vector2(textLeft, textTop + nameLine),
             Typography.FitText(PlacingDetail(placing), room, PrismType.Caption), PrismArt.Muted, PrismType.Caption);
         return bottom;
     }
 
-    private static void HoverWash(ImDrawListPtr drawList, Vector2 min, Vector2 max, PrismPlacingDto placing,
-        float scale)
+    private void TapForProfile(ImDrawListPtr drawList, Rect hit, PrismPlacingDto placing, float scale)
     {
-        if ((placing.GlamId.Length == 0 && !HasOutfit(placing.Outfit)) || !UiInteract.Hover(min, max))
+        if (placing.GlamId.Length == 0 || profileGlamId.Length > 0)
         {
             return;
         }
 
-        drawList.AddRectFilled(min, max, ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Quaternary)),
-            Metrics.Radius.Sm * scale);
-    }
-
-    private void TapForProfile(Vector2 min, Vector2 max, PrismPlacingDto placing)
-    {
-        if (placing.GlamId.Length > 0 && UiInteract.HoverClick(min, max))
+        if (UiInteract.Click(hit.Min, hit.Max, HoverWash(drawList, hit, hit, Metrics.Radius.Sm * scale)))
         {
             profileGlamId = placing.GlamId;
             glams.Open(new GlamDto(placing.GlamId));
         }
     }
+
+    private Vector4 NameInk(PrismPlacingDto placing) =>
+        profileGlamId.Length > 0 && profileGlamId == placing.GlamId ? PrismArt.Muted : PrismArt.Fore;
 
     private void FollowPlacingProfile()
     {

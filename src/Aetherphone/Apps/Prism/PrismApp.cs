@@ -357,6 +357,7 @@ internal sealed partial class PrismApp : IResumableApp
         {
             store.ClearFailure();
             ResetPieces();
+            profileGlamId = string.Empty;
         }
 
         screen = next;
