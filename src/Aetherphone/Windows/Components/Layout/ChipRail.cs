@@ -30,6 +30,7 @@ internal sealed class ChipRail
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 Black = new(0f, 0f, 0f, 1f);
     private const float ActiveHoverLift = 0.10f;
+    private const float LightAccentLuminance = 0.5f;
 
     private float offset;
     private float maxOffset;
@@ -182,8 +183,7 @@ internal sealed class ChipRail
             ? Palette.Mix(ink.Accent, White, highlighted ? ActiveHoverLift : 0f)
             : Surfaces.Fill(ink, highlighted ? FillLevel.Secondary : FillLevel.Tertiary);
         Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
-        var labelInk = !active ? ink.Ink
-            : Palette.ContrastRatio(fill, White) >= Palette.ContrastRatio(fill, Black) ? White : Black;
+        var labelInk = !active ? ink.Ink : Palette.RelativeLuminance(ink.Accent) > LightAccentLuminance ? Black : White;
         var fitted = Typography.FitText(label, MathF.Max(1f, LabelRoom(rect)), LabelStyle);
         var fittedSize = Typography.Measure(fitted, LabelStyle);
         Typography.Draw(drawList, rect.Center - fittedSize * 0.5f, fitted, labelInk, LabelStyle);
