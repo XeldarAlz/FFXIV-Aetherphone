@@ -133,19 +133,21 @@ internal sealed class GlamStore : IDisposable
 
         if (session.IsSignedIn && followLookups.TryAdd(author.Id, true))
         {
-            var userId = author.Id;
-            work.Run("follow state", async token =>
-            {
-                var fetched = await client.ProfileAsync(userId, token).ConfigureAwait(false);
-                if (fetched is not null && followsFor == owner)
-                {
-                    follows.TryAdd(userId, fetched.Following);
-                }
-            });
+            LookUpFollow(author.Id, owner);
         }
 
         return null;
     }
+
+    private void LookUpFollow(string userId, string owner) =>
+        work.Run("follow state", async token =>
+        {
+            var fetched = await client.ProfileAsync(userId, token).ConfigureAwait(false);
+            if (fetched is not null && followsFor == owner)
+            {
+                follows.TryAdd(userId, fetched.Following);
+            }
+        });
 
     public FeedLane<GlamDto> Lane(GlamScope scope) => discover[(int)scope];
 
