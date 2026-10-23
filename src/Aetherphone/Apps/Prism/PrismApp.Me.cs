@@ -41,7 +41,6 @@ internal sealed partial class PrismApp
     private readonly ChipRail profileTabRail = new();
     private readonly PullToRefresh profilePull = new();
     private Action? refreshProfileNow;
-    private readonly Dictionary<long, string> countLabels = new();
     private readonly Dictionary<string, string> placingLabels = new(StringComparer.Ordinal);
     private string? countLanguage;
     private Spring profileTabSlide;
@@ -730,17 +729,8 @@ internal sealed partial class PrismApp
         }
     }
 
-    private string CountLabel(long value)
-    {
-        SyncLabelLanguage();
-        if (!countLabels.TryGetValue(value, out var label))
-        {
-            label = value >= CompactFrom ? NumberText.Compact(value) : value.ToString("N0", Loc.Culture);
-            countLabels[value] = label;
-        }
-
-        return label;
-    }
+    private static string CountLabel(long value) =>
+        value >= CompactFrom ? NumberText.Compact(value) : NumberText.Group(value);
 
     private string PlacingLabel(GlamDto glam)
     {
@@ -762,7 +752,6 @@ internal sealed partial class PrismApp
         }
 
         countLanguage = Loc.Current.Code;
-        countLabels.Clear();
         placingLabels.Clear();
     }
 
@@ -880,6 +869,6 @@ internal sealed partial class PrismApp
         var key = HashCode.Combine(price, Loc.Current.Code);
         return vendorText.IsCurrent(key)
             ? vendorText.Value
-            : vendorText.Store(key, Loc.T(L.Prism.VendorPrice, price.ToString("N0", Loc.Culture)));
+            : vendorText.Store(key, Loc.T(L.Prism.VendorPrice, NumberText.Group(price)));
     }
 }
