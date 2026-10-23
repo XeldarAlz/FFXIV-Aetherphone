@@ -18,6 +18,7 @@ internal sealed partial class PrismApp
     private const float SearchGlyphUnits = 16f;
     private const float CancelShare = 0.4f;
     private const double TagFetchSeconds = 0.35;
+    private const double TagRetrySeconds = 5;
 
     private readonly List<MarketItemRef> searchHits = new();
     private readonly List<MarketItemRef> searchFound = new();
@@ -31,6 +32,7 @@ internal sealed partial class PrismApp
     private string tagGlamsFor = string.Empty;
     private GlamDto[] tagGlams = Array.Empty<GlamDto>();
     private double searchChangedAt;
+    private double tagRetryAt;
     private bool searchItems;
     private bool searchIndexed;
     private bool searchOpen;
@@ -154,19 +156,34 @@ internal sealed partial class PrismApp
             return;
         }
 
+        var now = ImGui.GetTime();
         if (glams.ListKey == searchTagKey)
         {
-            if (!glams.List.Loading)
+            if (glams.List.Loading)
+            {
+                return;
+            }
+
+            if (!glams.List.Failed)
             {
                 tagGlams = glams.List.Items;
                 tagGlamsFor = searchTag;
+                return;
             }
 
+            if (now < tagRetryAt)
+            {
+                return;
+            }
+
+            tagRetryAt = now + TagRetrySeconds;
+            glams.OpenTag(searchTag);
             return;
         }
 
-        if (ImGui.GetTime() - searchChangedAt >= TagFetchSeconds)
+        if (now - searchChangedAt >= TagFetchSeconds)
         {
+            tagRetryAt = now + TagRetrySeconds;
             glams.OpenTag(searchTag);
         }
     }
