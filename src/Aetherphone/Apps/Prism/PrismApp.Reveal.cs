@@ -285,7 +285,7 @@ internal sealed partial class PrismApp
         Go(PrismScreen.Final);
     }
 
-    private void DrawFinal(ImDrawListPtr drawList, Rect content, float scale)
+    private void DrawFinal(ImDrawListPtr drawList, Rect full, Rect content, float scale)
     {
         if (ShownResults() is not { } results)
         {
@@ -296,7 +296,6 @@ internal sealed partial class PrismApp
         FollowPlacingProfile();
         SyncOrder(results);
         var top = DrawBackHeader(drawList, content, results.Title, scale);
-        var full = FullFrom(content, scale);
         var body = new Rect(new Vector2(full.Min.X, top), new Vector2(full.Max.X, content.Max.Y));
         using var surface = BeginBody(body);
         var list = ImGui.GetWindowDrawList();

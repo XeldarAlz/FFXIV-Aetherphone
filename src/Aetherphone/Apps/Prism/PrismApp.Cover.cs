@@ -225,7 +225,7 @@ internal sealed partial class PrismApp
         }
 
         var track = Surfaces.Fill(PrismArt.Fore, FillLevel.Tertiary);
-        var under = Vector4.Lerp(followedTheme!.AppBackground, PrismArt.Fore, track.W);
+        var under = Vector4.Lerp(PrismArt.Page, PrismArt.Fore, track.W);
         var thumb = Vector4.Lerp(under, PrismArt.Fore, Surfaces.Fill(PrismArt.Fore, FillLevel.Primary).W)
             with { W = 1f };
         var picked = SegmentStrip.Draw("prism.tracks", row, trackLabels, selected, track, thumb, PrismArt.Muted,

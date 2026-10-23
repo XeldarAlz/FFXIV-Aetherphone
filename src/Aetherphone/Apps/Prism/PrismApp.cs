@@ -291,19 +291,19 @@ internal sealed partial class PrismApp : IResumableApp
                 DrawPick(drawList, content, scale);
                 break;
             case PrismScreen.Runway:
-                DrawRunway(drawList, content, scale);
+                DrawRunway(drawList, full, content, scale);
                 break;
             case PrismScreen.Reveal:
                 DrawReveal(drawList, full, content, scale);
                 break;
             case PrismScreen.Final:
-                DrawFinal(drawList, content, scale);
+                DrawFinal(drawList, full, content, scale);
                 break;
             case PrismScreen.Guide:
                 DrawGuide(drawList, content, scale);
                 break;
             case PrismScreen.Rewards:
-                DrawRewards(drawList, content, scale);
+                DrawRewards(drawList, full, content, scale);
                 break;
             case PrismScreen.Outfit:
                 DrawOutfit(drawList, content, scale);
@@ -315,7 +315,7 @@ internal sealed partial class PrismApp : IResumableApp
                 DrawDyePick(drawList, content, scale);
                 break;
             case PrismScreen.Track:
-                DrawTrackChoice(drawList, content, scale);
+                DrawTrackChoice(drawList, full, content, scale);
                 break;
             case PrismScreen.Discover:
                 DrawDiscover(drawList, full, content, scale);
@@ -328,16 +328,16 @@ internal sealed partial class PrismApp : IResumableApp
                 break;
             case PrismScreen.Me:
             case PrismScreen.Profile:
-                DrawProfile(drawList, content, scale);
+                DrawProfile(drawList, full, content, scale);
                 break;
             case PrismScreen.GlamList:
-                DrawGlamList(drawList, content, scale);
+                DrawGlamList(drawList, full, content, scale);
                 break;
             case PrismScreen.Wardrobe:
-                DrawWardrobe(drawList, content, scale);
+                DrawWardrobe(drawList, full, content, scale);
                 break;
             case PrismScreen.WardrobeOutfit:
-                DrawWardrobeOutfit(drawList, content, scale);
+                DrawWardrobeOutfit(drawList, full, content, scale);
                 break;
             case PrismScreen.WardrobeCover:
                 DrawWardrobeCover(drawList, content, scale);
@@ -444,9 +444,6 @@ internal sealed partial class PrismApp : IResumableApp
             Typography.FitText(title, MathF.Max(1f, room), PrismType.Title), PrismArt.Fore, PrismType.Title);
         return top + height;
     }
-
-    private Rect FullFrom(Rect content, float scale) =>
-        SceneChrome.ScreenFrom(content, followedTheme ?? PhoneTheme.Default, scale);
 
     private static float PhotoTop(Rect full, Rect content) => PrismArt.Light ? content.Min.Y : full.Min.Y;
 

@@ -87,6 +87,8 @@ internal static class PrismArt
 
     public static Vector4 Back => inks.Back;
 
+    public static Vector4 Page => themeInks.Back;
+
     public static Vector4 Fore => inks.Fore;
 
     public static Vector4 Muted => inks.Muted;

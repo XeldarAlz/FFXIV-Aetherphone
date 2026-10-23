@@ -61,7 +61,7 @@ internal sealed partial class PrismApp
         }
     }
 
-    private void DrawTrackChoice(ImDrawListPtr drawList, Rect content, float scale)
+    private void DrawTrackChoice(ImDrawListPtr drawList, Rect full, Rect content, float scale)
     {
         var tracks = store.Tracks;
         if (tracks.Length < 2 || store.Week is not { } week)
@@ -71,7 +71,6 @@ internal sealed partial class PrismApp
         }
 
         var count = Math.Min(tracks.Length, MaxTracks);
-        var full = FullFrom(content, scale);
         var button = ActionRect(content, scale);
         var gap = Metrics.Space.Lg * scale;
         var blockKey = HashCode.Combine(Loc.Current.Code, content.Width, Plugin.Fonts.Generation, count);

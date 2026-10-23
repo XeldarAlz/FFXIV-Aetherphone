@@ -81,7 +81,7 @@ internal sealed partial class PrismApp
         Go(PrismScreen.Runway);
     }
 
-    private void DrawRunway(ImDrawListPtr drawList, Rect content, float scale)
+    private void DrawRunway(ImDrawListPtr drawList, Rect full, Rect content, float scale)
     {
         ConsumeBallotOutcome();
         if (heatDone)
@@ -115,7 +115,7 @@ internal sealed partial class PrismApp
             return;
         }
 
-        DrawLookToRate(drawList, content, looks, scale);
+        DrawLookToRate(drawList, full, content, looks, scale);
     }
 
     private void StartHeat(PrismBallotDto ballot, int count)
@@ -132,7 +132,7 @@ internal sealed partial class PrismApp
         turnAge = TurnIdle;
     }
 
-    private void DrawLookToRate(ImDrawListPtr drawList, Rect content, PrismLookDto[] looks, float scale)
+    private void DrawLookToRate(ImDrawListPtr drawList, Rect full, Rect content, PrismLookDto[] looks, float scale)
     {
         lookMenu.Gate();
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
@@ -153,7 +153,6 @@ internal sealed partial class PrismApp
         var questionHeight = Typography.MeasureWrappedBlock(question, PrismType.Title, width).Y;
         var below = Metrics.Space.Lg * scale * 3f + captionLine * 2f + Metrics.Space.Xxs * scale + questionHeight +
                     size + Metrics.Space.Xs * scale;
-        var full = FullFrom(content, scale);
         var photoTop = PhotoTop(full, content);
         var blockTop = MathF.Max(photoTop, content.Max.Y - below);
         var photo = new Rect(new Vector2(full.Min.X, photoTop),

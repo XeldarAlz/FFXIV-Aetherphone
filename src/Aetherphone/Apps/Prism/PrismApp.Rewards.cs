@@ -95,10 +95,9 @@ internal sealed partial class PrismApp
         }
     }
 
-    private void DrawRewards(ImDrawListPtr drawList, Rect content, float scale)
+    private void DrawRewards(ImDrawListPtr drawList, Rect full, Rect content, float scale)
     {
         SyncRewardArt();
-        var full = FullFrom(content, scale);
         var topInset = PhotoInset(full, content);
         var entering = store.Week is { Phase: PrismPhases.Entering, MyEntry: null };
         var button = ActionRect(content, scale);

@@ -71,7 +71,7 @@ internal sealed partial class PrismApp
     private PrismScreen sheetScreen;
     private string sheetOutfit = string.Empty;
 
-    private void DrawWardrobe(ImDrawListPtr drawList, Rect content, float scale)
+    private void DrawWardrobe(ImDrawListPtr drawList, Rect full, Rect content, float scale)
     {
         wardrobe.Ensure();
         GateWardrobeSheet();
@@ -83,7 +83,6 @@ internal sealed partial class PrismApp
 
         var top = DrawWardrobeHeader(drawList, content, scale);
         top = DrawWardrobeChips(content, top, scale);
-        var full = FullFrom(content, scale);
         var body = new Rect(new Vector2(full.Min.X, top), new Vector2(full.Max.X, content.Max.Y));
         if (wardrobe.Loading || wardrobe.Importing || CountOutfits(favouritesOnly) > 0)
         {
@@ -359,7 +358,7 @@ internal sealed partial class PrismApp
         }
     }
 
-    private void DrawWardrobeOutfit(ImDrawListPtr drawList, Rect content, float scale)
+    private void DrawWardrobeOutfit(ImDrawListPtr drawList, Rect full, Rect content, float scale)
     {
         if (wardrobe.Find(outfitId) is not { } outfit)
         {
@@ -369,7 +368,6 @@ internal sealed partial class PrismApp
 
         GateWardrobeSheet();
         SyncFit(outfit);
-        var full = FullFrom(content, scale);
         var covered = outfit.Cover is { } cover && !wallpaperImages.Failed(cover.Path);
         var top = covered ? PhotoTop(full, content) : content.Min.Y;
         DrawFit(new Rect(new Vector2(full.Min.X, top), new Vector2(full.Max.X, content.Max.Y)), outfit, covered,

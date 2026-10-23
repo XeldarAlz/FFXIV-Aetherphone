@@ -163,7 +163,7 @@ internal sealed partial class PrismApp
 
     private static float BodyTop() => ImGui.GetWindowPos().Y - ImGui.GetScrollY();
 
-    private void DrawProfile(ImDrawListPtr drawList, Rect content, float scale)
+    private void DrawProfile(ImDrawListPtr drawList, Rect full, Rect content, float scale)
     {
         if (!glams.IsSignedIn)
         {
@@ -192,7 +192,6 @@ internal sealed partial class PrismApp
         SyncProfileCover(author?.Id ?? string.Empty, lane);
         var covered = profileCover is not null || profile is { GlamCount: > 0 } ||
                       profile is null && !showSaved && lane.Loading;
-        var full = FullFrom(content, scale);
         var top = covered ? PhotoTop(full, content) : content.Min.Y;
         profileMenu.Gate();
         if (!covered && !mine)
@@ -826,10 +825,9 @@ internal sealed partial class PrismApp
         placingLabels.Clear();
     }
 
-    private void DrawGlamList(ImDrawListPtr drawList, Rect content, float scale)
+    private void DrawGlamList(ImDrawListPtr drawList, Rect full, Rect content, float scale)
     {
         var top = DrawBackHeader(drawList, content, string.Empty, scale);
-        var full = FullFrom(content, scale);
         var body = new Rect(new Vector2(full.Min.X, top), new Vector2(full.Max.X, content.Max.Y));
         using var surface = BeginBody(body);
         profilePull.Draw(body, surface.Pull, surface.Dragging, glams.List.Loading, PrismArt.Muted,
