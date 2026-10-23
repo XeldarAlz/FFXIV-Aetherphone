@@ -462,8 +462,8 @@ internal sealed partial class PrismApp
             var label = Loc.T(L.Prism.CheckMarket);
             var link = new Rect(new Vector2(left, cursor),
                 new Vector2(left + ButtonWidth([label], inner, scale), cursor + tap));
-            if (DrawButton(drawList, link, label, ButtonStyle.Plain, scale, enabled: ready, overlay: true,
-                    ink: photoControls, id: "prism.pieceMarket"))
+            if (DrawButton(drawList, link, label, ButtonStyle.Plain, scale, overlay: true, ink: photoControls,
+                    id: "prism.pieceMarket") && ready)
             {
                 marketLauncher.RequestItem(single.ItemId);
                 navigation.Open(MarketAppId);
@@ -474,8 +474,8 @@ internal sealed partial class PrismApp
 
         var button = new Rect(new Vector2(left, cursor + Metrics.Space.Sm * scale),
             new Vector2(left + inner, cursor + Metrics.Space.Sm * scale + tap));
-        if (DrawButton(drawList, button, Loc.T(L.Prism.TryOnPiece), ButtonStyle.Tinted, scale, enabled: ready,
-                overlay: true, ink: photoControls, id: "prism.tryOnPiece"))
+        if (DrawButton(drawList, button, Loc.T(L.Prism.TryOnPiece), ButtonStyle.Tinted, scale, overlay: true,
+                ink: photoControls, id: "prism.tryOnPiece") && ready)
         {
             TryOnPiece(single);
         }
