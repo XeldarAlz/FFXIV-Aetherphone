@@ -18,7 +18,6 @@ internal sealed partial class PrismApp
     private const int TitleMaxLength = 60;
     private const int TagsMaxLength = 80;
     private const int MaxTags = 6;
-    private const float FieldUnits = GlassField.HeightUnits;
     private const double RecaptureSeconds = 1.0;
 
     private readonly PhotoComposeSession composeSession;
@@ -227,7 +226,7 @@ internal sealed partial class PrismApp
     private float DrawInput(ImDrawListPtr drawList, float left, float top, float width, string hint, string id,
         ref string text, int maxLength, float scale)
     {
-        var field = new Rect(new Vector2(left, top), new Vector2(left + width, top + FieldUnits * scale));
+        var field = new Rect(new Vector2(left, top), new Vector2(left + width, top + GlassField.HeightUnits * scale));
         SearchBar.Surface(drawList, field, controls);
         GlassField.Text(field, id, hint, ref text, PrismArt.Fore, PrismArt.Muted, Metrics.Space.Md * scale, maxLength);
         return field.Max.Y;

@@ -200,7 +200,8 @@ internal sealed partial class PrismApp
         var gap = Metrics.Space.Xxs * scale;
         var column = (width - gap * (GridColumns + 1)) / GridColumns;
         var height = column / GlamStore.PhotoRatio;
-        var pitch = height + GridLine(scale) + gap;
+        var line = GridLine(scale);
+        var pitch = height + line + gap;
         var outfits = wardrobe.Outfits;
         var busy = wardrobe.Loading || wardrobe.Importing;
         var count = busy ? PlaceholderRows * GridColumns : outfits.Length;
@@ -215,7 +216,7 @@ internal sealed partial class PrismApp
             var min = new Vector2(origin.X + gap + shown % GridColumns * (column + gap), origin.Y + shown / GridColumns * pitch);
             var photo = new Rect(min, min + new Vector2(column, height));
             shown++;
-            if (!ImGui.IsRectVisible(photo.Min, new Vector2(photo.Max.X, photo.Max.Y + GridLine(scale))))
+            if (!ImGui.IsRectVisible(photo.Min, new Vector2(photo.Max.X, photo.Max.Y + line)))
             {
                 continue;
             }
@@ -236,9 +237,8 @@ internal sealed partial class PrismApp
                 }
             }
 
-            var opened = DrawGridTile(list, photo, string.Empty, outfit.Name, string.Empty, null, string.Empty,
-                PieceLabel(outfit.Gear), scale);
-            if (opened)
+            if (DrawGridTile(list, photo, string.Empty, outfit.Name, string.Empty, null, string.Empty,
+                    PieceLabel(outfit.Gear), scale))
             {
                 OpenOutfit(outfit.Id);
             }
@@ -307,7 +307,8 @@ internal sealed partial class PrismApp
                     scale);
                 if (showEmpty)
                 {
-                    BoardTooltip(tile, piece);
+                    HoverTooltip.Show(tile, piece.ItemId == 0 ? ModCountLine()
+                        : GearItem(piece.ItemId, out var name, out _) ? name : string.Empty);
                 }
 
                 return;
@@ -319,10 +320,6 @@ internal sealed partial class PrismApp
             PrismArt.SlotTile(drawList, tile, slot, 0, scale, true);
         }
     }
-
-    private void BoardTooltip(Rect tile, GlamGearDto piece) =>
-        HoverTooltip.Show(tile,
-            piece.ItemId == 0 ? ModCountLine() : GearItem(piece.ItemId, out var name, out _) ? name : string.Empty);
 
     private void DrawWardrobeOutfit(ImDrawListPtr drawList, Rect content, float scale)
     {

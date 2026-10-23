@@ -192,24 +192,22 @@ internal sealed partial class PrismApp
             new Vector2(frame.Max.X - pad, frame.Max.Y - pad));
         var byline = strip.Min.Y - pad - bar * 0.5f;
         var title = byline - bar * PlateTitleGapBars;
-        var ink = PrismArt.Fore;
         if (photo.Length > 0)
         {
             DrawLook(drawList, frame, photo, false, focusY: CoverFocus);
             PrismArt.Scrim(drawList, frame, frame.Max.Y - title, scale);
-            ink = PrismArt.Fore;
         }
         else
         {
             PrismArt.Placeholder(drawList, frame, false, scale);
         }
 
-        drawList.AddRectFilled(strip.Min, strip.Max, ImGui.GetColorU32(ink), strip.Height * 0.5f);
+        drawList.AddRectFilled(strip.Min, strip.Max, ImGui.GetColorU32(PrismArt.Fore), strip.Height * 0.5f);
         drawList.AddRectFilled(new Vector2(strip.Min.X, byline),
             new Vector2(strip.Min.X + strip.Width * PlateBylineShare, byline + bar * 0.5f),
-            ImGui.GetColorU32(Palette.WithAlpha(ink, PlateBarFaint)));
+            ImGui.GetColorU32(Palette.WithAlpha(PrismArt.Fore, PlateBarFaint)));
         drawList.AddRectFilled(new Vector2(strip.Min.X, title),
-            new Vector2(strip.Min.X + strip.Width * PlateTitleShare, title + bar), ImGui.GetColorU32(ink));
+            new Vector2(strip.Min.X + strip.Width * PlateTitleShare, title + bar), ImGui.GetColorU32(PrismArt.Fore));
     }
 
     private void DrawEnterPlate(ImDrawListPtr drawList, Rect plate, float scale)

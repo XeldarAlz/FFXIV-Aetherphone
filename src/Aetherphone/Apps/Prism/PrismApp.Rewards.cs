@@ -209,7 +209,8 @@ internal sealed partial class PrismApp
     }
 
     private float DrawRewardChapter(ImDrawListPtr drawList, float left, float top, float width, PrismRewardKind kind,
-        int number, float scale)
+        int number,
+        float scale)
     {
         var mark = PrismMotion.Mark(drawList);
         var cursor = DrawSectionTitle(drawList, left, left + width, top, Loc.T(RewardTitles[(int)kind]), string.Empty,

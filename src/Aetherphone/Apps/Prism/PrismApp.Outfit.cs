@@ -26,8 +26,6 @@ internal sealed partial class PrismApp
         L.Inventory.SlotWrists, L.Prism.SlotRing, L.Prism.SlotRing,
     };
 
-    private static readonly string[] RemoveIds = SlotIds("prism.remove.");
-
     private readonly uint[] draftItems = new uint[GearSlots.All.Length];
     private readonly byte[] draftStain0 = new byte[GearSlots.All.Length];
     private readonly byte[] draftStain1 = new byte[GearSlots.All.Length];
@@ -47,17 +45,6 @@ internal sealed partial class PrismApp
     private CachedText dyeChannelText;
 
     private static bool HasOutfit(GlamGearDto[]? outfit) => outfit is { Length: > 0 };
-
-    private static string[] SlotIds(string prefix)
-    {
-        var ids = new string[GearSlots.All.Length];
-        for (var index = 0; index < ids.Length; index++)
-        {
-            ids[index] = prefix + index.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        }
-
-        return ids;
-    }
 
     private bool EditingEntryOutfit =>
         outfitReturn == PrismScreen.Entry && store.Week is { Phase: PrismPhases.Entering, MyEntry: not null };
@@ -369,10 +356,12 @@ internal sealed partial class PrismApp
             Typography.Draw(drawList, new Vector2(textLeft, textTop + captionLine),
                 Typography.FitText(name, MathF.Max(1f, tapRight - textLeft), PrismType.Headline),
                 itemId != 0 || hovered ? PrismArt.Fore : PrismArt.Muted, PrismType.Headline);
-            if (itemId != 0 && DrawButton(drawList,
-                    new Rect(new Vector2(left + width - removeWidth, top + (head - tap) * 0.5f),
-                        new Vector2(left + width, top + (head + tap) * 0.5f)), remove, ButtonStyle.Plain, scale,
-                    id: RemoveIds[index]))
+            ImGui.PushID(index);
+            var removed = itemId != 0 && DrawButton(drawList,
+                new Rect(new Vector2(left + width - removeWidth, top + (head - tap) * 0.5f),
+                    new Vector2(left + width, top + (head + tap) * 0.5f)), remove, ButtonStyle.Plain, scale);
+            ImGui.PopID();
+            if (removed)
             {
                 draftItems[index] = 0;
                 draftStain0[index] = 0;

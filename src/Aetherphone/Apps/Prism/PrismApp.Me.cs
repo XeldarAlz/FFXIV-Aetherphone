@@ -308,7 +308,7 @@ internal sealed partial class PrismApp
         if (profileCover is { } cover)
         {
             DrawLook(drawList, photo, Cover(cover), false, native: true, focusY: CoverFocus);
-            if (UiInteract.Click(photo.Min, photo.Max, UiInteract.Hover(photo.Min, photo.Max)))
+            if (UiInteract.Click(photo.Min, photo.Max))
             {
                 OpenGlam(cover);
             }
@@ -593,7 +593,6 @@ internal sealed partial class PrismApp
         var pitch = MathF.Max(Metrics.Size.TapTarget * scale, Typography.LineHeight(PrismType.Headline));
         var textLeft = left + inset + radius * 2f + Metrics.Space.Md * scale;
         var right = left + width - inset;
-        var listed = false;
         for (var index = 0; index < placings.Length; index++)
         {
             var placing = placings[index];
@@ -602,7 +601,6 @@ internal sealed partial class PrismApp
                 continue;
             }
 
-            listed = true;
             var middle = bottom + pitch * 0.5f;
             DrawPlacingMedal(drawList, new Vector2(left + inset + radius, middle), radius, placing.Rank, false, scale);
             var track = placing.Track.Length > 0 ? PrismTracks.Name(placing.Track) : string.Empty;
@@ -617,7 +615,7 @@ internal sealed partial class PrismApp
             bottom += pitch;
         }
 
-        if (listed || bottom > top)
+        if (bottom > top)
         {
             return bottom;
         }
