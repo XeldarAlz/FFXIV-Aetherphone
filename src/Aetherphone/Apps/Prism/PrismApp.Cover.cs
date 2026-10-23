@@ -32,12 +32,14 @@ internal sealed partial class PrismApp
 
     private void DrawCover(ImDrawListPtr drawList, Rect full, Rect content, float scale)
     {
+        var area = new Rect(content.Min, new Vector2(content.Max.X, content.Max.Y - bottomChrome));
         if (!store.IsSignedIn)
         {
-            DrawCoverNotice(drawList, content, Loc.T(L.Prism.SignInTitle), Loc.T(L.Prism.SignInRequired), scale);
-            if (DrawButton(drawList, ActionRect(content, scale), Loc.T(L.Prism.OpenSettings), ButtonStyle.Solid, scale))
+            DrawEmpty(drawList, area, PhoneIcons.Crown, Loc.T(L.Prism.SignInTitle), Loc.T(L.Prism.SignInRequired),
+                Loc.T(L.Prism.OpenSettings), ButtonStyle.Solid, scale, out var settings);
+            if (settings)
             {
-                navigation.Open("settings");
+                navigation.Open(SettingsAppId);
             }
 
             return;
@@ -45,7 +47,7 @@ internal sealed partial class PrismApp
 
         if (store.Week is not { } week)
         {
-            DrawWeekMissing(drawList, content, scale);
+            DrawWeekMissing(drawList, area, scale);
             return;
         }
 
@@ -399,31 +401,21 @@ internal sealed partial class PrismApp
 
     private bool ShowingResults() => ShownResults() is not null;
 
-    private void DrawCoverNotice(ImDrawListPtr drawList, Rect content, string title, string body, float scale)
-    {
-        var width = content.Width;
-        var bottom = ActionRect(content, scale).Min.Y - Metrics.Space.Xxl * scale;
-        var top = bottom - Typography.MeasureWrappedBlock(body, PrismType.Body, width).Y - Metrics.Space.Sm * scale -
-                  PrismType.HeroHeight(title, width);
-        top += PrismType.DrawHero(drawList, new Vector2(content.Min.X, top), title, width, PrismArt.Fore) +
-               Metrics.Space.Sm * scale;
-        Typography.DrawWrappedLeft(new Vector2(content.Min.X, top), body, PrismArt.Muted, PrismType.Body, width);
-    }
-
-    private void DrawWeekMissing(ImDrawListPtr drawList, Rect content, float scale)
+    private void DrawWeekMissing(ImDrawListPtr drawList, Rect area, float scale)
     {
         if (!store.WeekFailed || store.Loading)
         {
             var loading = Loc.T(L.Common.Loading);
-            Typography.Draw(drawList, content.Center - Typography.Measure(loading, PrismType.Caption) * 0.5f, loading,
+            Typography.Draw(drawList, area.Center - Typography.Measure(loading, PrismType.Caption) * 0.5f, loading,
                 PrismArt.Muted, PrismType.Caption);
             return;
         }
 
         var reason = store.WeekFailureText;
-        DrawCoverNotice(drawList, content, Loc.T(L.Common.LoadFailed),
-            reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint), scale);
-        if (DrawButton(drawList, ActionRect(content, scale), Loc.T(L.Common.Retry), ButtonStyle.Solid, scale))
+        DrawEmpty(drawList, area, PhoneIcons.Refresh, Loc.T(L.Common.LoadFailed),
+            reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint), Loc.T(L.Common.Retry), ButtonStyle.Solid,
+            scale, out var retry);
+        if (retry)
         {
             UiFeedback.Play(UiSound.Refresh);
             store.Refresh();

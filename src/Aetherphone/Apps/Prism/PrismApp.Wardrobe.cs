@@ -90,13 +90,16 @@ internal sealed partial class PrismApp
         }
         else
         {
-            var inset = Metrics.Space.Lg * scale;
-            var resume = ImGui.GetCursorScreenPos();
-            EmptyState.Draw(new Rect(new Vector2(content.Min.X + inset, top), new Vector2(content.Max.X - inset,
-                    content.Max.Y - bottomChrome)), ui, favouritesOnly ? FontAwesomeIcon.Star : FontAwesomeIcon.Tshirt,
+            DrawEmpty(drawList, new Rect(new Vector2(content.Min.X, top),
+                    new Vector2(content.Max.X, content.Max.Y - bottomChrome)),
+                favouritesOnly ? PhoneIcons.Star : IconGlyph.Of(FontAwesomeIcon.Tshirt),
                 Loc.T(favouritesOnly ? L.Prism.FavouritesEmptyTitle : L.Prism.WardrobeEmptyTitle),
-                Loc.T(favouritesOnly ? L.Prism.FavouritesEmptyHint : L.Prism.WardrobeEmptyHint));
-            ImGui.SetCursorScreenPos(resume);
+                Loc.T(favouritesOnly ? L.Prism.FavouritesEmptyHint : L.Prism.WardrobeEmptyHint),
+                favouritesOnly ? string.Empty : Loc.T(L.Prism.SaveWearing), ButtonStyle.Solid, scale, out var save);
+            if (save)
+            {
+                SaveWearing();
+            }
         }
 
         DrawWardrobeSheet(full);

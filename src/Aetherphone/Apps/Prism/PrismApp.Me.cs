@@ -28,7 +28,6 @@ internal sealed partial class PrismApp
     private const float CoverMedalUnits = 11f;
     private const float PlacingMedalUnits = 14f;
     private const float ListIconUnits = 56f;
-    private const float EmptyStateUnits = 150f;
     private const long CompactFrom = 10000;
     private const string MarketAppId = "market";
     private const string SettingsAppId = "settings";
@@ -622,7 +621,6 @@ internal sealed partial class PrismApp
     {
         var lane = glams.List;
         var items = lane.Items;
-        var inset = Metrics.Space.Lg * scale;
         if (items.Length == 0 && (lane.Loading || lane.Failed))
         {
             return DrawLaneState(drawList, left, width, top, lane, scale);
@@ -638,20 +636,21 @@ internal sealed partial class PrismApp
             return DrawGlamTiles(drawList, left, width, top, items, null, scale);
         }
 
+        var area = EmptyArea(left, width, top, scale);
         if (showSaved)
         {
-            return DrawEmpty(left + inset, left + width - inset, top, PhoneIcons.Photo, Loc.T(L.Prism.Saved),
-                Loc.T(L.Prism.SavedEmptyHint), scale);
+            return DrawEmpty(drawList, area, PhoneIcons.Photo, Loc.T(L.Prism.Saved), Loc.T(L.Prism.SavedEmptyHint),
+                string.Empty, ButtonStyle.Solid, scale, out _);
         }
 
         if (!mine)
         {
-            return DrawEmpty(left + inset, left + width - inset, top, PhoneIcons.Photo,
-                Loc.T(L.Prism.ProfileEmptyHint), string.Empty, scale);
+            return DrawEmpty(drawList, area, PhoneIcons.Photo, Loc.T(L.Prism.ProfileEmptyHint), string.Empty,
+                string.Empty, ButtonStyle.Solid, scale, out _);
         }
 
-        var bottom = DrawEmpty(left + inset, left + width - inset, top, PhoneIcons.Photo,
-            Loc.T(L.Prism.FirstGlamTitle), Loc.T(L.Prism.FirstGlamHint), Loc.T(L.Prism.PostGlam), scale, out var post);
+        var bottom = DrawEmpty(drawList, area, PhoneIcons.Photo, Loc.T(L.Prism.FirstGlamTitle),
+            Loc.T(L.Prism.FirstGlamHint), Loc.T(L.Prism.PostGlam), ButtonStyle.Solid, scale, out var post);
         if (post)
         {
             StartCompose();
@@ -697,7 +696,8 @@ internal sealed partial class PrismApp
             return bottom;
         }
 
-        return DrawEmpty(left + inset, right, top, PhoneIcons.Crown, Loc.T(L.Prism.NoPlacings), string.Empty, scale);
+        return DrawEmpty(drawList, EmptyArea(left, width, top, scale), PhoneIcons.Crown, Loc.T(L.Prism.NoPlacings),
+            string.Empty, string.Empty, ButtonStyle.Solid, scale, out _);
     }
 
     private static bool PlacedGlam(GlamDto[] items, GlamPlacingDto placing)
@@ -757,45 +757,28 @@ internal sealed partial class PrismApp
             return DrawGridPlaceholders(drawList, left + gap, top, width - gap * 2f, scale);
         }
 
-        var inset = Metrics.Space.Lg * scale;
-        var hint = Loc.T(L.Common.LoadFailedHint);
-        top += Typography.DrawWrappedLeft(new Vector2(left + inset, top + Metrics.Space.Md * scale), hint,
-            PrismArt.Muted, PrismType.Body, width - inset * 2f) + Metrics.Space.Md * scale;
-        var label = Loc.T(L.Common.Retry);
-        var retry = new Rect(new Vector2(left + inset, top),
-            new Vector2(left + inset + ButtonWidth([label], width, scale), top + Button.LargeHeight * scale));
-        if (DrawButton(drawList, retry, label, ButtonStyle.Plain, scale))
+        var bottom = DrawEmpty(drawList, EmptyArea(left, width, top, scale), PhoneIcons.Refresh,
+            Loc.T(L.Common.LoadFailed), Loc.T(L.Common.LoadFailedHint), Loc.T(L.Common.Retry), ButtonStyle.Solid, scale,
+            out var retry);
+        if (retry)
         {
             RetryLane(lane);
         }
 
-        return retry.Max.Y;
+        return bottom;
     }
 
-    private float DrawEmpty(float left, float right, float top, string glyph, string title, string hint, float scale) =>
-        DrawEmpty(left, right, top, glyph, title, hint, string.Empty, scale, out _);
-
-    private float DrawEmpty(float left, float right, float top, string glyph, string title, string hint, string action,
-        float scale, out bool tapped)
+    private static Rect EmptyArea(float left, float width, float top, float scale)
     {
-        var hintHeight = hint.Length == 0
-            ? 0f
-            : Typography.MeasureWrappedBlock(hint, TextStyles.Subheadline, right - left - Metrics.Space.Xxl * scale * 2f).Y;
-        var actionHeight = action.Length > 0 ? Button.LargeHeight * scale * 2f : 0f;
-        var block = new Rect(new Vector2(left, top),
-            new Vector2(right, top + EmptyStateUnits * scale + hintHeight * 2f + actionHeight));
-        var resume = ImGui.GetCursorScreenPos();
-        tapped = EmptyState.Draw(block, ui, glyph, title, hint, action, ButtonStyle.Solid);
-        ImGui.SetCursorScreenPos(resume);
-        return block.Max.Y;
+        var at = new Vector2(left, top + Metrics.Space.Xl * scale);
+        return new Rect(at, at + new Vector2(width, 0f));
     }
 
     private void DrawProfileSignedOut(ImDrawListPtr drawList, Rect content, float scale)
     {
-        var inset = Metrics.Space.Lg * scale;
-        var top = content.Min.Y + content.Height * 0.2f;
-        DrawEmpty(content.Min.X + inset, content.Max.X - inset, top, PhoneIcons.User, Loc.T(L.Prism.MeSignInTitle),
-            Loc.T(L.Prism.MeSignInHint), Loc.T(L.Prism.OpenSettings), scale, out var open);
+        DrawEmpty(drawList, new Rect(content.Min, new Vector2(content.Max.X, content.Max.Y - bottomChrome)),
+            PhoneIcons.User, Loc.T(L.Prism.MeSignInTitle), Loc.T(L.Prism.MeSignInHint), Loc.T(L.Prism.OpenSettings),
+            ButtonStyle.Solid, scale, out var open);
         if (open)
         {
             navigation.Open(SettingsAppId);
