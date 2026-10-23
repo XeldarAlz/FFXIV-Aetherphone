@@ -35,6 +35,12 @@ internal sealed partial class PrismApp
     private const int SavedTab = 1;
     private const int PlacingsTab = 2;
 
+    private static readonly string[] StatGlyphs = { PhoneIcons.Photo, PhoneIcons.Wand, PhoneIcons.Heart };
+    private static readonly string[] StatIds = { "prism.stat.glams", "prism.stat.triedOn", "prism.stat.likes" };
+    private static readonly LocPlural[] StatLabels = { L.Prism.GlamCount, L.Prism.TriedOnTotal, L.Prism.LikeCount };
+
+    private readonly CachedText[] statCountTexts = new CachedText[3];
+    private readonly CachedText[] statLabelTexts = new CachedText[3];
     private readonly string[] profileTabs = new string[3];
     private readonly string[] profileTabGlyphs = new string[3];
     private readonly int[] profileTabKinds = new int[3];
@@ -57,7 +63,6 @@ internal sealed partial class PrismApp
     private GlamModDto? listMod;
     private string listTag = string.Empty;
     private string listTitle = string.Empty;
-    private CachedText profileStatsText;
     private CachedText profileRankText;
     private CachedText listCountText;
     private CachedText wornCountText;
@@ -529,12 +534,10 @@ internal sealed partial class PrismApp
             return top + height;
         }
 
-        var key = HashCode.Combine(stats.GlamCount, stats.TryOnsReceived, stats.LikesReceived, Loc.Current.Code);
-        var line = profileStatsText.IsCurrent(key)
-            ? profileStatsText.Value
-            : profileStatsText.Store(key, string.Concat(Loc.Plural(L.Prism.GlamCount, stats.GlamCount), GlamMetaSeparator,
-                Loc.Plural(L.Prism.TriedOnTotal, Clamp(stats.TryOnsReceived)), GlamMetaSeparator,
-                Loc.Plural(L.Prism.LikeCount, Clamp(stats.LikesReceived))));
+        var middle = top + height * 0.5f;
+        var end = DrawProfileStat(drawList, left, middle, height, 0, stats.GlamCount, scale);
+        end = DrawProfileStat(drawList, end, middle, height, 1, stats.TryOnsReceived, scale);
+        end = DrawProfileStat(drawList, end, middle, height, 2, stats.LikesReceived, scale);
         if (mine && glams.Season is { Me: { Rank: > 0 } standing })
         {
             var rankKey = HashCode.Combine(standing.Rank, Loc.Current.Code);
@@ -542,20 +545,37 @@ internal sealed partial class PrismApp
                 ? profileRankText.Value
                 : profileRankText.Store(rankKey, Loc.T(L.Prism.SeasonRank, standing.Rank));
             var size = Typography.Measure(rank, PrismType.Caption);
-            var room = right - size.X - Metrics.Space.Md * scale;
-            if (left + Typography.Measure(line, PrismType.Body).X <= room)
+            if (end <= right - size.X)
             {
-                Typography.Draw(drawList, new Vector2(right - size.X, top + (height - size.Y) * 0.5f), rank,
-                    PrismArt.Muted, PrismType.Caption);
-                right = room;
+                Typography.Draw(drawList, new Vector2(right - size.X, middle - size.Y * 0.5f), rank, PrismArt.Muted,
+                    PrismType.Caption);
             }
         }
 
-        var fittedLine = Typography.FitText(line, MathF.Max(1f, right - left), PrismType.Body);
-        var lineSize = Typography.Measure(fittedLine, PrismType.Body);
-        Typography.Draw(drawList, new Vector2(left, top + (height - lineSize.Y) * 0.5f), fittedLine, PrismArt.Fore,
-            PrismType.Body);
         return top + height;
+    }
+
+    private float DrawProfileStat(ImDrawListPtr drawList, float left, float middle, float height, int index,
+        long value, float scale)
+    {
+        ref var countText = ref statCountTexts[index];
+        var count = countText.IsCurrent(value) ? countText.Value : countText.Store(value, CountLabel(value));
+        var glyph = PrismArt.RowIconUnits * scale;
+        var textLeft = left + glyph + Metrics.Space.Xs * scale;
+        var size = Typography.Measure(count, PrismType.Headline);
+        PhoneIcon.Draw(drawList, new Vector2(left + glyph * 0.5f, middle), StatGlyphs[index], PrismArt.Fore, glyph);
+        Typography.Draw(drawList, new Vector2(textLeft, middle - size.Y * 0.5f), count, PrismArt.Fore,
+            PrismType.Headline);
+        var half = height * 0.5f;
+        var hit = new Rect(new Vector2(left, middle - half), new Vector2(textLeft + size.X, middle + half));
+        ref var labelText = ref statLabelTexts[index];
+        var key = HashCode.Combine(value, Loc.Current.Code);
+        var label = labelText.IsCurrent(key)
+            ? labelText.Value
+            : labelText.Store(key, Loc.Plural(StatLabels[index], Clamp(value)));
+        HoverTooltip.Show(ImGui.GetID(StatIds[index]), hit, label, UiInteract.Hover(hit.Min, hit.Max),
+            HoverLabelSide.Above);
+        return hit.Max.X + Metrics.Space.Lg * scale;
     }
 
     private static int Clamp(long value) => (int)Math.Min(value, int.MaxValue);
