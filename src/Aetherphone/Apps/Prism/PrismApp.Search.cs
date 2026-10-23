@@ -15,8 +15,6 @@ internal sealed partial class PrismApp
     private const int QueryMaxLength = 60;
     private const int TagTiles = 3;
     private const int SearchScrollId = 1;
-    private const float SearchRowUnits = 56f;
-    private const float SearchIconUnits = 40f;
     private const float SearchGlyphUnits = 16f;
     private const float CancelShare = 0.4f;
     private const double TagFetchSeconds = 0.35;
@@ -166,7 +164,7 @@ internal sealed partial class PrismApp
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth();
         var inset = Metrics.Space.Lg * scale;
-        var icon = SearchIconUnits * scale;
+        var icon = PieceTileUnits * scale;
         var textLeft = origin.X + inset + icon + Metrics.Space.Md * scale;
         var top = origin.Y;
         if (searchTag.Length > 0)
@@ -221,7 +219,7 @@ internal sealed partial class PrismApp
     }
 
     private static Rect SearchRow(float left, float top, float width, float scale) =>
-        new(new Vector2(left, top), new Vector2(left + width, top + SearchRowUnits * scale));
+        new(new Vector2(left, top), new Vector2(left + width, top + GlamRowUnits * scale));
 
     private static float DrawSearchCaption(ImDrawListPtr drawList, float left, float top, string text)
     {
@@ -229,18 +227,11 @@ internal sealed partial class PrismApp
         return top + Typography.LineHeight(PrismType.Caption);
     }
 
-    private static bool DrawSearchRow(ImDrawListPtr drawList, Rect row, float textLeft, string title, string caption,
+    private bool DrawSearchRow(ImDrawListPtr drawList, Rect row, float textLeft, string title, string caption,
         float scale)
     {
         var hovered = HoverWash(drawList, row);
-        var room = MathF.Max(1f, row.Max.X - Metrics.Space.Lg * scale - textLeft);
-        var titleLine = Typography.LineHeight(PrismType.Headline);
-        var y = row.Center.Y - (titleLine + Typography.LineHeight(PrismType.Caption)) * 0.5f;
-        Typography.Draw(drawList, new Vector2(textLeft, y), Typography.FitText(title, room, PrismType.Headline),
-            PrismArt.Fore, PrismType.Headline);
-        Typography.Draw(drawList, new Vector2(textLeft, y + titleLine),
-            Typography.FitText(caption, room, PrismType.Caption),
-            PrismArt.Muted, PrismType.Caption);
+        DrawRowText(drawList, textLeft, row.Max.X - Metrics.Space.Lg * scale, row.Center.Y, title, null, caption, scale);
         FeedCell.Hairline(drawList, textLeft, row.Max.X, row.Max.Y, PrismArt.Faint);
         return UiInteract.Click(row.Min, row.Max, hovered);
     }
