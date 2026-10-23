@@ -5723,6 +5723,8 @@
   "prism.postsAsVanilla": "Моды считываются через Penumbra. Без него этот гламур будет опубликован без модов.",
   "prism.designsAdded": "Добавлено дизайнов: {0}",
   "prism.youOwnThis": "Уже есть у вас",
+  "prism.notOwned": "У вас его пока нет",
+  "prism.checkStorage": "Откройте комод, чтобы проверить",
   "prism.vendorPrice": "Продаётся у торговцев за {0} гил",
   "prism.owned": "Есть",
   "prism.installed": "Установлен",

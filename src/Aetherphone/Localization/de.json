@@ -5723,6 +5723,8 @@
   "prism.postsAsVanilla": "Mods werden über Penumbra erkannt. Ohne Penumbra wird diese Projektion als Vanilla gepostet.",
   "prism.designsAdded": "Designs hinzugefügt: {0}",
   "prism.youOwnThis": "Hast du schon",
+  "prism.notOwned": "Hast du noch nicht",
+  "prism.checkStorage": "Öffne deine Kommode, um nachzusehen",
   "prism.vendorPrice": "Bei Händlern für {0} Gil erhältlich",
   "prism.owned": "Im Besitz",
   "prism.installed": "Installiert",

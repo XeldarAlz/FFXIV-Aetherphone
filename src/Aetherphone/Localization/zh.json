@@ -5723,6 +5723,8 @@
   "prism.postsAsVanilla": "模组通过 Penumbra 读取。没有 Penumbra 时，这套幻化会以原版发布。",
   "prism.designsAdded": "已添加 {0} 个设计",
   "prism.youOwnThis": "你已拥有",
+  "prism.notOwned": "你还没有",
+  "prism.checkStorage": "打开投影台即可确认",
   "prism.vendorPrice": "NPC 出售：{0} 金币",
   "prism.owned": "已拥有",
   "prism.installed": "已安装",

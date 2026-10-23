@@ -399,21 +399,20 @@ internal sealed partial class PrismApp
         var caption = Typography.LineHeight(PrismType.Caption);
         var tap = Metrics.Size.TapTarget * scale;
         var single = cardPiece >= 0 ? gear[cardPiece] : null;
+        var ownership = single is null ? Ownership.None : OwnedState(single.ItemId);
         var rows = tile.Group == PieceGroup.Mods ? totalMods : tile.Count;
         var note = tile.Group == PieceGroup.Mods && !glamour.HasPenumbra ? Loc.T(L.Prism.ModsNeedPenumbra)
-            : single is not null && OwnedState(single.ItemId) == Ownership.Maybe ? Loc.T(L.Prism.OpenStorage)
             : string.Empty;
         var noteHeight = note.Length > 0
             ? Typography.MeasureWrappedBlock(note, PrismType.Caption, inner).Y + Metrics.Space.Xs * scale
             : 0f;
-        var market = single is not null && OwnedState(single.ItemId) == Ownership.None &&
+        var market = single is not null && ownership != Ownership.Owned &&
                      marketIndex.TryGet(single.ItemId, out _) && navigation.IsAvailable(MarketAppId);
         float body;
         if (single is not null)
         {
             var dyes = (single.Stain0 != 0 ? 1 : 0) + (single.Stain1 != 0 ? 1 : 0);
-            var owned = OwnedState(single.ItemId) == Ownership.Owned ? caption : 0f;
-            body = dyes * caption + owned + noteHeight + (market ? tap : 0f) + Metrics.Space.Sm * scale + tap;
+            body = (dyes + 1) * caption + Metrics.Space.Sm * scale + tap + (market ? tap : 0f);
         }
         else
         {
@@ -433,50 +432,33 @@ internal sealed partial class PrismApp
         Typography.Draw(drawList, new Vector2(left, cursor), Typography.FitText(title, inner, PrismType.Headline),
             PrismArt.PhotoFore, PrismType.Headline);
         cursor += headline + Metrics.Space.Xs * scale;
-        if (single is not null)
-        {
-            cursor = DrawCardDye(drawList, left, cursor, inner, single.Stain0, scale);
-            cursor = DrawCardDye(drawList, left, cursor, inner, single.Stain1, scale);
-            if (OwnedState(single.ItemId) == Ownership.Owned)
-            {
-                var glyph = caption * 0.7f;
-                PhoneIcon.Draw(drawList, new Vector2(left + glyph * 0.5f, cursor + caption * 0.5f), PhoneIcons.Check,
-                    PrismArt.PhotoMuted, glyph);
-                Typography.Draw(drawList, new Vector2(left + glyph + Metrics.Space.Xs * scale, cursor),
-                    Typography.FitText(Loc.T(L.Prism.YouOwnThis), inner - glyph, PrismType.Caption),
-                    PrismArt.PhotoMuted, PrismType.Caption);
-                cursor += caption;
-            }
-        }
-
-        if (note.Length > 0)
-        {
-            cursor += Typography.DrawWrappedLeft(new Vector2(left, cursor), note, PrismArt.PhotoMuted,
-                PrismType.Caption, inner) + Metrics.Space.Xs * scale;
-        }
-
         if (single is null)
         {
+            if (note.Length > 0)
+            {
+                cursor += Typography.DrawWrappedLeft(new Vector2(left, cursor), note, PrismArt.PhotoMuted,
+                    PrismType.Caption, inner) + Metrics.Space.Xs * scale;
+            }
+
             DrawCardRows(drawList, new Rect(new Vector2(left, cursor), new Vector2(left + inner, card.Max.Y - pad)),
                 tile, gear, rows, ready && over, scale);
             return;
         }
 
-        if (market)
+        cursor = DrawCardDye(drawList, left, cursor, inner, single.Stain0, scale);
+        cursor = DrawCardDye(drawList, left, cursor, inner, single.Stain1, scale);
+        var glyph = ownership == Ownership.Owned ? caption * 0.7f : 0f;
+        if (glyph > 0f)
         {
-            var label = Loc.T(L.Prism.CheckMarket);
-            var link = new Rect(new Vector2(left, cursor),
-                new Vector2(left + ButtonWidth([label], inner, scale), cursor + tap));
-            if (DrawButton(drawList, link, label, ButtonStyle.Plain, scale, overlay: true, ink: photoControls,
-                    id: "prism.pieceMarket") && ready)
-            {
-                marketLauncher.RequestItem(single.ItemId);
-                navigation.Open(MarketAppId);
-            }
-
-            cursor += tap;
+            PhoneIcon.Draw(drawList, new Vector2(left + glyph * 0.5f, cursor + caption * 0.5f), PhoneIcons.Check,
+                PrismArt.PhotoMuted, glyph);
+            glyph += Metrics.Space.Xs * scale;
         }
 
+        Typography.Draw(drawList, new Vector2(left + glyph, cursor),
+            Typography.FitText(Loc.T(OwnershipLine(ownership)), inner - glyph, PrismType.Caption), PrismArt.PhotoMuted,
+            PrismType.Caption);
+        cursor += caption;
         var button = new Rect(new Vector2(left, cursor + Metrics.Space.Sm * scale),
             new Vector2(left + inner, cursor + Metrics.Space.Sm * scale + tap));
         if (DrawButton(drawList, button, Loc.T(L.Prism.TryOnPiece), ButtonStyle.Tinted, scale, overlay: true,
@@ -484,7 +466,29 @@ internal sealed partial class PrismApp
         {
             TryOnPiece(single, statsFor ?? string.Empty);
         }
+
+        if (!market)
+        {
+            return;
+        }
+
+        var label = Loc.T(L.Prism.CheckMarket);
+        var link = new Rect(new Vector2(left, button.Max.Y),
+            new Vector2(left + ButtonWidth([label], inner, scale), button.Max.Y + tap));
+        if (DrawButton(drawList, link, label, ButtonStyle.Plain, scale, overlay: true, ink: photoControls,
+                id: "prism.pieceMarket") && ready)
+        {
+            marketLauncher.RequestItem(single.ItemId);
+            navigation.Open(MarketAppId);
+        }
     }
+
+    private static LocString OwnershipLine(Ownership ownership) => ownership switch
+    {
+        Ownership.Owned => L.Prism.YouOwnThis,
+        Ownership.Maybe => L.Prism.CheckStorage,
+        _ => L.Prism.NotOwned,
+    };
 
     private float DrawCardDye(ImDrawListPtr drawList, float left, float top, float width, byte stain, float scale)
     {

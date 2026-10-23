@@ -5723,6 +5723,8 @@
   "prism.postsAsVanilla": "Les mods sont lus via Penumbra. Sans lui, ce mirage est publié en vanilla.",
   "prism.designsAdded": "Designs ajoutés : {0}",
   "prism.youOwnThis": "Vous l'avez déjà",
+  "prism.notOwned": "Vous ne l'avez pas encore",
+  "prism.checkStorage": "Ouvrez votre commode pour vérifier",
   "prism.vendorPrice": "Vendu par les marchands pour {0} gils",
   "prism.owned": "Possédé",
   "prism.installed": "Installé",

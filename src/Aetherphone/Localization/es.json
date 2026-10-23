@@ -5723,6 +5723,8 @@
   "prism.postsAsVanilla": "Los mods se leen a través de Penumbra. Sin él, este glamour se publica como vanilla.",
   "prism.designsAdded": "Diseños añadidos: {0}",
   "prism.youOwnThis": "Ya lo tienes",
+  "prism.notOwned": "Aún no lo tienes",
+  "prism.checkStorage": "Abre tu tocador para comprobarlo",
   "prism.vendorPrice": "A la venta en mercaderes por {0} gil",
   "prism.owned": "Lo tienes",
   "prism.installed": "Instalado",

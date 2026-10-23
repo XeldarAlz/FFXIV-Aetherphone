@@ -5723,6 +5723,8 @@
   "prism.postsAsVanilla": "Modlar Penumbra üzerinden okunur. Penumbra olmadan bu glam vanilla olarak paylaşılır.",
   "prism.designsAdded": "Eklenen tasarım: {0}",
   "prism.youOwnThis": "Sende var",
+  "prism.notOwned": "Henüz sende yok",
+  "prism.checkStorage": "Kontrol etmek için şifonyerini aç",
   "prism.vendorPrice": "Satıcılarda {0} gil",
   "prism.owned": "Sende var",
   "prism.installed": "Kurulu",

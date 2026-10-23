@@ -10930,6 +10930,8 @@ internal static class L
             "Mods are read through Penumbra. Without it, this glam posts as vanilla.");
         public static readonly LocString DesignsAdded = new("prism.designsAdded", "Designs added: {0}");
         public static readonly LocString YouOwnThis = new("prism.youOwnThis", "You have this one");
+        public static readonly LocString NotOwned = new("prism.notOwned", "You don't have this one");
+        public static readonly LocString CheckStorage = new("prism.checkStorage", "Open your dresser to check");
         public static readonly LocString VendorPrice = new("prism.vendorPrice", "Sold by vendors for {0} gil");
         public static readonly LocString Owned = new("prism.owned", "Owned");
         public static readonly LocString Installed = new("prism.installed", "Installed");

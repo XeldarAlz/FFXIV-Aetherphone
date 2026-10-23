@@ -5723,6 +5723,8 @@
   "prism.postsAsVanilla": "Mods are read through Penumbra. Without it, this glam posts as vanilla.",
   "prism.designsAdded": "Designs added: {0}",
   "prism.youOwnThis": "You have this one",
+  "prism.notOwned": "You don't have this one",
+  "prism.checkStorage": "Open your dresser to check",
   "prism.vendorPrice": "Sold by vendors for {0} gil",
   "prism.owned": "Owned",
   "prism.installed": "Installed",

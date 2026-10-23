@@ -5723,6 +5723,8 @@
   "prism.postsAsVanilla": "ModはPenumbraから読み取ります。Penumbraがない場合、このミラプリはバニラとして投稿されます。",
   "prism.designsAdded": "追加したデザイン：{0}件",
   "prism.youOwnThis": "所持しています",
+  "prism.notOwned": "まだ持っていません",
+  "prism.checkStorage": "ミラージュドレッサーを開くと確認できます",
   "prism.vendorPrice": "NPC販売：{0}ギル",
   "prism.owned": "所持",
   "prism.installed": "導入済み",
