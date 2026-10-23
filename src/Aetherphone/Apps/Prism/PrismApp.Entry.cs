@@ -35,7 +35,9 @@ internal sealed partial class PrismApp
         var top = DrawBackHeader(drawList, content, week.Title, scale);
         var editable = week.Phase == PrismPhases.Entering;
         var retry = editable && entry.Status == PrismPhases.StatusRejected;
-        if (editable && DrawEntryMore(drawList, content, scale))
+        var reach = Metrics.Size.TapTarget * scale * 0.5f;
+        if (editable && IconButton(drawList, new Vector2(content.Max.X - reach, content.Min.Y + reach), PhoneIcons.Dots,
+                Loc.T(L.Prism.More), scale, HoverLabelSide.Below))
         {
             OpenEntrySheet(retry);
         }
@@ -85,15 +87,6 @@ internal sealed partial class PrismApp
         }
 
         DrawEntrySheet(full);
-    }
-
-    private static bool DrawEntryMore(ImDrawListPtr drawList, Rect content, float scale)
-    {
-        var tap = Metrics.Size.TapTarget * scale;
-        var hit = new Rect(new Vector2(content.Max.X - tap, content.Min.Y),
-            new Vector2(content.Max.X, content.Min.Y + tap));
-        PhoneIcon.Draw(drawList, hit.Center, PhoneIcons.Dots, PrismArt.Fore, PhotoGlyphUnits * scale);
-        return UiInteract.HoverClick(hit.Min, hit.Max);
     }
 
     private void OpenEntrySheet(bool retry)
