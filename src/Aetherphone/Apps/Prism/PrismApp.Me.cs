@@ -56,6 +56,9 @@ internal sealed partial class PrismApp
     private string coverUser = string.Empty;
     private GlamDto? profileCover;
     private GlamDto[]? coverItems;
+    private GlamBannerDto? coverBanner;
+    private string coverChosen = string.Empty;
+    private bool coverMissing;
     private GlamListKind listKind;
     private uint listItemId;
     private uint listIconFor;
@@ -179,7 +182,7 @@ internal sealed partial class PrismApp
         var profile = glams.Profile;
         var author = profile?.User;
         var lane = glams.List;
-        SyncProfileCover(author?.Id ?? string.Empty, lane);
+        SyncProfileCover(author?.Id ?? string.Empty, lane, mine ? OwnBanner() : author?.BannerGlam);
         var covered = profileCover is not null || profile is { GlamCount: > 0 } ||
                       profile is null && !showSaved && lane.Loading;
         var top = covered ? PhotoTop(full, content) : content.Min.Y;
@@ -259,13 +262,26 @@ internal sealed partial class PrismApp
         showPlacings = placings;
     }
 
-    private void SyncProfileCover(string userId, FeedLane<GlamDto> lane)
+    private void SyncProfileCover(string userId, FeedLane<GlamDto> lane, GlamBannerDto? banner)
     {
-        if (coverUser != userId)
+        var chosen = banner?.GlamId ?? string.Empty;
+        if (coverUser != userId || coverChosen != chosen)
         {
             coverUser = userId;
+            coverChosen = chosen;
             profileCover = null;
             coverItems = null;
+            coverMissing = false;
+        }
+
+        coverBanner = banner;
+        if (chosen.Length > 0 && !coverMissing)
+        {
+            profileCover ??= FindBanner(chosen, lane, out coverMissing);
+            if (!coverMissing)
+            {
+                return;
+            }
         }
 
         var items = lane.Items;
@@ -334,7 +350,10 @@ internal sealed partial class PrismApp
     {
         if (profileCover is { } cover)
         {
-            DrawLook(drawList, photo, Cover(cover), false, native: true, focusY: ProfileFocus(photo, topInset));
+            var focus = coverBanner is { } chosen && chosen.GlamId == cover.Id
+                ? new Vector2(chosen.FocusX, BannerFocus(photo, topInset, chosen.FocusY))
+                : new Vector2(ImageFit.CenterFocus, ProfileFocus(photo, topInset));
+            DrawLook(drawList, photo, Cover(cover), false, native: true, focusY: focus.Y, focusX: focus.X);
             if (UiInteract.Click(photo.Min, photo.Max))
             {
                 OpenGlam(cover);
@@ -355,26 +374,11 @@ internal sealed partial class PrismApp
         var left = photo.Min.X + pad;
         var right = photo.Max.X - pad;
         var bottom = photo.Max.Y - pad;
-        var handleHeight = Typography.LineHeight(PrismType.Caption);
         var following = profile is { Following: true };
         var followWidth = mine || author is null ? 0f : ButtonWidth([Loc.T(L.Prism.Follow), Loc.T(L.Prism.Following)],
             (right - left) * 0.5f, scale);
-        var heroRight = followWidth > 0f ? right - followWidth - Metrics.Space.Sm * scale : right;
-        var name = AuthorName(author);
-        var heroHeight = PrismType.HeroHeight(name, heroRight - left);
-        var best = BestPlacing(profile);
-        var placingHeight = best is null ? 0f : MathF.Max(handleHeight, CoverMedalUnits * 2f * scale);
-        var handleTop = bottom - placingHeight - handleHeight;
-        PrismArt.Scrim(drawList, photo, heroHeight + handleHeight + placingHeight, scale);
-        PrismType.DrawHero(drawList, new Vector2(left, handleTop - heroHeight), name, heroRight - left,
-            PrismArt.PhotoFore);
-        Typography.Draw(drawList, new Vector2(left, handleTop),
-            Typography.FitText(ProfileHandle(author), MathF.Max(1f, heroRight - left), PrismType.Caption),
-            PrismArt.PhotoMuted, PrismType.Caption);
-        if (best is not null)
-        {
-            DrawCoverPlacing(drawList, left, bottom - placingHeight * 0.5f, heroRight - left, best, scale);
-        }
+        DrawCoverIdentity(drawList, photo, author, BestPlacing(profile),
+            followWidth > 0f ? right - followWidth - Metrics.Space.Sm * scale : right, scale);
         if (mine)
         {
             if (DrawPhotoButton(drawList, photo, topInset, 1, PhoneIcons.Pencil, Loc.T(L.Prism.EditProfile), scale))
@@ -405,6 +409,37 @@ internal sealed partial class PrismApp
         {
             glams.SetFollow(author, !following);
         }
+    }
+
+    private void DrawCoverIdentity(ImDrawListPtr drawList, Rect photo, GlamAuthorDto? author, GlamPlacingDto? best,
+        float heroRight, float scale)
+    {
+        var pad = Metrics.Space.Lg * scale;
+        var left = photo.Min.X + pad;
+        var bottom = photo.Max.Y - pad;
+        var handleHeight = Typography.LineHeight(PrismType.Caption);
+        var name = AuthorName(author);
+        var heroHeight = PrismType.HeroHeight(name, heroRight - left);
+        var placingHeight = best is null ? 0f : MathF.Max(handleHeight, CoverMedalUnits * 2f * scale);
+        var handleTop = bottom - placingHeight - handleHeight;
+        PrismArt.Scrim(drawList, photo, heroHeight + handleHeight + placingHeight, scale);
+        PrismType.DrawHero(drawList, new Vector2(left, handleTop - heroHeight), name, heroRight - left,
+            PrismArt.PhotoFore);
+        Typography.Draw(drawList, new Vector2(left, handleTop),
+            Typography.FitText(ProfileHandle(author), MathF.Max(1f, heroRight - left), PrismType.Caption),
+            PrismArt.PhotoMuted, PrismType.Caption);
+        if (best is not null)
+        {
+            DrawCoverPlacing(drawList, left, bottom - placingHeight * 0.5f, heroRight - left, best, scale);
+        }
+    }
+
+    private static float BannerFocus(Rect photo, float topInset, float focus)
+    {
+        var overflow = photo.Width / GlamStore.PhotoRatio - photo.Height;
+        return overflow <= 0f
+            ? ImageFit.CenterFocus
+            : Math.Clamp((focus * (overflow + topInset) - topInset) / overflow, 0f, 1f);
     }
 
     private static float ProfileFocus(Rect photo, float topInset)

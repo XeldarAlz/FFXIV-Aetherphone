@@ -50,6 +50,12 @@ internal sealed partial class PrismApp
             editFailed = outcome == OutcomeFailed;
             if (!editFailed)
             {
+                if (savingBanner is { } kept)
+                {
+                    KeepBanner(kept);
+                }
+
+                savingBanner = null;
                 GoBack();
                 return;
             }
@@ -76,6 +82,8 @@ internal sealed partial class PrismApp
             editName = me.DisplayName;
             editHandle = me.Handle;
             editBio = me.Bio;
+            editBanner = OwnBanner() is { GlamId.Length: > 0 } banner ? banner : null;
+            editBannerGlam = profileCover?.Id == editBanner?.GlamId ? profileCover : null;
         }
 
         if (save)
@@ -94,6 +102,7 @@ internal sealed partial class PrismApp
                 SocialProfilePages.DisplayNameMax, scale);
             cursor = DrawHandleField(list, origin.X, cursor, width, scale);
             cursor = DrawBioField(list, origin.X, cursor, width, scale);
+            cursor = DrawBannerRow(list, origin.X, cursor, width, scale);
             ImGui.SetCursorScreenPos(origin);
             ImGui.Dummy(new Vector2(width, cursor - origin.Y + PrismArt.BottomMargin(scale)));
         }
@@ -194,14 +203,16 @@ internal sealed partial class PrismApp
         var name = editName.Trim();
         var handle = editHandle.Trim();
         var bio = editBio.Trim();
-        if (editPhoto is null && name == me.DisplayName && handle == me.Handle && bio == me.Bio)
+        var banner = SameBanner(editBanner, OwnBanner()) ? null : editBanner ?? AutomaticBanner;
+        if (editPhoto is null && banner is null && name == me.DisplayName && handle == me.Handle && bio == me.Bio)
         {
             GoBack();
             return;
         }
 
         editFailed = false;
-        glams.UpdateProfile(name, handle, bio, editPhoto,
+        savingBanner = banner;
+        glams.UpdateProfile(name, handle, bio, editPhoto, banner,
             profileSettled ??= succeeded => editOutcome = succeeded ? OutcomeSent : OutcomeFailed);
     }
 

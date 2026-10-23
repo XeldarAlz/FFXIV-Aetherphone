@@ -69,7 +69,8 @@ internal sealed partial class PrismApp
     private static bool IsLibraryScreen(PrismScreen value) =>
         value is PrismScreen.GlamDetail or PrismScreen.Compose or PrismScreen.Profile or PrismScreen.GlamList
             or PrismScreen.WardrobeOutfit or PrismScreen.WardrobeCover or PrismScreen.Rewards or PrismScreen.Activity
-            or PrismScreen.Gallery or PrismScreen.EditProfile or PrismScreen.ProfilePhoto;
+            or PrismScreen.Gallery or PrismScreen.EditProfile or PrismScreen.ProfilePhoto or PrismScreen.BannerPick
+            or PrismScreen.BannerCrop;
 
     private static bool ShowsTabBar(PrismScreen value) =>
         IsTabRoot(value) || value is PrismScreen.GlamDetail or PrismScreen.Profile or PrismScreen.GlamList

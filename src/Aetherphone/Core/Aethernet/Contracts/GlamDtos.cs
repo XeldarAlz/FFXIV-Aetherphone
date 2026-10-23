@@ -21,8 +21,10 @@ internal sealed record GlamModDto(
 
 internal sealed record GlamOptionDto(string Group = "", string[]? Picked = null);
 
+internal sealed record GlamBannerDto(string GlamId = "", float FocusX = 0.5f, float FocusY = 0.5f);
+
 internal sealed record GlamAuthorDto(string Id = "", string DisplayName = "", string Handle = "", string AvatarUrl = "",
-    string Bio = "");
+    string Bio = "", GlamBannerDto? BannerGlam = null);
 
 internal sealed record GlamPhotoDto(string Url = "", int Width = 0, int Height = 0);
 

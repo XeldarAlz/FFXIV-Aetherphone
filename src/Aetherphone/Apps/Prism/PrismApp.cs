@@ -48,6 +48,8 @@ internal enum PrismScreen : byte
     Gallery,
     EditProfile,
     ProfilePhoto,
+    BannerPick,
+    BannerCrop,
 }
 
 internal sealed partial class PrismApp : IResumableApp
@@ -350,6 +352,12 @@ internal sealed partial class PrismApp : IResumableApp
             case PrismScreen.ProfilePhoto:
                 DrawProfilePhoto(drawList, content, scale);
                 break;
+            case PrismScreen.BannerPick:
+                DrawBannerPick(drawList, full, content, scale);
+                break;
+            case PrismScreen.BannerCrop:
+                DrawBannerCrop(drawList, full, content, scale);
+                break;
             default:
                 DrawCover(drawList, full, content, scale);
                 break;
@@ -622,7 +630,8 @@ internal sealed partial class PrismApp : IResumableApp
     }
 
     private Rect DrawLook(ImDrawListPtr drawList, Rect rect, string url, bool contain, float alpha = 1f,
-        float zoom = 1f, Vector2? pivot = null, bool native = false, float focusY = ImageFit.CenterFocus)
+        float zoom = 1f, Vector2? pivot = null, bool native = false, float focusY = ImageFit.CenterFocus,
+        float focusX = ImageFit.CenterFocus)
     {
         if (url.Length == 0)
         {
@@ -661,7 +670,7 @@ internal sealed partial class PrismApp : IResumableApp
         alpha *= fade;
         var (uv0, uv1) = contain
             ? (Vector2.Zero, Vector2.One)
-            : ImageFit.Cover(texture.Size.X, texture.Size.Y, rect.Width, rect.Height, focusY);
+            : ImageFit.Cover(texture.Size.X, texture.Size.Y, rect.Width, rect.Height, new Vector2(focusX, focusY));
         var anchor = pivot ?? frame.Center;
         var drawn = zoom == 1f ? frame : new Rect(anchor + (frame.Min - anchor) * zoom, anchor + (frame.Max - anchor) * zoom);
         if (zoom != 1f)

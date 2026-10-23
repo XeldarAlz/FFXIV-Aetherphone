@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Aetherphone.Core.Aethernet.Contracts;
 
 internal sealed record ChallengeRequest(string Name, string World);
@@ -91,10 +93,13 @@ internal sealed record UserDto(
     string? BannerUrl = null,
     int PendingPhotoTags = 0,
     bool ShowOnLeaderboards = false,
-    bool ShowInHallOfFame = false) : IIdentified;
+    bool ShowInHallOfFame = false,
+    GlamBannerDto? BannerGlam = null) : IIdentified;
 
 internal sealed record UpdateProfileRequest(string? DisplayName, string? Handle, string? Bio, string? AvatarUrl = null,
-    string? BannerUrl = null);
+    string? BannerUrl = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    GlamBannerDto? BannerGlam = null);
 
 internal sealed record UpdateBadgeLoadoutRequest(int Equipped);
 

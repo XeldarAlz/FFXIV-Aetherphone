@@ -80,6 +80,9 @@ internal sealed class GlamStore : IDisposable
     private volatile string meFor = string.Empty;
     private volatile bool loadingMe;
     private volatile bool savingProfile;
+    private volatile GlamDto? banner;
+    private volatile string bannerFor = string.Empty;
+    private volatile bool bannerMissing;
     private volatile GlamAuthorDto[] people = Array.Empty<GlamAuthorDto>();
     private volatile string peopleFor = string.Empty;
     private volatile string peopleAsked = string.Empty;
@@ -603,8 +606,35 @@ internal sealed class GlamStore : IDisposable
         }, () => loadingMe = false);
     }
 
+    public GlamDto? BannerGlam(string glamId, out bool missing)
+    {
+        if (bannerFor != glamId && IsSignedIn)
+        {
+            bannerFor = glamId;
+            banner = null;
+            bannerMissing = false;
+            FetchBanner(glamId);
+        }
+
+        missing = bannerMissing && bannerFor == glamId;
+        return banner is { } found && found.Id == glamId ? found : null;
+    }
+
+    private void FetchBanner(string glamId) =>
+        work.Run("banner", async token =>
+        {
+            var fetched = await client.GlamAsync(glamId, token).ConfigureAwait(false);
+            if (bannerFor != glamId)
+            {
+                return;
+            }
+
+            banner = fetched;
+            bannerMissing = fetched is null;
+        });
+
     public void UpdateProfile(string displayName, string handle, string bio, GlamPhotoDraft? photo,
-        Action<bool> onComplete)
+        GlamBannerDto? banner, Action<bool> onComplete)
     {
         var owner = MyId;
         if (savingProfile || !IsSignedIn || owner.Length == 0)
@@ -629,7 +659,7 @@ internal sealed class GlamStore : IDisposable
             }
 
             var updated = await account.UpdateProfileAsync(
-                new UpdateProfileRequest(displayName, handle, bio, avatarUrl), token, null,
+                new UpdateProfileRequest(displayName, handle, bio, avatarUrl, BannerGlam: banner), token, null,
                 received => failure = received).ConfigureAwait(false);
             if (updated is null)
             {
@@ -767,7 +797,7 @@ internal sealed class GlamStore : IDisposable
     }
 
     private static GlamAuthorDto Author(UserDto user, string id) =>
-        new(id, user.DisplayName, user.Handle, user.AvatarUrl ?? string.Empty, user.Bio);
+        new(id, user.DisplayName, user.Handle, user.AvatarUrl ?? string.Empty, user.Bio, user.BannerGlam);
 
     private void AcceptMe(UserDto user, string owner)
     {
