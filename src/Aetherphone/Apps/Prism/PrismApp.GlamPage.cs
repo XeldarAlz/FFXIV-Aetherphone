@@ -42,7 +42,6 @@ internal sealed partial class PrismApp
     private const float PagerSlopUnits = 12f;
     private const float PagerSlopBias = 1.2f;
     private const float DotsShare = 0.3f;
-    private const float DotPitchUnits = 12f;
     private const float PillHandoverSeconds = 0.18f;
 
     private readonly DoubleTapLike photoLike = new();
@@ -321,9 +320,7 @@ internal sealed partial class PrismApp
 
         if (UiInteract.Click(strip.Min, strip.Max, hovered))
         {
-            var nearest = (ImGui.GetMousePos().X - center.X) /
-                          MathF.Min(DotPitchUnits * scale, width * DotsShare / (count - 1)) + (count - 1) * 0.5f;
-            photoPager.AnimateTo((int)MathF.Round(nearest), count);
+            photoPager.AnimateTo(PhotoCarousel.DotAt(center.X, count, width * DotsShare, ImGui.GetMousePos().X), count);
         }
     }
 

@@ -95,6 +95,10 @@ internal sealed class PhotoCarousel
         return new CarouselResult(active, consumed, tapped);
     }
 
+    public static int DotAt(float centerX, int count, float maxWidth, float x) =>
+        count <= 1 ? 0 : Math.Clamp((int)MathF.Round((x - centerX) / DotPitch(count, maxWidth) + (count - 1) * 0.5f), 0,
+            count - 1);
+
     public static void DrawDots(ImDrawListPtr drawList, Vector2 center, int count, int active, float maxWidth,
         Vector4 ink)
     {
@@ -104,14 +108,8 @@ internal sealed class PhotoCarousel
         }
 
         var scale = UiScale.Current;
-        var spacing = DotSpacing * scale;
+        var spacing = DotPitch(count, maxWidth);
         var span = spacing * (count - 1);
-        if (maxWidth > 0f && span > maxWidth)
-        {
-            spacing = maxWidth / (count - 1);
-            span = maxWidth;
-        }
-
         var radius = MathF.Min(DotRadius * scale, spacing * 0.32f);
         var startX = center.X - span * 0.5f;
         for (var index = 0; index < count; index++)
@@ -120,6 +118,12 @@ internal sealed class PhotoCarousel
             var alpha = index == active ? 0.95f : 0.32f;
             drawList.AddCircleFilled(dot, radius, ImGui.GetColorU32(Palette.WithAlpha(ink, alpha)), 12);
         }
+    }
+
+    private static float DotPitch(int count, float maxWidth)
+    {
+        var spacing = DotSpacing * UiScale.Current;
+        return maxWidth > 0f && spacing * (count - 1) > maxWidth ? maxWidth / (count - 1) : spacing;
     }
 
     private Pager PagerFor(string postId)
