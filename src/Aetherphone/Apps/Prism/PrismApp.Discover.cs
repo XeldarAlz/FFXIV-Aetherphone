@@ -110,9 +110,11 @@ internal sealed partial class PrismApp
             drawList.AddCircleFilled(dot, ActivityDotUnits * scale, ImGui.GetColorU32(PrismArt.Fore));
         }
 
-        var chipTop = top + tap + Metrics.Space.Xxs * scale;
-        var chips = new Rect(new Vector2(left, chipTop),
-            new Vector2(content.Max.X - Metrics.Space.Lg * scale, chipTop + ChipRail.RowHeight * scale));
+        return top + tap + Metrics.Space.Sm * scale;
+    }
+
+    private void DrawFilterChips(Rect chips)
+    {
         for (var index = 0; index < FilterNames.Length; index++)
         {
             filterLabels[index] = Loc.T(FilterNames[index]);
@@ -131,8 +133,17 @@ internal sealed partial class PrismApp
         {
             SetDiscoverFilter(discoverFilter == tapped ? 0 : tapped);
         }
+    }
 
-        return chips.Max.Y + Metrics.Space.Sm * scale;
+    private void ClearDiscoverFilters()
+    {
+        if (!glams.FitsBody && discoverFilter == 0)
+        {
+            return;
+        }
+
+        glams.SetBody(0, 0);
+        SetDiscoverFilter(0);
     }
 
     private bool DrawHeaderIcon(ImDrawListPtr drawList, Vector2 center, float radius, string glyph, string tip) =>
