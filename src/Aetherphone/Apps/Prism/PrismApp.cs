@@ -541,20 +541,9 @@ internal sealed partial class PrismApp : IResumableApp
 
     private bool DrawButton(ImDrawListPtr drawList, Rect rect, string label, ButtonStyle style, float scale,
         bool enabled = true, bool overlay = false, ControlInk? ink = null, string? id = null,
-        UiSound tapSound = UiSound.Tap)
-    {
-        var hovered = enabled && (overlay
-            ? UiInteract.HoverWindowOnly(rect.Min, rect.Max)
-            : UiInteract.Hover(rect.Min, rect.Max));
-        var face = Button.Surface(drawList, rect, ink ?? controls, style, ButtonRole.Normal, enabled, hovered,
-            ImGui.GetID(id ?? label));
-        var room = MathF.Max(1f, rect.Width - Metrics.Space.Xl * scale);
-        var labelStyle = FitStyle(label, room, Button.LabelStyle(rect.Height));
-        var fitted = Typography.FitText(label, room, labelStyle);
-        Typography.Draw(drawList, face.Face.Center - Typography.Measure(fitted, labelStyle) * 0.5f, fitted,
-            face.LabelInk, labelStyle);
-        return enabled && UiInteract.Click(rect.Min, rect.Max, hovered, tapSound);
-    }
+        UiSound tapSound = UiSound.Tap) =>
+        Button.Draw(drawList, rect, label, ink ?? controls, style, ButtonRole.Normal, enabled, overlay, id, 1f,
+            tapSound, MathF.Max(1f, rect.Width - Metrics.Space.Xl * scale));
 
     private static TextStyle FitStyle(string text, float room, in TextStyle largest) =>
         new(Typography.FitScale(text, room, largest.Scale, PrismType.Caption.Scale, largest.Weight), largest.Weight);

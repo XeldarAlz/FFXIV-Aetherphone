@@ -87,13 +87,22 @@ internal static class Button
 
     public static bool Draw(ImDrawListPtr drawList, Rect rect, string label, in ControlInk ink,
         ButtonStyle style = ButtonStyle.Prominent, ButtonRole role = ButtonRole.Normal, bool enabled = true,
-        bool overlay = false, string? id = null, float opacity = 1f, UiSound tapSound = UiSound.Tap)
+        bool overlay = false, string? id = null, float opacity = 1f, UiSound tapSound = UiSound.Tap,
+        float labelRoom = 0f)
     {
         var hovered = enabled && (overlay
             ? UiInteract.HoverWindowOnly(rect.Min, rect.Max)
             : UiInteract.Hover(rect.Min, rect.Max));
         var face = Surface(drawList, rect, ink, style, role, enabled, hovered, ImGui.GetID(id ?? label), opacity);
-        DrawLabel(drawList, face, label, id);
+        if (labelRoom > 0f)
+        {
+            DrawFittedLabel(drawList, face, label, LabelStyle(rect.Height), labelRoom);
+        }
+        else
+        {
+            DrawLabel(drawList, face, label, id);
+        }
+
         return enabled && UiInteract.Click(rect.Min, rect.Max, hovered, tapSound);
     }
 
@@ -174,6 +183,15 @@ internal static class Button
 
         Typography.DrawCentered(drawList, rect.Center, Typography.FitText(label, maxLabelWidth, style),
             face.LabelInk, style);
+    }
+
+    private static void DrawFittedLabel(ImDrawListPtr drawList, in ButtonFace face, string label, TextStyle largest,
+        float room)
+    {
+        var style = new TextStyle(
+            Typography.FitScale(label, room, largest.Scale, TextStyles.Footnote.Scale, largest.Weight), largest.Weight);
+        Typography.DrawCentered(drawList, face.Face.Center, Typography.FitText(label, room, style), face.LabelInk,
+            style);
     }
 
     private static void PaintProminent(ImDrawListPtr drawList, Rect face, float radius, Vector4 tone, in ButtonPose pose,
