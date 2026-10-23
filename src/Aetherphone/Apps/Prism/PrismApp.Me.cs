@@ -408,10 +408,10 @@ internal sealed partial class PrismApp
 
         var height = Metrics.Size.TapTarget * scale;
         var pill = new Rect(new Vector2(right - followWidth, bottom - height), new Vector2(right, bottom));
-        UiInteract.HoverOverlay(pill);
+        var overPill = UiInteract.HoverOverlay(pill);
         if (DrawButton(drawList, pill, Loc.T(following ? L.Prism.Following : L.Prism.Follow),
                 following ? ButtonStyle.Tinted : ButtonStyle.Solid, scale, overlay: true, ink: photoControls,
-                id: "prism.follow"))
+                id: "prism.follow") && overPill)
         {
             glams.SetFollow(author, !following);
         }
