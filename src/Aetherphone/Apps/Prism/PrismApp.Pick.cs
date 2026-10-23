@@ -26,6 +26,7 @@ internal sealed partial class PrismApp
         new(PrismArt.Fore, PrismArt.Muted, Palette.WithAlpha(PrismArt.Fore, PickFillAlpha), PrismArt.Faint, false);
 
     private volatile int entryOutcome;
+    private Vector2 enterShardOrigin;
     private CachedText outfitLinkText;
     private CachedText pickHeadingText;
 
@@ -67,8 +68,7 @@ internal sealed partial class PrismApp
         if (entered)
         {
             var corner = Metrics.Size.TapTarget * scale * 0.5f;
-            shards.Burst(new Vector2(content.Max.X - corner, content.Min.Y + corner), EnterShardAngle,
-                EnterShardSpread, EnterShardSpeed, ShardLifeSeconds);
+            enterShardOrigin = new Vector2(content.Max.X - corner, content.Min.Y + corner);
             RememberEntryDrops();
             store.Enter(pickSession.FirstSelected, pickSession.CropsArray()[0], EntryOutfit(), entryRace, entryGender,
                 entrySettled);
@@ -191,6 +191,7 @@ internal sealed partial class PrismApp
         entryOutcome = OutcomePending;
         if (outcome == OutcomeSent)
         {
+            shards.Burst(enterShardOrigin, EnterShardAngle, EnterShardSpread, EnterShardSpeed, ShardLifeSeconds);
             pickIntake.Discard();
             Go(PrismScreen.Entry);
         }
