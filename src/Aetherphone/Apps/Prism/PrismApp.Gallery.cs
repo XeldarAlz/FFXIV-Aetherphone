@@ -35,6 +35,10 @@ internal sealed partial class PrismApp
             return;
         }
 
+        var tap = Metrics.Size.TapTarget * scale;
+        var lightBottom = content.Min.Y + tap + Metrics.Space.Sm * scale + (HasTracks ? Metrics.Space.Xs * scale + tap : 0f);
+        PrismLight.Week(drawList, new Rect(full.Min, new Vector2(full.Max.X, lightBottom)), gallery.WeekId,
+            PrismArt.Page, PrismArt.Fore, 0f, 0f);
         var top = DrawBackHeader(drawList, content, gallery.Title.Length > 0 ? gallery.Title : WeekTitle(gallery.WeekId),
             scale);
         if (HasTracks)

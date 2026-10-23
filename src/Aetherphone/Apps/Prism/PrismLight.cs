@@ -24,6 +24,32 @@ internal static class PrismLight
     private const float PrimaryUnits = 1f;
     private const float PrimaryGapUnits = 1.5f;
     private const float Faint = 0.003f;
+    private const float MarkUnits = 24f;
+    private const float MarkStrokeUnits = 1.6f;
+    private const float MarkBackEdge = 0.28f;
+    private const float MarkRidge = 0.7f;
+    private const float MarkInnerBeam = 0.35f;
+    private const float MarkBeamWidth = 0.8f;
+    private const float MarkFanWidth = 0.78f;
+    private const float MarkFanReach = 8.5f;
+    private const float MarkFanTop = 7.6f;
+    private const float MarkFanStep = 2.48f;
+    private const float MarkFanClosed = 1.6f;
+    private const float WeekDeepMix = 0.8f;
+    private const float WeekGlowMix = 0.52f;
+    private const float WeekFadeShare = 0.62f;
+    private const float WeekFadeAlpha = 0.55f;
+    private const float WeekGlowAlpha = 0.62f;
+    private const float WeekGlowReach = 0.75f;
+    private const float WeekGlowX = 0.8f;
+    private const float WeekGlowY = 0.12f;
+    private const float WeekMarkInk = 0.2f;
+    private const float WeekMarkFan = 0.7f;
+    private const uint HashSeed = 2166136261u;
+    private const uint HashPrime = 16777619u;
+
+    public const float MarkLeftUnits = 1.5f;
+    public const float MarkWidthUnits = 25.6f;
 
     public static readonly Vector4[] Hues =
     {
@@ -42,6 +68,16 @@ internal static class PrismLight
     };
 
     private static readonly uint OpaqueWhite = Palette.Pack(new Vector4(1f, 1f, 1f, 1f));
+    private static readonly Vector2 MarkApex = new(11f, 3f);
+    private static readonly Vector2 MarkLeft = new(3f, 18.5f);
+    private static readonly Vector2 MarkRight = new(20.5f, 16.5f);
+    private static readonly Vector2 MarkFront = new(12.5f, 21.5f);
+    private static readonly Vector2 MarkEntry = new(6.4f, 11.6f);
+    private static readonly Vector2 MarkExit = new(15.6f, 9.2f);
+    private static readonly Vector2 MarkSource = new(-MarkLeftUnits, 12.6f);
+
+    private static string weekId = string.Empty;
+    private static int weekHue;
 
     public static float EdgeWidth(float scale) => MathF.Max(1f, EdgeUnits * scale);
 
@@ -114,6 +150,85 @@ internal static class PrismLight
             drawList.AddRectFilledMultiColor(new Vector2(x, top), new Vector2(x + step, top + height), from, to, to,
                 from);
         }
+    }
+
+    public static void Mark(ImDrawListPtr drawList, Vector2 center, float size, Vector4 ink, float fan,
+        float fanAlpha = 1f)
+    {
+        var unit = size / MarkUnits;
+        var origin = center - new Vector2(size * 0.5f, size * 0.5f);
+        var thickness = MathF.Max(1f, MarkStrokeUnits * unit);
+        var solid = ImGui.GetColorU32(ink);
+        drawList.AddLine(origin + MarkSource * unit, origin + MarkEntry * unit, solid, thickness * MarkBeamWidth);
+        drawList.AddLine(origin + MarkEntry * unit, origin + MarkExit * unit,
+            ImGui.GetColorU32(ink with { W = ink.W * MarkInnerBeam }), thickness * MarkBeamWidth);
+        if (fan > Faint && fanAlpha > Faint)
+        {
+            var exit = origin + MarkExit * unit;
+            for (var index = 0; index < Hues.Length; index++)
+            {
+                var end = new Vector2(MarkExit.X + MarkFanReach * fan,
+                    MarkFanTop + index * MarkFanStep * fan + (1f - fan) * MarkFanClosed);
+                drawList.AddLine(exit, origin + end * unit,
+                    ImGui.GetColorU32(Hues[index] with { W = fanAlpha * ink.W }), thickness * MarkFanWidth);
+            }
+        }
+
+        drawList.AddLine(origin + MarkLeft * unit, origin + MarkRight * unit,
+            ImGui.GetColorU32(ink with { W = ink.W * MarkBackEdge }), thickness);
+        drawList.PathLineTo(origin + MarkApex * unit);
+        drawList.PathLineTo(origin + MarkLeft * unit);
+        drawList.PathLineTo(origin + MarkFront * unit);
+        drawList.PathLineTo(origin + MarkRight * unit);
+        drawList.PathStroke(solid, ImDrawFlags.Closed, thickness);
+        drawList.AddLine(origin + MarkApex * unit, origin + MarkFront * unit,
+            ImGui.GetColorU32(ink with { W = ink.W * MarkRidge }), thickness);
+    }
+
+    public static void Week(ImDrawListPtr drawList, Rect rect, string id, Vector4 page, Vector4 ink, float markSize,
+        float markHeightShare, float opacity = 1f)
+    {
+        var hue = WeekHue(id);
+        var deep = Vector4.Lerp(Hues[hue], page, WeekDeepMix) with { W = opacity };
+        var glow = Vector4.Lerp(Hues[(hue + 1) % Hues.Length], page, WeekGlowMix);
+        var middle = rect.Min.Y + rect.Height * WeekFadeShare;
+        var fade = Palette.Pack(deep with { W = WeekFadeAlpha * opacity });
+        var top = Palette.Pack(deep);
+        var bottom = Palette.Pack(page with { W = opacity });
+        drawList.AddRectFilled(rect.Min, rect.Max, bottom);
+        drawList.AddRectFilledMultiColor(rect.Min, new Vector2(rect.Max.X, middle), top, top, fade, fade);
+        drawList.AddRectFilledMultiColor(new Vector2(rect.Min.X, middle), rect.Max, fade, fade,
+            Palette.Pack(deep with { W = 0f }), Palette.Pack(deep with { W = 0f }));
+        drawList.PushClipRect(rect.Min, rect.Max, true);
+        SoftGlow.Draw(drawList,
+            new Vector2(rect.Min.X + rect.Width * WeekGlowX, rect.Min.Y + rect.Height * WeekGlowY),
+            MathF.Min(MathF.Max(rect.Width, rect.Height) * WeekGlowReach, rect.Height * (1f - WeekGlowY)),
+            glow with { W = WeekGlowAlpha * opacity });
+        if (markSize > 0f)
+        {
+            Mark(drawList, new Vector2(rect.Center.X, rect.Min.Y + rect.Height * markHeightShare), markSize,
+                ink with { W = WeekMarkInk * opacity }, 1f, WeekMarkFan);
+        }
+
+        drawList.PopClipRect();
+    }
+
+    private static int WeekHue(string id)
+    {
+        if (ReferenceEquals(id, weekId) || id == weekId)
+        {
+            return weekHue;
+        }
+
+        var hash = HashSeed;
+        for (var index = 0; index < id.Length; index++)
+        {
+            hash = (hash ^ id[index]) * HashPrime;
+        }
+
+        weekId = id;
+        weekHue = (int)(hash % (uint)Hues.Length);
+        return weekHue;
     }
 
     private static void Outline(ImDrawListPtr drawList, Rect rect, float radius, float gap, float thickness,

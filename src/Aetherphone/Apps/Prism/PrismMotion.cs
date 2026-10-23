@@ -12,6 +12,7 @@ internal static class PrismMotion
     public const float Stagger = 0.06f;
     public const float Settled = 0.995f;
     public const float GrowEpsilon = 0.001f;
+    public const double LongAgo = -1000d;
 
     public static float At(float age, float delay, float smoothTime) => Spring.Settle(age - delay, smoothTime);
 

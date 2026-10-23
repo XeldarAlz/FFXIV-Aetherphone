@@ -35,6 +35,8 @@ internal sealed partial class PrismApp
     private const float EmptyActionUnits = 132f;
     private const float EmptyTextUnits = 300f;
     private const float ScopeLineUnits = 2f;
+    private const float ContestMarkUnits = 30f;
+    private const float ContestMarkShare = 0.45f;
     private const int RaceCount = 8;
     private const int MaleGender = 0;
     private const int FemaleGender = 1;
@@ -510,8 +512,8 @@ internal sealed partial class PrismApp
         }
         else
         {
-            PrismArt.Placeholder(drawList, thumb, false, scale);
-            PhoneIcon.Draw(drawList, thumb.Center, PhoneIcons.Crown, PrismArt.Muted, PrismArt.IconUnits * scale);
+            PrismLight.Week(drawList, thumb, week.Id, PrismArt.Page, PrismArt.Fore, ContestMarkUnits * scale,
+                ContestMarkShare);
         }
 
         var entered = week.Phase == PrismPhases.Entering && week.MyEntry is not null;
