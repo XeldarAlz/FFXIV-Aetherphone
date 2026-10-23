@@ -111,7 +111,8 @@ internal sealed class BottomTabBar
         var ink = active ? ui.Accent : hovered ? ui.TitleInk : ui.MutedInk;
         if (tab.UsesPhoneGlyph)
         {
-            PhoneIcon.Draw(drawList, iconCenter, tab.GlyphFor(active), ink, LabelledPhoneGlyphSize * scale * press);
+            PhoneIcon.Draw(drawList, iconCenter, tab.GlyphFor(active), ink, LabelledPhoneGlyphSize * scale * press,
+                optical: true);
         }
         else
         {
@@ -171,7 +172,8 @@ internal sealed class BottomTabBar
     {
         var hit = new Vector2(HitRadius * scale, HitRadius * scale);
         var hovered = UiInteract.Hover(center - hit, center + hit);
-        PhoneIcon.Draw(ImGui.GetWindowDrawList(), center, tab.GlyphFor(active), ink, PhoneGlyphSize * scale);
+        PhoneIcon.Draw(ImGui.GetWindowDrawList(), center, tab.GlyphFor(active), ink, PhoneGlyphSize * scale,
+            optical: true);
         HoverTooltip.Show(new Rect(center - hit, center + hit), tab.Label, HoverLabelSide.Above);
         if (hovered)
         {

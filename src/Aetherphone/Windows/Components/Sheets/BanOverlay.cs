@@ -117,14 +117,7 @@ internal sealed class BanOverlay
         var iconCenter = new Vector2(centerX, contentTop + iconRadius);
         drawList.AddCircleFilled(iconCenter, iconRadius,
             ImGui.GetColorU32(Palette.WithAlpha(theme.Danger, 0.16f * alpha)), 48);
-        using (Plugin.Fonts.PushDalamudIcon())
-        {
-            var glyph = IconGlyph.Of(FontAwesomeIcon.Ban);
-            var size = ImGui.CalcTextSize(glyph);
-            drawList.AddText(ImGui.GetFont(), ImGui.GetFontSize(), iconCenter - size * 0.5f,
-                ImGui.GetColorU32(Palette.WithAlpha(theme.Danger, alpha)), glyph);
-        }
-
+        AppSkin.Icon(drawList, iconCenter, IconGlyph.Of(FontAwesomeIcon.Ban), Palette.WithAlpha(theme.Danger, alpha), 1f);
         var suspension = session.Suspension;
         var temporary = IsTemporary(suspension);
         var left = centerX - maxWidth * 0.5f;

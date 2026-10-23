@@ -108,51 +108,20 @@ internal static class ProgressRing
         }
     }
 
-    public static void CenterIcon(ImDrawListPtr dl, Vector2 c, FontAwesomeIcon icon, Vector4 col, float targetHeight)
+    public static void CenterIcon(ImDrawListPtr drawList, Vector2 center, FontAwesomeIcon icon, Vector4 color,
+        float targetHeight) =>
+        PhoneIcon.Draw(drawList, center, IconGlyph.Of(icon), color, targetHeight);
+
+    public static void CenterIcon(Vector2 center, FontAwesomeIcon icon, Vector4 color, float targetHeight)
     {
         var glyph = IconGlyph.Of(icon);
+        PhoneIcon.Draw(ImGui.GetWindowDrawList(), center, glyph, color, targetHeight);
         using (Plugin.Fonts.PushIcon(targetHeight, glyph))
         {
-            var font = ImGui.GetFont();
-            var baseSize = ImGui.GetFontSize();
             var measured = ImGui.CalcTextSize(glyph);
-            var scale = measured.Y > 0f ? targetHeight / measured.Y : 1f;
-            var drawSize = baseSize * scale;
-            dl.AddText(font, drawSize, GlyphPen(font, glyph[0], c, drawSize, measured * scale), ImGui.GetColorU32(col),
-                glyph);
-        }
-    }
-
-    private static unsafe Vector2 GlyphPen(ImFontPtr font, char codepoint, Vector2 center, float drawSize,
-        Vector2 lineSize)
-    {
-        ImFontGlyphPtr found = font.FindGlyph(codepoint);
-        if (found.IsNull || font.FontSize <= 0f)
-        {
-            return center - lineSize * 0.5f;
-        }
-
-        var ratio = drawSize / font.FontSize;
-        return new Vector2(center.X - (found.X0 + found.X1) * 0.5f * ratio,
-            center.Y - (found.Y0 + found.Y1) * 0.5f * ratio);
-    }
-
-    public static void CenterIcon(Vector2 c, FontAwesomeIcon icon, Vector4 col, float targetHeight)
-    {
-        var glyph = IconGlyph.Of(icon);
-        using (Plugin.Fonts.PushIcon(targetHeight, glyph))
-        {
-            var baseHeight = ImGui.CalcTextSize(glyph).Y;
-            var scale = baseHeight > 0f ? targetHeight / baseHeight : 1f;
-            ImGui.SetWindowFontScale(scale);
-            var size = ImGui.CalcTextSize(glyph);
-            ImGui.SetCursorScreenPos(new Vector2(c.X - size.X * 0.5f, c.Y - size.Y * 0.5f));
-            using (UiScope.PushColor(ImGuiCol.Text, col))
-            {
-                Typography.Plain(glyph);
-            }
-
-            ImGui.SetWindowFontScale(1f);
+            var size = measured.Y > 0f ? measured * (targetHeight / measured.Y) : measured;
+            ImGui.SetCursorScreenPos(center - size * 0.5f);
+            ImGui.Dummy(size);
         }
     }
 

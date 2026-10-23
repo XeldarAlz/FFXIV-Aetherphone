@@ -19,17 +19,7 @@ internal static class SubmitField
         var radius = (pillMax.Y - pillMin.Y) * 0.5f;
         Squircle.Fill(drawList, pillMin, pillMax, radius, ImGui.GetColorU32(Surfaces.Fill(theme.TextStrong, FillLevel.Tertiary)));
         var glyphCenter = new Vector2(pillMin.X + 16f * scale, bar.Center.Y);
-        using (Plugin.Fonts.PushDalamudIcon())
-        {
-            var glyph = IconGlyph.Of(icon);
-            var size = ImGui.CalcTextSize(glyph);
-            ImGui.SetCursorScreenPos(new Vector2(glyphCenter.X - size.X * 0.5f, glyphCenter.Y - size.Y * 0.5f));
-            using (UiScope.PushColor(ImGuiCol.Text, theme.TextMuted))
-            {
-                Typography.Plain(glyph);
-            }
-        }
-
+        AppSkin.Icon(drawList, glyphCenter, IconGlyph.Of(icon), theme.TextMuted, 1f);
         var hasText = text.Length > 0;
         var clearRadius = 9f * scale;
         var clearCenter = new Vector2(pillMax.X - 16f * scale, bar.Center.Y);
@@ -91,17 +81,7 @@ internal static class SubmitField
         Squircle.Fill(drawList, pillMin, pillMax, MathF.Min(pillMax.Y - pillMin.Y, rowHeight) * 0.5f,
             ImGui.GetColorU32(Surfaces.Fill(theme.TextStrong, FillLevel.Tertiary)));
         var glyphCenter = new Vector2(pillMin.X + 16f * scale, rowCenterY);
-        using (Plugin.Fonts.PushDalamudIcon())
-        {
-            var glyph = IconGlyph.Of(icon);
-            var size = ImGui.CalcTextSize(glyph);
-            ImGui.SetCursorScreenPos(new Vector2(glyphCenter.X - size.X * 0.5f, glyphCenter.Y - size.Y * 0.5f));
-            using (UiScope.PushColor(ImGuiCol.Text, theme.TextMuted))
-            {
-                Typography.Plain(glyph);
-            }
-        }
-
+        AppSkin.Icon(drawList, glyphCenter, IconGlyph.Of(icon), theme.TextMuted, 1f);
         var hasText = editor.Text.Length > 0;
         var clearRadius = 9f * scale;
         var clearCenter = new Vector2(pillMax.X - 16f * scale, rowCenterY);

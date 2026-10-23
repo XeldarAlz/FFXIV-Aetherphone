@@ -384,12 +384,6 @@ internal sealed class AppSkin
             targetSize = ImGui.GetFontSize() * scale;
         }
 
-        using (Plugin.Fonts.PushIcon(targetSize, glyph))
-        {
-            var font = ImGui.GetFont();
-            var ratio = targetSize / ImGui.GetFontSize();
-            var size = ImGui.CalcTextSize(glyph) * ratio;
-            drawList.AddText(font, targetSize, center - size * 0.5f, ImGui.GetColorU32(color), glyph, 0f);
-        }
+        PhoneIcon.Draw(drawList, center, glyph, color, targetSize);
     }
 }
