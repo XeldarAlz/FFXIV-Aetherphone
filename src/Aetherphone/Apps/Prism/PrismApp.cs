@@ -65,7 +65,6 @@ internal sealed partial class PrismApp : IResumableApp
     private const float GridLineUnits = 28f;
     private const float GridAvatarUnits = 20f;
     private const float GridGlyphUnits = 14f;
-    private const int GridAvatarSegments = 32;
 
     private readonly PrismStore store;
     private readonly GlamStore glams;
@@ -586,29 +585,33 @@ internal sealed partial class PrismApp : IResumableApp
 
         DrawLook(drawList, photo, url, false);
         var hovered = HoverWash(drawList, tile, photo, 0f);
-        var middle = (photo.Max.Y + tile.Max.Y) * 0.5f;
-        var left = photo.Min.X;
-        var right = photo.Max.X;
+        DrawCountByline(drawList, photo.Min.X, photo.Max.X, (photo.Max.Y + tile.Max.Y) * 0.5f, label, avatarName,
+            avatarUrl, glyph, count, PrismArt.Fore, PrismArt.Muted, PrismArt.Muted, scale);
+        return UiInteract.Click(tile.Min, tile.Max, hovered);
+    }
+
+    private float DrawCountByline(ImDrawListPtr drawList, float left, float right, float middle, string label,
+        string avatarName, string? avatarUrl, string glyph, string count, Vector4 ink, Vector4 countInk,
+        Vector4 avatarInk, float scale)
+    {
         if (avatarName.Length > 0)
         {
             var radius = GridAvatarUnits * scale * 0.5f;
-            AvatarView.Draw(drawList, new Vector2(left + radius, middle), radius, PrismArt.Muted,
-                Initials.Of(avatarName), TextStyles.Caption2.Scale, images.Avatar(avatarUrl, radius * 2f),
-                GridAvatarSegments);
+            AvatarView.Draw(drawList, new Vector2(left + radius, middle), radius, avatarInk, Initials.Of(avatarName),
+                TextStyles.Caption2.Scale, images.Avatar(avatarUrl, radius * 2f), AvatarSegments);
             left += radius * 2f + Metrics.Space.Xs * scale;
         }
 
         if (count.Length > 0)
         {
             var size = Typography.Measure(count, PrismType.Caption);
-            Typography.Draw(drawList, new Vector2(right - size.X, middle - size.Y * 0.5f), count, PrismArt.Muted,
+            Typography.Draw(drawList, new Vector2(right - size.X, middle - size.Y * 0.5f), count, countInk,
                 PrismType.Caption);
             right -= size.X + Metrics.Space.Xxs * scale;
             if (glyph.Length > 0)
             {
                 var glyphSize = GridGlyphUnits * scale;
-                PhoneIcon.Draw(drawList, new Vector2(right - glyphSize * 0.5f, middle), glyph, PrismArt.Muted,
-                    glyphSize);
+                PhoneIcon.Draw(drawList, new Vector2(right - glyphSize * 0.5f, middle), glyph, countInk, glyphSize);
                 right -= glyphSize;
             }
 
@@ -616,10 +619,9 @@ internal sealed partial class PrismApp : IResumableApp
         }
 
         var fitted = Typography.FitText(label, MathF.Max(1f, right - left), PrismType.Headline);
-        Typography.Draw(drawList,
-            new Vector2(left, middle - Typography.Measure(fitted, PrismType.Headline).Y * 0.5f), fitted, PrismArt.Fore,
-            PrismType.Headline);
-        return UiInteract.Click(tile.Min, tile.Max, hovered);
+        var fittedSize = Typography.Measure(fitted, PrismType.Headline);
+        Typography.Draw(drawList, new Vector2(left, middle - fittedSize.Y * 0.5f), fitted, ink, PrismType.Headline);
+        return left + fittedSize.X;
     }
 
     private static bool HoverWash(ImDrawListPtr drawList, Rect rect) => HoverWash(drawList, rect, rect, 0f);

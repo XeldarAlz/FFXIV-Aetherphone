@@ -13,9 +13,6 @@ internal sealed partial class PrismApp
     private const int GridColumns = 2;
     private const int PlaceholderRows = 2;
     private const float TileShadeShare = 0.4f;
-    private const float BylineAvatarUnits = 20f;
-    private const float BylineGlyphUnits = 14f;
-    private const int BylineAvatarSegments = 32;
     private const float HeaderDotShare = 0.32f;
     private const float HeaderDotRimUnits = 1.5f;
     private const float ContestRowUnits = 56f;
@@ -257,7 +254,7 @@ internal sealed partial class PrismApp
         var textLeft = left + inset;
         var textWidth = width - inset * 2f;
         var caption = Typography.LineHeight(PrismType.Caption);
-        var byline = MathF.Max(BylineAvatarUnits * scale, Typography.LineHeight(PrismType.Headline));
+        var byline = MathF.Max(GridAvatarUnits * scale, Typography.LineHeight(PrismType.Headline));
         var block = caption + gap + PrismType.HeroHeight(glam.Title, textWidth) + gap + byline;
         PrismArt.Scrim(drawList, photo, block, scale);
         var y = photo.Max.Y - inset - block;
@@ -266,48 +263,21 @@ internal sealed partial class PrismApp
             PrismType.Caption);
         y += caption + gap;
         y += PrismType.DrawHero(drawList, new Vector2(textLeft, y), glam.Title, textWidth, PrismArt.PhotoFore) + gap;
-        var handleEnd = DrawHeroByline(drawList,
-            new Rect(new Vector2(textLeft, y), new Vector2(textLeft + textWidth, y + byline)), glam, scale);
+        var bylineMiddle = y + byline * 0.5f;
+        var handleEnd = DrawCountByline(drawList, textLeft, textLeft + textWidth, bylineMiddle, AuthorLine(glam.Author),
+            AuthorName(glam.Author), glam.Author?.AvatarUrl, PhoneIcons.Wand,
+            glam.TryOns > 0 ? NumberText.Compact(glam.TryOns) : string.Empty, PrismArt.PhotoFore, PrismArt.PhotoFore,
+            PrismArt.PhotoMuted, scale);
         if (UiInteract.Click(photo.Min, photo.Max, HoverWash(drawList, photo)))
         {
             OpenGlam(glam);
         }
 
         var reach = Metrics.Size.TapTarget * scale * 0.5f;
-        var bylineMiddle = y + byline * 0.5f;
         ClickProfile(new Rect(new Vector2(textLeft, bylineMiddle - reach),
             new Vector2(handleEnd, bylineMiddle + reach)), glam.Author);
 
         return photo.Max.Y;
-    }
-
-    private float DrawHeroByline(ImDrawListPtr drawList, Rect line, GlamDto glam, float scale)
-    {
-        var middle = line.Center.Y;
-        var radius = BylineAvatarUnits * scale * 0.5f;
-        AvatarView.Draw(drawList, new Vector2(line.Min.X + radius, middle), radius, PrismArt.PhotoMuted,
-            Initials.Of(AuthorName(glam.Author)), TextStyles.Caption2.Scale, images.Avatar(glam.Author?.AvatarUrl,
-                radius * 2f), BylineAvatarSegments);
-        var left = line.Min.X + radius * 2f + Metrics.Space.Xs * scale;
-        var right = line.Max.X;
-        if (glam.TryOns > 0)
-        {
-            var count = NumberText.Compact(glam.TryOns);
-            var size = Typography.Measure(count, PrismType.Caption);
-            Typography.Draw(drawList, new Vector2(right - size.X, middle - size.Y * 0.5f), count, PrismArt.PhotoFore,
-                PrismType.Caption);
-            var glyph = BylineGlyphUnits * scale;
-            right -= size.X + Metrics.Space.Xxs * scale + glyph;
-            PhoneIcon.Draw(drawList, new Vector2(right + glyph * 0.5f, middle), PhoneIcons.Wand, PrismArt.PhotoFore,
-                glyph);
-            right -= Metrics.Space.Sm * scale;
-        }
-
-        var handle = Typography.FitText(AuthorLine(glam.Author), MathF.Max(1f, right - left), PrismType.Headline);
-        var handleSize = Typography.Measure(handle, PrismType.Headline);
-        Typography.Draw(drawList, new Vector2(left, middle - handleSize.Y * 0.5f), handle, PrismArt.PhotoFore,
-            PrismType.Headline);
-        return left + handleSize.X;
     }
 
     private void ClickProfile(Rect hit, GlamAuthorDto? author)
@@ -366,7 +336,7 @@ internal sealed partial class PrismApp
         else
         {
             PrismArt.Placeholder(drawList, thumb, false, scale);
-            PhoneIcon.Draw(drawList, thumb.Center, PhoneIcons.Crown, PrismArt.Muted, BylineGlyphUnits * scale);
+            PhoneIcon.Draw(drawList, thumb.Center, PhoneIcons.Crown, PrismArt.Muted, GridGlyphUnits * scale);
         }
 
         var label = Loc.T(week.Phase != PrismPhases.Entering ? L.Prism.JudgeHeat
