@@ -509,7 +509,7 @@ internal sealed partial class PrismApp
     }
 
     private string ContestCover(PrismWeekDto week) =>
-        CoverPlacing(store.Results) is { ImageUrl.Length: > 0 } winner
+        CoverPlacing(ShownResults()) is { ImageUrl.Length: > 0 } winner
             ? winner.ImageUrl
             : week.MyEntry?.ImageUrl ?? string.Empty;
 
