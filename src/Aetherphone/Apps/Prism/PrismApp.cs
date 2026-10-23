@@ -359,6 +359,7 @@ internal sealed partial class PrismApp : IResumableApp
         if (next != screen)
         {
             store.ClearFailure();
+            ResetPieces();
         }
 
         screen = next;
@@ -401,7 +402,7 @@ internal sealed partial class PrismApp : IResumableApp
 
     private void LeaveScreen()
     {
-        if (piecesOpen)
+        if (piecesOpen && screen is PrismScreen.GlamDetail or PrismScreen.WardrobeOutfit)
         {
             piecesOpen = false;
         }
