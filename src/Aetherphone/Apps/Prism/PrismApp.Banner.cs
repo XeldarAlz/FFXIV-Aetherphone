@@ -120,6 +120,7 @@ internal sealed partial class PrismApp
     {
         if (glams.Me is { } me)
         {
+            showSaved = false;
             glams.OpenProfile(me);
         }
 
