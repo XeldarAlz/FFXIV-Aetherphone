@@ -23,6 +23,7 @@ internal sealed partial class PrismApp
     private const float ProfileAvatarUnits = 64f;
     private const int ProfileAvatarSegments = 48;
     private const float CoverShare = 0.75f;
+    private const float ProfileCoverFocus = 0.1f;
     private const float CoverMedalUnits = 11f;
     private const float PlacingMedalUnits = 14f;
     private const float ListIconUnits = 56f;
@@ -308,7 +309,7 @@ internal sealed partial class PrismApp
     {
         if (profileCover is { } cover)
         {
-            DrawLook(drawList, photo, Cover(cover), false, native: true, focusY: CoverFocus);
+            DrawLook(drawList, photo, Cover(cover), false, native: true, focusY: ProfileFocus(photo, topInset));
             if (UiInteract.Click(photo.Min, photo.Max))
             {
                 OpenGlam(cover);
@@ -370,6 +371,14 @@ internal sealed partial class PrismApp
         {
             glams.SetFollow(author, !following);
         }
+    }
+
+    private static float ProfileFocus(Rect photo, float topInset)
+    {
+        var shown = photo.Height / MathF.Max(1f, photo.Width) * GlamStore.PhotoRatio;
+        return shown >= 1f
+            ? ImageFit.CenterFocus
+            : MathF.Max(0f, ProfileCoverFocus - topInset / MathF.Max(1f, photo.Height) * shown / (1f - shown));
     }
 
     private float DrawCoverPlacing(ImDrawListPtr drawList, float right, float middle, float room,
