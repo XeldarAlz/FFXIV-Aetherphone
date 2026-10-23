@@ -11006,7 +11006,7 @@ internal static class L
             "Every glam lists its gear, dyes and mods. Try on puts it on your character with Glamourer, with the mods you have.");
         public static readonly LocString GuidePostTitle = new("prism.guidePostTitle", "Post your own");
         public static readonly LocString GuidePostBody = new("prism.guidePostBody",
-            "Pick up to four photos. Prism reads your gear, dyes and mods and links each mod to its page. It never hosts mod files.");
+            "Pick up to four photos, then add the pieces, dyes and mods you wore so people can try it on. Prism links each mod to its page and never hosts mod files.");
         public static readonly LocString GuideWardrobeTitle = new("prism.guideWardrobeTitle", "Keep a wardrobe");
         public static readonly LocString GuideWardrobeBody = new("prism.guideWardrobeBody",
             "Save what you're wearing, bring in Glamourer designs or add any glam, then put it back on in one tap. Only you can see it.");
@@ -11120,7 +11120,7 @@ internal static class L
         public static readonly LocString NoPlacings = new("prism.noPlacings", "No placings yet");
         public static readonly LocString FirstGlamTitle = new("prism.firstGlamTitle", "Share your first glam");
         public static readonly LocString FirstGlamHint = new("prism.firstGlamHint",
-            "Up to four photos of one outfit. Prism reads the gear, dyes and mods for you.");
+            "Up to four photos of one outfit, plus the pieces and mods you wore.");
         public static readonly LocString EditProfile = new("prism.editProfile", "Edit profile");
         public static readonly LocString MeSignInTitle = new("prism.meSignInTitle", "Sign in to see your profile");
         public static readonly LocString MeSignInHint = new("prism.meSignInHint",
