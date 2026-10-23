@@ -121,8 +121,7 @@ internal sealed partial class PrismApp
             return row.Max.Y;
         }
 
-        var style = new TextStyle(Typography.FitScale(heading, room, PrismType.Headline.Scale, PrismType.Caption.Scale,
-            PrismType.Headline.Weight), PrismType.Headline.Weight);
+        var style = FitStyle(heading, room, PrismType.Headline);
         var title = Typography.FitText(heading, room, style);
         var size = Typography.Measure(title, style);
         Typography.Draw(drawList, row.Center - size * 0.5f, title, PrismArt.Fore, style);
