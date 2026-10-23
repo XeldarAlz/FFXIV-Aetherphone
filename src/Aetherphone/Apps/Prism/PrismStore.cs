@@ -58,6 +58,7 @@ internal sealed class PrismStore : IDisposable
     private volatile PrismResultsDto? results;
     private volatile PrismBallotDto? ballot;
     private volatile string lastWeekId = string.Empty;
+    private volatile string lastWeekLanguage = string.Empty;
     private volatile bool loading;
     private volatile bool loadedOnce;
     private volatile bool weekFailed;
@@ -178,7 +179,7 @@ internal sealed class PrismStore : IDisposable
             results = fetched;
             if (fetched.WeekId == current.PreviousWeekId)
             {
-                KeepLastWeek(fetched.WeekId);
+                KeepLastWeek(fetched.WeekId, lang);
                 lastWeekResults[showing] = fetched;
             }
 
@@ -208,9 +209,9 @@ internal sealed class PrismStore : IDisposable
         }
 
         var previous = raw.PreviousWeekId;
-        KeepLastWeek(previous);
-        var tracks = PrismTracks.Of(raw);
         var lang = Loc.Current.Code;
+        KeepLastWeek(previous, lang);
+        var tracks = PrismTracks.Of(raw);
         for (var index = 0; index < tracks.Length; index++)
         {
             var id = tracks[index].Id;
@@ -222,23 +223,30 @@ internal sealed class PrismStore : IDisposable
             work.Run("last week results", async token =>
             {
                 var fetched = await client.ResultsAsync(previous, lang, id, token).ConfigureAwait(false);
-                if (fetched is not null && lastWeekId == previous)
+                if (fetched is not null && lastWeekId == previous && lastWeekLanguage == lang)
                 {
                     lastWeekResults[id] = fetched;
                 }
-            }, () => lastWeekResults.TryRemove(new KeyValuePair<string, PrismResultsDto?>(id, null)));
+            }, () =>
+            {
+                if (lastWeekLanguage == lang)
+                {
+                    lastWeekResults.TryRemove(new KeyValuePair<string, PrismResultsDto?>(id, null));
+                }
+            });
         }
     }
 
-    private void KeepLastWeek(string previous)
+    private void KeepLastWeek(string previous, string lang)
     {
-        if (lastWeekId == previous)
+        if (lastWeekId == previous && lastWeekLanguage == lang)
         {
             return;
         }
 
         lastWeekResults.Clear();
         lastWeekId = previous;
+        lastWeekLanguage = lang;
     }
 
     internal static bool StillCurrent(PrismResultsDto held, PrismWeekDto current) =>
