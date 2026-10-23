@@ -26,6 +26,8 @@ internal sealed partial class PrismApp
     private const float GuideScorePitch = 1.2f;
     private const float GuideNumeralUnits = 120f;
     private const float GuideCountdownSeconds = 1.2f;
+    private const float GuideTextShadeUnits = 300f;
+    private static readonly Vector4 GuideShadeBlack = new(0f, 0f, 0f, 0.85f);
     private const int GuideChosenScore = 4;
     private const long GuideLikes = 128;
 
@@ -162,10 +164,10 @@ internal sealed partial class PrismApp
 
     private bool DrawGuideArrow(ImDrawListPtr drawList, Vector2 center, bool last, float scale) =>
         DrawRoundAction(drawList, center, last ? DoneGlyph : NextGlyph,
-            Loc.T(last ? L.Prism.GetStarted : L.Common.Next), true, string.Empty, photoControls, scale);
+            Loc.T(last ? L.Prism.GetStarted : L.Common.Next), true, string.Empty, photoControls, scale, false);
 
     private bool DrawRoundAction(ImDrawListPtr drawList, Vector2 center, string glyph, string label, bool enabled,
-        string busy, in ControlInk ink, float scale)
+        string busy, in ControlInk ink, float scale, bool labelled = true)
     {
         var radius = Metrics.Size.TapTarget * 0.5f * scale;
         var rect = new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
@@ -181,7 +183,11 @@ internal sealed partial class PrismApp
                 PrismArt.OnFore, HeaderSweepMs, HeaderSweepArc, 1f, drawList);
         }
 
-        HoverTooltip.Show(key, rect, busy.Length > 0 ? busy : label, over, HoverLabelSide.Above);
+        if (labelled || busy.Length > 0)
+        {
+            HoverTooltip.Show(key, rect, busy.Length > 0 ? busy : label, over, HoverLabelSide.Above);
+        }
+
         return hovered && UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
@@ -233,6 +239,11 @@ internal sealed partial class PrismApp
     {
         PrismArt.TopFog(drawList, full, scale);
         PrismArt.Scrim(drawList, full, full.Max.Y - top, scale);
+        var clear = ImGui.GetColorU32(GuideShadeBlack with { W = 0f });
+        var black = ImGui.GetColorU32(GuideShadeBlack);
+        drawList.AddRectFilledMultiColor(
+            new Vector2(full.Min.X, MathF.Max(full.Min.Y, full.Max.Y - GuideTextShadeUnits * scale)), full.Max,
+            clear, clear, black, black);
     }
 
     private void GuideRise(ImDrawListPtr drawList, int mark, float scale) =>
