@@ -90,8 +90,8 @@ internal sealed partial class PrismApp
         }
 
         var next = Loc.T(L.Common.Next);
-        var top = DrawActionHeader(drawList, content, Loc.T(L.Common.Cancel), Loc.T(L.Prism.PostGlam), next, next,
-            composeSession.HasSelection, UiSound.Tap, scale, out var advance) + Metrics.Space.Sm * scale;
+        var top = DrawActionHeader(drawList, content, PhoneIcons.X, Loc.T(L.Common.Cancel), Loc.T(L.Prism.PostGlam),
+            next, next, composeSession.HasSelection, UiSound.Tap, scale, out var advance) + Metrics.Space.Sm * scale;
         if (advance)
         {
             if (AutoCapture)
@@ -119,13 +119,14 @@ internal sealed partial class PrismApp
         }
     }
 
-    private float DrawActionHeader(ImDrawListPtr drawList, Rect content, string leave, string heading, string action,
-        string widestAction, bool enabled, UiSound tapSound, float scale, out bool acted)
+    private float DrawActionHeader(ImDrawListPtr drawList, Rect content, string leaveGlyph, string leave,
+        string heading, string action, string widestAction, bool enabled, UiSound tapSound, float scale,
+        out bool acted)
     {
-        var row = new Rect(content.Min, new Vector2(content.Max.X, content.Min.Y + Metrics.Size.TapTarget * scale));
-        var leading = ButtonWidth([leave], row.Width * HeaderSideShare, scale);
-        if (DrawButton(drawList, new Rect(row.Min, new Vector2(row.Min.X + leading, row.Max.Y)), leave,
-                ButtonStyle.Plain, scale, id: "prism.headerLeave"))
+        var leading = Metrics.Size.TapTarget * scale;
+        var row = new Rect(content.Min, new Vector2(content.Max.X, content.Min.Y + leading));
+        if (IconButton(drawList, new Vector2(row.Min.X + leading * 0.5f, row.Center.Y), leaveGlyph, leave, scale,
+                HoverLabelSide.Below))
         {
             LeaveScreen();
         }
@@ -156,8 +157,9 @@ internal sealed partial class PrismApp
     {
         var label = Loc.T(glams.Posting ? L.Prism.Posting : L.Prism.Post);
         var ready = !string.IsNullOrWhiteSpace(glamTitle) && !glams.Posting;
-        var top = DrawActionHeader(drawList, content, Loc.T(L.Prism.Back), Loc.T(L.Prism.PostGlam), label,
-            Loc.T(L.Prism.Posting), ready, UiSound.Shutter, scale, out var post) + Metrics.Space.Sm * scale;
+        var top = DrawActionHeader(drawList, content, PhoneIcons.ChevronLeft, Loc.T(L.Prism.Back),
+            Loc.T(L.Prism.PostGlam), label, Loc.T(L.Prism.Posting), ready, UiSound.Shutter, scale, out var post) +
+                  Metrics.Space.Sm * scale;
         if (post)
         {
             PostGlam();

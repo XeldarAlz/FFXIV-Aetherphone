@@ -50,8 +50,9 @@ internal sealed partial class PrismApp
         var week = store.Week;
         var enter = Loc.T(L.Prism.Enter);
         var ready = pickSession.HasSelection && !store.Busy && (!VanillaEntry || DraftPieces() > 0);
-        var top = DrawActionHeader(drawList, content, Loc.T(L.Common.Cancel), week?.Title ?? Loc.T(L.Prism.EnterLook),
-            enter, enter, ready, UiSound.Shutter, scale, out var entered) + Metrics.Space.Sm * scale;
+        var top = DrawActionHeader(drawList, content, PhoneIcons.X, Loc.T(L.Common.Cancel),
+            week?.Title ?? Loc.T(L.Prism.EnterLook), enter, enter, ready, UiSound.Shutter, scale, out var entered) +
+                  Metrics.Space.Sm * scale;
         if (entered)
         {
             var (race, gender) = WornBody();
