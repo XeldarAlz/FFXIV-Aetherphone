@@ -47,7 +47,7 @@ internal sealed partial class PrismApp
     };
 
     private readonly PrismStop[] history = new PrismStop[HistoryDepth];
-    private readonly TabBar tabBar = new() { Height = TabBarUnits };
+    private readonly TabBar tabBar = new() { Height = TabBarUnits, SideInset = 0f };
     private readonly TabItem[] tabItems = new TabItem[TabRoots.Length + 1];
     private readonly AppSkin ui = new(AppPalettes.Neutral(AppAccents.For("prism")));
     private float bottomChrome;
@@ -86,9 +86,8 @@ internal sealed partial class PrismApp
     {
         var stage = TabBar.ContentArea(content, scale, TabBarUnits);
         var height = WearingBarUnits * scale;
-        var side = Metrics.Space.GlassInset * scale;
-        var min = new Vector2(stage.Min.X + side, stage.Max.Y - height);
-        var max = new Vector2(stage.Max.X - side, stage.Max.Y);
+        var min = new Vector2(stage.Min.X, stage.Max.Y - height);
+        var max = stage.Max;
         using var layer = ScreenLayer.Begin("prism.wearing", new Rect(new Vector2(stage.Min.X, min.Y), stage.Max), false);
         UiInteract.HoverOverlay(new Rect(min, max));
         var drawList = ImGui.GetWindowDrawList();

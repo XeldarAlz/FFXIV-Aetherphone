@@ -65,6 +65,8 @@ internal sealed class TabBar
 
     public float Height { get; init; } = TabBarLayout.Height;
 
+    public float SideInset { get; init; } = TabBarLayout.SideInset;
+
     public static float ContentInset(float scale, float height = TabBarLayout.Height) =>
         TabBarLayout.ContentInset(scale, height);
 
@@ -101,7 +103,7 @@ internal sealed class TabBar
         SyncVisit(ImGui.GetFrameCount());
 
         var activeIndex = Math.Clamp(active, 0, items.Length - 1);
-        var capsule = TabBarLayout.FullCapsule(area, scale, action.HasValue, Height);
+        var capsule = TabBarLayout.FullCapsule(area, scale, action.HasValue, Height, SideInset);
         Bounds = capsule;
 
         var theme = ui.Theme;
@@ -232,7 +234,7 @@ internal sealed class TabBar
     private bool DrawAction(ImDrawListPtr drawList, Rect area, AppSkin ui, in TabBarAction action, GlassTone tone,
         Vector4 backdrop, float delta, float scale)
     {
-        var circle = TabBarLayout.ActionCircle(area, scale, Height);
+        var circle = TabBarLayout.ActionCircle(area, scale, Height, SideInset);
         var hovered = BarHover(circle.Min, circle.Max);
         actionHover.Step(hovered ? 1f : 0f, Motion.HoverLift, delta);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);

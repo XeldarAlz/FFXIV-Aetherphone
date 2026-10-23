@@ -24,11 +24,12 @@ internal static class TabBarLayout
     public static Rect Zone(Rect area, float scale, float height = Height) =>
         new(new Vector2(area.Min.X, MathF.Max(area.Min.Y, area.Max.Y - (height + BottomInset) * scale)), area.Max);
 
-    public static Rect FullCapsule(Rect area, float scale, bool hasAction, float height = Height)
+    public static Rect FullCapsule(Rect area, float scale, bool hasAction, float height = Height,
+        float side = SideInset)
     {
         var bottom = area.Max.Y - BottomInset * scale;
-        var left = area.Min.X + SideInset * scale;
-        var right = area.Max.X - SideInset * scale;
+        var left = area.Min.X + side * scale;
+        var right = area.Max.X - side * scale;
         if (hasAction)
         {
             right -= (ActionDiameter + ActionGap) * scale;
@@ -37,10 +38,10 @@ internal static class TabBarLayout
         return new Rect(new Vector2(left, bottom - height * scale), new Vector2(MathF.Max(left, right), bottom));
     }
 
-    public static Rect ActionCircle(Rect area, float scale, float height = Height)
+    public static Rect ActionCircle(Rect area, float scale, float height = Height, float side = SideInset)
     {
         var diameter = ActionDiameter * scale;
-        var right = area.Max.X - SideInset * scale;
+        var right = area.Max.X - side * scale;
         var centerY = area.Max.Y - BottomInset * scale - height * scale * 0.5f;
         return new Rect(new Vector2(right - diameter, centerY - diameter * 0.5f),
             new Vector2(right, centerY + diameter * 0.5f));
