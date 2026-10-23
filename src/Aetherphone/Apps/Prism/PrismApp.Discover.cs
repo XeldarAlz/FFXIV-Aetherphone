@@ -359,19 +359,16 @@ internal sealed partial class PrismApp
     private string ContestCaption(PrismWeekDto week)
     {
         var entering = week.Phase == PrismPhases.Entering;
-        var unix = entering ? week.EntriesCloseAtUnix
-            : week.Phase == PrismPhases.Final ? week.FinalCloseAtUnix
-            : week.JudgingCloseAtUnix;
-        var minute = DateTimeOffset.UtcNow.ToUnixTimeSeconds() / SecondsPerMinute;
-        var key = HashCode.Combine(week.Phase, unix, minute, Loc.Current.Code);
+        var deadline = DeadlineValue(week);
+        var key = HashCode.Combine(entering, deadline, Loc.Current.Code);
         if (contestCaption.IsCurrent(key))
         {
             return contestCaption.Value;
         }
 
-        return contestCaption.Store(key, unix <= 0
+        return contestCaption.Store(key, deadline.Length == 0
             ? Loc.T(L.Prism.TabWeek)
-            : Loc.T(entering ? L.Prism.ContestCloses : L.Prism.ContestJudgingCloses, TimeText.Until(unix)));
+            : Loc.T(entering ? L.Prism.ContestCloses : L.Prism.ContestJudgingCloses, deadline));
     }
 
     private float DrawLaneGrid(ImDrawListPtr drawList, float left, float top, float width, FeedLane<GlamDto> lane,
