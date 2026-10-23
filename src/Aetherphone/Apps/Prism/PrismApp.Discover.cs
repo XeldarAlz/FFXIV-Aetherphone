@@ -37,6 +37,8 @@ internal sealed partial class PrismApp
     private const float ScopeLineUnits = 2f;
     private const float ContestMarkUnits = 30f;
     private const float ContestMarkShare = 0.45f;
+    private const float ContestTileUnits = 32f;
+    private const int CountdownUnitsShown = 3;
     private const int RaceCount = 8;
     private const int MaleGender = 0;
     private const int FemaleGender = 1;
@@ -59,6 +61,7 @@ internal sealed partial class PrismApp
     private GlamScope discoverScope = GlamScope.New;
     private bool fitsMe;
     private bool scopeLineShown;
+    private readonly PrismCountdown rowCountdown = new();
     private Spring scopeLineLeft;
     private Spring scopeLineRight;
     private bool todayResolved;
@@ -516,6 +519,8 @@ internal sealed partial class PrismApp
                 ContestMarkShare);
         }
 
+        var deadline = PrismCountdown.Deadline(week);
+        var remaining = PrismCountdown.Remaining(deadline);
         var entered = week.Phase == PrismPhases.Entering && week.MyEntry is not null;
         var label = Loc.T(week.Phase == PrismPhases.Final ? L.Prism.JudgeFinal
             : week.Phase != PrismPhases.Entering ? L.Prism.JudgeHeat
@@ -525,20 +530,31 @@ internal sealed partial class PrismApp
         var captionHeight = Typography.LineHeight(PrismType.Caption);
         var themeLine = Typography.LineHeight(PrismType.Title);
         var pillHeight = Button.RegularHeight * scale;
+        var pillWidth = MathF.Min(Typography.Measure(label, Button.LabelStyle(pillHeight)).X + pillHeight, room);
+        var tiles = remaining > 0 &&
+                    room - pillWidth - Metrics.Space.Sm * scale >= ContestTileUnits * CountdownUnitsShown * scale;
         var gap = Metrics.Space.Xxs * scale;
         var y = row.Center.Y - (captionHeight + gap + themeLine + Metrics.Space.Sm * scale + pillHeight) * 0.5f;
-        Typography.Draw(drawList, new Vector2(textLeft, y),
-            Typography.FitText(ContestCaption(week), room, PrismType.Caption), PrismArt.Muted, PrismType.Caption);
+        var caption = tiles
+            ? Loc.T(week.Phase == PrismPhases.Entering ? L.Prism.TabWeek : DeadlineLabel(week.Phase))
+            : ContestCaption(week);
+        Typography.Draw(drawList, new Vector2(textLeft, y), Typography.FitText(caption, room, PrismType.Caption),
+            PrismArt.Muted, PrismType.Caption);
         y += captionHeight + gap;
         var themeStyle = FitStyle(week.Title, room, PrismType.Title);
         Typography.Draw(drawList, new Vector2(textLeft, y + (themeLine - Typography.LineHeight(themeStyle)) * 0.5f),
             Typography.FitText(week.Title, room, themeStyle), PrismArt.Fore, themeStyle);
         y += themeLine + Metrics.Space.Sm * scale;
-        var pillWidth = MathF.Min(Typography.Measure(label, Button.LabelStyle(pillHeight)).X + pillHeight, room);
         var pill = new Rect(new Vector2(textLeft, y), new Vector2(textLeft + pillWidth, y + pillHeight));
         Button.DrawLabel(drawList, Button.Surface(drawList, pill, controls,
             entered ? ButtonStyle.Gray : ButtonStyle.Solid, ButtonRole.Normal, true, hovered,
             ImGui.GetID("prism.contestRow")), label);
+        if (tiles)
+        {
+            rowCountdown.DrawCompact(drawList,
+                new Rect(new Vector2(pill.Max.X + Metrics.Space.Sm * scale, pill.Min.Y),
+                    new Vector2(row.Max.X - inset, pill.Max.Y)), deadline, scale);
+        }
     }
 
     private string ContestCover(PrismWeekDto week) =>

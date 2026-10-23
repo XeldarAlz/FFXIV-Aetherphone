@@ -60,6 +60,7 @@ internal sealed partial class PrismApp
     private CachedText rateCaption;
     private CachedText picksCaption;
     private CachedText heatTitle;
+    private CachedText heatCaption;
     private CachedText coinCounter;
     private CachedText rewardText;
 
@@ -694,8 +695,12 @@ internal sealed partial class PrismApp
                 Plain[Math.Min(total, Plain.Length - 1)]));
     }
 
-    private string RateCaption(int current, int total) =>
-        FactLine(ref rateCaption, LookCounter(current, total), Loc.T(L.Prism.InspectHint));
+    private string RateCaption(int current, int total)
+    {
+        var look = FactLine(ref rateCaption, LookCounter(current, total), Loc.T(L.Prism.InspectHint));
+        var heat = store.Ballot is { } ballot ? HeatTitle(ballot) : string.Empty;
+        return heat.Length > 0 ? FactLine(ref heatCaption, heat, look) : look;
+    }
 
     private string PicksCaption(PrismBallotDto ballot)
     {
