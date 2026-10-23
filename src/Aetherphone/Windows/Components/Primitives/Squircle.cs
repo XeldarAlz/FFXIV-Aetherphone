@@ -15,6 +15,8 @@ internal static class Squircle
     private const float DegenerateBox = 0.5f;
     private const uint AlphaMask = 0xFF000000;
     private const float EdgeFringe = 1f;
+    private const uint OpaqueWhite = 0xFFFFFFFF;
+    private const float QuarterTurn = MathF.PI * 0.5f;
     private static readonly Vector2[][] UnitCorners = BuildUnitCorners(Exponent);
     private static readonly Vector2[][] RoundCorners = BuildUnitCorners(RoundExponent);
     private static readonly Vector2[] PathScratch = new Vector2[(MaxCornerSegments + 1) * 4 + 4];
@@ -299,6 +301,27 @@ internal static class Squircle
             var weight = facing <= 0f ? 0f : MathF.Pow(facing, sharpness);
             var alpha = (uint)MathF.Round((vertex.Col >> 24) * weight);
             vertex.Col = (vertex.Col & ~AlphaMask) | (alpha << 24);
+        }
+    }
+
+    public static void StrokeShaded(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius, float thickness,
+        uint lit, uint side, uint shade)
+    {
+        var firstVertex = drawList.VtxBuffer.Size;
+        Stroke(drawList, min, max, radius, OpaqueWhite, thickness);
+        var box = CornerBox(min, max, radius);
+        var center = (min + max) * 0.5f;
+        var straight = (max - min) * 0.5f - new Vector2(box, box);
+        var vertices = drawList.VtxBuffer.AsSpan();
+        for (var index = firstVertex; index < vertices.Length; index++)
+        {
+            ref var vertex = ref vertices[index];
+            var offset = vertex.Pos - center;
+            var cornerX = MathF.Max(MathF.Abs(offset.X) - straight.X, 0f);
+            var cornerY = MathF.Max(MathF.Abs(offset.Y) - straight.Y, 0f);
+            var towardEnd = MathF.Atan2(cornerY, cornerX) / QuarterTurn;
+            var mixed = MixColor(offset.X < 0f ? side : shade, offset.Y < 0f ? lit : shade, towardEnd);
+            vertex.Col = (vertex.Col & AlphaMask) == 0 ? mixed & ~AlphaMask : mixed;
         }
     }
 
