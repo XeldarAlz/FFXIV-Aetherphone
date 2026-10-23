@@ -144,7 +144,7 @@ internal sealed partial class PrismApp
         }
 
         tabItems[(int)PrismTab.Wardrobe + shift] =
-            new TabItem(Loc.T(L.Prism.TabWardrobe), IconGlyph.Of(FontAwesomeIcon.Tshirt));
+            new TabItem(Loc.T(L.Prism.TabWardrobe), PhoneIcons.Shirt, PhoneIcons.ShirtFilled);
         tabItems[(int)PrismTab.Me + shift] = new TabItem(Loc.T(L.Prism.TabMe), PhoneIcons.User, PhoneIcons.UserFilled);
         var active = (int)tab + (tab >= PrismTab.Wardrobe ? shift : 0);
         var tapped = tabBar.Draw(content, ui, tabItems.AsSpan(0, TabRoots.Length + shift), active).Tapped;

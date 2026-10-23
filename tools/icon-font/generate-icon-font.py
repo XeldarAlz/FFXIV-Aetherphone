@@ -151,6 +151,7 @@ OUTLINE = [
     ("Candle", "candle"),
     ("Wand", "wand"),
     ("MoonStars", "moon-stars"),
+    ("Shirt", "shirt"),
 ]
 
 FILLED = [
@@ -173,6 +174,7 @@ FILLED = [
     ("PawFilled", "paw"),
     ("EyeFilled", "eye"),
     ("DropletFilled", "droplet"),
+    ("ShirtFilled", "shirt"),
 ]
 
 
