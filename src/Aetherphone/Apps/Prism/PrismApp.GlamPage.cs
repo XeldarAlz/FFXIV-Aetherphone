@@ -1143,7 +1143,7 @@ internal sealed partial class PrismApp
         var installedKey = HashCode.Combine(installed, Loc.Current.Code);
         var caption = !glamour.HasPenumbra ? Loc.T(L.Prism.ModsNeedPenumbra)
             : installedText.IsCurrent(installedKey) ? installedText.Value
-            : installedText.Store(installedKey, Loc.T(L.Prism.InstalledCount, installed));
+            : installedText.Store(installedKey, Loc.Plural(L.Prism.InstalledCount, installed));
         top = DrawSectionTitle(drawList, left, right, top, ModCountLine(), caption, scale) + Metrics.Space.Xs * scale;
         var drawn = 0;
         for (var orderIndex = 0; orderIndex <= pieceOrder.Length; orderIndex++)
