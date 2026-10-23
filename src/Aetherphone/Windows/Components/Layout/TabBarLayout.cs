@@ -16,15 +16,15 @@ internal static class TabBarLayout
     public const float CapsulePadding = 4f;
     public const float HighlightInset = 4f;
 
-    public static float ContentInset(float scale) => (Height + BottomInset + ContentGap) * scale;
+    public static float ContentInset(float scale, float height = Height) => (height + BottomInset + ContentGap) * scale;
 
-    public static Rect ContentArea(Rect area, float scale) =>
-        new(area.Min, new Vector2(area.Max.X, MathF.Max(area.Min.Y, area.Max.Y - ContentInset(scale))));
+    public static Rect ContentArea(Rect area, float scale, float height = Height) =>
+        new(area.Min, new Vector2(area.Max.X, MathF.Max(area.Min.Y, area.Max.Y - ContentInset(scale, height))));
 
-    public static Rect Zone(Rect area, float scale) =>
-        new(new Vector2(area.Min.X, MathF.Max(area.Min.Y, area.Max.Y - (Height + BottomInset) * scale)), area.Max);
+    public static Rect Zone(Rect area, float scale, float height = Height) =>
+        new(new Vector2(area.Min.X, MathF.Max(area.Min.Y, area.Max.Y - (height + BottomInset) * scale)), area.Max);
 
-    public static Rect FullCapsule(Rect area, float scale, bool hasAction)
+    public static Rect FullCapsule(Rect area, float scale, bool hasAction, float height = Height)
     {
         var bottom = area.Max.Y - BottomInset * scale;
         var left = area.Min.X + SideInset * scale;
@@ -34,14 +34,14 @@ internal static class TabBarLayout
             right -= (ActionDiameter + ActionGap) * scale;
         }
 
-        return new Rect(new Vector2(left, bottom - Height * scale), new Vector2(MathF.Max(left, right), bottom));
+        return new Rect(new Vector2(left, bottom - height * scale), new Vector2(MathF.Max(left, right), bottom));
     }
 
-    public static Rect ActionCircle(Rect area, float scale)
+    public static Rect ActionCircle(Rect area, float scale, float height = Height)
     {
         var diameter = ActionDiameter * scale;
         var right = area.Max.X - SideInset * scale;
-        var centerY = area.Max.Y - BottomInset * scale - Height * scale * 0.5f;
+        var centerY = area.Max.Y - BottomInset * scale - height * scale * 0.5f;
         return new Rect(new Vector2(right - diameter, centerY - diameter * 0.5f),
             new Vector2(right, centerY + diameter * 0.5f));
     }

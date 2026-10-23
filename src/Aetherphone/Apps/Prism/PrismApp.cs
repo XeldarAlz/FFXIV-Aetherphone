@@ -248,7 +248,7 @@ internal sealed partial class PrismApp : IResumableApp
         var bar = ShowsTabBar(screen);
         var wearing = glamour.TryingOn && bar;
         bottomChrome = bar
-            ? TabBar.ContentInset(scale) + (wearing ? (WearingBarUnits + WearingGapUnits) * scale : 0f)
+            ? TabBar.ContentInset(scale, TabBarUnits) + (wearing ? (WearingBarUnits + WearingGapUnits) * scale : 0f)
             : 0f;
         var stage = ScreenLayer.Begin("prism.stage", full, enter < TransitionTiming.InteractiveProgress);
         try

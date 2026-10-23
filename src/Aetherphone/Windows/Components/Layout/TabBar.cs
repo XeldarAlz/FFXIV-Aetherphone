@@ -63,14 +63,18 @@ internal sealed class TabBar
 
     public UiSound TapSound { get; set; } = UiSound.Tap;
 
-    public static float ContentInset(float scale) => TabBarLayout.ContentInset(scale);
+    public float Height { get; init; } = TabBarLayout.Height;
+
+    public static float ContentInset(float scale, float height = TabBarLayout.Height) =>
+        TabBarLayout.ContentInset(scale, height);
 
     private static float CurrentGlassOpacity => WallpaperBackdrop.Available ? GlassOpacity : FlatGlassOpacity;
 
     private static bool BarHover(Vector2 min, Vector2 max) =>
         !UiInteract.InputBlocked && UiInteract.HoverWindowOnly(min, max);
 
-    public static Rect ContentArea(Rect area, float scale) => TabBarLayout.ContentArea(area, scale);
+    public static Rect ContentArea(Rect area, float scale, float height = TabBarLayout.Height) =>
+        TabBarLayout.ContentArea(area, scale, height);
 
     public static Rect Zone(Rect area, float scale) => TabBarLayout.Zone(area, scale);
 
@@ -97,13 +101,13 @@ internal sealed class TabBar
         SyncVisit(ImGui.GetFrameCount());
 
         var activeIndex = Math.Clamp(active, 0, items.Length - 1);
-        var capsule = TabBarLayout.FullCapsule(area, scale, action.HasValue);
+        var capsule = TabBarLayout.FullCapsule(area, scale, action.HasValue, Height);
         Bounds = capsule;
 
         var theme = ui.Theme;
         var backdrop = ui.BackdropColor;
         var tone = Material.ToneFor(backdrop);
-        var zone = TabBarLayout.Zone(area, scale);
+        var zone = TabBarLayout.Zone(area, scale, Height);
         var layerRect = new Rect(new Vector2(zone.Min.X, zone.Min.Y - LayerHeadroomUnits * scale), zone.Max);
         using var layer = ScreenLayer.Begin("tabbar", layerRect, false);
         UiInteract.HoverOverlay(layerRect);
@@ -220,15 +224,15 @@ internal sealed class TabBar
         var half = highlight.Size * 0.5f * (1f - PressDepth * pressAmount);
         var min = highlight.Center - half;
         var max = highlight.Center + half;
-        Squircle.Fill(drawList, min, max, half.Y, ImGui.GetColorU32(Palette.WithAlpha(accent, HighlightTint)));
-        Squircle.Stroke(drawList, min, max, half.Y,
-            ImGui.GetColorU32(Palette.WithAlpha(HighlightRim, HighlightRimAlpha)), 1f * scale);
+        drawList.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(accent, HighlightTint)), half.Y);
+        drawList.AddRect(min, max, ImGui.GetColorU32(Palette.WithAlpha(HighlightRim, HighlightRimAlpha)), half.Y,
+            ImDrawFlags.None, 1f * scale);
     }
 
     private bool DrawAction(ImDrawListPtr drawList, Rect area, AppSkin ui, in TabBarAction action, GlassTone tone,
         Vector4 backdrop, float delta, float scale)
     {
-        var circle = TabBarLayout.ActionCircle(area, scale);
+        var circle = TabBarLayout.ActionCircle(area, scale, Height);
         var hovered = BarHover(circle.Min, circle.Max);
         actionHover.Step(hovered ? 1f : 0f, Motion.HoverLift, delta);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);

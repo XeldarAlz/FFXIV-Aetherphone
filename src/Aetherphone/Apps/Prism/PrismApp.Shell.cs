@@ -34,6 +34,8 @@ internal readonly record struct PrismStop(
 internal sealed partial class PrismApp
 {
     private const float WearingBarUnits = 44f;
+    private const float TabBarUnits = 44f;
+    private const int PostSlot = 2;
     private const float WearingGapUnits = 8f;
     private const int HistoryDepth = 12;
     private const float KeepScroll = -1f;
@@ -45,8 +47,8 @@ internal sealed partial class PrismApp
     };
 
     private readonly PrismStop[] history = new PrismStop[HistoryDepth];
-    private readonly TabBar tabBar = new();
-    private readonly TabItem[] tabItems = new TabItem[TabRoots.Length];
+    private readonly TabBar tabBar = new() { Height = TabBarUnits };
+    private readonly TabItem[] tabItems = new TabItem[TabRoots.Length + 1];
     private readonly AppSkin ui = new(AppPalettes.Neutral(AppAccents.For("prism")));
     private float bottomChrome;
     private int historyDepth;
@@ -82,7 +84,7 @@ internal sealed partial class PrismApp
 
     private void DrawWearingBar(Rect content, float scale)
     {
-        var stage = TabBar.ContentArea(content, scale);
+        var stage = TabBar.ContentArea(content, scale, TabBarUnits);
         var height = WearingBarUnits * scale;
         var side = Metrics.Space.GlassInset * scale;
         var min = new Vector2(stage.Min.X + side, stage.Max.Y - height);
@@ -131,24 +133,40 @@ internal sealed partial class PrismApp
 
     private void DrawTabBar(Rect content)
     {
+        var post = glams.IsSignedIn;
+        var shift = post ? 1 : 0;
         tabItems[(int)PrismTab.Discover] =
             new TabItem(Loc.T(L.Prism.TabDiscover), PhoneIcons.Compass, PhoneIcons.CompassFilled);
         tabItems[(int)PrismTab.Week] = new TabItem(Loc.T(L.Prism.TabWeek), PhoneIcons.Crown);
-        tabItems[(int)PrismTab.Wardrobe] = new TabItem(Loc.T(L.Prism.TabWardrobe), IconGlyph.Of(FontAwesomeIcon.Tshirt));
-        tabItems[(int)PrismTab.Me] = new TabItem(Loc.T(L.Prism.TabMe), PhoneIcons.User, PhoneIcons.UserFilled);
-        TabBarAction? post = glams.IsSignedIn ? new TabBarAction(PhoneIcons.Plus, Loc.T(L.Prism.PostGlam)) : null;
-        var result = tabBar.Draw(content, ui, tabItems, (int)tab, post);
-        if (result.ActionTapped)
+        if (post)
+        {
+            tabItems[PostSlot] = new TabItem(Loc.T(L.Prism.PostGlam), PhoneIcons.Plus);
+        }
+
+        tabItems[(int)PrismTab.Wardrobe + shift] =
+            new TabItem(Loc.T(L.Prism.TabWardrobe), IconGlyph.Of(FontAwesomeIcon.Tshirt));
+        tabItems[(int)PrismTab.Me + shift] = new TabItem(Loc.T(L.Prism.TabMe), PhoneIcons.User, PhoneIcons.UserFilled);
+        var active = (int)tab + (tab >= PrismTab.Wardrobe ? shift : 0);
+        var tapped = tabBar.Draw(content, ui, tabItems.AsSpan(0, TabRoots.Length + shift), active).Tapped;
+        if (post && tapped == PostSlot)
         {
             StartCompose();
+            return;
         }
-        else if (result.Tapped == (int)tab && IsTabRoot(screen))
+
+        if (tapped < 0)
+        {
+            return;
+        }
+
+        var next = (PrismTab)(tapped - (post && tapped > PostSlot ? 1 : 0));
+        if (next == tab && IsTabRoot(screen))
         {
             pendingScroll = 0f;
         }
-        else if (result.Tapped >= 0)
+        else
         {
-            OpenTab((PrismTab)result.Tapped);
+            OpenTab(next);
         }
     }
 
