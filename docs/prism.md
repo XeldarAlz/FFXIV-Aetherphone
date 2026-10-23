@@ -13,7 +13,7 @@ A glam is one outfit with up to four portrait (3:4) photos. Everything about the
 | Mods per slot (name, author, version, link, picked options) | Penumbra, through `Core/Glamour/GlamourService.Capture` |
 | Character mods (body, face, hair) | The same capture, on slot `-1` |
 | Vanilla stamp | No mods on any slot |
-| Owned pieces ("you own 7 of 9") | Bags, armoury, glamour dresser and armoire on the viewer's side (`OwnedItems`) |
+| Owned pieces ("You own 7", and per piece "You have this one") | Bags, armoury, glamour dresser and armoire on the viewer's side (`OwnedItems`) |
 
 ### How mods are attributed
 
@@ -21,7 +21,7 @@ A glam is one outfit with up to four portrait (3:4) photos. Everything about the
 
 ### Trying a glam on
 
-With Glamourer, Try on sets each slot with `Glamourer.SetItem.V3` (once, equipment only) and switches on the glam's mods that the viewer has installed with `Penumbra.SetTemporaryModSettingsPlayer.V5`, matched by mod name and with the poster's options. Nothing in the viewer's collections changes. The try on stays on while the viewer browses or leaves the phone (a Wearing bar above Prism's tabs takes it off), and comes off when the plugin unloads. Taking it off puts back the Glamourer state saved just before the first try on (falling back to `Glamourer.RevertState`), so a look the viewer had on survives, and drops the temporary settings with `Penumbra.RemoveAllTemporaryModSettingsPlayer.V5` under Prism's own key. Without Glamourer, Try on falls back to the game's own Try On window for each item, with its dyes.
+Try on is the glam page's one filled button, at the right end of the row under the photo; it pins to the top with Back when the page scrolls. Once the glam is on, a short refraction plays over the photo and the button steps forward to Add to wardrobe, then to In your wardrobe, which opens the saved outfit. With Glamourer, Try on sets each slot with `Glamourer.SetItem.V3` (once, equipment only) and switches on the glam's mods that the viewer has installed with `Penumbra.SetTemporaryModSettingsPlayer.V5`, matched by mod name and with the poster's options. Nothing in the viewer's collections changes. The try on stays on while the viewer browses or leaves the phone (a Wearing bar above Prism's tabs takes it off), and comes off when the plugin unloads. Taking it off puts back the Glamourer state saved just before the first try on (falling back to `Glamourer.RevertState`), so a look the viewer had on survives, and drops the temporary settings with `Penumbra.RemoveAllTemporaryModSettingsPlayer.V5` under Prism's own key. Without Glamourer, Try on falls back to the game's own Try On window for each item, with its dyes.
 
 ### Mod links
 
@@ -29,9 +29,10 @@ A link is clickable only when it is `https` on an allowed host: `xivmodarchive.c
 
 ### What the client adds on its own
 
-- Owned pieces count the bags, armoury, glamour dresser and armoire (`Core/Glamour/OwnedItems.cs`). The dresser and armoire only count once the player has opened them this session, and the glam page says so.
+- Owned pieces count the bags, armoury, glamour dresser and armoire (`Core/Glamour/OwnedItems.cs`). The dresser and armoire only count once the player has opened them this session, and the glam page says so; until then a piece the client can't find shows a hollow ring, and its card says Open your dresser to check.
+- The chip at the bottom left of a glam's photo ("7 pieces") opens its pieces layer: the photo dims and the outfit's item icons run down the right edge, head to feet, with accessories, weapons and mods each grouped into one tile. A tile opens a card with the piece's dyes, whether you own it, Try on piece and, unless you own it, Check market. Tapping the photo or Back closes the layer.
 - An item's page shows whether you own it, its gil vendor price and a market board link, from the phone's market index. The server only sends the glam count and what the item is worn with.
-- Search on Discover matches tradable gear by name through the market index and opens that item's glams, so untradable pieces are only reachable from a glam that uses them. A single word or `#text` also offers that tag. The glam of the day card ignores the feed filters.
+- Search, behind the magnifier at the top right of Discover, matches tradable gear by name through the market index and opens that item's glams, so untradable pieces are only reachable from a glam that uses them. A single word or `#text` also offers that tag, with a strip of its first three glams under it. The glam of the day photo ignores the feed filters.
 - Without Penumbra the glam page says mods need it and a new post is stamped vanilla; without Glamourer it says Try on uses the game's window.
 
 ## Server contract
@@ -124,6 +125,6 @@ Follow requests and accepts (types 14 and 15) belong to Aethergram, which owns t
 
 - Up to 5 new glams per account per day, 4 photos each, 3:4.
 - Mod links outside the allowlist are dropped.
-- Glam of the day (`scope=today`) changes at the daily reset, 15:00 UTC. The client shows it as the card on top of Discover, not as a tab.
+- Glam of the day (`scope=today`) changes at the daily reset, 15:00 UTC. The client shows it as the full width photo on top of Discover, not as a tab.
 - Popular (`scope=popular`) ranks the last seven days by likes and try ons.
 - Popular orderings count likes and try-ons from distinct, established accounts only.
