@@ -416,13 +416,7 @@ internal sealed partial class PrismApp
 
         if (loadedAt.TryGetValue(coverUrl, out var seen))
         {
-            var sweep = PrismMotion.At((float)(ImGui.GetTime() - seen), 0.1f, Motion.Sheet);
-            if (sweep < PrismMotion.Settled)
-            {
-                drawList.PushClipRect(frame.Min, frame.Max, true);
-                PrismArt.Refraction(drawList, frame, sweep);
-                drawList.PopClipRect();
-            }
+            PrismArt.Refraction(drawList, frame, PrismMotion.At((float)(ImGui.GetTime() - seen), 0.1f, Motion.Sheet));
         }
 
         var pad = Metrics.Space.Md * scale;
