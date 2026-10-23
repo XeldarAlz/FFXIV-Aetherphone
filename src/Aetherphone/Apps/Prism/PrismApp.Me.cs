@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Report;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -40,6 +41,8 @@ internal sealed partial class PrismApp
     private readonly int[] profileTabKinds = new int[3];
     private readonly bool[] profileTabActive = new bool[3];
     private readonly ChipRail profileTabRail = new();
+    private readonly ActionSheet profileMenu = new();
+    private readonly ActionSheet.Item[] profileMenuItems = new ActionSheet.Item[1];
     private readonly PullToRefresh profilePull = new();
     private Action? refreshProfileNow;
     private readonly Dictionary<string, string> placingLabels = new(StringComparer.Ordinal);
@@ -191,12 +194,28 @@ internal sealed partial class PrismApp
         var covered = profileCover is not null || profile is { GlamCount: > 0 } || !showSaved && lane.Loading;
         var full = FullFrom(content, scale);
         var top = covered ? PhotoTop(full, content) : content.Min.Y;
+        profileMenu.Gate();
         if (!covered && !mine)
         {
             top = DrawBackHeader(drawList, content, string.Empty, scale);
+            var reach = Metrics.Size.TapTarget * scale * 0.5f;
+            if (author is not null && IconButton(drawList, new Vector2(content.Max.X - reach, content.Min.Y + reach),
+                    PhoneIcons.Dots, Loc.T(L.Prism.More), scale, HoverLabelSide.Below))
+            {
+                OpenProfileMenu();
+            }
         }
 
-        var body = new Rect(new Vector2(full.Min.X, top), new Vector2(full.Max.X, content.Max.Y));
+        DrawProfileBody(new Rect(new Vector2(full.Min.X, top), new Vector2(full.Max.X, content.Max.Y)), full, content,
+            profile, covered, mine, scale);
+        DrawProfileMenu(full, author);
+    }
+
+    private void DrawProfileBody(Rect body, Rect full, Rect content, GlamProfileDto? profile, bool covered, bool mine,
+        float scale)
+    {
+        var author = profile?.User;
+        var lane = glams.List;
         using var surface = BeginBody(body);
         profilePull.Draw(body, surface.Pull, surface.Dragging, lane.Loading, PrismArt.Muted,
             refreshProfileNow ??= RefreshProfile);
@@ -382,6 +401,11 @@ internal sealed partial class PrismApp
             return;
         }
 
+        if (DrawPhotoButton(drawList, photo, topInset, 1, PhoneIcons.Dots, Loc.T(L.Prism.More), scale))
+        {
+            OpenProfileMenu();
+        }
+
         var height = Metrics.Size.TapTarget * scale;
         var pill = new Rect(new Vector2(right - followWidth, bottom - height), new Vector2(right, bottom));
         UiInteract.HoverOverlay(pill);
@@ -399,6 +423,36 @@ internal sealed partial class PrismApp
         return shown >= 1f
             ? ImageFit.CenterFocus
             : MathF.Max(0f, ProfileCoverFocus - topInset / MathF.Max(1f, photo.Height) * shown / (1f - shown));
+    }
+
+    private void OpenProfileMenu()
+    {
+        profileMenuItems[0] = new ActionSheet.Item(Loc.T(L.Report.UserTitle), PhoneIcons.Flag, true);
+        profileMenu.Open();
+    }
+
+    private void DrawProfileMenu(Rect full, GlamAuthorDto? author)
+    {
+        if (!profileMenu.CapturesPointer)
+        {
+            return;
+        }
+
+        if (profileMenu.Draw(full, ActionSheetStyle.From(ui), profileMenuItems, Loc.T(L.Common.Cancel), false) == 0 &&
+            author is { Id.Length: > 0 })
+        {
+            ReportProfile(author.Id);
+        }
+    }
+
+    private void ReportProfile(string userId)
+    {
+        report.Open(new ReportPrompt
+        {
+            Title = Loc.T(L.Report.UserTitle),
+            Venue = ReportVenue.Social,
+            Submit = (reason, done) => store.ReportUser(userId, reason, done),
+        });
     }
 
     private static GlamPlacingDto? BestPlacing(GlamProfileDto? profile)

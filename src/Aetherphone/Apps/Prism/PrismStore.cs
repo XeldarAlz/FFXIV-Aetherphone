@@ -42,6 +42,7 @@ internal sealed class PrismStore : IDisposable
 {
     private const int EntryBaseSize = 1080;
     private const PostAspect EntryAspect = PostAspect.Portrait;
+    private const string UserReportTarget = "user";
 
     private readonly AethernetSession session;
     private readonly PrismClient client;
@@ -395,6 +396,11 @@ internal sealed class PrismStore : IDisposable
     public void Report(string lookId, ReportReason reason, Action<bool> done)
     {
         work.Run("report", token => safety.ReportAsync(PrismClient.ReportTarget, lookId, reason, token), done);
+    }
+
+    public void ReportUser(string userId, ReportReason reason, Action<bool> done)
+    {
+        work.Run("report user", token => safety.ReportAsync(UserReportTarget, userId, reason, token), done);
     }
 
     private bool BeginAction()
