@@ -1,4 +1,5 @@
 using Aetherphone.Core.Social;
+using Aetherphone.Windows.Components;
 
 namespace Aetherphone.Apps.Chirper;
 
@@ -16,6 +17,7 @@ internal enum ChirperScreen
     Activity,
     Hashtag,
     BadgeProgress,
+    Dm,
 }
 
 internal readonly record struct ChirperRoute(
@@ -23,7 +25,9 @@ internal readonly record struct ChirperRoute(
     string? UserId = null,
     string? PostId = null,
     UserListKind Kind = UserListKind.Followers,
-    string? Tag = null)
+    string? Tag = null,
+    SocialDmScreen DmScreen = SocialDmScreen.Inbox,
+    string? DmId = null)
 {
     public static readonly ChirperRoute Home = new(ChirperScreen.Home);
     public static readonly ChirperRoute Compose = new(ChirperScreen.Compose);
@@ -36,6 +40,9 @@ internal readonly record struct ChirperRoute(
     public static ChirperRoute Profile(string userId) => new(ChirperScreen.Profile, userId);
     public static ChirperRoute Thread(string postId) => new(ChirperScreen.Thread, PostId: postId);
     public static ChirperRoute Hashtag(string tag) => new(ChirperScreen.Hashtag, Tag: tag);
+
+    public static ChirperRoute Dm(SocialDmScreen screen, string? id = null) =>
+        new(ChirperScreen.Dm, DmScreen: screen, DmId: id);
 
     public static ChirperRoute UserList(string sourceId, UserListKind kind) =>
         new(ChirperScreen.UserList, UserId: sourceId, Kind: kind);

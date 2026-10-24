@@ -7,41 +7,47 @@ using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
-using Aetherphone.Core.Message;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Runtime;
 using Aetherphone.Windows.Components;
 
-namespace Aetherphone.Apps.Aethergram;
+namespace Aetherphone.Core.Message;
 
-internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThreadDto>
+internal sealed class SocialDmStore : ChatThreadStoreBase<DmMessageDto, DmThreadDto>
 {
-    private readonly GramDmClient client;
+    private readonly SocialDmSurface surface;
+    private readonly DmClient client;
     private readonly SocialClient social;
     private readonly ConcurrentDictionary<string, PostDto?> sharedPosts = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, byte> sharedPostFetches = new(StringComparer.Ordinal);
-    private volatile bool gramKeysHydrated;
+    private volatile bool keysHydrated;
 
-    public GramDmStore(AethernetSession session, GramDmClient client, SocialClient social, SafetyClient safety,
-        MediaClient media, NotificationService notifications, KeyVault vault, ConversationKeyStore keys,
-        DecryptedHistoryStore chatHistory, PhoneVisibility visibility, RealtimeSignalBus signals,
-        AppInstaller installer)
-        : base("AethergramDm", session, safety, media, notifications, vault, keys, chatHistory, visibility, signals,
-            installer.Gate("aethergram"))
+    public SocialDmStore(SocialDmSurface surface, AethernetSession session, DmClient client, SocialClient social,
+        SafetyClient safety, MediaClient media, NotificationService notifications, KeyVault vault,
+        ConversationKeyStore keys, DecryptedHistoryStore chatHistory, PhoneVisibility visibility,
+        RealtimeSignalBus signals, AppInstaller installer)
+        : base(surface.LogTag, session, safety, media, notifications, vault, keys, chatHistory, visibility, signals,
+            installer.Gate(surface.AppId))
     {
+        this.surface = surface;
         this.client = client;
         this.social = social;
-        signals.GramPinged += OnGramPinged;
+        signals.DmPinged += OnDmPinged;
     }
 
-    private void OnGramPinged()
+    private void OnDmPinged(string pinged)
     {
+        if (pinged != surface.Name)
+        {
+            return;
+        }
+
         InboxCadence.RequestImmediate();
         RequestThreadRefresh();
     }
 
-    public GramThreadDto[] Threads => ThreadListItems;
+    public DmThreadDto[] Threads => ThreadListItems;
     public bool LoadingThreads => LoadingThreadList;
     public bool ThreadsLoaded => ThreadListLoaded;
     public int UnreadCount => ComputeUnread();
@@ -66,7 +72,9 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
 
     public void RefreshThreads() => RefreshThreadListCore();
 
-    protected override bool IsThreadMuted(GramThreadDto thread) => thread.Pending;
+    protected override bool IsThreadMuted(DmThreadDto thread) => thread.Pending;
+
+    protected override bool TickActive => base.TickActive && surface.Live;
 
     public bool IsThreadPending(string otherId)
     {
@@ -94,7 +102,7 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
 
             if (snapshot[index].Pending)
             {
-                var updated = (GramThreadDto[])snapshot.Clone();
+                var updated = (DmThreadDto[])snapshot.Clone();
                 updated[index] = snapshot[index] with { Pending = false };
                 ThreadListItems = updated;
             }
@@ -114,22 +122,22 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
         }
     }
 
-    protected override string ImageUploadScope => "gram-dm";
-    protected override string VoiceUploadScope => "gram-voice";
-    protected override string ReportTargetType => "gram_message";
-    protected override string TypingSignalType => Core.Telephony.Contracts.SignalType.GramTyping;
+    protected override string ImageUploadScope => surface.ImageUploadScope;
+    protected override string VoiceUploadScope => surface.VoiceUploadScope;
+    protected override string ReportTargetType => surface.ReportTargetType;
+    protected override string TypingSignalType => surface.TypingSignalType;
 
     protected override string ScopeFor(string threadId) =>
-        ConversationKeyStore.GramScope(ConversationKeyStore.Pair(MyUserId, threadId));
+        ConversationKeyStore.PairScope(surface.Name, ConversationKeyStore.Pair(MyUserId, threadId));
 
-    protected override Task HydrateKeysAsync(CancellationToken token) => EnsureGramHydratedAsync(token);
+    protected override Task HydrateKeysAsync(CancellationToken token) => EnsureKeysHydratedAsync(token);
 
     protected override Task<ChatKeyStatus> EnsureThreadKeysAsync(string threadId, CancellationToken token) =>
-        keys.EnsureGramKeysAsync(threadId, MyUserId, token);
+        keys.EnsurePairKeysAsync(surface.Name, threadId, MyUserId, token);
 
     protected override void OnCipherCleared()
     {
-        gramKeysHydrated = false;
+        keysHydrated = false;
     }
 
     protected override void OnAccountSwitched()
@@ -138,21 +146,21 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
         sharedPostFetches.Clear();
     }
 
-    private async Task EnsureGramHydratedAsync(CancellationToken token)
+    private async Task EnsureKeysHydratedAsync(CancellationToken token)
     {
-        if (gramKeysHydrated || vault.State != KeyVaultState.Unlocked)
+        if (keysHydrated || vault.State != KeyVaultState.Unlocked)
         {
             return;
         }
 
-        gramKeysHydrated = true;
-        await keys.HydrateGramAsync(token).ConfigureAwait(false);
+        keysHydrated = true;
+        await keys.HydratePairsAsync(surface.Name, token).ConfigureAwait(false);
     }
 
     protected override async Task<ThreadListPage?> FetchThreadListAsync(string? cursor, CancellationToken token,
         Action<AepFailure>? onFailure = null)
     {
-        await EnsureGramHydratedAsync(token).ConfigureAwait(false);
+        await EnsureKeysHydratedAsync(token).ConfigureAwait(false);
         var page = await client.ThreadsAsync(cursor, token, onFailure).ConfigureAwait(false);
         return page is null ? null : new ThreadListPage(page.Items, page.NextCursor);
     }
@@ -164,7 +172,7 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
         return page is null ? null : new MessagePage(page.Items, page.NextCursor);
     }
 
-    protected override async Task<GramMessageDto?> SendMessageRequestAsync(string threadId, string body, int kind,
+    protected override async Task<DmMessageDto?> SendMessageRequestAsync(string threadId, string body, int kind,
         CancellationToken token, string? mediaKey, int mediaWidth, int mediaHeight, int encVersion,
         string? commitmentTag, string? replyToId, int durationSecs, Action<AepFailure>? onFailure = null)
     {
@@ -190,7 +198,7 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
             var status = await EnsureThreadKeysAsync(otherId, token).ConfigureAwait(false);
             var scope = ScopeFor(otherId);
             var generation = keys.CurrentGeneration(scope);
-            GramMessageDto? sent;
+            DmMessageDto? sent;
             var encoded = default(EncryptedOutbound);
             var encrypted = cipher.IsUnlocked && status.CanEncrypt
                 && cipher.TryEncrypt(scope, generation, postId, MyUserId, out encoded);
@@ -241,7 +249,7 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
             var status = await EnsureThreadKeysAsync(otherId, token).ConfigureAwait(false);
             var scope = ScopeFor(otherId);
             var generation = keys.CurrentGeneration(scope);
-            GramMessageDto? sent;
+            DmMessageDto? sent;
             var encoded = default(EncryptedOutbound);
             var encrypted = cipher.IsUnlocked && status.CanEncrypt
                 && cipher.TryEncrypt(scope, generation, text, MyUserId, out encoded);
@@ -302,7 +310,7 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
         return false;
     }
 
-    protected override Task<GramMessageDto?> EditMessageRequestAsync(string messageId, string body,
+    protected override Task<DmMessageDto?> EditMessageRequestAsync(string messageId, string body,
         CancellationToken token, int encVersion, string? commitmentTag)
     {
         return client.EditMessageAsync(messageId, body, token, encVersion, commitmentTag);
@@ -343,28 +351,28 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
         return ReadConfirmations.Classify(succeeded, failure, missingRouteIsUnsupported: true);
     }
 
-    protected override long MessageTimeOf(GramMessageDto message) => message.CreatedAtUnix;
+    protected override long MessageTimeOf(DmMessageDto message) => message.CreatedAtUnix;
 
-    protected override int MessageEncVersionOf(GramMessageDto message) => message.EncVersion;
+    protected override int MessageEncVersionOf(DmMessageDto message) => message.EncVersion;
 
-    protected override string MessageBodyOf(GramMessageDto message) => message.Body;
+    protected override string MessageBodyOf(DmMessageDto message) => message.Body;
 
-    protected override int MessageKindOf(GramMessageDto message) => message.Kind;
+    protected override int MessageKindOf(DmMessageDto message) => message.Kind;
 
-    protected override string MessageSenderIdOf(GramMessageDto message) => message.SenderId;
+    protected override string MessageSenderIdOf(DmMessageDto message) => message.SenderId;
 
-    protected override ReactionSummaryDto[]? ReactionsOf(GramMessageDto message) => message.Reactions;
+    protected override ReactionSummaryDto[]? ReactionsOf(DmMessageDto message) => message.Reactions;
 
-    protected override GramMessageDto WithReactions(GramMessageDto message, ReactionSummaryDto[]? reactions) =>
+    protected override DmMessageDto WithReactions(DmMessageDto message, ReactionSummaryDto[]? reactions) =>
         message with { Reactions = reactions };
 
-    protected override GramMessageDto WithBody(GramMessageDto message, string body) =>
+    protected override DmMessageDto WithBody(DmMessageDto message, string body) =>
         message with { Body = body };
 
-    protected override GramMessageDto PreserveLocalFields(GramMessageDto updated, GramMessageDto existing) =>
+    protected override DmMessageDto PreserveLocalFields(DmMessageDto updated, DmMessageDto existing) =>
         updated with { Reactions = existing.Reactions, ReadAtUnix = existing.ReadAtUnix };
 
-    protected override GramMessageDto Tombstone(GramMessageDto message)
+    protected override DmMessageDto Tombstone(DmMessageDto message)
     {
         return message with
         {
@@ -377,7 +385,7 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
         };
     }
 
-    protected override GramMessageDto ResolveOutgoingReply(string scope, GramMessageDto message)
+    protected override DmMessageDto ResolveOutgoingReply(string scope, DmMessageDto message)
     {
         if (message.ReplyEncVersion != EnvelopeCodec.VersionEnvelope)
         {
@@ -390,39 +398,39 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
         };
     }
 
-    protected override string NotificationAppId => "aethergram";
+    protected override string NotificationAppId => surface.AppId;
 
-    protected override string ThreadKeyOf(GramThreadDto thread) => thread.OtherUserId;
+    protected override string ThreadKeyOf(DmThreadDto thread) => thread.OtherUserId;
 
-    protected override long ThreadLastMessageAtOf(GramThreadDto thread) => thread.LastMessageAtUnix;
+    protected override long ThreadLastMessageAtOf(DmThreadDto thread) => thread.LastMessageAtUnix;
 
-    protected override int ThreadUnreadCountOf(GramThreadDto thread) => thread.UnreadCount;
+    protected override int ThreadUnreadCountOf(DmThreadDto thread) => thread.UnreadCount;
 
-    protected override string? ThreadLastMessageIdOf(GramThreadDto thread) => thread.LastMessageId;
+    protected override string? ThreadLastMessageIdOf(DmThreadDto thread) => thread.LastMessageId;
 
-    protected override GramThreadDto WithUnreadCleared(GramThreadDto thread) => thread with { UnreadCount = 0 };
+    protected override DmThreadDto WithUnreadCleared(DmThreadDto thread) => thread with { UnreadCount = 0 };
 
-    protected override PhoneNotification BuildInboxNotification(GramThreadDto thread)
+    protected override PhoneNotification BuildInboxNotification(DmThreadDto thread)
     {
         var name = string.IsNullOrEmpty(thread.OtherDisplayName) ? thread.OtherHandle : thread.OtherDisplayName;
         var preview = thread.LastMessageKind == PostShareKind
-            ? Loc.T(L.Aethergram.SharedPost)
+            ? Loc.T(surface.SharedPost)
             : ChatText.ListPreview(thread.LastMessagePreview);
         return new PhoneNotification(NotificationAppId, name, preview, DateTime.Now,
-            AppPalettes.Aethergram.Accent, thread.OtherUserId);
+            surface.Accent, thread.OtherUserId);
     }
 
-    protected override bool IsInboxPreviewReady(GramThreadDto thread)
+    protected override bool IsInboxPreviewReady(DmThreadDto thread)
     {
         return thread.LastMessageKind == PostShareKind
             || thread.LastMessageEncVersion != EnvelopeCodec.VersionEnvelope
             || cipher.IsPreviewResolved(thread.OtherUserId, thread.LastMessagePreview);
     }
 
-    protected override GramMessageDto[] DecorateMessages(string threadId, GramMessageDto[] items)
+    protected override DmMessageDto[] DecorateMessages(string threadId, DmMessageDto[] items)
     {
         var scope = ScopeFor(threadId);
-        GramMessageDto[]? decorated = null;
+        DmMessageDto[]? decorated = null;
         for (var index = 0; index < items.Length; index++)
         {
             var item = items[index];
@@ -450,16 +458,16 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
                 };
             }
 
-            decorated ??= (GramMessageDto[])items.Clone();
+            decorated ??= (DmMessageDto[])items.Clone();
             decorated[index] = updated;
         }
 
         return decorated ?? items;
     }
 
-    protected override GramThreadDto[] DecorateThreadList(GramThreadDto[] items)
+    protected override DmThreadDto[] DecorateThreadList(DmThreadDto[] items)
     {
-        GramThreadDto[]? decorated = null;
+        DmThreadDto[]? decorated = null;
         for (var index = 0; index < items.Length; index++)
         {
             var item = items[index];
@@ -469,10 +477,10 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
                 continue;
             }
 
-            decorated ??= (GramThreadDto[])items.Clone();
+            decorated ??= (DmThreadDto[])items.Clone();
             if (isPostShare)
             {
-                decorated[index] = item with { LastMessagePreview = Loc.T(L.Aethergram.SharedPost) };
+                decorated[index] = item with { LastMessagePreview = Loc.T(surface.SharedPost) };
                 continue;
             }
 
@@ -487,7 +495,7 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
         return decorated ?? items;
     }
 
-    public byte[]? DecryptMedia(GramMessageDto message, byte[] sealedBytes, string threadPartnerId)
+    public byte[]? DecryptMedia(DmMessageDto message, byte[] sealedBytes, string threadPartnerId)
     {
         if (message.EncVersion != EnvelopeCodec.VersionEnvelope)
         {
@@ -500,6 +508,6 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
 
     protected override void DisposeCore()
     {
-        signals.GramPinged -= OnGramPinged;
+        signals.DmPinged -= OnDmPinged;
     }
 }

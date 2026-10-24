@@ -270,7 +270,7 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
     protected override Task HydrateKeysAsync(CancellationToken token) => EnsureVelvetHydratedAsync(token);
 
     protected override Task<ChatKeyStatus> EnsureThreadKeysAsync(string threadId, CancellationToken token) =>
-        keys.EnsureVelvetKeysAsync(threadId, MyUserId, token);
+        keys.EnsurePairKeysAsync(PairSurface.Velvet, threadId, MyUserId, token);
 
     protected override void OnCipherCleared()
     {
@@ -355,7 +355,7 @@ internal sealed partial class VelvetStore : ChatThreadStoreBase<VelvetMessageDto
         }
 
         velvetKeysHydrated = true;
-        await keys.HydrateVelvetAsync(token).ConfigureAwait(false);
+        await keys.HydratePairsAsync(PairSurface.Velvet, token).ConfigureAwait(false);
     }
 
     protected override async Task<ThreadListPage?> FetchThreadListAsync(string? cursor, CancellationToken token,

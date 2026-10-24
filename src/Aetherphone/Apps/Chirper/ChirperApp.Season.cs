@@ -39,6 +39,9 @@ internal sealed partial class ChirperApp
     private static string ExploreGlyph => SeasonalTheme.Halloween ? PhoneIcons.CrystalBall : PhoneIcons.Search;
     private static string AlertsGlyph => SeasonalTheme.Halloween ? PhoneIcons.Paw : PhoneIcons.Bell;
     private static string AlertsActiveGlyph => SeasonalTheme.Halloween ? PhoneIcons.PawFilled : PhoneIcons.BellFilled;
+    private static string MessagesGlyph => SeasonalTheme.Halloween ? PhoneIcons.Ghost : PhoneIcons.MessageCircle;
+    private static string MessagesActiveGlyph =>
+        SeasonalTheme.Halloween ? PhoneIcons.Ghost : PhoneIcons.MessageCircleFilled;
     private static Vector4 FabTop => SeasonalTheme.Halloween ? MoonOrbTop : ChirperInk.Accent;
     private static Vector4 FabBottom => SeasonalTheme.Halloween ? MoonOrbBottom : ChirperInk.AccentDeep;
     private static Vector4? FabGlyph => SeasonalTheme.Halloween ? MoonOrbGlyph : null;

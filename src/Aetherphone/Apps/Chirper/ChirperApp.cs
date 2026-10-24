@@ -4,18 +4,22 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Conduct;
+using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Emoji;
 using Aetherphone.Core.Game;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Honorific;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Message;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Report;
+using Aetherphone.Core.Runtime;
 using Aetherphone.Core.Sharing;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
@@ -31,7 +35,8 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Chirper;
 
-internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INameplateHandleSource, ISocialFeed
+internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INameplateHandleSource, ISocialFeed,
+    ISocialDmHost
 {
     private enum SheetKind
     {
@@ -56,6 +61,8 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         BadgeProgress,
         Pin,
         Unpin,
+        SendInMessage,
+        MessagePrivacy,
     }
 
     private enum ActionGlyph
@@ -70,20 +77,21 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         Feed,
         Explore,
         Alerts,
+        Messages,
         Profile,
     }
 
     private const int MaxPostLength = 300;
     private const int MaxCommentLength = 500;
     private const int FeedBodyMaxLines = 6;
-    private const int PostSheetMaxItems = 5;
+    private const int PostSheetMaxItems = 6;
     private const float TopBarButtonRadius = 18f;
     private const float FeedTabRowHeight = 44f;
     private const float LatestScopeRowHeight = 40f;
 
     private const float LatestScopePillGap = 8f;
     private const float FeedTabUnderline = 4f;
-    private const int TabCount = 4;
+    private const int TabCount = 5;
     private const int FilterToggleCount = 3;
     private const int TabRevalidateCooldownSeconds = 15;
     private const float FeedTopPadding = 2f;
@@ -180,7 +188,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         return store.Me?.Handle ?? string.Empty;
     }
     public string Glyph => "Ch";
-    public int BadgeCount => social.UnseenCount(Id);
+    public int BadgeCount => dmStore.UnreadCount + social.UnseenCount(Id);
     public bool HasBadge => true;
     public SocialFeedScope LatestScope => latestScope;
 
@@ -192,7 +200,10 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
 
     public ShareKindSet AcceptedShares => store.IsSignedIn ? ShareKindSet.Photo : ShareKindSet.None;
     private readonly ChirperStore store;
+    private readonly SocialDmStore dmStore;
+    private readonly SocialDms dms;
     private readonly SocialLauncher launcher;
+    private readonly SocialDmLauncher dmLauncher;
     private readonly GameData gameData;
     private readonly Configuration configuration;
     private readonly LodestoneService lodestone;
@@ -300,11 +311,16 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, GameData gameData,
         Configuration configuration, SocialNotificationService social, WallpaperImageCache wallpaperImages,
         ConfirmService confirm, TranslationService translation, ReportService report, ConductGateService conduct,
-        RealtimeSignalBus realtimeSignals)
+        RealtimeSignalBus realtimeSignals, SocialDmLauncher dmLauncher, NotificationService notifications,
+        HttpService http, KeyVault keyVault, ConversationKeyStore conversationKeys, DecryptedHistoryStore chatHistory,
+        PhoneVisibility visibility, AppInstaller installer, EncryptionHelpService encryptionHelp)
     {
         this.translation = translation;
         this.confirm = confirm;
+        this.dmLauncher = dmLauncher;
         store = new ChirperStore(session, net.Account, net.Social, net.Safety, net.Media, realtimeSignals);
+        dmStore = new SocialDmStore(SocialDmSurface.Chirper, session, net.ChirperDm, net.Social, net.Safety, net.Media,
+            notifications, keyVault, conversationKeys, chatHistory, visibility, realtimeSignals, installer);
         store.SetFeedRegions(SocialRegion.FilterCsv(configuration.ChirperFeedRegionMask));
         composeMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
@@ -347,6 +363,76 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             DeleteCommentFailed = L.Chirper.DeleteCommentFailed,
             RemoveCommentConfirmMessage = L.Chirper.RemoveCommentConfirmMessage,
         }, confirm, report);
+        dms = new SocialDms(this, dmStore, store, net.Account, new SocialDmLabels
+        {
+            LogTag = "Chirper",
+            RowIdPrefix = "chirper.dm.row.",
+            InboxTitle = L.Chirper.InboxTitle,
+            InboxEmpty = L.Chirper.InboxEmpty,
+            InboxEmptyHint = L.Chirper.InboxEmptyHint,
+            ThreadEmpty = L.Chirper.ThreadEmpty,
+            MessageHint = L.Chirper.MessageHint,
+            ImportFromPc = L.Chirper.ImportFromPc,
+            NewMessage = L.Chirper.NewMessage,
+            NewMessageHint = L.Chirper.NewMessageHint,
+            NewMessageEmpty = L.Chirper.NewMessageEmpty,
+            CannotMessage = L.Chirper.CannotMessage,
+            ActiveNow = L.Chirper.ActiveNow,
+            Requests = L.Chirper.Requests,
+            RequestsCount = L.Chirper.RequestsCount,
+            RequestsEmpty = L.Chirper.RequestsEmpty,
+            RequestBanner = L.Chirper.RequestBanner,
+            AcceptRequest = L.Chirper.AcceptRequest,
+            DeleteConversation = L.Chirper.DeleteConversation,
+            DeleteConversationMessage = L.Chirper.DeleteConversationMessage,
+            DeleteConfirm = L.Chirper.DeleteConfirm,
+            DeleteCancel = L.Chirper.DeleteCancel,
+            SendTo = L.Chirper.SendTo,
+            SearchHint = L.Chirper.NameOrWorld,
+            Send = L.Chirper.Send,
+            Sent = L.Chirper.Sent,
+            PrivacyTitle = L.Chirper.MessagePrivacy,
+            PrivacyHint = L.Chirper.MessagesAudienceHint,
+        }, ui, images, lodestone, gameData, http, library, configuration, confirm, report, translation,
+            wallpaperImages, encryptionHelp, configuration.ChirperPinnedThreads, configuration.ChirperArchivedThreads,
+            toast.Show);
+    }
+
+    SocialInk ISocialDmHost.Ink => ChirperInk.Shared;
+
+    AppPalette ISocialDmHost.SearchPalette => ChirperInk.CurrentPalette;
+
+    PhoneTheme ISocialDmHost.Theme => theme;
+
+    INavigator ISocialDmHost.Navigation => navigation;
+
+    void ISocialDmHost.PushDm(SocialDmScreen screen, string? id, bool animate) =>
+        router.Push(ChirperRoute.Dm(screen, id), animate);
+
+    void ISocialDmHost.ReplaceDm(SocialDmScreen screen, string id) => router.Replace(ChirperRoute.Dm(screen, id));
+
+    void ISocialDmHost.PopDm() => router.Pop();
+
+    bool ISocialDmHost.IsDmOnTop(SocialDmScreen screen, string? id) =>
+        router.Current is { Screen: ChirperScreen.Dm } current && current.DmScreen == screen
+        && (id is null || current.DmId == id);
+
+    void ISocialDmHost.OpenProfile(string userId) => OpenProfile(userId);
+
+    void ISocialDmHost.OpenPost(string postId) => OpenThreadFromLink(postId);
+
+    private void ShowLaunchedThread(string userId)
+    {
+        var target = ChirperRoute.Dm(SocialDmScreen.Thread, userId);
+        if (router.Current == target)
+        {
+            return;
+        }
+
+        router.Reset();
+        dms.ResetInbox();
+        router.Push(ChirperRoute.Dm(SocialDmScreen.Inbox), false);
+        router.Push(target, false);
     }
 
     public void OnOpened()
@@ -395,6 +481,17 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             RefreshFeedOnReturn(latestScope, keepPlace);
         }
 
+        if (store.IsSignedIn && dmLauncher.TryConsume(Id, out var threadUserId, out var threadDraft))
+        {
+            ShowLaunchedThread(threadUserId);
+            if (!string.IsNullOrEmpty(threadDraft))
+            {
+                dms.PrefillDraft(threadDraft);
+            }
+
+            return;
+        }
+
         if (store.IsSignedIn && launcher.TryConsume(Id, out var link))
         {
             if (link.Kind == SocialLinkKind.Profile)
@@ -411,12 +508,14 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
     public void OnClosed()
     {
         store.FlushFeedSignals();
+        dms.OnAppClosed();
     }
 
     public void Draw(in PhoneContext context)
     {
         using var names = UserName.Style(SeasonalTheme.BlackletterNames);
         using var tapGlow = TapGlow.Use(SeasonalTheme.Halloween, GlowInk);
+        dmStore.NoteInboxWatched();
         theme = context.Theme;
         navigation = context.Navigation;
         ui.Theme = theme;
@@ -424,6 +523,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         sheet.Gate();
         filterSheet.Gate();
         feedExplainer.Gate();
+        dms.Gate();
         actions.Tick(MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds));
         TickReactionsExpansion();
         if (actions.IsOpen)
@@ -459,6 +559,7 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         DrawSheet(screen);
         DrawFilterSheet(screen);
         DrawFeedExplainer(screen);
+        dms.DrawOverlays(screen);
         DrawClaw(screen);
         toast.Draw(screen, ToastStyle);
     }
@@ -505,6 +606,9 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
                 break;
             case ChirperScreen.BadgeProgress:
                 DrawBadgeProgress(area);
+                break;
+            case ChirperScreen.Dm:
+                dms.Draw(route.DmScreen, area, route.DmId, depth == router.Depth);
                 break;
             default:
                 DrawHome(area);
@@ -717,16 +821,37 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             store.EnsureMe();
         }
 
+        var dmsLive = SocialDmSurface.Chirper.Live;
+        var profileSlot = dmsLive ? (int)HomeTab.Profile : (int)HomeTab.Messages;
         tabItems[(int)HomeTab.Feed] = new TabItem(Loc.T(L.Chirper.TabHome), HomeGlyph, HomeActiveGlyph);
         tabItems[(int)HomeTab.Explore] = new TabItem(Loc.T(L.Chirper.TabExplore), ExploreGlyph);
         tabItems[(int)HomeTab.Alerts] = new TabItem(Loc.T(L.Social.ActivityTitle), AlertsGlyph, AlertsActiveGlyph,
             social.UnseenCount(Id));
-        tabItems[(int)HomeTab.Profile] = new TabItem(Loc.T(L.Chirper.TabProfile), PhoneIcons.User,
-            PhoneIcons.UserFilled, CustomIcon: hasAvatar);
-        var result = tabBar.Draw(area, ui, tabItems, (int)homeTab, icons: this);
+        if (dmsLive)
+        {
+            tabItems[(int)HomeTab.Messages] = new TabItem(Loc.T(L.Chirper.InboxTitle), MessagesGlyph,
+                MessagesActiveGlyph, dmStore.UnreadCount, "chirper.inbox");
+        }
+
+        tabItems[profileSlot] = new TabItem(Loc.T(L.Chirper.TabProfile), PhoneIcons.User, PhoneIcons.UserFilled,
+            CustomIcon: hasAvatar);
+        var active = homeTab == HomeTab.Profile ? profileSlot : (int)homeTab;
+        var result = tabBar.Draw(area, ui, tabItems.AsSpan(0, profileSlot + 1), active, icons: this);
         UiAnchors.Report("chirper.tabbar", tabBar.Bounds);
         if (result.Tapped < 0)
         {
+            return;
+        }
+
+        if (result.Tapped == profileSlot)
+        {
+            SelectHomeTab(HomeTab.Profile);
+            return;
+        }
+
+        if (result.Tapped == (int)HomeTab.Messages)
+        {
+            dms.OpenInbox();
             return;
         }
 
@@ -902,6 +1027,10 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
             AddSheetItem(PostSheetAction.Reactions, Loc.T(L.Chirper.ViewReactions), false);
         }
 
+        if (SocialDmSurface.Chirper.Live)
+        {
+            AddSheetItem(PostSheetAction.SendInMessage, Loc.T(L.Chirper.SendInMessage), false);
+        }
         var mine = store.Me is { } me && me.Id == post.AuthorId;
         if (mine)
         {
@@ -972,6 +1101,9 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
         {
             case PostSheetAction.Reactions:
                 OpenUserList(post.Id, UserListKind.Likers);
+                break;
+            case PostSheetAction.SendInMessage:
+                dms.OpenShare(post.Id);
                 break;
             case PostSheetAction.Follow:
                 store.SetFollow(post.AuthorId, !post.IsFollowing);
@@ -2612,6 +2744,8 @@ internal sealed partial class ChirperApp : IResumableApp, ITabIconDrawer, INamep
 
     public void Dispose()
     {
+        dms.Dispose();
+        dmStore.Dispose();
         store.Dispose();
     }
 }

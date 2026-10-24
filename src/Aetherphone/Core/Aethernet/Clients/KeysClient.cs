@@ -103,87 +103,36 @@ internal sealed class KeysClient
         return net.SendJsonForStatusAsync(HttpMethod.Post, $"/chats/{Uri.EscapeDataString(conversationId)}/keys/wraps", request, AethernetJsonContext.Default.AddWrapsRequest, token, null, onFailure);
     }
 
-    public Task<MyConversationKeysDto?> VelvetKeysAsync(CancellationToken token,
+    public Task<MyConversationKeysDto?> PairKeysAsync(string surface, CancellationToken token,
         Action<AepFailure>? onFailure = null)
     {
-        return net.GetAsync("/velvet/keys", AethernetJsonContext.Default.MyConversationKeysDto, token, null, onFailure);
+        return net.GetAsync($"/{surface}/keys", AethernetJsonContext.Default.MyConversationKeysDto, token, null,
+            onFailure);
     }
 
-    public Task<ConversationKeysDto?> VelvetThreadKeysAsync(string otherId, CancellationToken token,
+    public Task<ConversationKeysDto?> PairThreadKeysAsync(string surface, string otherId, CancellationToken token,
         Action<AepFailure>? onFailure = null)
     {
-        return net.GetAsync($"/velvet/threads/{Uri.EscapeDataString(otherId)}/keys", AethernetJsonContext.Default.ConversationKeysDto, token, null, onFailure);
-    }
-
-    public async Task<(bool Ok, int Status)> CreateVelvetGenerationAsync(string otherId, CreateGenerationRequest request, CancellationToken token,
-        Action<AepFailure>? onFailure = null)
-    {
-        var status = 0;
-        var ok = await net.SendJsonForStatusAsync(HttpMethod.Post, $"/velvet/threads/{Uri.EscapeDataString(otherId)}/keys", request, AethernetJsonContext.Default.CreateGenerationRequest, token, statusCode => status = statusCode, onFailure).ConfigureAwait(false);
-        return (ok, status);
-    }
-
-    public Task<bool> AddVelvetWrapsAsync(string otherId, AddWrapsRequest request, CancellationToken token,
-        Action<AepFailure>? onFailure = null)
-    {
-        return net.SendJsonForStatusAsync(HttpMethod.Post, $"/velvet/threads/{Uri.EscapeDataString(otherId)}/keys/wraps", request, AethernetJsonContext.Default.AddWrapsRequest, token, null, onFailure);
-    }
-
-    public Task<MyConversationKeysDto?> AdKeysAsync(CancellationToken token,
-        Action<AepFailure>? onFailure = null)
-    {
-        return net.GetAsync("/ads/keys", AethernetJsonContext.Default.MyConversationKeysDto, token, null, onFailure);
-    }
-
-    public Task<ConversationKeysDto?> AdThreadKeysAsync(string otherId, CancellationToken token,
-        Action<AepFailure>? onFailure = null)
-    {
-        return net.GetAsync($"/ads/threads/{Uri.EscapeDataString(otherId)}/keys",
+        return net.GetAsync($"/{surface}/threads/{Uri.EscapeDataString(otherId)}/keys",
             AethernetJsonContext.Default.ConversationKeysDto, token, null, onFailure);
     }
 
-    public async Task<(bool Ok, int Status)> CreateAdGenerationAsync(string otherId, CreateGenerationRequest request,
-        CancellationToken token, Action<AepFailure>? onFailure = null)
+    public async Task<(bool Ok, int Status)> CreatePairGenerationAsync(string surface, string otherId,
+        CreateGenerationRequest request, CancellationToken token, Action<AepFailure>? onFailure = null)
     {
         var status = 0;
         var ok = await net.SendJsonForStatusAsync(HttpMethod.Post,
-            $"/ads/threads/{Uri.EscapeDataString(otherId)}/keys", request,
+            $"/{surface}/threads/{Uri.EscapeDataString(otherId)}/keys", request,
             AethernetJsonContext.Default.CreateGenerationRequest, token, statusCode => status = statusCode, onFailure)
             .ConfigureAwait(false);
         return (ok, status);
     }
 
-    public Task<bool> AddAdWrapsAsync(string otherId, AddWrapsRequest request, CancellationToken token,
-        Action<AepFailure>? onFailure = null)
+    public Task<bool> AddPairWrapsAsync(string surface, string otherId, AddWrapsRequest request,
+        CancellationToken token, Action<AepFailure>? onFailure = null)
     {
         return net.SendJsonForStatusAsync(HttpMethod.Post,
-            $"/ads/threads/{Uri.EscapeDataString(otherId)}/keys/wraps", request,
+            $"/{surface}/threads/{Uri.EscapeDataString(otherId)}/keys/wraps", request,
             AethernetJsonContext.Default.AddWrapsRequest, token, null, onFailure);
-    }
-
-    public Task<MyConversationKeysDto?> GramKeysAsync(CancellationToken token,
-        Action<AepFailure>? onFailure = null)
-    {
-        return net.GetAsync("/gram/keys", AethernetJsonContext.Default.MyConversationKeysDto, token, null, onFailure);
-    }
-
-    public Task<ConversationKeysDto?> GramThreadKeysAsync(string otherId, CancellationToken token,
-        Action<AepFailure>? onFailure = null)
-    {
-        return net.GetAsync($"/gram/threads/{Uri.EscapeDataString(otherId)}/keys", AethernetJsonContext.Default.ConversationKeysDto, token, null, onFailure);
-    }
-
-    public async Task<(bool Ok, int Status)> CreateGramGenerationAsync(string otherId, CreateGenerationRequest request, CancellationToken token,
-        Action<AepFailure>? onFailure = null)
-    {
-        var status = 0;
-        var ok = await net.SendJsonForStatusAsync(HttpMethod.Post, $"/gram/threads/{Uri.EscapeDataString(otherId)}/keys", request, AethernetJsonContext.Default.CreateGenerationRequest, token, statusCode => status = statusCode, onFailure).ConfigureAwait(false);
-        return (ok, status);
-    }
-
-    public Task<bool> AddGramWrapsAsync(string otherId, AddWrapsRequest request, CancellationToken token,
-        Action<AepFailure>? onFailure = null)
-    {
-        return net.SendJsonForStatusAsync(HttpMethod.Post, $"/gram/threads/{Uri.EscapeDataString(otherId)}/keys/wraps", request, AethernetJsonContext.Default.AddWrapsRequest, token, null, onFailure);
     }
 }

@@ -1,6 +1,6 @@
 namespace Aetherphone.Core.Aethernet.Contracts;
 
-internal sealed record GramThreadDto(
+internal sealed record DmThreadDto(
     string Id,
     string OtherUserId,
     string OtherDisplayName,
@@ -18,9 +18,9 @@ internal sealed record GramThreadDto(
     bool LastMessageSeen = false,
     string LastMessageId = "") : IIdentified;
 
-internal sealed record GramThreadPage(GramThreadDto[] Items, string? NextCursor);
+internal sealed record DmThreadPage(DmThreadDto[] Items, string? NextCursor);
 
-internal sealed record GramMessageDto(
+internal sealed record DmMessageDto(
     string Id,
     string ThreadId,
     string SenderId,
@@ -43,11 +43,11 @@ internal sealed record GramMessageDto(
     long? EditedAtUnix = null,
     string? StoryId = null,
     string? StoryMediaUrl = null,
-    bool StoryExpired = false) : IIdentified;
+    bool StoryExpired = false) : IDirectMessage;
 
-internal sealed record GramMessagePage(GramMessageDto[] Items, string? NextCursor);
+internal sealed record DmMessagePage(DmMessageDto[] Items, string? NextCursor);
 
-internal sealed record SendGramMessageRequest(
+internal sealed record SendDmMessageRequest(
     string Body,
     int Kind,
     string? MediaKey = null,
@@ -59,6 +59,6 @@ internal sealed record SendGramMessageRequest(
     int DurationSecs = 0,
     string? StoryId = null);
 
-internal sealed record GramMediaUrlDto(string Url, long ExpiresAtUnix);
+internal sealed record DmMediaUrlDto(string Url, long ExpiresAtUnix);
 
-internal sealed record GramTypingDto(bool OtherTyping);
+internal sealed record DmTypingDto(bool OtherTyping);

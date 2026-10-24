@@ -30,10 +30,13 @@ internal sealed class ConversationKeyStore
     private static readonly TimeSpan PreviewHydrateCooldown = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan UnreadableRekeyCooldown = TimeSpan.FromMinutes(2);
 
+    private static readonly (string Name, bool RotatesGenerations)[] PairSurfaceSpecs =
+    {
+        (PairSurface.Velvet, true), (PairSurface.Gram, true), (PairSurface.Ads, false), (PairSurface.Chirper, true),
+    };
+
     private readonly KeySurface chatSurface;
-    private readonly KeySurface velvetSurface;
-    private readonly KeySurface gramSurface;
-    private readonly KeySurface adSurface;
+    private readonly Dictionary<string, KeySurface> pairSurfaces = new(StringComparer.Ordinal);
 
     private readonly record struct KeySurface(
         Func<string, CancellationToken, Task<ConversationKeysDto?>> ThreadKeys,
@@ -50,21 +53,16 @@ internal sealed class ConversationKeyStore
             (id, request, token) => client.CreateConversationGenerationAsync(id, request, token),
             (id, request, token) => client.AddConversationWrapsAsync(id, request, token),
             RotatesGenerations: true);
-        velvetSurface = new KeySurface(
-            (id, token) => client.VelvetThreadKeysAsync(id, token),
-            (id, request, token) => client.CreateVelvetGenerationAsync(id, request, token),
-            (id, request, token) => client.AddVelvetWrapsAsync(id, request, token),
-            RotatesGenerations: true);
-        gramSurface = new KeySurface(
-            (id, token) => client.GramThreadKeysAsync(id, token),
-            (id, request, token) => client.CreateGramGenerationAsync(id, request, token),
-            (id, request, token) => client.AddGramWrapsAsync(id, request, token),
-            RotatesGenerations: true);
-        adSurface = new KeySurface(
-            (id, token) => client.AdThreadKeysAsync(id, token),
-            (id, request, token) => client.CreateAdGenerationAsync(id, request, token),
-            (id, request, token) => client.AddAdWrapsAsync(id, request, token),
-            RotatesGenerations: false);
+        for (var index = 0; index < PairSurfaceSpecs.Length; index++)
+        {
+            var name = PairSurfaceSpecs[index].Name;
+            pairSurfaces[name] = new KeySurface(
+                (id, token) => client.PairThreadKeysAsync(name, id, token),
+                (id, request, token) => client.CreatePairGenerationAsync(name, id, request, token),
+                (id, request, token) => client.AddPairWrapsAsync(name, id, request, token),
+                PairSurfaceSpecs[index].RotatesGenerations);
+        }
+
         vault.Changed += OnVaultChanged;
         vault.PreviousKeysRestored += OnPreviousKeysRestored;
         signals.KeysWentStale += OnKeysWentStale;
@@ -77,17 +75,22 @@ internal sealed class ConversationKeyStore
 
     public static string VelvetScope(string pairKey)
     {
-        return "velvet:" + pairKey;
+        return PairScope(PairSurface.Velvet, pairKey);
     }
 
     public static string GramScope(string pairKey)
     {
-        return "gram:" + pairKey;
+        return PairScope(PairSurface.Gram, pairKey);
     }
 
     public static string AdScope(string pairKey)
     {
-        return "ads:" + pairKey;
+        return PairScope(PairSurface.Ads, pairKey);
+    }
+
+    public static string PairScope(string surface, string pairKey)
+    {
+        return surface + ":" + pairKey;
     }
 
     public static string Pair(string firstUserId, string secondUserId)
@@ -152,34 +155,36 @@ internal sealed class ConversationKeyStore
         }
     }
 
-    public async Task HydrateVelvetAsync(CancellationToken token)
+    public async Task HydratePairsAsync(string surface, CancellationToken token)
     {
         if (vault.State != KeyVaultState.Unlocked)
         {
             return;
         }
 
-        var bulk = await client.VelvetKeysAsync(token).ConfigureAwait(false);
+        var bulk = await client.PairKeysAsync(surface, token).ConfigureAwait(false);
         if (bulk is null)
         {
             return;
         }
 
+        var keySurface = pairSurfaces[surface];
         for (var index = 0; index < bulk.Items.Length; index++)
         {
             var item = bulk.Items[index];
-            var scope = VelvetScope(item.ConversationId);
+            var scope = PairScope(surface, item.ConversationId);
             CacheWraps(scope, item.CurrentGeneration, item.Wraps);
             if (vault.MyUserId is { } myUserId
                 && OtherIdFromPairKey(item.ConversationId, myUserId) is { } otherId)
             {
-                ScheduleHeal(velvetSurface, scope, otherId, item.HealTargets);
+                ScheduleHeal(keySurface, scope, otherId, item.HealTargets);
             }
         }
     }
 
-    public Task<ChatKeyStatus> EnsureVelvetKeysAsync(string otherId, string myUserId, CancellationToken token) =>
-        EnsureScopeKeysAsync(velvetSurface, otherId, VelvetScope(Pair(myUserId, otherId)), token);
+    public Task<ChatKeyStatus> EnsurePairKeysAsync(string surface, string otherId, string myUserId,
+        CancellationToken token) =>
+        EnsureScopeKeysAsync(pairSurfaces[surface], otherId, PairScope(surface, Pair(myUserId, otherId)), token);
 
     private async Task<ChatKeyStatus> EnsureScopeKeysAsync(KeySurface surface, string remoteId, string scope,
         CancellationToken token)
@@ -334,64 +339,6 @@ internal sealed class ConversationKeyStore
             await surface.AddWraps(remoteId, new AddWrapsRequest(generation, wraps), token).ConfigureAwait(false);
         }
     }
-
-    public async Task HydrateGramAsync(CancellationToken token)
-    {
-        if (vault.State != KeyVaultState.Unlocked)
-        {
-            return;
-        }
-
-        var bulk = await client.GramKeysAsync(token).ConfigureAwait(false);
-        if (bulk is null)
-        {
-            return;
-        }
-
-        for (var index = 0; index < bulk.Items.Length; index++)
-        {
-            var item = bulk.Items[index];
-            var scope = GramScope(item.ConversationId);
-            CacheWraps(scope, item.CurrentGeneration, item.Wraps);
-            if (vault.MyUserId is { } myUserId
-                && OtherIdFromPairKey(item.ConversationId, myUserId) is { } otherId)
-            {
-                ScheduleHeal(gramSurface, scope, otherId, item.HealTargets);
-            }
-        }
-    }
-
-    public async Task HydrateAdsAsync(CancellationToken token)
-    {
-        if (vault.State != KeyVaultState.Unlocked)
-        {
-            return;
-        }
-
-        var bulk = await client.AdKeysAsync(token).ConfigureAwait(false);
-        if (bulk is null)
-        {
-            return;
-        }
-
-        for (var index = 0; index < bulk.Items.Length; index++)
-        {
-            var item = bulk.Items[index];
-            var scope = AdScope(item.ConversationId);
-            CacheWraps(scope, item.CurrentGeneration, item.Wraps);
-            if (vault.MyUserId is { } myUserId
-                && OtherIdFromPairKey(item.ConversationId, myUserId) is { } otherId)
-            {
-                ScheduleHeal(adSurface, scope, otherId, item.HealTargets);
-            }
-        }
-    }
-
-    public Task<ChatKeyStatus> EnsureAdKeysAsync(string otherId, string myUserId, CancellationToken token) =>
-        EnsureScopeKeysAsync(adSurface, otherId, AdScope(Pair(myUserId, otherId)), token);
-
-    public Task<ChatKeyStatus> EnsureGramKeysAsync(string otherId, string myUserId, CancellationToken token) =>
-        EnsureScopeKeysAsync(gramSurface, otherId, GramScope(Pair(myUserId, otherId)), token);
 
     public Task<ChatKeyStatus> EnsureChatKeysAsync(string conversationId, CancellationToken token) =>
         EnsureScopeKeysAsync(chatSurface, conversationId, ChatScope(conversationId), token);
@@ -647,23 +594,17 @@ internal sealed class ConversationKeyStore
     {
         try
         {
-            switch (surface)
+            if (surface == "chat")
             {
-                case "chat":
-                    await HydrateAsync(CancellationToken.None).ConfigureAwait(false);
-                    break;
-                case "velvet":
-                    await HydrateVelvetAsync(CancellationToken.None).ConfigureAwait(false);
-                    break;
-                case "gram":
-                    await HydrateGramAsync(CancellationToken.None).ConfigureAwait(false);
-                    break;
-                case "ads":
-                    await HydrateAdsAsync(CancellationToken.None).ConfigureAwait(false);
-                    break;
-                default:
-                    AepLog.Debug($"[Crypto] preview hydrate skipped for unknown surface {surface}.");
-                    break;
+                await HydrateAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+            else if (pairSurfaces.ContainsKey(surface))
+            {
+                await HydratePairsAsync(surface, CancellationToken.None).ConfigureAwait(false);
+            }
+            else
+            {
+                AepLog.Debug($"[Crypto] preview hydrate skipped for unknown surface {surface}.");
             }
         }
         catch (Exception exception)
@@ -718,52 +659,29 @@ internal sealed class ConversationKeyStore
     private async Task PostSelfRepairAsync(string scopeId, string myUserId, AddWrapsRequest request)
     {
         const string chatPrefix = "chat:";
-        const string velvetPrefix = "velvet:";
-        const string gramPrefix = "gram:";
-        const string adPrefix = "ads:";
         bool accepted;
         if (scopeId.StartsWith(chatPrefix, StringComparison.Ordinal))
         {
             accepted = await client.AddConversationWrapsAsync(scopeId[chatPrefix.Length..], request, CancellationToken.None)
                 .ConfigureAwait(false);
         }
-        else if (scopeId.StartsWith(velvetPrefix, StringComparison.Ordinal))
-        {
-            var otherId = OtherIdFromPairKey(scopeId[velvetPrefix.Length..], myUserId);
-            if (otherId is null)
-            {
-                AepLog.Warning($"[Crypto] self repair skipped for {scopeId}; the pair key does not contain this user.");
-                return;
-            }
-
-            accepted = await client.AddVelvetWrapsAsync(otherId, request, CancellationToken.None).ConfigureAwait(false);
-        }
-        else if (scopeId.StartsWith(gramPrefix, StringComparison.Ordinal))
-        {
-            var otherId = OtherIdFromPairKey(scopeId[gramPrefix.Length..], myUserId);
-            if (otherId is null)
-            {
-                AepLog.Warning($"[Crypto] self repair skipped for {scopeId}; the pair key does not contain this user.");
-                return;
-            }
-
-            accepted = await client.AddGramWrapsAsync(otherId, request, CancellationToken.None).ConfigureAwait(false);
-        }
-        else if (scopeId.StartsWith(adPrefix, StringComparison.Ordinal))
-        {
-            var otherId = OtherIdFromPairKey(scopeId[adPrefix.Length..], myUserId);
-            if (otherId is null)
-            {
-                AepLog.Warning($"[Crypto] self repair skipped for {scopeId}; the pair key does not contain this user.");
-                return;
-            }
-
-            accepted = await client.AddAdWrapsAsync(otherId, request, CancellationToken.None).ConfigureAwait(false);
-        }
         else
         {
-            AepLog.Debug($"[Crypto] self repair skipped for {scopeId}; the surface has no repair route.");
-            return;
+            var separatorIndex = scopeId.IndexOf(':');
+            if (separatorIndex <= 0 || !pairSurfaces.TryGetValue(scopeId[..separatorIndex], out var surface))
+            {
+                AepLog.Debug($"[Crypto] self repair skipped for {scopeId}; the surface has no repair route.");
+                return;
+            }
+
+            var otherId = OtherIdFromPairKey(scopeId[(separatorIndex + 1)..], myUserId);
+            if (otherId is null)
+            {
+                AepLog.Warning($"[Crypto] self repair skipped for {scopeId}; the pair key does not contain this user.");
+                return;
+            }
+
+            accepted = await surface.AddWraps(otherId, request, CancellationToken.None).ConfigureAwait(false);
         }
 
         if (!accepted)
@@ -811,9 +729,10 @@ internal sealed class ConversationKeyStore
         try
         {
             await HydrateAsync(CancellationToken.None).ConfigureAwait(false);
-            await HydrateVelvetAsync(CancellationToken.None).ConfigureAwait(false);
-            await HydrateGramAsync(CancellationToken.None).ConfigureAwait(false);
-            await HydrateAdsAsync(CancellationToken.None).ConfigureAwait(false);
+            for (var index = 0; index < PairSurfaceSpecs.Length; index++)
+            {
+                await HydratePairsAsync(PairSurfaceSpecs[index].Name, CancellationToken.None).ConfigureAwait(false);
+            }
         }
         catch (Exception exception)
         {

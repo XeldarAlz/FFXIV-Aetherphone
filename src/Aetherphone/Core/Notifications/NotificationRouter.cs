@@ -58,7 +58,7 @@ internal sealed class NotificationRouter
     private readonly LinkpearlLauncher linkpearlLauncher;
     private readonly VelvetLauncher velvetLauncher;
     private readonly DmLauncher dmLauncher;
-    private readonly GramDmLauncher gramDmLauncher;
+    private readonly SocialDmLauncher socialDmLauncher;
     private readonly SocialLauncher socialLauncher;
     private readonly MusterLauncher musterLauncher;
     private readonly YellowPagesLauncher yellowPagesLauncher;
@@ -75,7 +75,7 @@ internal sealed class NotificationRouter
 
     public NotificationRouter(INavigator navigation, NotificationService notifications,
         SocialNotificationService socialNotifications, LinkpearlLauncher linkpearlLauncher,
-        VelvetLauncher velvetLauncher, DmLauncher dmLauncher, GramDmLauncher gramDmLauncher, SocialLauncher socialLauncher,
+        VelvetLauncher velvetLauncher, DmLauncher dmLauncher, SocialDmLauncher socialDmLauncher, SocialLauncher socialLauncher,
         MusterLauncher musterLauncher, YellowPagesLauncher yellowPagesLauncher,
         AnnouncementsLauncher announcementsLauncher, SafetyLauncher safetyLauncher,
         EncryptionSetupLauncher encryptionSetupLauncher, RadioLauncher radioLauncher,
@@ -96,7 +96,7 @@ internal sealed class NotificationRouter
         this.linkpearlLauncher = linkpearlLauncher;
         this.velvetLauncher = velvetLauncher;
         this.dmLauncher = dmLauncher;
-        this.gramDmLauncher = gramDmLauncher;
+        this.socialDmLauncher = socialDmLauncher;
         this.socialLauncher = socialLauncher;
         this.musterLauncher = musterLauncher;
         this.yellowPagesLauncher = yellowPagesLauncher;
@@ -150,10 +150,10 @@ internal sealed class NotificationRouter
         {
             velvetLauncher.Request(notification.GroupKey);
         }
-        else if (notification.AppId == AethergramAppId && notification.SocialType < 0
+        else if (notification.AppId is (AethergramAppId or ChirperAppId) && notification.SocialType < 0
                  && !string.IsNullOrEmpty(notification.GroupKey))
         {
-            gramDmLauncher.Request(notification.GroupKey);
+            socialDmLauncher.Request(notification.AppId, notification.GroupKey);
         }
         else if (notification.AppId == MusterAppId && !string.IsNullOrEmpty(notification.GroupKey))
         {

@@ -1,6 +1,6 @@
 # Messaging and chat
 
-This page explains the shared chat stack behind every server-backed conversation in Aetherphone: ChocoChat (the Message app) and its pop-out windows, Velvet, Aethergram DMs, and Yellow Pages inquiries. Read it before you change one of those screens or build a new one. The in-game chat app has its own page, [Linkpearl](linkpearl.md); the HTTP client, the realtime socket and the cryptography live in [Networking](networking.md).
+This page explains the shared chat stack behind every server-backed conversation in Aetherphone: ChocoChat (the Message app) and its pop-out windows, Velvet, Aethergram and Chirper DMs, and Yellow Pages inquiries. Read it before you change one of those screens or build a new one. The in-game chat app has its own page, [Linkpearl](linkpearl.md); the HTTP client, the realtime socket and the cryptography live in [Networking](networking.md).
 
 The UI is Dear ImGui, an immediate mode library: every screen is redrawn each frame, and a "component" here is a class whose `Draw` method you call every frame. Keep work off that per-frame path.
 
@@ -20,6 +20,8 @@ The UI is Dear ImGui, an immediate mode library: every screen is redrawn each fr
 | src/Aetherphone/Apps/Message/DirectMessagesStore.cs | ChocoChat's store, the reference implementation |
 | src/Aetherphone/Apps/Message/MessageThreadViewBase.cs | ChocoChat's view, shared with its pop-outs |
 | src/Aetherphone/Windows/Components/Chat/ChatListChrome.cs | Inbox row, header and list styles shared by ChocoChat and Linkpearl |
+| src/Aetherphone/Windows/Components/Chat/DirectTranscript.cs | One-to-one transcript mapping, reactions and encryption flags |
+| src/Aetherphone/Windows/Components/Chat/ChatRowSheet.cs | The inbox row sheet: pin, archive and delete |
 
 ## Two stacks, one look
 
@@ -35,7 +37,7 @@ The Music app's `LiveChatTranscript` (radio and jam lobby chat) is a third, smal
 | ChocoChat (`message`) | `ThreadView` in Apps/Message/MessageApp.Thread.cs | `DirectMessagesStore` |
 | ChocoChat pop-outs | `PopoutThreadView` in Apps/Message/MessagePopoutWindow.cs | One detached `DirectMessagesStore` per window |
 | Velvet (`velvet`) | `ThreadView` in Apps/Velvet/VelvetShell.Thread.cs | `VelvetStore` |
-| Aethergram (`aethergram`) | `ThreadView` in Apps/Aethergram/AethergramApp.Thread.cs | `GramDmStore` |
+| Aethergram (`aethergram`) and Chirper (`chirper`) | `ThreadView` in Windows/Components/Social/SocialDms.Thread.cs | `SocialDmStore`, one per `SocialDmSurface` |
 | Yellow Pages (`yellowpages`) | `ThreadView` in Apps/YellowPages/YellowPagesApp.Thread.cs | `AdInquiryStore` in Core/YellowPages |
 
 ChocoChat is the Message app's user-facing name; code and localization keys say `message` and `MessageApp`. `MessageThreadViewBase` holds what its phone screen and pop-outs share: the DTO mapping, saved drafts, the wallpaper, the composer layout and group sender avatars.
@@ -184,7 +186,7 @@ protected override async Task<MessagePage?> FetchMessagesPageAsync(string thread
 
 The first four lines name things the server must already know. A new upload scope, typing signal type, report target type or route needs a matching server change before it works. The server is a separate private repository, so open an issue or ask a maintainer before you build the client half.
 
-**2. The view.** Subclass `ChatThreadView<TMessage, TThread>` and implement `MapTranscript` (your DTO array to `TranscriptMessage[]`), `DrawHeader`, `BuildMenuModel`, `BeginReply`, the field accessors, and the navigation pushes (`OpenImageView`, `OpenReactions`, `PushImagePickerScreen`, `PopScreen`) into your app's `ViewRouter`. You inherit the transcript, composer, search, menus, voice playback, image viewer, image picker and reactors screen; your routes call `DrawImageViewer`, `DrawImagePicker` and `DrawReactions`.
+**2. The view.** Subclass `ChatThreadView<TMessage, TThread>` and implement `MapTranscript` (your DTO array to `TranscriptMessage[]`), `DrawHeader`, `BuildMenuModel`, `BeginReply`, the field accessors, and the navigation pushes (`OpenImageView`, `OpenReactions`, `PushImagePickerScreen`, `PopScreen`) into your app's `ViewRouter`. You inherit the transcript, composer, search, menus, voice playback, image viewer, image picker and reactors screen; your routes call `DrawImageViewer`, `DrawImagePicker` and `DrawReactions`. A one-to-one surface whose message DTO implements `IDirectMessage` maps with `DirectTranscript.Map`, replies through `ChatComposer.BeginReply` and builds its menu with `ChatMenuModel.Direct`, as Aethergram, Velvet and Yellow Pages do. Its inbox rows get pin, archive and delete from one `ChatRowSheet`.
 
 **3. Per-frame wiring.** In your app's `Draw`, call `threadView.GateMenus()` before drawing routes, pass `depth == router.Depth` as `activeLayer`, call your store's `NoteInboxWatched`, and call `threadView.OnAppClosed()` from the close hook so the draft is saved and recording and playback stop. YellowPagesApp.cs shows all four compactly.
 

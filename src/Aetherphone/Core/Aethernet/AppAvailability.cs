@@ -9,8 +9,10 @@ internal sealed class AppAvailability : IDisposable
     private const long RetryIntervalMilliseconds = 60 * 1000;
     private const long PushDebounceMilliseconds = 1500;
 
+    public const string ChirperDms = "chirper.dms";
+
     private static readonly string[] AlwaysAvailable = { "appstore", "settings", "announcements" };
-    private static readonly string[] HiddenUntilLaunched = { "muster", "coin", "casino", "prism", "loveisland" };
+    private static readonly string[] HiddenUntilLaunched = { "muster", "coin", "casino", "prism", "loveisland", ChirperDms };
     private static readonly string[] UnavailableInChina = Array.Empty<string>();
 
     private static AppAvailability? current;

@@ -29,6 +29,7 @@ internal static class SignalType
     public const string ChatPing = "chat.ping";
     public const string VelvetPing = "velvet.ping";
     public const string GramPing = "gram.ping";
+    public const string ChirperPing = "chirper.ping";
     public const string AdPing = "ads.ping";
     public const string SocialPing = "social.ping";
     public const string MusterPing = "muster.ping";
@@ -41,6 +42,7 @@ internal static class SignalType
     public const string ChatTyping = "chat.typing";
     public const string VelvetTyping = "velvet.typing";
     public const string GramTyping = "gram.typing";
+    public const string ChirperTyping = "chirper.typing";
     public const string AdTyping = "ads.typing";
     public const string CasinoPrefix = "casino.";
     public const string CasinoAttach = "casino.attach";

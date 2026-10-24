@@ -13,6 +13,7 @@ using Aetherphone.Core.Honorific;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Message;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
@@ -31,7 +32,7 @@ using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Aethergram;
 
-internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INameplateHandleSource
+internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INameplateHandleSource, ISocialDmHost
 {
     private enum PostSheetAction
     {
@@ -148,10 +149,9 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     private readonly InfoSheet feedExplainer = new();
     private readonly string[] feedExplainerParagraphs = new string[4];
     private readonly AethergramStore store;
-    private readonly GramDmStore dmStore;
-    private readonly AccountClient account;
+    private readonly SocialDmStore dmStore;
     private readonly SocialLauncher launcher;
-    private readonly GramDmLauncher dmLauncher;
+    private readonly SocialDmLauncher dmLauncher;
     private readonly GameData gameData;
     private readonly Configuration configuration;
     private readonly LodestoneService lodestone;
@@ -242,14 +242,10 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
     private string commentDraft = string.Empty;
     private string hashtagTitle = string.Empty;
     private string hashtagTitleTag = string.Empty;
-    private readonly ActionSheet inboxRowSheet = new();
-    private readonly CancellationTokenSource settingsCancellation = new();
-    private readonly HashSet<string> shareSentUserIds = new(StringComparer.Ordinal);
-    private string shareSearchDraft = string.Empty;
-    private readonly ThreadView threadView;
+    private readonly SocialDms dms;
 
     public AethergramApp(AethernetSession session, AethernetApi net, LodestoneService lodestone,
-        RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, GramDmLauncher dmLauncher,
+        RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, SocialDmLauncher dmLauncher,
         GameData gameData, Configuration configuration, SocialNotificationService social,
         NotificationService notifications, HttpService http, KeyVault keyVault,
         ConversationKeyStore conversationKeys, DecryptedHistoryStore chatHistory,
@@ -262,9 +258,8 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         store = new AethergramStore(session, net.Account, net.Social, net.Grams, net.Safety, net.Media, realtimeSignals);
         store.SetFeedRegions(SocialRegion.FilterCsv(configuration.AethergramFeedRegionMask));
         store.SetFeedSensitive(configuration.AethergramShowSensitivePosts, activeScope);
-        account = net.Account;
-        dmStore = new GramDmStore(session, net.GramDm, net.Social, net.Safety, net.Media, notifications, keyVault,
-            conversationKeys, chatHistory, visibility, realtimeSignals, installer);
+        dmStore = new SocialDmStore(SocialDmSurface.Aethergram, session, net.GramDm, net.Social, net.Safety, net.Media,
+            notifications, keyVault, conversationKeys, chatHistory, visibility, realtimeSignals, installer);
         composeMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         editPostMentions = new MentionAutocomplete(store.NewMentionSuggestions());
@@ -310,8 +305,67 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             DeleteCommentFailed = L.Aethergram.DeleteCommentFailed,
             RemoveCommentConfirmMessage = L.Aethergram.RemoveCommentConfirmMessage,
         }, confirm, report);
-        threadView = new ThreadView(this);
+        dms = new SocialDms(this, dmStore, store, net.Account, new SocialDmLabels
+        {
+            LogTag = "Aethergram",
+            RowIdPrefix = "aethergram.row.",
+            InboxTitle = L.Aethergram.InboxTitle,
+            InboxEmpty = L.Aethergram.InboxEmpty,
+            InboxEmptyHint = L.Aethergram.InboxEmptyHint,
+            ThreadEmpty = L.Aethergram.ThreadEmpty,
+            MessageHint = L.Aethergram.MessageHint,
+            ImportFromPc = L.Aethergram.ImportFromPc,
+            NewMessage = L.Aethergram.NewMessage,
+            NewMessageHint = L.Aethergram.NewMessageHint,
+            NewMessageEmpty = L.Aethergram.NewMessageEmpty,
+            CannotMessage = L.Aethergram.CannotMessage,
+            ActiveNow = L.Aethergram.ActiveNow,
+            Requests = L.Aethergram.Requests,
+            RequestsCount = L.Aethergram.RequestsCount,
+            RequestsEmpty = L.Aethergram.RequestsEmpty,
+            RequestBanner = L.Aethergram.RequestBanner,
+            AcceptRequest = L.Aethergram.AcceptRequest,
+            DeleteConversation = L.Aethergram.DeleteConversation,
+            DeleteConversationMessage = L.Aethergram.DeleteConversationMessage,
+            DeleteConfirm = L.Aethergram.DeleteConfirm,
+            DeleteCancel = L.Aethergram.DeleteCancel,
+            SendTo = L.Aethergram.SendTo,
+            SearchHint = L.Aethergram.NameOrWorld,
+            Send = L.Aethergram.Send,
+            Sent = L.Aethergram.Sent,
+            PrivacyTitle = L.Aethergram.Settings,
+            PrivacyHint = L.Social.MessagesAudienceHint,
+            YouRepliedToStory = L.Aethergram.YouRepliedToStory,
+            RepliedToYourStory = L.Aethergram.RepliedToYourStory,
+        }, ui, images, lodestone, gameData, http, library, configuration, confirm, report, translation,
+            wallpaperImages, encryptionHelp, configuration.AethergramPinnedThreads,
+            configuration.AethergramArchivedThreads, toast.Show);
     }
+
+    SocialInk ISocialDmHost.Ink => Ink;
+
+    AppPalette ISocialDmHost.SearchPalette => AethergramInk.CurrentPalette;
+
+    PhoneTheme ISocialDmHost.Theme => theme;
+
+    INavigator ISocialDmHost.Navigation => navigation;
+
+    void ISocialDmHost.PushDm(SocialDmScreen screen, string? id, bool animate) =>
+        router.Push(AethergramRoute.Dm(screen, id), animate);
+
+    void ISocialDmHost.ReplaceDm(SocialDmScreen screen, string id) => router.Replace(AethergramRoute.Dm(screen, id));
+
+    void ISocialDmHost.PopDm() => router.Pop();
+
+    bool ISocialDmHost.IsDmOnTop(SocialDmScreen screen, string? id) =>
+        router.Current is { Screen: AethergramScreen.Dm } current && current.DmScreen == screen
+        && (id is null || current.Id == id);
+
+    void ISocialDmHost.OpenProfile(string userId) => OpenProfile(userId);
+
+    void ISocialDmHost.OpenPost(string postId) => OpenDetailFromLink(postId);
+
+    private void OpenThread(string userId) => dms.OpenThread(userId);
 
     public void OnOpened()
     {
@@ -321,8 +375,6 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         caption = string.Empty;
         composeSensitive = false;
         commentDraft = string.Empty;
-        shareSearchDraft = string.Empty;
-        shareSentUserIds.Clear();
         store.ClearDiscover();
         introSwarmPending = intro.Begin(Id);
         RefreshAndConsumeLaunch();
@@ -343,12 +395,12 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             stories.RefreshTray();
         }
 
-        if (store.IsSignedIn && dmLauncher.TryConsume(out var threadUserId, out var threadDraft))
+        if (store.IsSignedIn && dmLauncher.TryConsume(Id, out var threadUserId, out var threadDraft))
         {
             ShowLaunchedThread(threadUserId);
             if (!string.IsNullOrEmpty(threadDraft))
             {
-                threadView.PrefillDraft(threadDraft);
+                dms.PrefillDraft(threadDraft);
             }
 
             return;
@@ -374,22 +426,22 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
 
     private void ShowLaunchedThread(string userId)
     {
-        var target = AethergramRoute.Thread(userId);
+        var target = AethergramRoute.Dm(SocialDmScreen.Thread, userId);
         if (router.Current == target)
         {
             return;
         }
 
         router.Reset();
-        ResetInboxState();
-        router.Push(AethergramRoute.Inbox, false);
+        dms.ResetInbox();
+        router.Push(AethergramRoute.Dm(SocialDmScreen.Inbox), false);
         router.Push(target, false);
     }
 
     public void OnClosed()
     {
         store.FlushFeedSignals();
-        threadView.OnAppClosed();
+        dms.OnAppClosed();
         stories.Close();
     }
 
@@ -408,8 +460,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         commentSheet.Gate();
         profileMenu.Gate();
         profileActionSheet.Gate();
-        inboxRowSheet.Gate();
-        threadView.GateMenus();
+        dms.Gate();
         var screen = SceneChrome.ScreenFrom(context.Content, theme, UiScale.Current);
         screenRect = screen;
         ui.Backdrop(screen);
@@ -449,7 +500,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         DrawCommentSheet(screen);
         DrawProfileMenu(screen);
         DrawProfileActionSheet(screen);
-        DrawInboxRowSheet(screen);
+        dms.DrawOverlays(screen);
         DrawFlights(screen);
         toast.Draw(screen, ScreenToastStyle.From(ui));
     }
@@ -485,32 +536,11 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
             case AethergramScreen.UserList:
                 DrawUserList(area, route.Id!, route.Kind);
                 break;
-            case AethergramScreen.Inbox:
-                DrawInbox(area);
-                break;
-            case AethergramScreen.InboxArchived:
-                DrawInboxArchived(area);
-                break;
-            case AethergramScreen.NewMessage:
-                DrawNewMessage(area);
-                break;
-            case AethergramScreen.Thread:
-                threadView.Draw(ChatArea(area), route.Id!, depth == router.Depth);
-                break;
-            case AethergramScreen.ChatImage:
-                threadView.DrawImagePicker(ChatArea(area), route.Id!);
-                break;
-            case AethergramScreen.ImageView:
-                threadView.DrawImageViewer(ChatArea(area), route.Id!);
-                break;
-            case AethergramScreen.Reactions:
-                threadView.DrawReactions(ChatArea(area), route.Id!);
+            case AethergramScreen.Dm:
+                dms.Draw(route.DmScreen, area, route.Id, depth == router.Depth);
                 break;
             case AethergramScreen.Settings:
                 DrawSettings(area);
-                break;
-            case AethergramScreen.Share:
-                DrawShare(area, route.Id!);
                 break;
             case AethergramScreen.FollowRequests:
                 DrawFollowRequests(area);
@@ -520,9 +550,6 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
                 break;
             case AethergramScreen.Liked:
                 DrawLiked(area);
-                break;
-            case AethergramScreen.Encryption:
-                threadView.DrawEncryptionScreen(ChatArea(area));
                 break;
             case AethergramScreen.Archive:
                 DrawArchive(area);
@@ -543,13 +570,6 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
 
         SocialSeason.OfferTreat(screenRect, area, depth, TreatSpot.AethergramFeed, TreatSpot.AethergramDeep,
             AppHeader.Height);
-    }
-
-    private Rect ChatArea(Rect area)
-    {
-        var sidePadding = theme.SidePadding * UiScale.Current;
-        return new Rect(new Vector2(area.Min.X + sidePadding, area.Min.Y),
-            new Vector2(area.Max.X - sidePadding, area.Max.Y));
     }
 
     private void DrawRoot(Rect area)
@@ -1355,7 +1375,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
         {
             TapGlow.Bloom(shareKey);
             SendByBat(sendFrom);
-            OpenShare(post.Id);
+            dms.OpenShare(post.Id);
         }
 
         var iconSize = CardActionIconSize * scale;
@@ -1688,7 +1708,7 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
 
         if (result.Tapped == (int)AethergramTab.Messages)
         {
-            OpenInbox();
+            dms.OpenInbox();
             return;
         }
 
@@ -1779,10 +1799,8 @@ internal sealed partial class AethergramApp : IResumableApp, ITabIconDrawer, INa
 
     public void Dispose()
     {
-        settingsCancellation.Cancel();
-        settingsCancellation.Dispose();
         composeSession.Dispose();
-        threadView.Dispose();
+        dms.Dispose();
         dmStore.Dispose();
         store.Dispose();
         stories.Dispose();

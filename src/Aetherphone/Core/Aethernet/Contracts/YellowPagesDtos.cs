@@ -133,7 +133,10 @@ internal sealed record AdInquiryMessageDto(
     int ReplyEncVersion = 0,
     int DurationSecs = 0,
     ReactionSummaryDto[]? Reactions = null,
-    long? EditedAtUnix = null) : IIdentified;
+    long? EditedAtUnix = null) : IDirectMessage
+{
+    long? IDirectMessage.ReadAtUnix => ReadAtUnix > 0 ? ReadAtUnix : null;
+}
 
 internal sealed record AdInquiryMessagePage(AdInquiryMessageDto[] Items, string? NextCursor);
 

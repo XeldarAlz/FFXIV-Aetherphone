@@ -569,7 +569,7 @@ internal sealed record VelvetMessageDto(
     bool Deleted = false,
     int DurationSecs = 0,
     ReactionSummaryDto[]? Reactions = null,
-    long? EditedAtUnix = null) : IIdentified;
+    long? EditedAtUnix = null) : IDirectMessage;
 
 internal sealed record VelvetMessagePage(VelvetMessageDto[] Items, string? NextCursor);
 

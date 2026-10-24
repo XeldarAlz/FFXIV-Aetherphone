@@ -45,7 +45,7 @@ internal sealed class RealtimeSignalBus
     public event Action? KeysWentStale;
     public event Action? DeviceLinkRequested;
     public event Action? VelvetPinged;
-    public event Action? GramPinged;
+    public event Action<string>? DmPinged;
     public event Action? AdsPinged;
     public event Action<SocialSignal>? SocialPinged;
     public event Action<TypingSignal>? TypingPinged;
@@ -95,9 +95,9 @@ internal sealed class RealtimeSignalBus
         VelvetPinged?.Invoke();
     }
 
-    public void PublishGram()
+    public void PublishDm(string surface)
     {
-        GramPinged?.Invoke();
+        DmPinged?.Invoke(surface);
     }
 
     public void PublishAds()
