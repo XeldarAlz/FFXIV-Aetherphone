@@ -198,6 +198,11 @@ internal static class Material
             return false;
         }
 
+        if (RealGlass.TryDrawRing(drawList, min, max, radius, band, RealGlassKind.Liquid, tone, default, opacity))
+        {
+            return true;
+        }
+
         if (!WallpaperBackdrop.FillEdge(drawList, min, max, radius, band, opacity))
         {
             return false;

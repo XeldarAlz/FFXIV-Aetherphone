@@ -42,23 +42,12 @@ internal static class RealGlass
     public static GlassGroup Group() => new(layer);
 
     public static bool TryDraw(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius, RealGlassKind kind,
-        GlassTone tone, Vector4 accent, float opacity)
-    {
-        if (configuration is not { RealGlass: true } settings || layer is not { } glass || !glass.CanRecord())
-        {
-            return false;
-        }
+        GlassTone tone, Vector4 accent, float opacity) =>
+        TryDrawShape(drawList, RealGlassMaterials.Shape(min, max, radius), kind, tone, accent, opacity);
 
-        var size = max - min;
-        if (size.X <= 0f || size.Y <= 0f)
-        {
-            return false;
-        }
-
-        var material = RealGlassMaterials.Build(kind, tone, accent, opacity, settings.GlassAmount, radius, size)
-            .Scaled(UiScale.Current);
-        return glass.TryDraw(drawList, GlassShape.FromRect(min, size, radius), in material);
-    }
+    public static bool TryDrawRing(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius, float thickness,
+        RealGlassKind kind, GlassTone tone, Vector4 accent, float opacity) =>
+        TryDrawShape(drawList, RealGlassMaterials.Ring(min, max, radius, thickness), kind, tone, accent, opacity);
 
     public static GlassSuspendScope Suspend(bool transformed = true) =>
         transformed && layer is { } glass ? glass.Suspend() : default;
@@ -75,6 +64,24 @@ internal static class RealGlass
         layer = null;
         configuration = null;
         pluginLog = null;
+    }
+
+    private static bool TryDrawShape(ImDrawListPtr drawList, in GlassShape shape, RealGlassKind kind, GlassTone tone,
+        Vector4 accent, float opacity)
+    {
+        if (configuration is not { RealGlass: true } settings || layer is not { } glass || !glass.CanRecord())
+        {
+            return false;
+        }
+
+        if (shape.HalfSize.X <= 0f || shape.HalfSize.Y <= 0f)
+        {
+            return false;
+        }
+
+        var material = RealGlassMaterials.Build(kind, tone, accent, opacity, settings.GlassAmount, shape.Radius,
+            shape.HalfSize * 2f).Scaled(UiScale.Current);
+        return glass.TryDraw(drawList, in shape, in material);
     }
 
     private static void OnResizeBuffers() => layer?.ReleaseResources();

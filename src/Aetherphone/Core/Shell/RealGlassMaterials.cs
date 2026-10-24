@@ -19,6 +19,11 @@ internal static class RealGlassMaterials
         return material;
     }
 
+    public static GlassShape Shape(Vector2 min, Vector2 max, float radius) => GlassShape.FromRect(min, max - min, radius);
+
+    public static GlassShape Ring(Vector2 min, Vector2 max, float radius, float thickness) =>
+        GlassShape.Ring(min, max - min, radius, thickness);
+
     public static float CornerExponent(float radius, Vector2 size) =>
         radius >= MathF.Min(size.X, size.Y) * 0.5f - CapsuleTolerance
             ? Glasswork.CornerCurve.CircularExponent

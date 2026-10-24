@@ -13,6 +13,10 @@ public sealed class RealGlassMaterialsTests
     private const float Tolerance = 1e-4f;
     private static readonly Vector2 Bar = new(320f, 56f);
     private static readonly Vector4 Accent = new(0.2f, 0.5f, 0.9f, 0.7f);
+    private const float ChassisRadius = 48f;
+    private const float Band = 6f;
+    private static readonly Vector2 ChassisMin = new(100f, 80f);
+    private static readonly Vector2 ChassisMax = new(500f, 920f);
 
     [Theory]
     [InlineData(true)]
@@ -146,6 +150,53 @@ public sealed class RealGlassMaterialsTests
         Assert.Equal(GlassMaterial.RegularLight.Bezel, material.Bezel);
         Assert.Equal(GlassMaterial.RegularLight.ShadowRadius, material.ShadowRadius);
         Assert.Equal(GlassMaterial.RegularLight.EdgeLineWidth, material.EdgeLineWidth);
+    }
+
+    [Fact]
+    public void ShapeFillsTheRect()
+    {
+        var shape = RealGlassMaterials.Shape(ChassisMin, ChassisMax, ChassisRadius);
+
+        Assert.Equal(ChassisMin, shape.Min);
+        Assert.Equal(ChassisMax, shape.Max);
+        Assert.Equal(ChassisRadius, shape.Radius);
+        Assert.Equal(0f, shape.Thickness);
+        Assert.False(shape.IsRing);
+    }
+
+    [Fact]
+    public void RingCarriesTheBandThicknessInsideTheOuterRect()
+    {
+        var ring = RealGlassMaterials.Ring(ChassisMin, ChassisMax, ChassisRadius, Band);
+
+        Assert.Equal(ChassisMin, ring.Min);
+        Assert.Equal(ChassisMax, ring.Max);
+        Assert.Equal(ChassisRadius, ring.Radius);
+        Assert.Equal(Band, ring.Thickness);
+        Assert.True(ring.IsRing);
+    }
+
+    [Theory]
+    [InlineData(199f, true)]
+    [InlineData(200f, false)]
+    [InlineData(260f, false)]
+    public void RingAtOrPastHalfTheShortSideFillsTheShapeLikeGlasswork(float thickness, bool ring)
+    {
+        Assert.Equal(ring, RealGlassMaterials.Ring(ChassisMin, ChassisMax, ChassisRadius, thickness).IsRing);
+    }
+
+    [Fact]
+    public void RingBezelClampsToHalfTheBandLikeGlasswork()
+    {
+        var material = RealGlassMaterials.Build(RealGlassKind.Liquid, GlassTone.Dark, default, 1f, NeutralAmount,
+            ChassisRadius, ChassisMax - ChassisMin);
+        var band = RealGlassMaterials.Ring(ChassisMin, ChassisMax, ChassisRadius, Band);
+        var wideRing = RealGlassMaterials.Ring(ChassisMin, ChassisMax, ChassisRadius, material.Bezel * 4f);
+        var filled = RealGlassMaterials.Shape(ChassisMin, ChassisMax, ChassisRadius);
+
+        Assert.Equal(Band * 0.5f, GlassRenderer.EffectiveBezel(in material, [band]));
+        Assert.Equal(material.Bezel, GlassRenderer.EffectiveBezel(in material, [wideRing]));
+        Assert.Equal(material.Bezel, GlassRenderer.EffectiveBezel(in material, [filled]));
     }
 
     private static GlassMaterial Build(RealGlassKind kind, GlassTone tone, float amount) =>
