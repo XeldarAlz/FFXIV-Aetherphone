@@ -163,6 +163,7 @@ public sealed class CollectionsLogicTests
             var category = CollectionCategories.All[index];
             var options = CollectionCategories.SortOptions(category);
 
+            Assert.InRange(options.Length, 1, CollectionFilter.SortCount);
             Assert.Equal(CollectionSort.Newest, options[0]);
             Assert.Equal(category == CollectionCategory.Facewear, Array.IndexOf(options, CollectionSort.GameOrder) >= 0);
         }

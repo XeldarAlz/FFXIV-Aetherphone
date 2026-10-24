@@ -30,8 +30,7 @@ internal sealed partial class CollectionsApp
     private readonly string[] ownershipLabels = new string[3];
     private readonly ChipRail sourceRail = new();
     private readonly ActionSheet sortSheet = new();
-    private readonly ActionSheet.Item[] sharedSortItems = new ActionSheet.Item[3];
-    private readonly ActionSheet.Item[] gameOrderSortItems = new ActionSheet.Item[4];
+    private readonly ActionSheet.Item[] sortItems = new ActionSheet.Item[CollectionFilter.SortCount];
     private readonly NavBarButton[] categoryButtons = new NavBarButton[1];
 
     private string categorySearch = string.Empty;
@@ -374,16 +373,15 @@ internal sealed partial class CollectionsApp
             return;
         }
 
-        var sortItems = sortOptions.Length == gameOrderSortItems.Length ? gameOrderSortItems : sharedSortItems;
-        for (var index = 0; index < sortItems.Length; index++)
+        for (var index = 0; index < sortOptions.Length; index++)
         {
             var option = sortOptions[index];
             sortItems[index] = new ActionSheet.Item(Loc.T(CollectionText.SortLabel(option)),
                 Selected: option == sort, Checkable: true);
         }
 
-        var picked = sortSheet.Draw(screen, ActionSheetStyle.From(ui), sortItems, Loc.T(L.Common.Cancel), false,
-            Loc.T(L.Collections.Sort));
+        var picked = sortSheet.Draw(screen, ActionSheetStyle.From(ui), sortItems.AsSpan(0, sortOptions.Length),
+            Loc.T(L.Common.Cancel), false, Loc.T(L.Collections.Sort));
         if (picked < 0 || picked >= sortOptions.Length || sortOptions[picked] == sort)
         {
             return;

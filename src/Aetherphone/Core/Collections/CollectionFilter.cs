@@ -17,6 +17,8 @@ internal enum CollectionSort : byte
 
 internal static class CollectionFilter
 {
+    public const int SortCount = 4;
+
     private static readonly Comparison<CollectionItem> ByNewest = CompareNewest;
     private static readonly Comparison<CollectionItem> ByGameOrder = CompareGameOrder;
     private static readonly Comparison<CollectionItem> ByRarest = CompareRarest;
