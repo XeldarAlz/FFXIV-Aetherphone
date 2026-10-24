@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Aetherphone.Core.Collections;
 using Xunit;
 
@@ -5,6 +6,12 @@ namespace Aetherphone.Tests;
 
 public sealed class CollectionsLogicTests
 {
+    private static CollectionItem Item(int id, string name, string? owned, string patch, int gameOrder)
+    {
+        var dto = new CollectionItemDto { Id = id, Name = name, Owned = owned, Patch = patch, Order = gameOrder };
+        return new CollectionItem(CollectionCategory.Facewear, dto, id);
+    }
+
     private static CollectionItem Item(int id, string name, string? owned = null, string patch = "",
         params string[] sourceTypes)
     {
@@ -118,6 +125,50 @@ public sealed class CollectionsLogicTests
     }
 
     [Fact]
+    public void FilterSortsGameOrderByTheCatalogOrderFieldWithUnorderedLast()
+    {
+        var items = new[]
+        {
+            Item(1, "A", null, "7.0", 30),
+            Item(2, "B", null, "6.0", 10),
+            Item(3, "C", null, "6.5"),
+            Item(4, "D", null, "5.0", 20),
+        };
+        var output = new List<CollectionItem>();
+
+        CollectionFilter.Apply(items, output, string.Empty, OwnershipFilter.All, string.Empty, null,
+            CollectionSort.GameOrder);
+
+        Assert.Equal(new[] { 2, 4, 1, 3 }, output.ConvertAll(item => item.Id));
+    }
+
+    [Fact]
+    public void CatalogOrderFieldSurvivesTheDiskCacheRoundTrip()
+    {
+        var json = "{\"count\":2,\"results\":[{\"id\":1,\"order\":7},{\"id\":2}]}";
+
+        var response = JsonSerializer.Deserialize(json, CollectionJsonContext.Default.CollectionResponse)!;
+        var cached = JsonSerializer.SerializeToUtf8Bytes(response, CollectionJsonContext.Default.CollectionResponse);
+        var restored = JsonSerializer.Deserialize(cached, CollectionJsonContext.Default.CollectionResponse)!;
+
+        Assert.Equal(7, restored.Results![0].Order);
+        Assert.Null(restored.Results[1].Order);
+    }
+
+    [Fact]
+    public void OnlyFacewearOffersGameOrder()
+    {
+        for (var index = 0; index < CollectionCategories.All.Length; index++)
+        {
+            var category = CollectionCategories.All[index];
+            var options = CollectionCategories.SortOptions(category);
+
+            Assert.Equal(CollectionSort.Newest, options[0]);
+            Assert.Equal(category == CollectionCategory.Facewear, Array.IndexOf(options, CollectionSort.GameOrder) >= 0);
+        }
+    }
+
+    [Fact]
     public void FilterAppliesOwnershipSourceAndQuery()
     {
         var items = new[]
@@ -130,7 +181,7 @@ public sealed class CollectionsLogicTests
         var owned = new HashSet<int> { 3 };
 
         CollectionFilter.Apply(items, output, CollectionFilter.Normalize("  CHOCOBO "), OwnershipFilter.Missing,
-            "quest", owned, CollectionSort.Default);
+            "quest", owned, CollectionSort.Newest);
 
         Assert.Equal(new[] { 1 }, output.ConvertAll(item => item.Id));
     }

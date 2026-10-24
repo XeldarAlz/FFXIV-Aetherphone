@@ -581,7 +581,7 @@
   "collections.noResultsHint": "Попробуйте другое название, источник или фильтр.",
   "collections.percent": "{0}%",
   "collections.sort": "Сортировка",
-  "collections.sortDefault": "Порядок в игре",
+  "collections.sortGameOrder": "Порядок в игре",
   "collections.sortNewest": "Сначала новые",
   "collections.sortRarest": "Сначала редкие",
   "collections.sortMostCollected": "Сначала самые собираемые",

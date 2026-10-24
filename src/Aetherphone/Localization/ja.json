@@ -581,7 +581,7 @@
   "collections.noResultsHint": "別の名前、入手方法、フィルターをお試しください。",
   "collections.percent": "{0}%",
   "collections.sort": "並べ替え",
-  "collections.sortDefault": "ゲーム内の順番",
+  "collections.sortGameOrder": "ゲーム内の順番",
   "collections.sortNewest": "新しい順",
   "collections.sortRarest": "レアな順",
   "collections.sortMostCollected": "所持率の高い順",

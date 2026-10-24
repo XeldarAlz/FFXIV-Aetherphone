@@ -581,7 +581,7 @@
   "collections.noResultsHint": "Tente outro nome, fonte ou filtro.",
   "collections.percent": "{0}%",
   "collections.sort": "Ordenar",
-  "collections.sortDefault": "Ordem do jogo",
+  "collections.sortGameOrder": "Ordem do jogo",
   "collections.sortNewest": "Mais recentes primeiro",
   "collections.sortRarest": "Mais raros primeiro",
   "collections.sortMostCollected": "Mais colecionados primeiro",

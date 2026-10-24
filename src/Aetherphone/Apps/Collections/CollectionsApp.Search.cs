@@ -62,7 +62,7 @@ internal sealed partial class CollectionsApp
             }
 
             CollectionFilter.Apply(entry.Items, searchScratch, query, OwnershipFilter.All, string.Empty, null,
-                CollectionSort.Default);
+                CollectionSort.Newest);
             searchTotals[index] = searchScratch.Count;
             searchHitTotal += searchScratch.Count;
             searchCounts[index] = searchScratch.Count.ToString("N0", Loc.Culture);

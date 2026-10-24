@@ -29,10 +29,10 @@ internal static class CollectionText
 
     public static LocString SortLabel(CollectionSort sort) => sort switch
     {
-        CollectionSort.Newest => L.Collections.SortNewest,
         CollectionSort.Rarest => L.Collections.SortRarest,
         CollectionSort.MostCollected => L.Collections.SortMostCollected,
-        _ => L.Collections.SortDefault,
+        CollectionSort.GameOrder => L.Collections.SortGameOrder,
+        _ => L.Collections.SortNewest,
     };
 
     public static string Percent(float value) => Loc.T(L.Collections.Percent, CollectionRarity.Display(value));

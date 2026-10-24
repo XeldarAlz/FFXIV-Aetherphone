@@ -14,6 +14,27 @@ internal static class CollectionCategories
         CollectionCategory.TriadCards,
     };
 
+    private static readonly CollectionSort[] SharedSorts =
+    {
+        CollectionSort.Newest,
+        CollectionSort.Rarest,
+        CollectionSort.MostCollected,
+    };
+
+    private static readonly CollectionSort[] GameOrderSorts =
+    {
+        CollectionSort.Newest,
+        CollectionSort.GameOrder,
+        CollectionSort.Rarest,
+        CollectionSort.MostCollected,
+    };
+
+    public static CollectionSort[] SortOptions(CollectionCategory category) => category switch
+    {
+        CollectionCategory.Facewear => GameOrderSorts,
+        _ => SharedSorts,
+    };
+
     public static string CatalogPath(CollectionCategory category) => category switch
     {
         CollectionCategory.Mounts => "mounts",

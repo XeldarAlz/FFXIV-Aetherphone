@@ -85,6 +85,7 @@ internal sealed class CollectionItemDto
     [JsonPropertyName("points")] public int? Points { get; set; }
     [JsonPropertyName("stars")] public int? Stars { get; set; }
     [JsonPropertyName("icon")] public string? Icon { get; set; }
+    [JsonPropertyName("order")] public int? Order { get; set; }
     [JsonPropertyName("category")] public CollectionGroupRef? Category { get; set; }
     [JsonPropertyName("type")] public CollectionGroupRef? Type { get; set; }
     [JsonPropertyName("stats")] public CollectionStats? Stats { get; set; }

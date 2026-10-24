@@ -581,7 +581,7 @@
   "collections.noResultsHint": "换个名称、获取途径或筛选条件试试。",
   "collections.percent": "{0}%",
   "collections.sort": "排序",
-  "collections.sortDefault": "游戏内顺序",
+  "collections.sortGameOrder": "游戏内顺序",
   "collections.sortNewest": "最新优先",
   "collections.sortRarest": "最稀有优先",
   "collections.sortMostCollected": "拥有率最高优先",

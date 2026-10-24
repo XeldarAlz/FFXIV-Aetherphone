@@ -581,7 +581,7 @@
   "collections.noResultsHint": "Farklı bir ad, kaynak veya filtre dene.",
   "collections.percent": "%{0}",
   "collections.sort": "Sırala",
-  "collections.sortDefault": "Oyun sırası",
+  "collections.sortGameOrder": "Oyun sırası",
   "collections.sortNewest": "Önce en yeniler",
   "collections.sortRarest": "Önce en nadirler",
   "collections.sortMostCollected": "Önce en çok toplananlar",

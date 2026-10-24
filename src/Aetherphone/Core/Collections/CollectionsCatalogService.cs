@@ -312,7 +312,7 @@ internal sealed class CollectionsCatalogService : IDisposable
         {
             var token = cancellation.Token;
             var path = CollectionCategories.CatalogPath(category);
-            var cacheKey = string.Concat("collect:catalog:v2:", path);
+            var cacheKey = string.Concat("collect:catalog:v3:", path);
             var cached = disk.Get(cacheKey, CatalogFreshFor);
             CollectionResponse? response;
 

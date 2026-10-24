@@ -946,7 +946,7 @@ internal static class L
         public static readonly LocString NoResultsHint = new("collections.noResultsHint", "Try a different name, source or filter.");
         public static readonly LocString Percent = new("collections.percent", "{0}%");
         public static readonly LocString Sort = new("collections.sort", "Sort");
-        public static readonly LocString SortDefault = new("collections.sortDefault", "Game order");
+        public static readonly LocString SortGameOrder = new("collections.sortGameOrder", "Game order");
         public static readonly LocString SortNewest = new("collections.sortNewest", "Newest first");
         public static readonly LocString SortRarest = new("collections.sortRarest", "Rarest first");
         public static readonly LocString SortMostCollected = new("collections.sortMostCollected", "Most collected first");

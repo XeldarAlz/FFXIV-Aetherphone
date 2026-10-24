@@ -9,18 +9,16 @@ internal enum OwnershipFilter : byte
 
 internal enum CollectionSort : byte
 {
-    Default,
     Newest,
+    GameOrder,
     Rarest,
     MostCollected,
 }
 
 internal static class CollectionFilter
 {
-    public const int SortCount = 4;
-
-    private static readonly Comparison<CollectionItem> ByOrder = CompareOrder;
     private static readonly Comparison<CollectionItem> ByNewest = CompareNewest;
+    private static readonly Comparison<CollectionItem> ByGameOrder = CompareGameOrder;
     private static readonly Comparison<CollectionItem> ByRarest = CompareRarest;
     private static readonly Comparison<CollectionItem> ByMostCollected = CompareMostCollected;
 
@@ -67,10 +65,10 @@ internal static class CollectionFilter
 
         output.Sort(sort switch
         {
-            CollectionSort.Newest => ByNewest,
+            CollectionSort.GameOrder => ByGameOrder,
             CollectionSort.Rarest => ByRarest,
             CollectionSort.MostCollected => ByMostCollected,
-            _ => ByOrder,
+            _ => ByNewest,
         });
     }
 
@@ -89,6 +87,12 @@ internal static class CollectionFilter
     }
 
     private static int CompareOrder(CollectionItem left, CollectionItem right) => left.Order.CompareTo(right.Order);
+
+    private static int CompareGameOrder(CollectionItem left, CollectionItem right)
+    {
+        var byGameOrder = left.GameOrder.CompareTo(right.GameOrder);
+        return byGameOrder != 0 ? byGameOrder : CompareOrder(left, right);
+    }
 
     private static int CompareNewest(CollectionItem left, CollectionItem right)
     {
