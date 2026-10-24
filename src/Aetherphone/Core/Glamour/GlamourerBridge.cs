@@ -90,10 +90,14 @@ internal sealed class GlamourerBridge : IDisposable
 
     public bool SetItem(GearSlot slot, uint itemId, byte stain0, byte stain1)
     {
-        var stains = new[] { stain0, stain1 };
+        var stains = StainList(stain0, stain1);
         return Call(() => setItemGate.InvokeFunc(PenumbraBridge.PlayerIndex, GearSlots.GlamourerSlot(slot), itemId,
             stains, 0, OnceFlag | EquipmentFlag), -1, "SetItem") == Success;
     }
+
+    // Dalamud round-trips IPC arguments through JSON unless the type matches exactly: a byte[] turns into base64 that
+    // IReadOnlyList<byte> cannot read, while a List<byte> turns into a number array that it can.
+    internal static List<byte> StainList(byte stain0, byte stain1) => new(2) { stain0, stain1 };
 
     public void RevertEquipment() =>
         Call(() => revertGate.InvokeFunc(PenumbraBridge.PlayerIndex, 0, EquipmentFlag), -1, "RevertState");

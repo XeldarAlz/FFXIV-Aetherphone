@@ -24,6 +24,7 @@ internal sealed partial class PrismApp
     private readonly List<WornMod> wornMods = new();
     private readonly List<bool> wornPicked = new();
     private readonly List<string> wornCaptions = new();
+    private ModDraft? wornTarget;
     private WardrobeOutfit? editingOutfit;
     private WardrobeCover? outfitCoverDraft;
     private GlamGearDto[] outfitLoadedPieces = Array.Empty<GlamGearDto>();
@@ -141,24 +142,26 @@ internal sealed partial class PrismApp
     {
         top = DrawSectionTitle(drawList, left, left + width, top, Loc.T(L.Prism.ModsHeading), string.Empty, scale) +
               Metrics.Space.Md * scale;
-        if (glamour.HasPenumbra)
-        {
-            var pick = new Rect(new Vector2(left, top), new Vector2(left + width, top + Button.RegularHeight * scale));
-            if (DrawButton(drawList, pick, Loc.T(L.Prism.PickMyMods), ButtonStyle.Tinted, scale,
-                    id: "prism.outfit.pickMods"))
-            {
-                OpenWornMods();
-            }
-
-            top = pick.Max.Y + Metrics.Space.Md * scale;
-        }
-        else
-        {
-            top += Typography.DrawWrappedLeft(new Vector2(left, top), Loc.T(L.Prism.ModsNeedPenumbra), PrismArt.Muted,
-                PrismType.Body, width) + Metrics.Space.Md * scale;
-        }
-
+        top = DrawPickModsButton(drawList, left, top, width, outfitMods, "prism.outfit.pickMods", scale);
         return DrawNamedMods(drawList, left, top, width, outfitMods, outfitGear, OutfitModId, scale);
+    }
+
+    private float DrawPickModsButton(ImDrawListPtr drawList, float left, float top, float width, ModDraft target,
+        string id, float scale)
+    {
+        if (!glamour.HasPenumbra)
+        {
+            return top + Typography.DrawWrappedLeft(new Vector2(left, top), Loc.T(L.Prism.ModsNeedPenumbra),
+                PrismArt.Muted, PrismType.Body, width) + Metrics.Space.Md * scale;
+        }
+
+        var pick = new Rect(new Vector2(left, top), new Vector2(left + width, top + Button.RegularHeight * scale));
+        if (DrawButton(drawList, pick, Loc.T(L.Prism.PickMyMods), ButtonStyle.Tinted, scale, id: id))
+        {
+            OpenWornMods(target);
+        }
+
+        return pick.Max.Y + Metrics.Space.Md * scale;
     }
 
     private float DrawEditorManage(ImDrawListPtr drawList, float left, float top, float width, WardrobeOutfit outfit,
@@ -206,16 +209,26 @@ internal sealed partial class PrismApp
 
     private void FillOutfitFromWearing()
     {
+        if (!FillFromWearing(outfitGear))
+        {
+            return;
+        }
+
+        outfitStateDraft = glamour.ReadState();
+        outfitStatePieces = OutfitFrom(outfitGear);
+    }
+
+    private bool FillFromWearing(GearDraft draft)
+    {
         var gear = glamour.Capture();
         if (CountPieces(gear) == 0)
         {
             ShellToast.Show(Loc.T(L.Prism.NothingToSave));
-            return;
+            return false;
         }
 
-        LoadGear(outfitGear, gear);
-        outfitStateDraft = glamour.ReadState();
-        outfitStatePieces = OutfitFrom(outfitGear);
+        LoadGear(draft, gear);
+        return true;
     }
 
     private void SaveOutfitDraft()
@@ -286,8 +299,9 @@ internal sealed partial class PrismApp
         composeSession.Open(true);
     }
 
-    private void OpenWornMods()
+    private void OpenWornMods(ModDraft target)
     {
+        wornTarget = target;
         wornMods.Clear();
         wornPicked.Clear();
         wornPickedCount = 0;
@@ -300,7 +314,7 @@ internal sealed partial class PrismApp
             for (var modIndex = 0; modIndex < mods.Length; modIndex++)
             {
                 var key = PostedMods.Key(mods[modIndex]);
-                if (outfitMods.Contains(key) || !seen.Add(key))
+                if (target.Contains(key) || !seen.Add(key))
                 {
                     continue;
                 }
@@ -395,11 +409,17 @@ internal sealed partial class PrismApp
 
     private void AddPickedMods()
     {
-        for (var index = 0; index < wornMods.Count && outfitMods.Count < MaxNamedMods; index++)
+        var target = wornTarget;
+        if (target is null)
+        {
+            return;
+        }
+
+        for (var index = 0; index < wornMods.Count && target.Count < MaxNamedMods; index++)
         {
             if (wornPicked[index])
             {
-                outfitMods.Add(wornMods[index].Mod, wornMods[index].Slot);
+                target.Add(wornMods[index].Mod, wornMods[index].Slot);
             }
         }
     }

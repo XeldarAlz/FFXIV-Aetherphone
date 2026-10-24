@@ -8,7 +8,8 @@ public sealed class CampaignTextsTests
 {
     private static readonly string[] ContractKeys =
     {
-        "tabTonight", "tabExperiences", "tabGallery", "tabPerks", "doorsOpenIn", "liveNow", "betweenSets",
+        "tabTonight", "tabDjs", "tabExperiences", "tabGallery", "tabPerks", "doorsOpenIn", "liveNow", "betweenSets",
+        "djsSub", "noDjs",
         "endedTitle", "endedBody", "keepNight", "keepNightHintLive", "keepNightHintBefore", "liveDj", "noStream",
         "streamHint", "watchTwitch", "shareTitle", "shareBody", "websiteNote", "postCta", "galleryCta", "pinned",
         "announcements",

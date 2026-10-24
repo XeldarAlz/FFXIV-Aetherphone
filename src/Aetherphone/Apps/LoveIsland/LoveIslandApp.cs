@@ -22,7 +22,7 @@ namespace Aetherphone.Apps.LoveIsland;
 
 internal sealed partial class LoveIslandApp : IResumableApp
 {
-    private const int TabCount = 4;
+    private const int TabCount = 5;
     private const string SettingsAppId = "settings";
     private const string AethergramAppId = "aethergram";
     private const string CoinAppId = "coin";
@@ -302,6 +302,9 @@ internal sealed partial class LoveIslandApp : IResumableApp
         {
             switch (activeTab)
             {
+                case LoveIslandTab.Djs:
+                    DrawDjsTab(area);
+                    break;
                 case LoveIslandTab.Experiences:
                     DrawExperiencesTab(area);
                     break;
@@ -326,6 +329,8 @@ internal sealed partial class LoveIslandApp : IResumableApp
         var unread = activeTab == LoveIslandTab.Tonight ? 0 : store.UnreadCount;
         tabItems[(int)LoveIslandTab.Tonight] = new TabItem(texts.T(CampaignTextKeys.TabTonight), PhoneIcons.Moon,
             PhoneIcons.MoonStars, unread, "loveisland.tab.tonight");
+        tabItems[(int)LoveIslandTab.Djs] = new TabItem(texts.T(CampaignTextKeys.TabDjs), PhoneIcons.Music,
+            PhoneIcons.Music, 0, "loveisland.tab.djs");
         tabItems[(int)LoveIslandTab.Experiences] = new TabItem(texts.T(CampaignTextKeys.TabExperiences),
             PhoneIcons.Calendar, PhoneIcons.CalendarFilled, 0, "loveisland.tab.experiences");
         tabItems[(int)LoveIslandTab.Gallery] = new TabItem(texts.T(CampaignTextKeys.TabGallery), PhoneIcons.Photo,

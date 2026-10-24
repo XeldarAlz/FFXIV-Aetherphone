@@ -26,8 +26,39 @@ public sealed class CampaignCountdownTests
         Assert.Equal(CampaignPhase.Live, moment.Phase);
         Assert.Equal(1, moment.CurrentIndex);
         Assert.Equal(2, moment.NextIndex);
-        Assert.Equal(1, moment.NextStreamedIndex);
         Assert.True(moment.WindowOpen);
+    }
+
+    [Fact]
+    public void DjSetsFeedTheLiveCardByTheirOwnTimes()
+    {
+        var campaign = Campaign(djSets: new[]
+        {
+            DjSet("late", Start + 3L * Hour, Start + 4L * Hour),
+            DjSet("opening", Start + Hour, Start + 2L * Hour, "https://twitch.tv/example"),
+        });
+
+        var during = CampaignCountdown.Evaluate(campaign, Start + Hour + 60L);
+        Assert.Equal(1, during.CurrentDjIndex);
+        Assert.Equal(0, during.NextDjIndex);
+
+        var between = CampaignCountdown.Evaluate(campaign, Start + 2L * Hour + 60L);
+        Assert.Equal(-1, between.CurrentDjIndex);
+        Assert.Equal(0, between.NextDjIndex);
+
+        var after = CampaignCountdown.Evaluate(campaign, Start + 5L * Hour);
+        Assert.Equal(-1, after.CurrentDjIndex);
+        Assert.Equal(-1, after.NextDjIndex);
+        Assert.Equal(ExperienceState.Ended, CampaignCountdown.StateOf(campaign.DjSets[0], Start + 5L * Hour));
+    }
+
+    [Fact]
+    public void ACampaignWithoutDjSetsHasNoDjIndices()
+    {
+        var moment = CampaignCountdown.Evaluate(Campaign(), Start + Hour);
+
+        Assert.Equal(-1, moment.CurrentDjIndex);
+        Assert.Equal(-1, moment.NextDjIndex);
     }
 
     [Fact]

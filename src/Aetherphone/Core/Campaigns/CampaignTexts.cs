@@ -9,6 +9,7 @@ internal readonly record struct CampaignTextArgs(string? N = null, string? Name 
 internal static class CampaignTextKeys
 {
     public const string TabTonight = "tabTonight";
+    public const string TabDjs = "tabDjs";
     public const string TabExperiences = "tabExperiences";
     public const string TabGallery = "tabGallery";
     public const string TabPerks = "tabPerks";
@@ -40,6 +41,8 @@ internal static class CampaignTextKeys
     public const string AboutFooter = "aboutFooter";
     public const string ExperiencesSub = "experiencesSub";
     public const string NothingScheduled = "nothingScheduled";
+    public const string DjsSub = "djsSub";
+    public const string NoDjs = "noDjs";
     public const string WhoIsOn = "whoIsOn";
     public const string RemindMe = "remindMe";
     public const string DcTravelNote = "dcTravelNote";
@@ -131,6 +134,7 @@ internal sealed class CampaignTexts
     public static LocString Default(string key) => key switch
     {
         CampaignTextKeys.TabTonight => L.LoveIsland.TabTonight,
+        CampaignTextKeys.TabDjs => L.LoveIsland.TabDjs,
         CampaignTextKeys.TabExperiences => L.LoveIsland.TabExperiences,
         CampaignTextKeys.TabGallery => L.LoveIsland.TabGallery,
         CampaignTextKeys.TabPerks => L.LoveIsland.TabPerks,
@@ -162,6 +166,8 @@ internal sealed class CampaignTexts
         CampaignTextKeys.AboutFooter => L.LoveIsland.AboutFooter,
         CampaignTextKeys.ExperiencesSub => L.LoveIsland.ExperiencesSub,
         CampaignTextKeys.NothingScheduled => L.LoveIsland.NothingScheduled,
+        CampaignTextKeys.DjsSub => L.LoveIsland.DjsSub,
+        CampaignTextKeys.NoDjs => L.LoveIsland.NoDjs,
         CampaignTextKeys.WhoIsOn => L.LoveIsland.WhoIsOn,
         CampaignTextKeys.RemindMe => L.LoveIsland.RemindMe,
         CampaignTextKeys.DcTravelNote => L.LoveIsland.DcTravelNote,

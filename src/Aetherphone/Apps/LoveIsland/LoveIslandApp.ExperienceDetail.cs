@@ -190,10 +190,15 @@ internal sealed partial class LoveIslandApp
     private float DrawAddressCard(ImDrawListPtr drawList, CampaignExperienceDto experience,
         ExperienceLabels experienceLabels, float left, float top, float width, float scale)
     {
-        cardButtons[0] = new CardButton(Loc.T(L.Maps.Teleport), true, DetailTeleportId);
-        cardButtons[1] = new CardButton(Loc.T(L.LoveIsland.CopyCommand), false, DetailCopyId);
+        var buttonCount = 0;
+        if (experienceLabels.CanTeleport)
+        {
+            cardButtons[buttonCount++] = new CardButton(Loc.T(L.Maps.Teleport), true, DetailTeleportId);
+            cardButtons[buttonCount++] = new CardButton(Loc.T(L.LoveIsland.CopyCommand), false, DetailCopyId);
+        }
+
         var bottom = DrawCard(drawList, left, top, width, new CardContent(AddressCardId, labels.WhereLine,
-            CardPill.None, string.Empty, experienceLabels.Address, experienceLabels.WardPlot, 0, 0, false), 2,
+            CardPill.None, string.Empty, experienceLabels.Address, experienceLabels.WardPlot, 0, 0, false), buttonCount,
             out var action);
         UiAnchors.Report("loveisland.detail.address", new Rect(new Vector2(left, top), new Vector2(left + width, bottom)));
         if (action == 0)

@@ -23,13 +23,30 @@ internal sealed class ExperienceLabels
     public string WardPlot = string.Empty;
     public string Command = string.Empty;
     public string Destination = string.Empty;
+    public bool CanTeleport;
     public DateTime LocalDay;
     public readonly ClampedLines RowTitle = new();
+}
+
+internal sealed class DjLabels
+{
+    public string RowId = string.Empty;
+    public string DayLabel = string.Empty;
+    public string StartClock = string.Empty;
+    public string EndClock = string.Empty;
+    public string Detail = string.Empty;
+    public string NextUpLine = string.Empty;
+    public string StreamLine = string.Empty;
+    public string OnAirLine = string.Empty;
+    public string WatchUrl = string.Empty;
+    public DateTime LocalDay;
+    public readonly ClampedLines NameLines = new();
 }
 
 internal sealed class LoveIslandLabels
 {
     private const string CommandPrefix = "/li ";
+    private const string DjRowPrefix = "loveisland.dj.";
     private const string CopyIdPrefix = "loveisland.syncshell.copyId.";
     private const string CopyPasswordPrefix = "loveisland.syncshell.copyPassword.";
 
@@ -48,12 +65,14 @@ internal sealed class LoveIslandLabels
     public string CoinsAmount = string.Empty;
     public string WhereLine = string.Empty;
     public ExperienceLabels[] Experiences = Array.Empty<ExperienceLabels>();
+    public DjLabels[] DjSets = Array.Empty<DjLabels>();
     public string[] LinkLabels = Array.Empty<string>();
     public string[] SyncshellServices = Array.Empty<string>();
     public string[] SyncshellCopyIdButtons = Array.Empty<string>();
     public string[] SyncshellCopyPasswordButtons = Array.Empty<string>();
 
     private readonly Dictionary<string, ExperienceLabels> experienceCache = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, DjLabels> djCache = new(StringComparer.Ordinal);
     private CampaignDto? source;
     private int textsVersion = -1;
     private LanguageInfo? language;
@@ -97,6 +116,7 @@ internal sealed class LoveIslandLabels
             CoinsAmount = string.Empty;
             WhereLine = string.Empty;
             Experiences = Array.Empty<ExperienceLabels>();
+            DjSets = Array.Empty<DjLabels>();
             LinkLabels = Array.Empty<string>();
             SyncshellServices = Array.Empty<string>();
             SyncshellCopyIdButtons = Array.Empty<string>();
@@ -111,7 +131,7 @@ internal sealed class LoveIslandLabels
             TimeText.Clock(campaign.StartsAtUnix));
         LiveChannelLine = string.IsNullOrEmpty(campaign.LiveChannel)
             ? string.Empty
-            : Loc.T(L.LoveIsland.LiveChannel, campaign.LiveChannel);
+            : Loc.T(L.LoveIsland.LiveChannel, LoveIslandKit.TwitchChannelName(campaign.LiveChannel));
         AboutTitle = Loc.T(L.LoveIsland.AboutTitle, campaign.Name);
         ExperiencesSub = string.Concat(campaign.DataCenter, LoveIslandKit.Separator,
             texts.T(CampaignTextKeys.ExperiencesSub));
@@ -123,6 +143,7 @@ internal sealed class LoveIslandLabels
         CoinsBody = texts.T(CampaignTextKeys.CoinsBody, new CampaignTextArgs(N: CoinsAmount));
         WhereLine = Loc.T(L.LoveIsland.Where, campaign.DataCenter);
         RebuildExperiences(campaign);
+        RebuildDjSets(campaign);
         RebuildLinks(campaign);
         RebuildSyncshells(campaign);
     }
@@ -159,9 +180,11 @@ internal sealed class LoveIslandLabels
             ? DateTimeOffset.FromUnixTimeSeconds(experience.StartsAtUnix).ToLocalTime().Date
             : DateTime.MinValue;
         labels.Lineup = LineupNames(campaign, experience);
+        var housing = experience.Place.Length == 0;
+        var where = housing ? experience.District : experience.Place;
         var detail = labels.Lineup.Length > 0
             ? labels.Lineup
-            : experience.Spot.Length > 0 ? experience.Spot : experience.District;
+            : experience.Spot.Length > 0 ? experience.Spot : where;
         labels.RowDetail = string.IsNullOrEmpty(experience.TwitchUrl)
             ? detail
             : string.Concat(detail, LoveIslandKit.Separator, streamed);
@@ -173,14 +196,76 @@ internal sealed class LoveIslandLabels
         labels.FirstUpLine = Loc.T(L.LoveIsland.FirstUp, experience.Title);
         labels.StreamLine = string.Concat(TimeText.FutureMoment(experience.StartsAtUnix), LoveIslandKit.Separator,
             labels.Lineup.Length > 0 ? labels.Lineup : experience.Stage);
-        labels.Address = string.Concat(experience.World, LoveIslandKit.Separator, experience.District);
+        labels.Address = Join(experience.World, where);
+        labels.CanTeleport = housing;
+        if (!housing)
+        {
+            labels.WardPlot = experience.Spot;
+            labels.Command = string.Empty;
+            labels.Destination = string.Empty;
+            return;
+        }
+
         var wardPlot = Loc.T(L.LoveIsland.WardPlot, experience.Ward, experience.Plot);
-        labels.WardPlot = experience.Spot.Length > 0 ? string.Concat(wardPlot, LoveIslandKit.Separator, experience.Spot) : wardPlot;
+        labels.WardPlot = Join(wardPlot, experience.Spot);
         labels.Command = LifestreamBridge.HousingCommand(experience.World, LoveIslandKit.StripThe(experience.District),
             experience.Ward, experience.Plot);
         labels.Destination = labels.Command.StartsWith(CommandPrefix, StringComparison.Ordinal)
             ? labels.Command.Substring(CommandPrefix.Length)
             : labels.Command;
+    }
+
+    private void RebuildDjSets(CampaignDto campaign)
+    {
+        var djSets = campaign.DjSets;
+        var rebuilt = DjSets.Length == djSets.Length ? DjSets : new DjLabels[djSets.Length];
+        var streamed = Loc.T(L.LoveIsland.Streamed);
+        var channel = LoveIslandKit.TwitchChannelName(campaign.LiveChannel ?? string.Empty);
+        var channelUrl = channel.Length > 0 ? string.Concat(LoveIslandKit.TwitchHostPrefix, channel) : string.Empty;
+        for (var index = 0; index < djSets.Length; index++)
+        {
+            var djSet = djSets[index];
+            if (!djCache.TryGetValue(djSet.Id, out var labels))
+            {
+                labels = new DjLabels { RowId = DjRowPrefix + djSet.Id };
+                djCache[djSet.Id] = labels;
+            }
+
+            FillDj(labels, djSet, streamed, channel, channelUrl);
+            rebuilt[index] = labels;
+        }
+
+        DjSets = rebuilt;
+    }
+
+    private static void FillDj(DjLabels labels, CampaignDjSetDto djSet, string streamed, string channel,
+        string channelUrl)
+    {
+        labels.DayLabel = TimeText.FutureDayLabel(djSet.StartsAtUnix);
+        labels.StartClock = TimeText.Clock(djSet.StartsAtUnix);
+        labels.EndClock = TimeText.Clock(djSet.EndsAtUnix);
+        labels.LocalDay = djSet.StartsAtUnix > 0
+            ? DateTimeOffset.FromUnixTimeSeconds(djSet.StartsAtUnix).ToLocalTime().Date
+            : DateTime.MinValue;
+        var about = Join(djSet.Title, djSet.Stage);
+        var ownUrl = djSet.TwitchUrl ?? string.Empty;
+        labels.WatchUrl = ownUrl.Length > 0 ? ownUrl : channelUrl;
+        labels.Detail = labels.WatchUrl.Length > 0 ? Join(about, streamed) : about;
+        labels.NextUpLine = Loc.T(L.LoveIsland.NextUp, djSet.Name);
+        labels.StreamLine = Join(TimeText.FutureMoment(djSet.StartsAtUnix), about);
+        var setChannel = ownUrl.Length > 0 ? LoveIslandKit.TwitchChannelName(ownUrl) : channel;
+        var channelLine = setChannel.Length > 0 ? Loc.T(L.LoveIsland.LiveChannel, setChannel) : string.Empty;
+        labels.OnAirLine = Join(Join(Loc.T(L.LoveIsland.UntilClock, labels.EndClock), about), channelLine);
+    }
+
+    private static string Join(string left, string right)
+    {
+        if (left.Length == 0)
+        {
+            return right;
+        }
+
+        return right.Length == 0 ? left : string.Concat(left, LoveIslandKit.Separator, right);
     }
 
     private static string LineupNames(CampaignDto campaign, CampaignExperienceDto experience)

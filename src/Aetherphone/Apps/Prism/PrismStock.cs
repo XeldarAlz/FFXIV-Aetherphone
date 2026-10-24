@@ -20,6 +20,10 @@ internal enum PrismPicture : byte
     GuideLibraryFourth,
     GuideLibraryFifth,
     GuideLibrarySixth,
+    GuideWardrobe,
+    GuideExploreFirst,
+    GuideExploreSecond,
+    GuideExploreThird,
 }
 
 internal static class PrismStock
@@ -29,7 +33,8 @@ internal static class PrismStock
         string.Empty, "track-modded.png", "track-vanilla.png", "guide-judging.png", "guide-podium-first.png",
         "guide-podium-second.png", "guide-podium-third.png", "guide-try-on.png", "guide-library-1.jpg",
         "guide-library-2.jpg", "guide-library-3.jpg", "guide-library-4.png", "guide-library-5.png",
-        "guide-library-6.png",
+        "guide-library-6.png", "guide-wardrobe.png", "guide-explore-first.png", "guide-explore-second.png",
+        "guide-explore-third.png",
     };
     private static readonly string[] Paths = BuildPaths();
 

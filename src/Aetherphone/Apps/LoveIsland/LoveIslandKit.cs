@@ -23,6 +23,7 @@ internal static class LoveIslandKit
     public const float HeroMaxHeight = 240f;
     public const float ThumbOversample = 2f;
     public const string Separator = " · ";
+    public const string TwitchHostPrefix = "https://twitch.tv/";
 
     public static readonly TextStyle EyebrowStyle = TextStyles.FootnoteEmphasized;
     public static readonly TextStyle CardTitleStyle = TextStyles.Headline;
@@ -248,6 +249,26 @@ internal static class LoveIslandKit
 
         color = new Vector4(((packed >> 16) & 0xFF) / 255f, ((packed >> 8) & 0xFF) / 255f, (packed & 0xFF) / 255f, 1f);
         return true;
+    }
+
+    public static string TwitchChannelName(string channel)
+    {
+        const string host = "twitch.tv/";
+        var span = channel.AsSpan().Trim();
+        var hostIndex = span.IndexOf(host, StringComparison.OrdinalIgnoreCase);
+        if (hostIndex >= 0)
+        {
+            span = span.Slice(hostIndex + host.Length);
+        }
+
+        var end = span.IndexOfAny('/', '?', '#');
+        if (end >= 0)
+        {
+            span = span.Slice(0, end);
+        }
+
+        span = span.TrimStart('@');
+        return span.Length == channel.Length ? channel : span.ToString();
     }
 
     public static string StripThe(string district)

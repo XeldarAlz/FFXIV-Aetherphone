@@ -203,7 +203,6 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public int PrismGuideVersion { get; set; }
     public long PrismShowcaseEndsAtUnix { get; set; }
     public bool PrismShowcaseOpened { get; set; }
-    public bool PrismAutoCapture { get; set; }
     public float ScreenBrightness { get; set; } = 1f;
     public float PhoneScale { get; set; } = PhoneSizeCatalog.DefaultWidth / PhoneSizeCatalog.DesignWidth;
     public float PhoneWidth { get; set; }

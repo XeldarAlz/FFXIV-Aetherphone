@@ -429,11 +429,20 @@ internal sealed class CampaignLedger
             Array.Sort(sorted, ByStart);
         }
 
+        var djSets = campaign.DjSets ?? Array.Empty<CampaignDjSetDto>();
+        var sortedDjSets = djSets;
+        if (!IsSortedByStart(djSets))
+        {
+            sortedDjSets = (CampaignDjSetDto[])djSets.Clone();
+            Array.Sort(sortedDjSets, ByStart);
+        }
+
         return campaign with
         {
             Links = campaign.Links ?? Array.Empty<CampaignLinkDto>(),
             Texts = campaign.Texts ?? Array.Empty<CampaignTextDto>(),
             Experiences = sorted,
+            DjSets = sortedDjSets,
             Members = campaign.Members ?? Array.Empty<CampaignMemberDto>(),
             Syncshells = campaign.Syncshells ?? Array.Empty<CampaignSyncshellDto>(),
             Reward = campaign.Reward ?? new CampaignRewardDto(null, null, null, null, 0),
@@ -454,6 +463,25 @@ internal sealed class CampaignLedger
     }
 
     private static int ByStart(CampaignExperienceDto left, CampaignExperienceDto right)
+    {
+        var byTime = left.StartsAtUnix.CompareTo(right.StartsAtUnix);
+        return byTime != 0 ? byTime : string.CompareOrdinal(left.Id, right.Id);
+    }
+
+    private static bool IsSortedByStart(CampaignDjSetDto[] djSets)
+    {
+        for (var index = 1; index < djSets.Length; index++)
+        {
+            if (djSets[index - 1].StartsAtUnix > djSets[index].StartsAtUnix)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static int ByStart(CampaignDjSetDto left, CampaignDjSetDto right)
     {
         var byTime = left.StartsAtUnix.CompareTo(right.StartsAtUnix);
         return byTime != 0 ? byTime : string.CompareOrdinal(left.Id, right.Id);

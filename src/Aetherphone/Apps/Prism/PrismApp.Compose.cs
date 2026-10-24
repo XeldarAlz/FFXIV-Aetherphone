@@ -18,7 +18,6 @@ internal sealed partial class PrismApp
     private const int TitleMaxLength = 60;
     private const int TagsMaxLength = 80;
     private const int MaxTags = 6;
-    private const double RecaptureSeconds = 1.0;
     private const double HeaderSweepMs = 900d;
     private const float HeaderSweepArc = 1.6f;
     private const float HeaderGlyphShare = 0.475f;
@@ -28,8 +27,6 @@ internal sealed partial class PrismApp
     private const int MaxNamedMods = 20;
     private const string ComposeRaceId = "prism.composeRace";
     private const string ComposeGenderId = "prism.composeGender";
-
-    private const string AutoCaptureToggleId = "prism.autoCapture";
 
     private readonly PhotoComposeSession composeSession;
     private readonly HashSet<string> droppedMods = new(StringComparer.Ordinal);
@@ -55,19 +52,13 @@ internal sealed partial class PrismApp
     private string postedId = string.Empty;
     private int composeDraft;
     private int postingDraft;
-    private CachedText capturedText;
-    private double recaptureAt;
-
-    private bool AutoCapture => configuration.PrismAutoCapture;
 
     private void StartCompose()
     {
         composeDraft++;
-        droppedMods.Clear();
         composeSession.Open(false);
         composeSession.MaxPhotos = GlamStore.MaxPhotos;
         composeDetails = false;
-        captured = Array.Empty<GlamGearDto>();
         glamGear.Clear();
         composeMods.Clear();
         composeVanilla = null;
@@ -95,11 +86,6 @@ internal sealed partial class PrismApp
             scale, out var advance) + Metrics.Space.Sm * scale;
         if (advance)
         {
-            if (AutoCapture)
-            {
-                captured = glamour.Capture();
-            }
-
             composeDetails = true;
             focusTitle = true;
         }
@@ -197,7 +183,7 @@ internal sealed partial class PrismApp
     {
         bodyRaceMenu.Gate();
         var bodyChosen = BodyChosen(composeRace, composeGender);
-        var gearReady = composeVanilla != true || PostedPieces() > 0;
+        var gearReady = composeVanilla != true || DraftPieces() > 0;
         var ready = !string.IsNullOrWhiteSpace(glamTitle) && !glams.Posting && composeVanilla is not null &&
                     bodyChosen && gearReady;
         var top = DrawActionHeader(drawList, content, PhoneIcons.ChevronLeft, Loc.T(L.Prism.Back),
@@ -211,11 +197,6 @@ internal sealed partial class PrismApp
 
         var left = content.Min.X;
         var width = content.Width;
-        if (AutoCapture && RecaptureDue())
-        {
-            captured = glamour.Capture();
-        }
-
         var bottom = content.Max.Y - PrismArt.BottomMargin(scale);
         var failureHeight = 0f;
         var notice = string.Empty;
@@ -267,10 +248,7 @@ internal sealed partial class PrismApp
             cursor = DrawTrackChoice(origin.X, cursor, bodyWidth, scale);
             cursor = DrawBodyField(list, origin.X, cursor, bodyWidth, ComposeRaceId, ComposeGenderId,
                 ref composeRace, ref composeGender, scale);
-            cursor = DrawAutoCaptureToggle(list, origin.X, cursor, bodyWidth, scale);
-            cursor = AutoCapture
-                ? DrawCaptured(list, origin.X, cursor, bodyWidth, scale)
-                : DrawChosenGear(list, origin.X, cursor, bodyWidth, scale);
+            cursor = DrawChosenGear(list, origin.X, cursor, bodyWidth, scale);
             ImGui.SetCursorScreenPos(origin);
             ImGui.Dummy(new Vector2(bodyWidth, cursor - origin.Y));
         }
@@ -317,38 +295,6 @@ internal sealed partial class PrismApp
         return top + cardHeight;
     }
 
-    private float DrawStillTryingOn(ImDrawListPtr drawList, float left, float top, float width, float scale)
-    {
-        if (!glamour.TryingOn)
-        {
-            return top;
-        }
-
-        top += Typography.DrawWrappedLeft(new Vector2(left, top), Loc.T(L.Prism.StillTryingOn), PrismArt.Fore,
-            PrismType.Body, width) + Metrics.Space.Xs * scale;
-        var label = Loc.T(L.Prism.TakeOff);
-        var takeOff = new Rect(new Vector2(left, top),
-            new Vector2(left + ButtonWidth([label], width, scale), top + Button.LargeHeight * scale));
-        if (DrawButton(drawList, takeOff, label, ButtonStyle.Plain, scale))
-        {
-            glamour.Revert();
-            recaptureAt = ImGui.GetTime() + RecaptureSeconds;
-        }
-
-        return takeOff.Max.Y;
-    }
-
-    private bool RecaptureDue()
-    {
-        if (recaptureAt <= 0d || ImGui.GetTime() < recaptureAt)
-        {
-            return false;
-        }
-
-        recaptureAt = 0d;
-        return true;
-    }
-
     private float DrawField(ImDrawListPtr drawList, float left, float top, float width, string label, string hint,
         string id, ref string text, int maxLength, float scale)
     {
@@ -388,65 +334,28 @@ internal sealed partial class PrismApp
         return top + tap + Metrics.Space.Lg * scale;
     }
 
-    private float DrawAutoCaptureToggle(ImDrawListPtr drawList, float left, float top, float width, float scale)
-    {
-        var size = new Vector2(Metrics.Size.ToggleWidth, Metrics.Size.ToggleHeight) * scale;
-        var labelLine = Typography.LineHeight(PrismType.Headline);
-        var rowHeight = MathF.Max(size.Y, labelLine);
-        var toggleMin = new Vector2(left + width - size.X, top + (rowHeight - size.Y) * 0.5f);
-        var room = MathF.Max(1f, width - size.X - Metrics.Space.Md * scale);
-        Typography.Draw(drawList, new Vector2(left, top + (rowHeight - labelLine) * 0.5f),
-            Typography.FitText(Loc.T(L.Prism.AutoCaptureLabel), room, PrismType.Headline), PrismArt.Fore,
-            PrismType.Headline);
-        var on = Toggle.Draw(AutoCaptureToggleId, new Rect(toggleMin, toggleMin + size), AutoCapture, ui.Theme);
-        if (on != AutoCapture)
-        {
-            configuration.PrismAutoCapture = on;
-            configuration.Save();
-            if (on)
-            {
-                captured = glamour.Capture();
-            }
-        }
-
-        top += rowHeight + Metrics.Space.Xxs * scale;
-        top += Typography.DrawWrappedLeft(new Vector2(left, top), Loc.T(L.Prism.AutoCaptureHint), PrismArt.Muted,
-            PrismType.Caption, room);
-        return top + Metrics.Space.Lg * scale;
-    }
-
-    private float DrawCaptured(ImDrawListPtr drawList, float left, float top, float width, float scale)
-    {
-        top = DrawSectionTitle(drawList, left, left + width, top, Loc.T(L.Prism.CapturedHeading), string.Empty,
-            scale) + Metrics.Space.Xxs * scale;
-        SyncCapturedMods();
-        Typography.Draw(drawList, new Vector2(left, top), CapturedLine(), PrismArt.Muted, PrismType.Caption);
-        top += Typography.LineHeight(PrismType.Caption) + Metrics.Space.Md * scale;
-        var note = PrismType.Sentences(Loc.T(L.Prism.CapturedNote), PrismType.Body, width);
-        top += Typography.DrawWrappedLeft(new Vector2(left, top), note, PrismArt.Muted, PrismType.Body,
-            PrismType.BalancedWidth(note, PrismType.Body, width)) + Metrics.Space.Md * scale;
-        if (composeVanilla == false)
-        {
-            top = DrawModRows(drawList, left, top, width, scale);
-        }
-
-        return DrawStillTryingOn(drawList, left, top, width, scale) + PrismArt.BottomMargin(scale);
-    }
-
     private float DrawChosenGear(ImDrawListPtr drawList, float left, float top, float width, float scale)
     {
-        top = DrawSectionTitle(drawList, left, left + width, top + Metrics.Space.Sm * scale, Loc.T(L.Prism.YourGear),
-            string.Empty, scale) + Metrics.Space.Xs * scale;
+        top = DrawSectionTitle(drawList, left, left + width, top + Metrics.Space.Sm * scale,
+            Loc.T(L.Prism.PiecesHeading), string.Empty, scale) + Metrics.Space.Xs * scale;
         top += Typography.DrawWrappedLeft(new Vector2(left, top), Loc.T(L.Prism.GlamGearNote), PrismArt.Muted,
-            PrismType.Body, width) + Metrics.Space.Lg * scale;
-        top = DrawGearSlots(drawList, left, top, width, scale);
+            PrismType.Body, width) + Metrics.Space.Md * scale;
+        var fill = new Rect(new Vector2(left, top), new Vector2(left + width, top + Button.RegularHeight * scale));
+        if (DrawButton(drawList, fill, Loc.T(L.Prism.FillFromWearing), ButtonStyle.Tinted, scale,
+                id: "prism.compose.fill"))
+        {
+            FillFromWearing(glamGear);
+        }
+
+        top = DrawGearSlots(drawList, left, fill.Max.Y + Metrics.Space.Lg * scale, width, scale);
         if (composeVanilla != false)
         {
             return top + PrismArt.BottomMargin(scale);
         }
 
-        top = DrawSectionTitle(drawList, left, left + width, top + Metrics.Space.Lg * scale, Loc.T(L.Prism.YourMods),
-            string.Empty, scale) + Metrics.Space.Sm * scale;
+        top = DrawSectionTitle(drawList, left, left + width, top + Metrics.Space.Lg * scale,
+            Loc.T(L.Prism.ModsHeading), string.Empty, scale) + Metrics.Space.Md * scale;
+        top = DrawPickModsButton(drawList, left, top, width, composeMods, "prism.compose.pickMods", scale);
         return DrawNamedMods(drawList, left, top, width, composeMods, glamGear, "##glamMod", scale) +
                PrismArt.BottomMargin(scale);
     }
@@ -626,46 +535,10 @@ internal sealed partial class PrismApp
         capturedMods = mods.ToArray();
     }
 
-    private int CapturedPieces()
-    {
-        var pieces = 0;
-        for (var index = 0; index < captured.Length; index++)
-        {
-            if (captured[index].ItemId != 0)
-            {
-                pieces++;
-            }
-        }
-
-        return pieces;
-    }
-
-    private int PostedPieces() => AutoCapture ? CapturedPieces() : DraftPieces();
-
-    private string CapturedLine()
-    {
-        var pieces = CapturedPieces();
-        var mods = KeptModCount();
-        var key = HashCode.Combine(pieces, mods, Loc.Current.Code);
-        return capturedText.IsCurrent(key)
-            ? capturedText.Value
-            : capturedText.Store(key, Loc.T(L.Prism.CapturedCounts, pieces, mods));
-    }
-
     private void PostGlam()
     {
         var vanilla = composeVanilla == true;
-        GlamGearDto[] gear;
-        if (AutoCapture)
-        {
-            captured = glamour.Capture();
-            gear = vanilla ? PostedMods.Unmodded(captured) : PostedMods.Without(captured, droppedMods);
-        }
-        else
-        {
-            gear = ChosenGear();
-        }
-
+        var gear = ChosenGear();
         var paths = composeSession.SelectedArray();
         var crops = composeSession.CropsArray();
         var count = Math.Min(paths.Length, GlamStore.MaxPhotos);
