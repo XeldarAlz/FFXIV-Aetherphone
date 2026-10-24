@@ -25,7 +25,6 @@ internal sealed partial class AethergramApp
     private const float InboxPinGap = 6f;
     private const float InboxTickGlyph = 14f;
     private const float InboxTickGap = 4f;
-    private const int MaxPinnedChats = 3;
     private const long MinuteTicks = 60000;
 
     private static readonly TextStyle InboxHeadingStyle = TextStyles.Title3;
@@ -35,7 +34,6 @@ internal sealed partial class AethergramApp
     private static readonly TextStyle InboxPreviewUnreadStyle = TextStyles.SubheadlineEmphasized;
     private static readonly TextStyle InboxPreviewStyle = TextStyles.Subheadline;
 
-    private readonly ActionSheet.Item[] inboxRowSheetItems = new ActionSheet.Item[3];
     private readonly List<GramThreadDto> inboxPinned = new();
     private readonly List<GramThreadDto> inboxFiltered = new();
     private readonly Dictionary<string, InboxPreviewLine> inboxPreviews = new(StringComparer.Ordinal);
@@ -51,8 +49,6 @@ internal sealed partial class AethergramApp
     private bool inboxShowRequests;
     private string inboxRequestsLabel = string.Empty;
     private int inboxRequestsLabelCount = -1;
-    private string? inboxSheetThreadId;
-    private string inboxSheetTitle = string.Empty;
 
     private void DrawInbox(Rect area)
     {
@@ -373,7 +369,7 @@ internal sealed partial class AethergramApp
 
         if (cell.Hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
         {
-            OpenInboxRowSheet(thread);
+            inboxRowSheet.Open(thread.OtherUserId, SocialIdentity.Name(thread.OtherDisplayName, thread.OtherHandle));
         }
         else if (cell.Tapped)
         {
@@ -420,84 +416,15 @@ internal sealed partial class AethergramApp
         return line;
     }
 
-    private void OpenInboxRowSheet(GramThreadDto thread)
-    {
-        inboxSheetThreadId = thread.OtherUserId;
-        inboxSheetTitle = SocialIdentity.Name(thread.OtherDisplayName, thread.OtherHandle);
-        var pinned = configuration.AethergramPinnedThreads.Contains(thread.OtherUserId);
-        var archived = configuration.AethergramArchivedThreads.Contains(thread.OtherUserId);
-        inboxRowSheetItems[0] = new ActionSheet.Item(Loc.T(pinned ? L.Common.Unpin : L.Common.Pin),
-            pinned ? PhoneIcons.PinFilled : PhoneIcons.Pin);
-        inboxRowSheetItems[1] = new ActionSheet.Item(
-            Loc.T(archived ? L.Social.UnarchiveAction : L.Social.ArchiveAction), PhoneIcons.Archive);
-        inboxRowSheetItems[2] = new ActionSheet.Item(Loc.T(L.Aethergram.DeleteConversation), PhoneIcons.Trash, true);
-        inboxRowSheet.Open();
-    }
-
     private void DrawInboxRowSheet(Rect screen)
     {
-        if (!inboxRowSheet.CapturesPointer)
-        {
-            return;
-        }
-
         if (inboxRowSheet.IsOpen
             && router.Current.Screen is not (AethergramScreen.Inbox or AethergramScreen.InboxArchived))
         {
             inboxRowSheet.Close();
         }
 
-        var picked = inboxRowSheet.Draw(screen, ActionSheetStyle.From(ui), inboxRowSheetItems,
-            Loc.T(L.Common.Cancel), false, inboxSheetTitle);
-        if (picked < 0 || inboxSheetThreadId is not { } otherId)
-        {
-            return;
-        }
-
-        switch (picked)
-        {
-            case 0:
-                ToggleInboxPinned(otherId);
-                break;
-            case 1:
-                ToggleInboxArchived(otherId);
-                break;
-            case 2:
-                AskDeleteConversation(otherId);
-                break;
-        }
-    }
-
-    private void ToggleInboxPinned(string otherId)
-    {
-        var pinned = configuration.AethergramPinnedThreads;
-        if (!pinned.Remove(otherId))
-        {
-            if (pinned.Count >= MaxPinnedChats)
-            {
-                toast.Show(Loc.T(L.Social.PinChatLimit, MaxPinnedChats));
-                return;
-            }
-
-            pinned.Add(otherId);
-            configuration.AethergramArchivedThreads.Remove(otherId);
-        }
-
-        configuration.Save();
-        inboxFilterDirty = true;
-    }
-
-    private void ToggleInboxArchived(string otherId)
-    {
-        var archived = configuration.AethergramArchivedThreads;
-        if (!archived.Remove(otherId))
-        {
-            archived.Add(otherId);
-            configuration.AethergramPinnedThreads.Remove(otherId);
-        }
-
-        configuration.Save();
-        inboxFilterDirty = true;
+        inboxRowSheet.Draw(screen, ui);
     }
 
     private void AskDeleteConversation(string otherId)
@@ -518,12 +445,7 @@ internal sealed partial class AethergramApp
     {
         var current = router.Current;
         var threadOpen = current.Screen == AethergramScreen.Thread && current.Id == otherId;
-        if (configuration.AethergramPinnedThreads.Remove(otherId) | configuration.AethergramArchivedThreads.Remove(otherId))
-        {
-            configuration.Save();
-            inboxFilterDirty = true;
-        }
-
+        inboxRowSheet.Forget(otherId);
         dmStore.DeleteThread(otherId);
         if (threadOpen)
         {
