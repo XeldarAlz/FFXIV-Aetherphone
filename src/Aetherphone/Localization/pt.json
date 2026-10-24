@@ -1153,6 +1153,7 @@
   "changelog.r1400.39": "Adicionamos um botão Responder abaixo dos comentários, que começa o seu comentário com o @nome de usuário da pessoa, contribuição de hellovvn",
   "changelog.r1400.40": "Alteramos os ícones das barras de abas e dos cabeçalhos para um mesmo tamanho óptico, deixando ícones preenchidos e de contorno equilibrados lado a lado, contribuição de t3sco",
   "changelog.r1400.41": "Corrigimos ícones que ficavam um pouco fora do centro nos botões e tremiam ao passar o cursor, contribuição de t3sco",
+  "changelog.r1400.43": "Adicionamos Travar posição e Sempre no topo em Ajustes > Telefone minimizado, para manter o minitelefone onde você o colocou ou deixar outras janelas ficarem por cima, contribuição de hellovvn",
   "changelog.r1400.42": "Adicionamos uma aba DJs ao Love Island Eclipse que lista cada set com quem toca, quando e quais são transmitidos, e o cartão DJ ao vivo agora segue essa lista",
   "changelog.r1400.5": "Adicionamos a ocultação de mensagens de pessoas que você bloqueou nos chats de grupo do ChocoChat: cada uma aparece como uma linha curta que você pode tocar para ler, e elas não te notificam mais",
   "changelog.r1400.6": "Corrigidas as mensagens de voz gravadas com Ganho automático que distorciam quando você levantava a voz e ficavam baixas depois",

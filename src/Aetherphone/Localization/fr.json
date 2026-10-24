@@ -1153,6 +1153,7 @@
   "changelog.r1400.39": "Ajout d'un bouton Répondre sous les commentaires, qui commence votre commentaire par son @nom d'utilisateur, contribution de hellovvn",
   "changelog.r1400.40": "Modification des icônes des barres d'onglets et des en-têtes vers une même taille optique, pour que les icônes pleines et en contour paraissent égales côte à côte, contribution de t3sco",
   "changelog.r1400.41": "Correction des icônes légèrement décentrées sur leurs boutons et qui tremblaient au survol, contribution de t3sco",
+  "changelog.r1400.43": "Ajout de Verrouiller la position et Toujours au premier plan dans Réglages > Téléphone réduit, pour garder le mini téléphone à sa place ou laisser d'autres fenêtres passer par-dessus, contribution de hellovvn",
   "changelog.r1400.42": "Ajout d'un onglet DJs dans Love Island Eclipse qui liste chaque set avec qui mixe, quand et lesquels sont diffusés, et la carte DJ en direct suit désormais cette liste",
   "changelog.r1400.5": "Ajout du masquage des messages des personnes bloquées dans les discussions de groupe ChocoChat : chacun apparaît comme une ligne courte à toucher pour le lire, et ils ne vous notifient plus",
   "changelog.r1400.6": "Correction des messages vocaux enregistrés avec le Gain automatique qui saturaient quand vous haussiez la voix puis restaient faibles",

@@ -1153,6 +1153,7 @@
   "changelog.r1400.39": "Added a Reply button under comments that starts your comment with their @handle, contributed by hellovvn",
   "changelog.r1400.40": "Changed tab bar and header icons to one optical size, so solid and outline icons look even side by side, contributed by t3sco",
   "changelog.r1400.41": "Fixed icons sitting slightly off center on their buttons and wiggling on hover, contributed by t3sco",
+  "changelog.r1400.43": "Added Lock position and Always on top to Settings > Minimized phone, to keep the mini phone where you put it or let other windows sit over it, contributed by hellovvn",
   "changelog.r1400.42": "Added a DJs tab to Love Island Eclipse that lists every set with who plays when and which ones stream, and the Live DJ card on Tonight now follows that list",
   "changelog.r1400.5": "Added hiding messages from people you blocked in ChocoChat group chats: each shows as a short row you can tap to read, and they no longer notify you",
   "changelog.r1400.6": "Fixed voice messages recorded with Automatic gain distorting when you raise your voice and staying quiet afterwards",

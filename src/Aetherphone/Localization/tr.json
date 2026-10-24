@@ -1153,6 +1153,7 @@
   "changelog.r1400.39": "Yorumların altına, yorumunu kişinin @kullanıcı adıyla başlatan Yanıtla düğmesi eklendi, katkı: hellovvn",
   "changelog.r1400.40": "Sekme çubuğu ve başlık simgeleri aynı optik boyuta getirildi, böylece dolgulu ve çizgi simgeler yan yana dengeli görünüyor, katkı: t3sco",
   "changelog.r1400.41": "Simgelerin düğmelerinde hafifçe ortadan kayık durması ve üzerine gelince titremesi düzeltildi, katkı: t3sco",
+  "changelog.r1400.43": "Ayarlar > Küçültülmüş telefon altına Konumu kilitle ve Her zaman üstte eklendi; mini telefon bıraktığınız yerde kalabilir ya da diğer pencereler üstüne gelebilir, katkı: hellovvn",
   "changelog.r1400.42": "Love Island Eclipse'e her seti kimin ne zaman çaldığı ve hangilerinin yayınlandığıyla listeleyen bir DJ'ler sekmesi eklendi ve Canlı DJ kartı artık bu listeyi izliyor",
   "changelog.r1400.5": "ChocoChat grup sohbetlerinde engellediğin kişilerin mesajlarını gizleme eklendi: her biri okumak için dokunabileceğin kısa bir satır olarak görünür ve artık bildirim göndermez",
   "changelog.r1400.6": "Otomatik kazançla kaydedilen sesli mesajların sesini yükselttiğinde bozulması ve ardından kısık kalması düzeltildi",
