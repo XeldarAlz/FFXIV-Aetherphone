@@ -16,10 +16,17 @@ internal sealed class MinimizedPhonePage : ISettingsPage
     private const float ToggleGap = 10f;
     private const float StagePadding = Metrics.Space.Lg;
 
+    private static readonly SettingsEntry[] Searchable =
+    {
+        new(L.Minimized.LockPosition, L.Minimized.Placement),
+        new(L.Minimized.AlwaysOnTop, L.Minimized.Placement),
+    };
+
     public string Title => Loc.T(L.Minimized.Title);
     public string Summary => string.Empty;
     public FontAwesomeIcon Icon => FontAwesomeIcon.MobileAlt;
     public Vector4 Tint => new(0.98f, 0.58f, 0.16f, 1f);
+    public ReadOnlySpan<SettingsEntry> Entries => Searchable;
     private readonly MinimizedLayoutService layout;
     private readonly MinimizedPreview preview;
     private readonly Configuration configuration;

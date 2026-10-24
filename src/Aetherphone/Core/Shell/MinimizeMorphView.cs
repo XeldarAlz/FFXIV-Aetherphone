@@ -12,6 +12,7 @@ internal sealed class MinimizeMorphView
     private const float FaceFadeEnd = 0.95f;
     private const float RailFadeEnd = 0.55f;
     private const string VeilLayerId = "morphveil";
+    private const string FaceLayerId = "morphface";
 
     private static readonly HardwareKey[] HardwareKeys =
     {
@@ -66,6 +67,7 @@ internal sealed class MinimizeMorphView
         RevealMorphContent(DeviceChrome.Chassis(device, theme), theme, geometry, eased, device.IsLandscape());
 
         var faceAlpha = Easing.Segment(eased, FaceFadeStart, FaceFadeEnd);
+        using var faceLayer = ScreenLayer.BeginPassive(FaceLayerId, body);
         minimizedPhone.DrawFace(minimizedPhone.LayerDrawList(), geometry, theme, delta, false, faceAlpha);
     }
 

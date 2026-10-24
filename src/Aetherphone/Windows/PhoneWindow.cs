@@ -250,7 +250,7 @@ internal sealed class PhoneWindow : Window
         }
 
         Components.DragScrollHost.Enabled = locked;
-        if (phase == MinimizePhase.Expanding && lastPhase != MinimizePhase.Expanding)
+        if (lastPhase == MinimizePhase.Minimized && phase != MinimizePhase.Minimized)
         {
             BringToFront();
         }
