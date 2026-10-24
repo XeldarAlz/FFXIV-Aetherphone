@@ -39,15 +39,12 @@ internal static class RealGlass
         layer.BeginFrame();
     }
 
+    public static GlassGroup Group() => new(layer);
+
     public static bool TryDraw(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius, RealGlassKind kind,
         GlassTone tone, Vector4 accent, float opacity)
     {
-        if (configuration is not { RealGlass: true } settings || layer is not { Ready: true, Suspended: false } glass)
-        {
-            return false;
-        }
-
-        if (glass.Quality == GlassQuality.Flat || !OnMainViewport())
+        if (configuration is not { RealGlass: true } settings || layer is not { } glass || !glass.CanRecord())
         {
             return false;
         }
@@ -60,8 +57,7 @@ internal static class RealGlass
 
         var material = RealGlassMaterials.Build(kind, tone, accent, opacity, settings.GlassAmount, radius, size)
             .Scaled(UiScale.Current);
-        glass.Draw(drawList, GlassShape.FromRect(min, size, radius), in material);
-        return true;
+        return glass.TryDraw(drawList, GlassShape.FromRect(min, size, radius), in material);
     }
 
     public static GlassSuspendScope Suspend(bool transformed = true) =>
@@ -81,16 +77,6 @@ internal static class RealGlass
         pluginLog = null;
     }
 
-    private static bool OnMainViewport()
-    {
-        if (ImGuiP.GetCurrentWindowRead().IsNull)
-        {
-            return true;
-        }
-
-        return ImGui.GetWindowViewport().ID == ImGui.GetMainViewport().ID;
-    }
-
     private static void OnResizeBuffers() => layer?.ReleaseResources();
 
     private static void Log(string message, Exception? exception)
@@ -103,4 +89,17 @@ internal static class RealGlass
 
         pluginLog?.Warning(exception, string.Concat(LogPrefix, message));
     }
+}
+
+internal readonly ref struct GlassGroup
+{
+    private readonly GlassLayer? layer;
+
+    public GlassGroup(GlassLayer? layer)
+    {
+        this.layer = layer;
+        layer?.BeginGroup();
+    }
+
+    public void Dispose() => layer?.EndGroup();
 }

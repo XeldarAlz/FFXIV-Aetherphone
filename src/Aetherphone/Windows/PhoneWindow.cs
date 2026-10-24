@@ -452,6 +452,7 @@ internal sealed class PhoneWindow : Window
 
     public override void Draw()
     {
+        using var glassGroup = RealGlass.Group();
         var device = DeviceRect();
         LastPosition = device.Min;
         LastSize = device.Size;
