@@ -15,11 +15,8 @@ internal static class RealGlass
     private static IPluginLog? pluginLog;
     private static Configuration? configuration;
     private static GlassLayer? layer;
-    private static int suspendDepth;
 
     public static bool Ready => layer is { Ready: true };
-
-    public static bool Suspended => suspendDepth > 0;
 
     public static void Initialize(IDalamudPluginInterface host, IPluginLog log, Configuration settings)
     {
@@ -45,7 +42,7 @@ internal static class RealGlass
     public static bool TryDraw(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius, RealGlassKind kind,
         GlassTone tone, Vector4 accent, float opacity)
     {
-        if (configuration is not { RealGlass: true } settings || suspendDepth > 0 || layer is not { Ready: true } glass)
+        if (configuration is not { RealGlass: true } settings || layer is not { Ready: true, Suspended: false } glass)
         {
             return false;
         }
@@ -67,24 +64,8 @@ internal static class RealGlass
         return true;
     }
 
-    public static GlassSuspension Suspend(bool transformed = true) => new(transformed);
-
-    public static void PushSuspension()
-    {
-        suspendDepth++;
-        SyncSuspended();
-    }
-
-    public static void PopSuspension()
-    {
-        if (suspendDepth == 0)
-        {
-            return;
-        }
-
-        suspendDepth--;
-        SyncSuspended();
-    }
+    public static GlassSuspendScope Suspend(bool transformed = true) =>
+        transformed && layer is { } glass ? glass.Suspend() : default;
 
     public static void Dispose()
     {
@@ -98,15 +79,6 @@ internal static class RealGlass
         layer = null;
         configuration = null;
         pluginLog = null;
-        suspendDepth = 0;
-    }
-
-    private static void SyncSuspended()
-    {
-        if (layer is not null)
-        {
-            layer.Suspended = suspendDepth > 0;
-        }
     }
 
     private static bool OnMainViewport()
@@ -130,27 +102,5 @@ internal static class RealGlass
         }
 
         pluginLog?.Warning(exception, string.Concat(LogPrefix, message));
-    }
-}
-
-internal readonly ref struct GlassSuspension
-{
-    private readonly bool active;
-
-    public GlassSuspension(bool active)
-    {
-        this.active = active;
-        if (active)
-        {
-            RealGlass.PushSuspension();
-        }
-    }
-
-    public void Dispose()
-    {
-        if (active)
-        {
-            RealGlass.PopSuspension();
-        }
     }
 }

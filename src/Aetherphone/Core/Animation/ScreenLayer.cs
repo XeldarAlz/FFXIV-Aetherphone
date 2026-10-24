@@ -1,5 +1,6 @@
 using Aetherphone.Core.Shell;
 using Dalamud.Bindings.ImGui;
+using Glasswork.Backend;
 
 namespace Aetherphone.Core.Animation;
 
@@ -14,15 +15,15 @@ internal ref struct ScreenLayer
     private readonly Rect rect;
     private ImGuiWindowPtr window;
     private readonly InputShield shield;
-    private readonly bool suspendsGlass;
+    private readonly GlassSuspendScope glassSuspension;
     private bool open;
 
-    private ScreenLayer(Rect rect, ImGuiWindowPtr window, InputShield shield, bool suspendsGlass)
+    private ScreenLayer(Rect rect, ImGuiWindowPtr window, InputShield shield, GlassSuspendScope glassSuspension)
     {
         this.rect = rect;
         this.window = window;
         this.shield = shield;
-        this.suspendsGlass = suspendsGlass;
+        this.glassSuspension = glassSuspension;
         open = true;
     }
 
@@ -38,15 +39,11 @@ internal ref struct ScreenLayer
     private static ScreenLayer Open(string id, Rect rect, ImGuiWindowFlags flags, InputShield shield,
         bool suspendGlass)
     {
-        if (suspendGlass)
-        {
-            RealGlass.PushSuspension();
-        }
-
+        var glassSuspension = RealGlass.Suspend(suspendGlass);
         ImGui.SetCursorScreenPos(rect.Min);
         ImGui.PushID(id);
         ImGui.BeginChild("stage", rect.Size, false, flags);
-        return new ScreenLayer(rect, ImGuiP.GetCurrentWindowRead(), shield, suspendGlass);
+        return new ScreenLayer(rect, ImGuiP.GetCurrentWindowRead(), shield, glassSuspension);
     }
 
     public readonly void Veil(uint color)
@@ -71,10 +68,7 @@ internal ref struct ScreenLayer
         shield.Dispose();
         ImGui.EndChild();
         ImGui.PopID();
-        if (suspendsGlass)
-        {
-            RealGlass.PopSuspension();
-        }
+        glassSuspension.Dispose();
     }
 
     public void Dispose() => End();
