@@ -25,6 +25,8 @@ internal readonly record struct PhotoComposeStyle(
     Vector4 Rail,
     bool EdgeFrame);
 
+internal sealed record PendingImport(string Path, int Opening);
+
 internal sealed class PhotoComposeSession : IDisposable
 {
     public const int GridColumns = 3;
@@ -76,7 +78,8 @@ internal sealed class PhotoComposeSession : IDisposable
     // instead of fighting the user's own zoom and pan every frame.
     private readonly List<float?> framedForRatio = new();
     private string[] pickerPaths = Array.Empty<string>();
-    private string? pendingPickedPath;
+    private PendingImport? pendingImport;
+    private int openings;
     private Spring zoomSpring = new(1f);
     private Spring centerXSpring = new(0.5f);
     private Spring centerYSpring = new(0.5f);
@@ -162,22 +165,24 @@ internal sealed class PhotoComposeSession : IDisposable
         CurrentIndex = 0;
         PreviewIndex = 0;
         Notice = string.Empty;
-        pendingPickedPath = null;
+        Interlocked.Increment(ref openings);
+        Volatile.Write(ref pendingImport, null);
         pickerPaths = library.List();
         LoadCrop(DefaultCrop);
     }
 
     public void LaunchImportDialog(string title)
     {
-        FilePicker.PickImage(title, path => Interlocked.Exchange(ref pendingPickedPath, path));
+        var opening = Volatile.Read(ref openings);
+        FilePicker.PickImage(title, path => Volatile.Write(ref pendingImport, new PendingImport(path, opening)));
     }
 
     public void ConsumePendingImport()
     {
-        var picked = Interlocked.Exchange(ref pendingPickedPath, null);
-        if (!string.IsNullOrEmpty(picked))
+        var picked = Interlocked.Exchange(ref pendingImport, null);
+        if (picked is { Path.Length: > 0 } && picked.Opening == Volatile.Read(ref openings))
         {
-            TakeImported(picked);
+            TakeImported(picked.Path);
         }
     }
 
@@ -842,9 +847,11 @@ internal sealed class PhotoComposeSession : IDisposable
     // aspect is the previewed photo's own aspect, not the shared container the caller frames it in,
     // so the caller must contain-fit the returned uv window rather than stretch it.
     public bool TryGetPreviewUv(float aspect, bool allowReveal, out IDalamudTextureWrap texture, out Vector2 uv0,
-        out Vector2 uv1)
+        out Vector2 uv1) => TryGetPreviewUv(ClampedPreviewIndex, aspect, allowReveal, out texture, out uv0, out uv1);
+
+    public bool TryGetPreviewUv(int index, float aspect, bool allowReveal, out IDalamudTextureWrap texture,
+        out Vector2 uv0, out Vector2 uv1)
     {
-        var index = ClampedPreviewIndex;
         var loaded = TextureFor(index, ImGui.GetTime());
         if (loaded is null)
         {
@@ -856,7 +863,7 @@ internal sealed class PhotoComposeSession : IDisposable
 
         texture = loaded;
         var minZoom = allowReveal ? WallpaperCrop.MinZoomToReveal(loaded.Size, aspect) : WallpaperCrop.MinZoom;
-        var crop = CropAt(index).Clamped(loaded.Size, aspect, minZoom);
+        var crop = (index == CurrentIndex ? CurrentTargetCrop : CropAt(index)).Clamped(loaded.Size, aspect, minZoom);
         (uv0, uv1) = crop.ComputeUv(loaded.Size, aspect, minZoom);
         return true;
     }

@@ -8,7 +8,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Core.Translation;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Aethergram;
 
@@ -210,7 +209,7 @@ internal sealed partial class AethergramApp
             {
                 ImGui.SetCursorScreenPos(new Vector2(textLeft, textTop));
                 using (Typography.WrapAt(textRight))
-                using (ImRaii.PushColor(ImGuiCol.Text, Ink.BodyInk))
+                using (UiScope.PushColor(ImGuiCol.Text, Ink.BodyInk))
                 using (Plugin.Fonts.Push(CommentBodyStyle.Scale))
                 {
                     Typography.Wrapped(commentText);

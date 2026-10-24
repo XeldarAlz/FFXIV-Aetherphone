@@ -5,7 +5,6 @@ using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino;
 
@@ -152,8 +151,8 @@ internal sealed class ClassicBetComposer
         var inset = capsule.Height * 0.4f;
         ImGui.SetCursorScreenPos(new Vector2(capsule.Min.X + inset, field.Center.Y - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(MathF.Max(1f, capsule.Width - inset * 2f));
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, skin.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, skin.TitleInk))
         {
             ImGui.InputText(fieldId, ref buffer, BufferLength,
                 ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.AutoSelectAll);

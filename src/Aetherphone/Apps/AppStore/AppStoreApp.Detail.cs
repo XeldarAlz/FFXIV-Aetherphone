@@ -8,7 +8,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.AppStore;
 
@@ -38,8 +37,8 @@ internal sealed partial class AppStoreApp
     {
         var app = Find(view.AppId);
         var navBar = AppHeader.BeginLargeTitle(context);
-        using (ImRaii.PushId("appstore.detail"))
-        using (ImRaii.PushId(view.Serial))
+        using (UiScope.PushId("appstore.detail"))
+        using (UiScope.PushId(view.Serial))
         using (AppSurface.Begin(navBar.Body))
         {
             if (app is not null)

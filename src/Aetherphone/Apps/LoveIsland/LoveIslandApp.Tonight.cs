@@ -32,7 +32,6 @@ internal sealed partial class LoveIslandApp
     private const string PostButtonId = "loveisland.tonight.post";
     private const string GalleryButtonId = "loveisland.tonight.gallery";
     private const string NightToggleId = "loveisland.tonight.night";
-    private const string TwitchHostPrefix = "https://twitch.tv/";
 
     private readonly ChipRail linkRail = new();
     private readonly bool[] linkActive = new bool[16];
@@ -118,12 +117,21 @@ internal sealed partial class LoveIslandApp
 
         var live = moment.CurrentIndex >= 0 ? campaign.Experiences[moment.CurrentIndex] : null;
         var buttonCount = 0;
+        var teleportAction = CardIdle;
+        var watchAction = CardIdle;
         if (live is not null)
         {
-            cardButtons[buttonCount++] = new CardButton(Loc.T(L.Maps.Teleport), true, TeleportButtonId);
+            if (labels.Experiences[moment.CurrentIndex].CanTeleport)
+            {
+                teleportAction = buttonCount;
+                cardButtons[buttonCount++] = new CardButton(Loc.T(L.Maps.Teleport), true, TeleportButtonId);
+            }
+
             if (!string.IsNullOrEmpty(live.TwitchUrl))
             {
-                cardButtons[buttonCount++] = new CardButton(texts.T(CampaignTextKeys.WatchTwitch), false, WatchButtonId);
+                watchAction = buttonCount;
+                cardButtons[buttonCount++] = new CardButton(texts.T(CampaignTextKeys.WatchTwitch), teleportAction < 0,
+                    WatchButtonId);
             }
         }
 
@@ -146,13 +154,16 @@ internal sealed partial class LoveIslandApp
                 OpenExperience(live.Id);
             }
         }
-        else if (liveAction == 0 && live is not null)
+        else if (liveAction >= 0 && live is not null)
         {
-            Teleport(live, labels.Experiences[moment.CurrentIndex]);
-        }
-        else if (liveAction == 1 && live is not null)
-        {
-            UrlActions.AskThenOpen(live.TwitchUrl!);
+            if (liveAction == teleportAction)
+            {
+                Teleport(live, labels.Experiences[moment.CurrentIndex]);
+            }
+            else if (liveAction == watchAction)
+            {
+                UrlActions.AskThenOpen(live.TwitchUrl!);
+            }
         }
 
         return liveBottom;
@@ -182,17 +193,26 @@ internal sealed partial class LoveIslandApp
         var texts = Texts;
         var onAir = campaign.LiveOnAir;
         var channel = campaign.LiveChannel ?? string.Empty;
+        var watchUrl = string.Empty;
         string title;
         string body;
-        if (onAir)
+        if (onAir && moment.CurrentDjIndex >= 0)
+        {
+            var current = labels.DjSets[moment.CurrentDjIndex];
+            title = campaign.DjSets[moment.CurrentDjIndex].Name;
+            body = current.OnAirLine;
+            watchUrl = current.WatchUrl;
+        }
+        else if (onAir)
         {
             title = string.IsNullOrWhiteSpace(campaign.LiveTitle) ? Loc.T(L.LoveIsland.LiveSet) : campaign.LiveTitle;
             body = labels.LiveChannelLine;
+            watchUrl = channel.Length > 0 ? TwitchUrlFor(channel) : string.Empty;
         }
-        else if (moment.NextStreamedIndex >= 0)
+        else if (moment.NextDjIndex >= 0)
         {
-            title = labels.Experiences[moment.NextStreamedIndex].NextUpLine;
-            body = labels.Experiences[moment.NextStreamedIndex].StreamLine;
+            title = labels.DjSets[moment.NextDjIndex].NextUpLine;
+            body = labels.DjSets[moment.NextDjIndex].StreamLine;
         }
         else
         {
@@ -201,17 +221,21 @@ internal sealed partial class LoveIslandApp
         }
 
         var buttonCount = 0;
-        if (onAir && channel.Length > 0)
+        if (watchUrl.Length > 0)
         {
             cardButtons[buttonCount++] = new CardButton(texts.T(CampaignTextKeys.WatchTwitch), true, TwitchButtonId);
         }
 
         var bottom = DrawCard(drawList, left, top, width, new CardContent(LiveCardId, texts.T(CampaignTextKeys.LiveDj),
             onAir ? CardPill.Live : CardPill.Off, Loc.T(onAir ? L.LoveIsland.OnAir : L.LoveIsland.OffAir), title, body,
-            0, 0, false), buttonCount, out var action);
-        if (action == 0)
+            0, 0, true), buttonCount, out var action);
+        if (action == CardTapped)
         {
-            UrlActions.AskThenOpen(TwitchUrlFor(channel));
+            SelectTab(LoveIslandTab.Djs);
+        }
+        else if (action == 0)
+        {
+            UrlActions.AskThenOpen(watchUrl);
         }
 
         return bottom;
@@ -225,9 +249,7 @@ internal sealed partial class LoveIslandApp
         }
 
         twitchChannelSource = channel;
-        twitchChannelUrl = channel.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-            ? channel
-            : string.Concat(TwitchHostPrefix, channel);
+        twitchChannelUrl = string.Concat(LoveIslandKit.TwitchHostPrefix, LoveIslandKit.TwitchChannelName(channel));
         return twitchChannelUrl;
     }
 

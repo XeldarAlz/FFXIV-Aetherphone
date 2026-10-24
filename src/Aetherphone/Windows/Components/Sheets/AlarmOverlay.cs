@@ -102,12 +102,8 @@ internal sealed class AlarmOverlay
         drawList.AddCircle(center, radius + (6f + 7f * pulse) * scale,
             ImGui.GetColorU32(Palette.WithAlpha(Orange, (0.30f + 0.25f * pulse) * alpha)), 64, 2.5f * scale);
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(Orange, alpha)), 64);
-        using (Plugin.Fonts.PushDalamudIcon())
-        {
-            var glyph = IconGlyph.Of(timer ? FontAwesomeIcon.HourglassHalf : FontAwesomeIcon.Bell);
-            var size = ImGui.CalcTextSize(glyph);
-            drawList.AddText(center - size * 0.5f, ImGui.GetColorU32(Ink with { W = alpha }), glyph);
-        }
+        AppSkin.Icon(drawList, center, IconGlyph.Of(timer ? FontAwesomeIcon.HourglassHalf : FontAwesomeIcon.Bell),
+            Ink with { W = alpha }, 1f);
     }
 
     private static bool Pill(ImDrawListPtr drawList, Vector2 center, float width, float height, Vector4 fill,

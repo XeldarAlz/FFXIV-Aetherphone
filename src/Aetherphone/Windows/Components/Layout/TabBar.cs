@@ -37,6 +37,7 @@ internal sealed class TabBar
     public const float GlassOpacity = 0.86f;
     public const float FlatGlassOpacity = 0.95f;
     private const float LayerHeadroomUnits = 12f;
+    private const float LayerBleedUnits = 4f;
     private const float HighlightTint = 0.22f;
     private const float HighlightRimAlpha = 0.16f;
     private const float PressDepth = 1f - Motion.PressScaleControl;
@@ -63,16 +64,28 @@ internal sealed class TabBar
 
     public UiSound TapSound { get; set; } = UiSound.Tap;
 
-    public static float ContentInset(float scale) => TabBarLayout.ContentInset(scale);
+    public float Height { get; init; } = TabBarLayout.Height;
+
+    public float SideInset { get; init; } = TabBarLayout.SideInset;
+
+    public static float ContentInset(float scale, float height = TabBarLayout.Height) =>
+        TabBarLayout.ContentInset(scale, height);
 
     private static float CurrentGlassOpacity => WallpaperBackdrop.Available ? GlassOpacity : FlatGlassOpacity;
 
     private static bool BarHover(Vector2 min, Vector2 max) =>
         !UiInteract.InputBlocked && UiInteract.HoverWindowOnly(min, max);
 
-    public static Rect ContentArea(Rect area, float scale) => TabBarLayout.ContentArea(area, scale);
+    public static Rect ContentArea(Rect area, float scale, float height = TabBarLayout.Height) =>
+        TabBarLayout.ContentArea(area, scale, height);
 
     public static Rect Zone(Rect area, float scale) => TabBarLayout.Zone(area, scale);
+
+    public static Rect GlassLayer(Rect rect, float scale)
+    {
+        var bleed = new Vector2(LayerBleedUnits * scale, 0f);
+        return new Rect(rect.Min - bleed, rect.Max + bleed);
+    }
 
     public static bool Hosting => hostDepth > 0;
 
@@ -97,23 +110,23 @@ internal sealed class TabBar
         SyncVisit(ImGui.GetFrameCount());
 
         var activeIndex = Math.Clamp(active, 0, items.Length - 1);
-        var capsule = TabBarLayout.FullCapsule(area, scale, action.HasValue);
+        var capsule = TabBarLayout.FullCapsule(area, scale, action.HasValue, Height, SideInset);
         Bounds = capsule;
 
         var theme = ui.Theme;
         var backdrop = ui.BackdropColor;
         var tone = Material.ToneFor(backdrop);
-        var zone = TabBarLayout.Zone(area, scale);
+        var zone = TabBarLayout.Zone(area, scale, Height);
         var layerRect = new Rect(new Vector2(zone.Min.X, zone.Min.Y - LayerHeadroomUnits * scale), zone.Max);
-        using var layer = ScreenLayer.Begin("tabbar", layerRect, false);
+        using var layer = ScreenLayer.Begin("tabbar", GlassLayer(layerRect, scale), false);
         UiInteract.HoverOverlay(layerRect);
         var drawList = ImGui.GetWindowDrawList();
         var radius = capsule.Height * 0.5f;
         Material.ThemedGlass(drawList, capsule.Min, capsule.Max, radius, scale, backdrop, CurrentGlassOpacity);
 
-        var activeCell = TabBarLayout.Cell(capsule, items.Length, activeIndex, scale);
         StepHighlight(activeIndex, delta);
-        DrawHighlight(drawList, activeCell, activeIndex, ui.Accent, Math.Clamp(press[activeIndex].Value, 0f, 1f), scale);
+        DrawHighlight(drawList, TabBarLayout.Highlight(capsule, items.Length, highlightSlot.Value, scale), ui.Accent,
+            Math.Clamp(press[activeIndex].Value, 0f, 1f), scale);
 
         var inactiveInk = tone == GlassTone.Dark ? MutedOnDarkGlass : theme.TextMuted;
         var result = TabBarResult.None;
@@ -127,8 +140,7 @@ internal sealed class TabBar
             hover[index].Step(hovered ? 1f : 0f, Motion.HoverLift, delta);
             var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
             press[index].Step(pressed ? 1f : 0f, pressed ? Motion.PressIn : Motion.Release, delta);
-            var itemScale = (1f - PressDepth * Math.Clamp(press[index].Value, 0f, 1f))
-                            * (1f + Motion.HoverLiftIcon * Math.Clamp(hover[index].Value, 0f, 1f));
+            var itemScale = 1f - PressDepth * Math.Clamp(press[index].Value, 0f, 1f);
             poses[index] = new TabItemPose(iconCenter, itemScale);
             if (item.AnchorKey is { } anchorKey)
             {
@@ -142,7 +154,7 @@ internal sealed class TabBar
             else
             {
                 PhoneIcon.Draw(drawList, iconCenter, item.GlyphFor(isActive), isActive ? ui.Accent : inactiveInk,
-                    TabBarLayout.IconSize * scale * itemScale);
+                    TabBarLayout.IconSize * scale * itemScale, optical: true);
             }
 
             if (item.Badge > 0)
@@ -212,35 +224,32 @@ internal sealed class TabBar
         highlightSlot.Step(targetSlot, Motion.TabBar, delta);
     }
 
-    private void DrawHighlight(ImDrawListPtr drawList, Rect activeCell, int activeIndex, Vector4 accent,
-        float pressAmount, float scale)
+    private static void DrawHighlight(ImDrawListPtr drawList, Rect highlight, Vector4 accent, float pressAmount,
+        float scale)
     {
-        var highlight = TabBarLayout.Highlight(activeCell, scale)
-            .Translate(new Vector2((highlightSlot.Value - activeIndex) * activeCell.Width, 0f));
         var half = highlight.Size * 0.5f * (1f - PressDepth * pressAmount);
         var min = highlight.Center - half;
         var max = highlight.Center + half;
-        Squircle.Fill(drawList, min, max, half.Y, ImGui.GetColorU32(Palette.WithAlpha(accent, HighlightTint)));
-        Squircle.Stroke(drawList, min, max, half.Y,
-            ImGui.GetColorU32(Palette.WithAlpha(HighlightRim, HighlightRimAlpha)), 1f * scale);
+        drawList.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(accent, HighlightTint)), half.Y);
+        drawList.AddRect(min, max, ImGui.GetColorU32(Palette.WithAlpha(HighlightRim, HighlightRimAlpha)), half.Y,
+            ImDrawFlags.None, 1f * scale);
     }
 
     private bool DrawAction(ImDrawListPtr drawList, Rect area, AppSkin ui, in TabBarAction action, GlassTone tone,
         Vector4 backdrop, float delta, float scale)
     {
-        var circle = TabBarLayout.ActionCircle(area, scale);
+        var circle = TabBarLayout.ActionCircle(area, scale, Height, SideInset);
         var hovered = BarHover(circle.Min, circle.Max);
         actionHover.Step(hovered ? 1f : 0f, Motion.HoverLift, delta);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
         actionPress.Step(pressed ? 1f : 0f, pressed ? Motion.PressIn : Motion.Release, delta);
-        var grow = (1f - PressDepth * Math.Clamp(actionPress.Value, 0f, 1f))
-                   * (1f + Motion.HoverLiftIcon * Math.Clamp(actionHover.Value, 0f, 1f));
+        var grow = 1f - PressDepth * Math.Clamp(actionPress.Value, 0f, 1f);
         var half = circle.Size * 0.5f * grow;
         var min = circle.Center - half;
         var max = circle.Center + half;
         Material.ThemedGlass(drawList, min, max, half.Y, scale, backdrop, CurrentGlassOpacity);
         var ink = tone == GlassTone.Dark ? StrongOnDarkGlass : ui.Theme.TextStrong;
-        PhoneIcon.Draw(drawList, circle.Center, action.Glyph, ink, TabBarLayout.IconSize * scale * grow);
+        PhoneIcon.Draw(drawList, circle.Center, action.Glyph, ink, TabBarLayout.IconSize * scale * grow, optical: true);
         if (action.Badge > 0)
         {
             AppBadge.Draw(circle.Center + new Vector2(BadgeOffsetX, -BadgeOffsetY) * scale, action.Badge, ui.Theme,

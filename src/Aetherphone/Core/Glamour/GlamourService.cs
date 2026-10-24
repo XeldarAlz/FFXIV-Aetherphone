@@ -177,13 +177,28 @@ internal sealed class GlamourService : IDisposable
         }
 
         var replacing = Prepare();
+        var attempted = 0;
+        var applied = 0;
         for (var index = 0; index < gear.Length; index++)
         {
             var piece = gear[index];
-            if (piece.ItemId != 0 && GearSlots.IsGear(piece.Slot))
+            if (piece.ItemId == 0 || !GearSlots.IsGear(piece.Slot))
             {
-                glamourer.SetItem((GearSlot)piece.Slot, piece.ItemId, piece.Stain0, piece.Stain1);
+                continue;
             }
+
+            attempted++;
+            if (glamourer.SetItem((GearSlot)piece.Slot, piece.ItemId, piece.Stain0, piece.Stain1))
+            {
+                applied++;
+            }
+        }
+
+        if (attempted > 0 && applied == 0)
+        {
+            Forget();
+            TryOnInGame(gear);
+            return;
         }
 
         WearMods(gear, replacing);
@@ -199,8 +214,10 @@ internal sealed class GlamourService : IDisposable
         if (HasGlamourer && GearSlots.IsGear(piece.Slot))
         {
             Snapshot();
-            glamourer.SetItem((GearSlot)piece.Slot, piece.ItemId, piece.Stain0, piece.Stain1);
-            return;
+            if (glamourer.SetItem((GearSlot)piece.Slot, piece.ItemId, piece.Stain0, piece.Stain1))
+            {
+                return;
+            }
         }
 
         GameLinkActions.TryOn(piece.ItemId, piece.Stain0, piece.Stain1);

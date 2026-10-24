@@ -156,7 +156,7 @@ internal sealed partial class SkywatcherApp : IResumableApp
     {
         var skyKey = ImGui.GetID("##sky");
         ImGui.SetCursorScreenPos(body.Min);
-        using var padding = ImRaii.PushStyle(ImGuiStyleVar.WindowPadding,
+        using var padding = UiScope.PushStyle(ImGuiStyleVar.WindowPadding,
             new Vector2(SidePaddingUnits * scale, 0f));
         using var child = ImRaii.Child("##sky", body.Size, false,
             DragScrollHost.ScrollFlags(ImGuiWindowFlags.NoBackground));

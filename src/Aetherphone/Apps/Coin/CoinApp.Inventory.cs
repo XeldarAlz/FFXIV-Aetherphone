@@ -8,7 +8,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Coin;
 
@@ -44,7 +43,7 @@ internal sealed partial class CoinApp
     private void DrawInventory(in PhoneContext context)
     {
         var navBar = AppHeader.BeginLargeTitle(context, false);
-        using (ImRaii.PushId("coin.items"))
+        using (UiScope.PushId("coin.items"))
         using (var surface = AppSurface.Begin(navBar.Body))
         {
             inventory.EnsureFresh();

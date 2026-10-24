@@ -14,7 +14,6 @@ using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Fishing;
 
@@ -97,7 +96,7 @@ internal sealed partial class FishingApp
         var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         EnsureDetailText(entry);
         EnsureNextWindows(entry, nowUnix);
-        using (ImRaii.PushId("fishing.detail"))
+        using (UiScope.PushId("fishing.detail"))
         using (AppSurface.Begin(navBar.Body))
         {
             DrawDetailHero(entry, entryIndex, nowUnix, scale);

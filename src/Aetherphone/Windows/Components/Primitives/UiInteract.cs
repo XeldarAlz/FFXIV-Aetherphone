@@ -9,7 +9,7 @@ internal static class UiInteract
 {
     private const int OverlayReservationLifetimeFrames = 1;
     private const float RectMatchEpsilon = 0.5f;
-    private const int OverlayReservationCapacity = 8;
+    private const int OverlayReservationCapacity = 16;
 
     private static int blockedFrame = -1;
     private static readonly Rect[] OverlayRects = new Rect[OverlayReservationCapacity];

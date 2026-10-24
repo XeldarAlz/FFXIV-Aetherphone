@@ -10,10 +10,13 @@ internal static class GlassCircle
 
     public static bool Draw(ImDrawListPtr drawList, uint key, Vector2 center, float radius, float scale,
         GlassTone tone, string tooltip, HoverLabelSide side, out float grow, Vector4? activeFill = null,
-        bool enabled = true, float opacity = 1f, bool tapSound = true)
+        bool enabled = true, float opacity = 1f, bool tapSound = true, float hitRadius = 0f, bool reserve = false)
     {
-        var extent = new Vector2(radius, radius);
-        var hovered = enabled && UiInteract.Hover(center - extent, center + extent);
+        var extent = new Vector2(MathF.Max(radius, hitRadius));
+        var over = reserve
+            ? UiInteract.HoverOverlay(new Rect(center - extent, center + extent))
+            : UiInteract.Hover(center - extent, center + extent);
+        var hovered = enabled && over;
         var down = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
         grow = PressFx.Scale(key, down, PressFx.ControlPressedScale);
         var drawn = radius * grow;
@@ -36,7 +39,7 @@ internal static class GlassCircle
 
         if (tooltip.Length > 0)
         {
-            HoverTooltip.Show(new Rect(center - extent, center + extent), tooltip, side);
+            HoverTooltip.Show(key, new Rect(center - extent, center + extent), tooltip, over, side);
         }
 
         if (hovered)
@@ -49,11 +52,12 @@ internal static class GlassCircle
 
     public static bool Icon(ImDrawListPtr drawList, uint key, Vector2 center, float radius, float glyphSize,
         string glyph, Vector4 ink, float scale, GlassTone tone, string tooltip, HoverLabelSide side,
-        bool enabled = true)
+        bool enabled = true, float hitRadius = 0f, bool reserve = false)
     {
-        var clicked = Draw(drawList, key, center, radius, scale, tone, tooltip, side, out var grow, null, enabled);
+        var clicked = Draw(drawList, key, center, radius, scale, tone, tooltip, side, out var grow, null, enabled,
+            hitRadius: hitRadius, reserve: reserve);
         var color = enabled ? ink : Palette.WithAlpha(ink, ink.W * DisabledAlpha);
-        PhoneIcon.Draw(drawList, center, glyph, color, glyphSize * grow);
+        PhoneIcon.Draw(drawList, center, glyph, color, glyphSize * grow, optical: true);
         return clicked;
     }
 }

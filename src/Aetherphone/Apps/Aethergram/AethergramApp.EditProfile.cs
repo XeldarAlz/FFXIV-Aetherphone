@@ -3,7 +3,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Social;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Aethergram;
 
@@ -174,8 +173,8 @@ internal sealed partial class AethergramApp
             var bioFieldTop = bioLabelTop + bioLabelHeight + 5f * scale;
             var bioFieldWidth = cardRight - innerPad - (cardMin.X + innerPad);
             ImGui.SetCursorScreenPos(new Vector2(cardMin.X + innerPad, bioFieldTop));
-            using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-            using (ImRaii.PushColor(ImGuiCol.Text, Ink.TitleInk))
+            using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+            using (UiScope.PushColor(ImGuiCol.Text, Ink.TitleInk))
             {
                 var wrapWidth = bioFieldWidth - ImGui.GetStyle().FramePadding.X * 2f - 4f * scale;
                 SoftWrapField.Multiline("##aethergramEditBio", ref editBio, SocialProfilePages.BioMax,
@@ -206,8 +205,8 @@ internal sealed partial class AethergramApp
         ImGui.SetCursorScreenPos(new Vector2(left, rowTop + rowHeight * 0.5f - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(MathF.Max(1f, right - left));
         Plugin.Fonts.NoticeText(value);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ink))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, ink))
         {
             return ImGui.InputText(id, ref value, maxLength, flags);
         }

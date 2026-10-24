@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Glamour;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
@@ -12,20 +13,30 @@ namespace Aetherphone.Apps.Prism;
 
 internal sealed partial class PrismApp
 {
+    private const float EnterShardAngle = 2.1f;
+    private const float EnterShardSpread = 1.1f;
+    private const float EnterShardSpeed = 360f;
     private const float PickPaneFraction = 0.52f;
 
     private const float PickFillAlpha = 0.08f;
+    private const string EntryRaceId = "prism.entryRace";
+    private const string EntryGenderId = "prism.entryGender";
 
     private static PhotoComposeStyle PickStyle =>
         new(PrismArt.Fore, PrismArt.Muted, Palette.WithAlpha(PrismArt.Fore, PickFillAlpha), PrismArt.Faint, false);
 
     private volatile int entryOutcome;
+    private Vector2 enterShardOrigin;
     private CachedText outfitLinkText;
+    private CachedText pickHeadingText;
 
     private void StartPick()
     {
         pickSession.Open(true);
         pickIntake.Discard();
+        entryOutcome = OutcomePending;
+        entryRace = 0;
+        entryGender = NoGender;
         pickReturn = screen == PrismScreen.Entry ? PrismScreen.Entry : PrismScreen.Cover;
         ResetEntryOutfit();
         Go(PrismScreen.Pick);
@@ -33,6 +44,7 @@ internal sealed partial class PrismApp
 
     private void DrawPick(ImDrawListPtr drawList, Rect content, float scale)
     {
+        bodyRaceMenu.Gate();
         ConsumeEntryOutcome();
         pickSession.ConsumePendingImport();
         while (pickIntake.TryTake(out var taken))
@@ -47,15 +59,25 @@ internal sealed partial class PrismApp
 
         pickIntake.AcceptDrop(content, library, PrismArt.Fore);
         var week = store.Week;
-        var top = DrawHeader(drawList, content, string.Empty,
-            week is null ? Loc.T(L.Prism.EnterLook) : TrackTitle(week.Title), true, scale);
+        var bodyChosen = BodyChosen(entryRace, entryGender);
+        var ready = pickSession.HasSelection && !store.Busy && (!VanillaEntry || DraftPieces() > 0) && bodyChosen;
+        var top = DrawActionHeader(drawList, content, PhoneIcons.X, Loc.T(L.Common.Cancel),
+            PickHeading(week), PhoneIcons.Check, Loc.T(L.Prism.Enter), ready,
+            store.Busy ? Loc.T(L.Prism.Uploading) : string.Empty, UiSound.Shutter, scale, out var entered) +
+                  Metrics.Space.Sm * scale;
+        if (entered)
+        {
+            var corner = Metrics.Size.TapTarget * scale * 0.5f;
+            enterShardOrigin = new Vector2(content.Max.X - corner, content.Min.Y + corner);
+            RememberEntryDrops();
+            store.Enter(pickSession.FirstSelected, pickSession.CropsArray()[0], EntryOutfit(), entryRace, entryGender,
+                entrySettled);
+        }
+
         if (week is { Brief.Length: > 0 })
         {
-            var gutter = PrismArt.Gutter(scale);
-            top += Typography.DrawWrappedLeft(new Vector2(content.Min.X + gutter, top), week.Brief, PrismArt.Muted,
-                TextStyles.Subheadline,
-                PrismType.BalancedWidth(week.Brief, TextStyles.Subheadline, content.Width - gutter * 2f)) +
-                   Metrics.Space.Lg * scale;
+            top += Typography.DrawWrappedLeft(new Vector2(content.Min.X, top), week.Brief, PrismArt.Muted,
+                PrismType.Body, content.Width) + Metrics.Space.Lg * scale;
         }
 
         var paneHeight = MathF.Min(content.Width, (content.Max.Y - top) * PickPaneFraction);
@@ -63,41 +85,41 @@ internal sealed partial class PrismApp
         pickSession.DrawPickPane(pane, scale, PickStyle, PrismStore.EntryRatio, PrismStore.EntryRevealsWholeImage,
             !store.Busy, Loc.T(L.Prism.EnterLook));
 
-        var strip = StripRect(content, scale);
-        var label = Loc.T(store.Busy ? L.Prism.Uploading : L.Prism.EnterThisLook);
-        var ready = pickSession.HasSelection && !store.Busy && (!VanillaEntry || DraftPieces() > 0);
-        if (PrismArt.Strip(drawList, strip, label, Arrow, true, ready, UiSound.Shutter))
-        {
-            var (race, gender) = WornBody();
-            RememberEntryDrops();
-            store.Enter(pickSession.FirstSelected, pickSession.CropsArray()[0], EntryOutfit(), race, gender,
-                entrySettled);
-        }
-
-        var gridBottom = strip.Min.Y - Metrics.Space.Lg * scale -
-                         PrismType.LineHeight(PrismFace.Label, PrismArt.LabelPixels());
+        var row = ActionRect(content, scale);
+        var gridBottom = content.Max.Y - bottomChrome - PrismArt.BottomMargin(scale);
         var link = OutfitLink();
-        if (link.Length > 0 && PrismArt.Link(drawList, new Vector2(strip.Min.X, gridBottom), link,
-                VanillaEntry && DraftPieces() == 0 ? PrismArt.Fore : PrismArt.Muted, scale))
+        if (link.Length > 0)
         {
-            OpenOutfit();
+            var linkRect = PlainRect(row.Center, link, row.Width, 0.5f, scale);
+            if (DrawButton(drawList, linkRect, link, ButtonStyle.Tinted, scale, enabled: !store.Busy))
+            {
+                OpenOutfit();
+            }
+
+            gridBottom = linkRect.Min.Y - Metrics.Space.Lg * scale;
         }
 
-        gridBottom -= Metrics.Space.Xl * scale;
-
-        if (store.Failed(PrismAction.Enter) && !store.Busy)
+        var tap = Metrics.Size.TapTarget * scale;
+        var bodyRow = new Rect(new Vector2(row.Min.X, gridBottom - tap), new Vector2(row.Max.X, gridBottom));
+        DrawBodyPicker(drawList, bodyRow, EntryRaceId, EntryGenderId, ref entryRace, ref entryGender, scale);
+        gridBottom = bodyRow.Min.Y - Metrics.Space.Md * scale;
+        var notice = store.Busy ? Loc.T(L.Prism.Uploading)
+            : store.Failed(PrismAction.Enter) ? store.ActionFailureText is { Length: > 0 } reason
+                ? reason
+                : Loc.T(L.Common.LoadFailedHint)
+            : pickSession.HasSelection && !bodyChosen ? Loc.T(L.Prism.BodyNeeded)
+            : string.Empty;
+        if (notice.Length > 0)
         {
-            var reason = store.ActionFailureText;
-            var text = reason.Length > 0 ? reason : Loc.T(L.Common.LoadFailedHint);
-            gridBottom -= Typography.MeasureWrappedBlock(text, TextStyles.Subheadline, strip.Width).Y;
-            Typography.DrawWrappedLeft(new Vector2(strip.Min.X, gridBottom), text, PrismArt.Muted,
-                TextStyles.Subheadline, strip.Width);
+            gridBottom -= Typography.MeasureWrappedBlock(notice, PrismType.Body, row.Width).Y;
+            Typography.DrawWrappedLeft(new Vector2(row.Min.X, gridBottom), notice, PrismArt.Muted, PrismType.Body,
+                row.Width);
             gridBottom -= Metrics.Space.Md * scale;
         }
 
         var gridRect = new Rect(new Vector2(content.Min.X, pane.Max.Y + Metrics.Space.Md * scale),
             new Vector2(content.Max.X, gridBottom));
-        using (AppSurface.BeginEdgeToEdge(gridRect))
+        using (AppSurface.BeginEdgeToEdge(gridRect, smoothWheel: true))
         {
             if (pickSession.DrawPickGrid(gridRect, scale, PickStyle, false, Loc.T(L.Common.ImportFromPc),
                     Loc.T(L.Prism.EnterLook), pickIntake.ClipboardHasImage() ? Loc.T(L.Common.PasteImage) : null))
@@ -105,6 +127,21 @@ internal sealed partial class PrismApp
                 pickIntake.Paste(library);
             }
         }
+
+        DrawBodyRaceMenu(content, ref entryRace);
+    }
+
+    private string PickHeading(PrismWeekDto? week)
+    {
+        if (!HasTracks)
+        {
+            return week?.Title ?? Loc.T(L.Prism.EnterLook);
+        }
+
+        var key = HashCode.Combine(store.Track, Loc.Current.Code);
+        return pickHeadingText.IsCurrent(key)
+            ? pickHeadingText.Value
+            : pickHeadingText.Store(key, Loc.T(L.Prism.EnterTrack, PrismTracks.Name(store.Track)));
     }
 
     private string OutfitLink()
@@ -120,7 +157,7 @@ internal sealed partial class PrismApp
         var text = VanillaEntry
             ? count == 0 ? Loc.T(L.Prism.AddYourGear) : Loc.Plural(L.Prism.GearSummary, count)
             : listed ? Loc.Plural(L.Prism.ModsSummary, count) : string.Empty;
-        return outfitLinkText.Store(key, text.Length > 0 ? string.Concat(text, " ", Arrow) : string.Empty);
+        return outfitLinkText.Store(key, text);
     }
 
     private int KeptModCount()
@@ -154,6 +191,7 @@ internal sealed partial class PrismApp
         entryOutcome = OutcomePending;
         if (outcome == OutcomeSent)
         {
+            shards.Burst(enterShardOrigin, EnterShardAngle, EnterShardSpread, EnterShardSpeed, ShardLifeSeconds);
             pickIntake.Discard();
             Go(PrismScreen.Entry);
         }

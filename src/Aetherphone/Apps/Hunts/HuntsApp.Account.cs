@@ -7,7 +7,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Hunts;
 
@@ -56,7 +55,7 @@ internal sealed partial class HuntsApp
     {
         var scale = UiScale.Current;
         var navBar = AppHeader.BeginLargeTitle(context);
-        using (ImRaii.PushId("hunts.account"))
+        using (UiScope.PushId("hunts.account"))
         using (AppSurface.Begin(navBar.Body))
         {
             if (hunts.IsAuthenticated)

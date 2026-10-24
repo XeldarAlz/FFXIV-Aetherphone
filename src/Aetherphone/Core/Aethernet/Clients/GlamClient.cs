@@ -8,7 +8,6 @@ internal sealed class GlamClient
     internal const string ReportTarget = "prism_glam";
     internal const string SavedCollection = "saved";
     internal const string ScopeNew = "new";
-    internal const string ScopeToday = "today";
     internal const string ScopePopular = "popular";
     internal const string ScopeFollowing = "following";
 
@@ -19,7 +18,7 @@ internal sealed class GlamClient
         this.net = net;
     }
 
-    internal static string FeedPath(string scope, bool? vanilla, string? cursor, int race = 0, int gender = 0)
+    internal static string FeedPath(string scope, bool? vanilla, string? cursor, int race = 0, int? gender = null)
     {
         var path = $"/prism/glams?scope={Uri.EscapeDataString(scope)}";
         if (vanilla is { } only)
@@ -27,12 +26,17 @@ internal sealed class GlamClient
             path += only ? "&vanilla=true" : "&vanilla=false";
         }
 
+        return WithCursor(WithBody(path, race, gender), cursor);
+    }
+
+    private static string WithBody(string path, int race, int? gender)
+    {
         if (race > 0)
         {
-            path += $"&race={race}&gender={gender}";
+            path += $"&race={race}";
         }
 
-        return WithCursor(path, cursor);
+        return gender is { } chosen ? $"{path}&gender={chosen}" : path;
     }
 
     internal static string GlamPath(string glamId) => $"/prism/glams/{Uri.EscapeDataString(glamId)}";
@@ -65,7 +69,15 @@ internal sealed class GlamClient
     internal static string TagGlamsPath(string tag, string? cursor) =>
         WithCursor($"/prism/tags/{Uri.EscapeDataString(tag)}/glams", cursor);
 
-    public Task<GlamPage?> FeedAsync(string scope, bool? vanilla, (int Race, int Gender) body, string? cursor,
+    internal static string WeekGlamsPath(string weekId, string track, string? cursor) =>
+        WithCursor($"/prism/weeks/{Uri.EscapeDataString(weekId)}/glams?track={Uri.EscapeDataString(track)}", cursor);
+
+    public Task<GlamPage?> WeekGlamsAsync(string weekId, string track, string? cursor, CancellationToken token,
+        Action<AepFailure>? onFailure = null) =>
+        net.GetAsync(WeekGlamsPath(weekId, track, cursor), AethernetJsonContext.Default.GlamPage, token, null,
+            onFailure);
+
+    public Task<GlamPage?> FeedAsync(string scope, bool? vanilla, (int Race, int? Gender) body, string? cursor,
         CancellationToken token, Action<AepFailure>? onFailure = null) =>
         net.GetAsync(FeedPath(scope, vanilla, cursor, body.Race, body.Gender), AethernetJsonContext.Default.GlamPage,
             token, null, onFailure);

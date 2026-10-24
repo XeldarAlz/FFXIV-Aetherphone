@@ -1,7 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -127,11 +126,11 @@ internal static class GlassField
             ImGui.SetKeyboardFocusHere();
         }
 
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, Transparent))
-        using (ImRaii.PushColor(ImGuiCol.FrameBgHovered, Transparent))
-        using (ImRaii.PushColor(ImGuiCol.FrameBgActive, Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, textColor))
-        using (ImRaii.PushColor(ImGuiCol.TextDisabled, hintColor))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, Transparent))
+        using (UiScope.PushColor(ImGuiCol.FrameBgHovered, Transparent))
+        using (UiScope.PushColor(ImGuiCol.FrameBgActive, Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, textColor))
+        using (UiScope.PushColor(ImGuiCol.TextDisabled, hintColor))
         {
             return callback is null
                 ? ImGui.InputTextWithHint(imguiId, hint, ref text, maxLength, flags)

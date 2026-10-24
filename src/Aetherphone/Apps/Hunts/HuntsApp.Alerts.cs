@@ -9,7 +9,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Hunts;
 
@@ -51,7 +50,7 @@ internal sealed partial class HuntsApp
     {
         var scale = UiScale.Current;
         var navBar = AppHeader.BeginLargeTitle(context, false);
-        using (ImRaii.PushId("hunts.alerts"))
+        using (UiScope.PushId("hunts.alerts"))
         using (AppSurface.Begin(navBar.Body))
         {
             DrawAlertsBody(scale);
@@ -70,7 +69,7 @@ internal sealed partial class HuntsApp
             DrawAlertsSignInCard(scale);
         }
 
-        using (ImRaii.PushStyle(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * (signedIn ? 1f : AlertsDisabledAlpha)))
+        using (UiScope.PushStyle(ImGuiStyleVar.Alpha, ImGui.GetStyle().Alpha * (signedIn ? 1f : AlertsDisabledAlpha)))
         {
             DrawRankTiles(signedIn, scale);
             DrawExpansionTiles(signedIn, scale);

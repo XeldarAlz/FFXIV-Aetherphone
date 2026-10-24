@@ -52,6 +52,9 @@ internal sealed class RemoteImageCache : IDisposable
         return null;
     }
 
+    public IDalamudTextureWrap? Nearest(string? url, float drawnPixels) =>
+        Fetchable(url) ? ready.Nearest(LegacyMediaHosts.Normalize(url!), TextureSizes.LevelFor(drawnPixels)) : null;
+
     public IDalamudTextureWrap? Sized(string? url, float drawnPixels)
     {
         return SizedAt(url, drawnPixels, 0d);

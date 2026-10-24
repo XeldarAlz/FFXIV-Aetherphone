@@ -14,7 +14,6 @@ using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Muster;
 
@@ -90,7 +89,7 @@ internal sealed partial class MusterApp
         var nowUnix = NowUnix();
         manageSync ??= SyncPlans;
         var navBar = AppHeader.BeginLargeTitle(context);
-        using (ImRaii.PushId("muster.manage"))
+        using (UiScope.PushId("muster.manage"))
         using (var surface = AppSurface.Begin(navBar.Body))
         {
             manageRefresh.Draw(navBar.Body, surface.Pull, surface.Dragging, store.Syncing, ui.MutedInk, manageSync);
@@ -177,7 +176,7 @@ internal sealed partial class MusterApp
             var row = new Rect(new Vector2(left + pad, rowTop), new Vector2(cardMax.X - pad, rowTop + rowHeight));
             if (ImGui.IsRectVisible(row.Min, row.Max))
             {
-                using (ImRaii.PushId(index))
+                using (UiScope.PushId(index))
                 {
                     DrawAttendeeRow(drawList, attendees[index], attendeeIdentities[index], attendeeNameKeys[index],
                         row, scale);

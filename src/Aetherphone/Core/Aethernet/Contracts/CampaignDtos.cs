@@ -28,6 +28,7 @@ internal sealed record CampaignDto(
     CampaignRewardDto Reward,
     CampaignTextDto[] Texts,
     CampaignExperienceDto[] Experiences,
+    CampaignDjSetDto[] DjSets,
     CampaignMemberDto[] Members,
     CampaignSyncshellDto[] Syncshells,
     CampaignPostDto? PinnedPost,
@@ -51,8 +52,19 @@ internal sealed record CampaignExperienceDto(
     int Ward,
     int Plot,
     string Spot,
+    string Place,
     string[] LineupMemberIds,
     string? BannerUrl,
+    string? TwitchUrl) : IIdentified;
+
+internal sealed record CampaignDjSetDto(
+    string Id,
+    string Name,
+    string Title,
+    string Stage,
+    long StartsAtUnix,
+    long EndsAtUnix,
+    string? MemberId,
     string? TwitchUrl) : IIdentified;
 
 internal sealed record CampaignMemberDto(string Id, string Name, string Role, string World, string? PortraitUrl,

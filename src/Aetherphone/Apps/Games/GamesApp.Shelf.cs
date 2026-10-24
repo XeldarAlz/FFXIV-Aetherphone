@@ -6,7 +6,6 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Games;
 
@@ -49,7 +48,7 @@ internal sealed partial class GamesApp
     private void DrawShelfPage(in PhoneContext context, GamesShelf shelf)
     {
         var navBar = AppHeader.BeginLargeTitle(context);
-        using (ImRaii.PushId(CategoryScopeId))
+        using (UiScope.PushId(CategoryScopeId))
         using (AppSurface.Begin(navBar.Body))
         {
             var scale = UiScale.Current;

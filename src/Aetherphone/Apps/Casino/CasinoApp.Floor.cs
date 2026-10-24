@@ -10,7 +10,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino;
 
@@ -265,7 +264,7 @@ internal sealed partial class CasinoApp
         {
             var left = origin.X + index * (cardWidth + gap);
             var card = new Rect(new Vector2(left, top), new Vector2(left + cardWidth, top + height));
-            using (ImRaii.PushId(index))
+            using (UiScope.PushId(index))
             {
                 if (FloorRoomCard.Draw(drawList, ui, roomViews[index], card, scale, out var pressed))
                 {

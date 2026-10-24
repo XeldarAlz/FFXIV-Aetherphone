@@ -1,7 +1,6 @@
 using System.Text;
 using Aetherphone.Core;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -202,7 +201,7 @@ internal static partial class Typography
         {
             Plugin.Fonts.NoticeText(text);
             ImGui.SetCursorScreenPos(position);
-            using (ImRaii.PushColor(ImGuiCol.Text, color))
+            using (UiScope.PushColor(ImGuiCol.Text, color))
             {
                 ImGui.TextUnformatted(text);
             }
@@ -231,6 +230,8 @@ internal static partial class Typography
 
     public static string FitText(string text, float maxWidth, in TextStyle style) =>
         FitText(text, maxWidth, style.Scale, style.Weight);
+
+    public static string FitInCurrentFont(string text, float maxWidth) => Fit(text, maxWidth);
 
     public static string FitTextMiddle(string text, float maxWidth, in TextStyle style)
     {
@@ -857,7 +858,7 @@ internal static partial class Typography
             }
 
             ImGui.SetCursorScreenPos(center - size * 0.5f);
-            using (ImRaii.PushColor(ImGuiCol.Text, color))
+            using (UiScope.PushColor(ImGuiCol.Text, color))
             {
                 ImGui.TextUnformatted(text);
             }

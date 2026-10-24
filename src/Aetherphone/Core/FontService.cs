@@ -87,6 +87,8 @@ internal sealed class FontService : IDisposable
     private readonly GlyphCoverage sharedCoverage = new();
     private readonly GlyphCoverage iconCoverage = new();
     private readonly ImFontPtr[,] textFonts = new ImFontPtr[WeightFiles.Length, SizeMultipliers.Length];
+    private readonly IconInk?[] iconInk = new IconInk?[IconSizeMultipliers.Length];
+    private readonly IconInk?[] retiredIconInk = new IconInk?[IconSizeMultipliers.Length];
     private readonly IFontHandle dalamudIconHandle;
     private IFontHandle? displayHandle;
     private ushort[] nativeRanges;
@@ -339,6 +341,36 @@ internal sealed class FontService : IDisposable
 
     public FontToken PushDalamudIcon() => new(dalamudIconHandle.Push());
 
+    public IconInkMark InkMark(ImFontPtr font, char codepoint) =>
+        TryInkMark(iconInk, font, codepoint, out var mark) || TryInkMark(retiredIconInk, font, codepoint, out mark)
+            ? mark
+            : IconInk.Unmeasured;
+
+    private static bool TryInkMark(IconInk?[] generation, ImFontPtr font, char codepoint, out IconInkMark mark)
+    {
+        for (var sizeIndex = 0; sizeIndex < generation.Length; sizeIndex++)
+        {
+            var ink = Volatile.Read(ref generation[sizeIndex]);
+            if (ink is null || !ink.Describes(font))
+            {
+                continue;
+            }
+
+            var largest = Volatile.Read(ref generation[^1]) ?? ink;
+            mark = ink.Mark(codepoint) with { Scale = largest.Mark(codepoint).Scale };
+            return true;
+        }
+
+        mark = IconInk.Unmeasured;
+        return false;
+    }
+
+    private void PublishInk(int sizeIndex, IconInk measured)
+    {
+        Volatile.Write(ref retiredIconInk[sizeIndex], Volatile.Read(ref iconInk[sizeIndex]));
+        Volatile.Write(ref iconInk[sizeIndex], measured);
+    }
+
     public ImFontPtr DalamudIconFont
     {
         get
@@ -546,25 +578,30 @@ internal sealed class FontService : IDisposable
     {
         var pixels = baseSize * IconSizeMultipliers[sizeIndex];
         var tablerPath = Path.Combine(fontDirectory, TablerIconFile);
-        return atlas.NewDelegateFontHandle(e => e.OnPreBuild(tk =>
+        var primary = default(ImFontPtr);
+        return atlas.NewDelegateFontHandle(e =>
         {
-            var primary = tk.AddDalamudAssetFont(Dalamud.DalamudAsset.FontAwesomeFreeSolid,
-                new SafeFontConfig { SizePx = pixels, GlyphRanges = fontAwesomeRanges, });
-            if (!File.Exists(tablerPath))
+            e.OnPreBuild(tk =>
             {
-                return;
-            }
+                primary = tk.AddDalamudAssetFont(Dalamud.DalamudAsset.FontAwesomeFreeSolid,
+                    new SafeFontConfig { SizePx = pixels, GlyphRanges = fontAwesomeRanges, });
+                if (!File.Exists(tablerPath))
+                {
+                    return;
+                }
 
-            try
-            {
-                tk.AddFontFromFile(tablerPath,
-                    new SafeFontConfig { SizePx = pixels, GlyphRanges = TablerRanges, MergeFont = primary, });
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning(exception, $"[Fonts] skipped merging '{TablerIconFile}' at {pixels}px.");
-            }
-        }));
+                try
+                {
+                    tk.AddFontFromFile(tablerPath,
+                        new SafeFontConfig { SizePx = pixels, GlyphRanges = TablerRanges, MergeFont = primary, });
+                }
+                catch (Exception exception)
+                {
+                    AepLog.Warning(exception, $"[Fonts] skipped merging '{TablerIconFile}' at {pixels}px.");
+                }
+            });
+            e.OnPostBuild(tk => PublishInk(sizeIndex, IconInk.Measure(tk, primary)));
+        });
     }
 
     public void SyncDisplay(bool wanted)

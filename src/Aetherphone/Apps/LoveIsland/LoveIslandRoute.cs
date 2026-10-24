@@ -3,6 +3,7 @@ namespace Aetherphone.Apps.LoveIsland;
 internal enum LoveIslandTab : byte
 {
     Tonight,
+    Djs,
     Experiences,
     Gallery,
     Perks,

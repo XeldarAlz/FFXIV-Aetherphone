@@ -7,7 +7,6 @@ using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino;
 
@@ -50,7 +49,7 @@ internal sealed partial class CasinoApp
 
         casinoVenue.EnsureNearby();
         var scale = UiScale.Current;
-        using (ImRaii.PushId("casino.live"))
+        using (UiScope.PushId("casino.live"))
         using (AppSurface.Begin(body))
         {
             var drawList = ImGui.GetWindowDrawList();
@@ -256,7 +255,7 @@ internal sealed partial class CasinoApp
         {
             var left = origin.X + index * (cardWidth + gap);
             var rect = new Rect(new Vector2(left, top), new Vector2(left + cardWidth, top + height));
-            using (ImRaii.PushId(index))
+            using (UiScope.PushId(index))
             {
                 if (LiveArt.RoomCard(drawList, ui, liveRoomCards[index], rect, nameHeight, livePhaseLines, interactive,
                         scale, out var pressed))
@@ -327,7 +326,7 @@ internal sealed partial class CasinoApp
                     LiveChallenges.SecondsUntil(views[index].StartsAtUnix, now));
             var height = ChallengeCard.Height(views[index], running, width, scale);
             var rect = new Rect(new Vector2(origin.X, top), new Vector2(origin.X + width, top + height));
-            using (ImRaii.PushId(index))
+            using (UiScope.PushId(index))
             {
                 if (ChallengeCard.Draw(drawList, ui, rect, views[index], clock, running, interactive, scale))
                 {
@@ -436,7 +435,7 @@ internal sealed partial class CasinoApp
                 continue;
             }
 
-            using (ImRaii.PushId(table.Row.TableId))
+            using (UiScope.PushId(table.Row.TableId))
             {
                 if (LiveArt.TableRow(drawList, ui, rect, table.GameId, liveViews[slot], table.Here, interactive,
                         scale))

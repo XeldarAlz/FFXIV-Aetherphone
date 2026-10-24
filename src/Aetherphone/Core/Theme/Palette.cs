@@ -4,6 +4,13 @@ internal static class Palette
 {
     public static Vector4 WithAlpha(Vector4 color, float alpha) => color with { W = alpha };
     public static Vector4 Mix(Vector4 from, Vector4 to, float amount) => Vector4.Lerp(from, to, amount);
+
+    public static Vector4 FromRgb(uint rgb) =>
+        new(((rgb >> 16) & 0xFFu) / 255f, ((rgb >> 8) & 0xFFu) / 255f, (rgb & 0xFFu) / 255f, 1f);
+
+    public static uint Pack(Vector4 color) =>
+        (PackChannel(color.W) << 24) | (PackChannel(color.Z) << 16) | (PackChannel(color.Y) << 8) | PackChannel(color.X);
+
     public static float Luminance(Vector4 color) => color.X * 0.299f + color.Y * 0.587f + color.Z * 0.114f;
 
     public static float RelativeLuminance(Vector4 color) =>
@@ -50,6 +57,8 @@ internal static class Palette
             EncodeChannel(blue + (1f - blue) * amount),
             color.W);
     }
+
+    private static uint PackChannel(float value) => (uint)(Math.Clamp(value, 0f, 1f) * 255f + 0.5f);
 
     private static float LinearChannel(float channel) =>
         channel <= 0.04045f ? channel / 12.92f : MathF.Pow((channel + 0.055f) / 1.055f, 2.4f);

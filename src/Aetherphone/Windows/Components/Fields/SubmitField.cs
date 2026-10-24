@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -20,17 +19,7 @@ internal static class SubmitField
         var radius = (pillMax.Y - pillMin.Y) * 0.5f;
         Squircle.Fill(drawList, pillMin, pillMax, radius, ImGui.GetColorU32(Surfaces.Fill(theme.TextStrong, FillLevel.Tertiary)));
         var glyphCenter = new Vector2(pillMin.X + 16f * scale, bar.Center.Y);
-        using (Plugin.Fonts.PushDalamudIcon())
-        {
-            var glyph = IconGlyph.Of(icon);
-            var size = ImGui.CalcTextSize(glyph);
-            ImGui.SetCursorScreenPos(new Vector2(glyphCenter.X - size.X * 0.5f, glyphCenter.Y - size.Y * 0.5f));
-            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
-            {
-                Typography.Plain(glyph);
-            }
-        }
-
+        AppSkin.Icon(drawList, glyphCenter, IconGlyph.Of(icon), theme.TextMuted, 1f);
         var hasText = text.Length > 0;
         var clearRadius = 9f * scale;
         var clearCenter = new Vector2(pillMax.X - 16f * scale, bar.Center.Y);
@@ -43,8 +32,8 @@ internal static class SubmitField
             TextStyles.Body);
         Plugin.Fonts.NoticeText(shownHint);
         Plugin.Fonts.NoticeText(text);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
+        using (UiScope.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
             submitted = ImGui.InputTextWithHint(imguiId, shownHint, ref text, maxLength,
                 ImGuiInputTextFlags.EnterReturnsTrue);
@@ -92,17 +81,7 @@ internal static class SubmitField
         Squircle.Fill(drawList, pillMin, pillMax, MathF.Min(pillMax.Y - pillMin.Y, rowHeight) * 0.5f,
             ImGui.GetColorU32(Surfaces.Fill(theme.TextStrong, FillLevel.Tertiary)));
         var glyphCenter = new Vector2(pillMin.X + 16f * scale, rowCenterY);
-        using (Plugin.Fonts.PushDalamudIcon())
-        {
-            var glyph = IconGlyph.Of(icon);
-            var size = ImGui.CalcTextSize(glyph);
-            ImGui.SetCursorScreenPos(new Vector2(glyphCenter.X - size.X * 0.5f, glyphCenter.Y - size.Y * 0.5f));
-            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
-            {
-                Typography.Plain(glyph);
-            }
-        }
-
+        AppSkin.Icon(drawList, glyphCenter, IconGlyph.Of(icon), theme.TextMuted, 1f);
         var hasText = editor.Text.Length > 0;
         var clearRadius = 9f * scale;
         var clearCenter = new Vector2(pillMax.X - 16f * scale, rowCenterY);
@@ -117,8 +96,8 @@ internal static class SubmitField
         ImGui.SetCursorScreenPos(new Vector2(inputLeft, fieldTop));
         Plugin.Fonts.NoticeText(hint);
         bool submitted;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
+        using (UiScope.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
             submitted = editor.Draw(imguiId, new Vector2(fieldWidth, fieldHeight), maxLength, 0);
         }

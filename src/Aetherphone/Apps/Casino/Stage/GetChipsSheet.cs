@@ -283,9 +283,9 @@ internal sealed class GetChipsSheet
         var cursor = ImGui.GetCursorScreenPos();
         ImGui.SetCursorScreenPos(new Vector2(textLeft, field.Center.Y - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(MathF.Max(1f, capsule.Max.X - inset - textLeft));
-        using (ImRaii.Disabled(!interactive))
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, skin.TitleInk))
+        using (UiScope.Disabled(!interactive))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, skin.TitleInk))
         {
             ImGui.InputTextWithHint(FieldId, Loc.T(L.Strip.CoinsFieldHint), ref buffer, FieldDigits + 1,
                 ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.AutoSelectAll);

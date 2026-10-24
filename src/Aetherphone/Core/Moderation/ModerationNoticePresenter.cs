@@ -20,6 +20,7 @@ internal sealed class ModerationNoticePresenter : IDisposable
     private readonly CoinStore coins;
     private readonly IFramework framework;
     private readonly HashSet<string> presented = new(StringComparer.Ordinal);
+    private readonly List<string> stale = new();
 
     public ModerationNoticePresenter(ModerationNoticeService notices, ConfirmService confirm,
         NotificationService notifications, AccountStateService accountState, CoinStore coins, IFramework framework)
@@ -46,7 +47,7 @@ internal sealed class ModerationNoticePresenter : IDisposable
             return;
         }
 
-        presented.RemoveWhere(id => !Contains(pending, id));
+        PruneStale(pending);
 
         for (var index = 0; index < pending.Length; index++)
         {
@@ -58,6 +59,24 @@ internal sealed class ModerationNoticePresenter : IDisposable
 
             Present(notice);
         }
+    }
+
+    private void PruneStale(ModerationNoticeDto[] pending)
+    {
+        foreach (var id in presented)
+        {
+            if (!Contains(pending, id))
+            {
+                stale.Add(id);
+            }
+        }
+
+        for (var index = 0; index < stale.Count; index++)
+        {
+            presented.Remove(stale[index]);
+        }
+
+        stale.Clear();
     }
 
     private static bool Contains(ModerationNoticeDto[] pending, string noticeId)

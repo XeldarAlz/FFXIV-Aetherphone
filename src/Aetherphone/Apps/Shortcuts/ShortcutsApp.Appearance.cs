@@ -7,7 +7,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Shortcuts;
 
@@ -135,8 +134,8 @@ internal sealed partial class ShortcutsApp
         ImGui.SetCursorScreenPos(new Vector2(inputLeft, field.Center.Y - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(field.Max.X - Metrics.Space.Md * scale - inputLeft);
         var edited = false;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, ui.TitleInk))
         {
             edited = ImGui.InputTextWithHint("##shortcutHex", Loc.T(L.Shortcuts.CustomColor), ref hexBuffer, 7,
                 ImGuiInputTextFlags.CharsNoBlank);

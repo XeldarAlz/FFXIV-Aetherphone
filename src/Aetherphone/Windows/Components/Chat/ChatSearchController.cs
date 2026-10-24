@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Localization;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -81,8 +80,8 @@ internal sealed class ChatSearchController
         }
 
         bool submitted;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
+        using (UiScope.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
             submitted = ImGui.InputTextWithHint("##threadSearch", Loc.T(L.Common.Search), ref query, QueryMaxLength,
                 ImGuiInputTextFlags.EnterReturnsTrue);

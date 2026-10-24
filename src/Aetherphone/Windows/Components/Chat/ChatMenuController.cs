@@ -3,7 +3,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -335,7 +334,7 @@ internal sealed class ChatMenuController
             ImGui.GetColorU32(SheetHandle));
         var panel = new Rect(new Vector2(area.Min.X, sheetTop + capHeight), area.Max);
         string? picked;
-        using (ImRaii.PushId("reactionSheet"))
+        using (UiScope.PushId("reactionSheet"))
         {
             picked = reactionPicker.Draw(panel, model.Ui);
         }

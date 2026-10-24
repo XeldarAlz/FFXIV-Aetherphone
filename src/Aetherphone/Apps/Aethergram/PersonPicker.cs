@@ -8,7 +8,6 @@ using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Aethergram;
 
@@ -88,8 +87,8 @@ internal sealed class PersonPicker
         var fieldTop = min.Y + pad + 26f * scale;
         ImGui.SetCursorScreenPos(new Vector2(min.X + pad, fieldTop));
         ImGui.SetNextItemWidth(max.X - min.X - pad * 2f);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, theme.SurfaceMuted))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, theme.SurfaceMuted))
+        using (UiScope.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
             if (ImGui.GetFrameCount() == openedFrame + 1)
             {

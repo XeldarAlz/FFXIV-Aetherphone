@@ -13,56 +13,89 @@ namespace Aetherphone.Apps.Prism;
 
 internal sealed partial class PrismApp
 {
-    private const float RewardsHeadlineUnits = PrismType.DisplayUnits;
-    private const float RewardsHeadlineMinUnits = PrismType.TitleUnits;
-    private const int RewardsHeadlineLines = 2;
-    private const float MedalUnits = 30f;
-    private const float ChapterArtUnits = 36f;
-    private const float RewardTitleUnits = PrismType.HeadingUnits;
-    private const float RewardTitleMinShare = 0.75f;
-    private const int RewardTitleLines = 2;
-    private const float MedalGlyphShare = 1.1f;
-    private const float MedalAvatarShare = 0.62f;
-    private const float MedalIconShare = 0.55f;
-    private const float RewardRuleDelay = 0.15f;
-    private const float MedalDelay = 0.25f;
-    private const float ChapterDelay = 0.5f;
-    private const float MedalRestScale = 0.82f;
-    private const float RingTurnPerSecond = 0.12f;
+    private const string RewardTrackId = "prism.rewards.track";
+    private const float RewardWashUnits = 420f;
+    private const float FirstVisualShare = 0.36f;
+    private const float PlaceVisualShare = 0.29f;
+    private const float FirstNumeralUnits = 44f;
+    private const float PlaceNumeralUnits = 34f;
+    private const float HeatNumeralUnits = 26f;
+    private const float PedestalStepUnits = 20f;
+    private const float PedestalEdgeUnits = 2f;
+    private const float PedestalPearlAlpha = 0.6f;
+    private const float RewardBadgeShare = 1.7f;
+    private const float RewardEmblemShare = 0.7f;
+    private const float RewardEmblemOffset = 0.74f;
+    private const float RewardEmblemBacking = 0.62f;
+    private const float RewardCoinShare = 1.1f;
+    private const float FirstGlowReach = 1.9f;
+    private const float FirstRingAlpha = 0.9f;
+    private const float PlaceRingAlpha = 0.55f;
+    private const int FirstSparkles = 11;
+    private const int PlaceSparkles = 6;
+    private const int HeatSparkles = 3;
+    private const float SparkleAlpha = 0.95f;
+    private const float RiseDelay = 0.12f;
+    private const float RiseStagger = 0.14f;
+    private const float RiseUnits = 28f;
     private const float RewardMonogramScale = 0.8f;
     private const int RewardAvatarSegments = 48;
+    private const int RewardDiscSegments = 64;
+    private const float HeatIconUnits = 44f;
+    private const float GilIconShare = 0.95f;
 
-    private static readonly LocString[] RewardTitles =
-    {
-        L.Prism.RewardBadgeTitle, L.Prism.RewardFrameTitle, L.Prism.RewardCoinTitle, L.Prism.RewardGilTitle,
-    };
+    private static readonly Vector4 FirstGlow = new(0.80f, 0.72f, 1f, 0.26f);
+    private static readonly Vector4 PedestalPearl = new(1f, 0.97f, 0.92f, 1f);
 
-    private static readonly LocString[] RewardBodies =
-    {
-        L.Prism.RewardBadgeBody, L.Prism.RewardFrameBody, L.Prism.RewardCoinBody, L.Prism.RewardGilBody,
-    };
-
-    private readonly List<PrismPrizeRow> rewardRows = new();
-    private readonly PrismRewardKind[] rewardKinds = new PrismRewardKind[PrismRewards.KindCount];
-    private int rewardKindCount;
+    private readonly List<PrismPrizeRow> finalPrizes = new();
+    private readonly List<PrismPrizeRow> heatPrizes = new();
+    private readonly string[] rewardTrackLabels = new string[2];
+    private readonly CachedText[] frameDayTexts = new CachedText[PodiumSize];
     private PrismPrizesDto? rewardsFor;
+    private PrismWeekDto? rewardsWeek;
     private PrismJudgeRewardDto? rewardsJudging;
-    private BadgeStyle? rewardBadge;
-    private FrameStyle? rewardFrame;
-    private int rewardFrameDays;
-    private CachedText rewardDaysText;
+    private bool rewardsAny;
+    private bool rewardTracksDiffer;
+    private string rewardTrack = string.Empty;
     private CachedText monogramText;
 
-    private PrismPrizesDto? Prizes => store.Week?.Prizes ?? store.Results?.Prizes;
+    private PrismPrizesDto? Prizes => store.Week?.Prizes ?? ShownResults()?.Prizes;
 
     private bool ChineseAccount => gameData.IsChineseGameClient();
 
-    private void OpenRewards() => Push(PrismScreen.Rewards);
-
-    private void SyncRewardArt()
+    private void OpenRewards()
     {
-        var prizes = Prizes;
-        var judging = store.Week?.JudgeReward;
+        rewardTrack = store.Track;
+        Push(PrismScreen.Rewards);
+    }
+
+    private PrismPrizesDto? TrackPrizes(string track)
+    {
+        var tracks = store.Tracks;
+        for (var index = 0; index < tracks.Length; index++)
+        {
+            if (tracks[index].Id == track && tracks[index].Prizes is { } prizes)
+            {
+                return prizes;
+            }
+        }
+
+        return Prizes;
+    }
+
+    private void SyncRewards()
+    {
+        var week = store.Week;
+        if (!ReferenceEquals(week, rewardsWeek))
+        {
+            rewardsWeek = week;
+            var tracks = store.Tracks;
+            rewardTracksDiffer = HasTracks && tracks.Length > 1 &&
+                                 !PrismRewards.Same(tracks[0].Prizes ?? Prizes, tracks[1].Prizes ?? Prizes);
+        }
+
+        var prizes = rewardTracksDiffer ? TrackPrizes(rewardTrack) : Prizes;
+        var judging = week?.JudgeReward;
         if (ReferenceEquals(prizes, rewardsFor) && ReferenceEquals(judging, rewardsJudging))
         {
             return;
@@ -70,228 +103,478 @@ internal sealed partial class PrismApp
 
         rewardsFor = prizes;
         rewardsJudging = judging;
-        rewardBadge = null;
-        rewardFrame = null;
-        rewardFrameDays = 0;
-        rewardKindCount = PrismRewards.Offered(prizes, judging, rewardKinds);
-        PrismRewards.Fill(rewardRows, prizes, PrismPhases.StageFinal);
-        TakeRewardArt();
-        if (rewardBadge is null || rewardFrame is null)
-        {
-            PrismRewards.Fill(rewardRows, prizes, PrismPhases.StageHeat);
-            TakeRewardArt();
-        }
+        rewardsAny = PrismRewards.Any(prizes, judging);
+        PrismRewards.Fill(finalPrizes, prizes, PrismPhases.StageFinal);
+        PrismRewards.Fill(heatPrizes, prizes, PrismPhases.StageHeat);
     }
 
-    private void TakeRewardArt()
+    private void DrawRewards(ImDrawListPtr drawList, Rect full, Rect content, float scale)
     {
-        for (var index = 0; index < rewardRows.Count; index++)
+        SyncRewards();
+        var entering = store.Week is { Phase: PrismPhases.Entering, MyEntry: null };
+        if (!rewardsAny)
         {
-            var row = rewardRows[index];
-            rewardBadge ??= row.Badge;
-            if (rewardFrame is null && row.Frame is not null)
-            {
-                rewardFrame = row.Frame;
-                rewardFrameDays = row.FrameDays;
-            }
-        }
-    }
-
-    private void DrawRewards(ImDrawListPtr drawList, Rect content, float scale)
-    {
-        SyncRewardArt();
-        var top = DrawHeader(drawList, content, string.Empty, IssueLine(store.Week?.Issue ?? 0), true, scale);
-        var body = new Rect(new Vector2(content.Min.X, top), content.Max);
-        using var surface = BeginBody(body);
-        var list = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var gutter = PrismArt.Gutter(scale);
-        var width = ScrollLayout.StableContentWidth() - gutter * 2f;
-        var left = origin.X + gutter;
-        var cursor = DrawRewardsHero(list, left, origin.Y, width, scale);
-        cursor = DrawRewardMedals(list, left, cursor, width, scale);
-        for (var index = 0; index < rewardKindCount; index++)
-        {
-            cursor = DrawRewardChapter(list, left, cursor, width, rewardKinds[index], index, scale);
+            DrawNoRewards(drawList, content, entering, scale);
+            return;
         }
 
-        if (store.Week is { Phase: PrismPhases.Entering, MyEntry: null })
+        var washBottom = MathF.Min(full.Max.Y, content.Min.Y + RewardWashUnits * scale);
+        PrismLight.Week(drawList, new Rect(full.Min, new Vector2(full.Max.X, washBottom)), store.Week?.Id ?? string.Empty,
+            PrismArt.Page, PrismArt.Fore, 0f, 0f);
+        var top = DrawBackHeader(drawList, content, Loc.T(L.Prism.Rewards), scale);
+        var button = ActionRect(content, scale);
+        var bottom = entering ? button.Min.Y - Metrics.Space.Md * scale : content.Max.Y - bottomChrome;
+        using (BeginBody(new Rect(new Vector2(full.Min.X, top), new Vector2(full.Max.X, bottom))))
         {
-            var strip = new Rect(new Vector2(left, cursor), new Vector2(left + width, cursor + PrismArt.StripUnits * scale));
-            if (PrismArt.Strip(list, strip, EnterLabel(), Arrow, true, !store.Busy))
+            var list = ImGui.GetWindowDrawList();
+            var origin = ImGui.GetCursorScreenPos();
+            var width = content.Width;
+            var left = origin.X + content.Min.X - full.Min.X;
+            var cursor = origin.Y + Metrics.Space.Sm * scale;
+            if (rewardTracksDiffer)
             {
-                StartEntry();
+                cursor = DrawRewardTracks(left, cursor, width, scale);
             }
 
-            cursor = strip.Max.Y;
+            var podium = finalPrizes.Count > 0 ? finalPrizes : heatPrizes;
+            if (podium.Count > 0)
+            {
+                cursor = DrawPrizePodium(list, left, cursor, width, podium, scale) + Metrics.Space.Xl * scale;
+            }
+
+            if (finalPrizes.Count > 0 && heatPrizes.Count > 0)
+            {
+                cursor = DrawHeatPrizes(list, left, cursor, width, scale) + Metrics.Space.Xl * scale;
+            }
+
+            cursor = DrawJudgePrize(list, left, cursor, width, scale);
+            cursor = DrawGilNote(list, left, cursor, width, scale);
+            ImGui.SetCursorScreenPos(origin);
+            ImGui.Dummy(new Vector2(width, cursor - origin.Y + PrismArt.BottomMargin(scale)));
         }
 
-        ImGui.Dummy(new Vector2(width, cursor - origin.Y + PrismArt.BottomMargin(scale)));
-        PrismArt.Refraction(list, body, PrismMotion.At(screenAge, RefractionDelay, Motion.Sheet));
+        if (!entering)
+        {
+            return;
+        }
+
+        PrismLight.Primary(drawList, button, !store.Busy, scale);
+        if (DrawButton(drawList, button, EnterLabel(), ButtonStyle.Solid, scale, enabled: !store.Busy,
+                id: "prism.rewards.enter"))
+        {
+            StartPick();
+        }
     }
 
-    private float DrawRewardsHero(ImDrawListPtr drawList, float left, float top, float width, float scale)
+    private void DrawNoRewards(ImDrawListPtr drawList, Rect content, bool entering, float scale)
     {
-        var mark = PrismMotion.Mark(drawList);
-        var labelPixels = PrismArt.LabelPixels();
-        PrismType.Draw(drawList, new Vector2(left, top), Loc.T(L.Prism.Rewards), PrismArt.Muted, PrismFace.Label,
-            labelPixels);
-        top += PrismType.LineHeight(PrismFace.Label, labelPixels) + Metrics.Space.Sm * scale;
-        var pixels = PrismType.Fit(Loc.T(L.Prism.RewardsHeadline), PrismFace.Headline, width,
-            RewardsHeadlineUnits * scale, RewardsHeadlineMinUnits * scale, RewardsHeadlineLines, out var lines);
-        top += PrismType.DrawLines(drawList, new Vector2(left, top), lines, PrismArt.Fore, PrismFace.Headline, pixels) +
-               Metrics.Space.Md * scale;
-        var draw = PrismMotion.At(screenAge, RewardRuleDelay, Motion.Sheet);
-        PrismArt.SpectrumRule(drawList, left, left + width * draw, top, scale);
-        if (draw >= PrismMotion.Settled)
+        var top = DrawBackHeader(drawList, content, Loc.T(L.Prism.Rewards), scale);
+        var area = new Rect(new Vector2(content.Min.X, top), new Vector2(content.Max.X, content.Max.Y - bottomChrome));
+        DrawEmpty(drawList, area, RewardsGlyph, string.Empty, Loc.T(L.Prism.NoRewardsHint),
+            entering ? EnterLabel() : string.Empty, ButtonStyle.Solid, scale, out var enter);
+        if (enter && !store.Busy)
         {
-            PrismArt.RuleGlow(drawList, left, left + width, top, scale,
-                screenAge - RewardRuleDelay - GlowLeadSeconds);
+            StartPick();
         }
-
-        top += Metrics.Space.Lg * scale;
-        var intro = PrismType.Sentences(Loc.T(L.Prism.RewardsIntro), TextStyles.Subheadline, width);
-        top += Typography.DrawWrappedLeft(new Vector2(left, top), intro, PrismArt.Muted, TextStyles.Subheadline,
-            PrismType.BalancedWidth(intro, TextStyles.Subheadline, width));
-        PrismMotion.Rise(drawList, mark, PrismMotion.At(screenAge, 0f, Motion.PageSettle), PrismMotion.RiseUnits * scale);
-        return top + Metrics.Space.Xxl * scale;
     }
 
-    private float DrawRewardMedals(ImDrawListPtr drawList, float left, float top, float width, float scale)
+    private float DrawRewardTracks(float left, float top, float width, float scale)
     {
-        if (rewardKindCount == 0)
+        var tap = Metrics.Size.TapTarget * scale;
+        rewardTrackLabels[0] = PrismTracks.Name(PrismTracks.Modded);
+        rewardTrackLabels[1] = PrismTracks.Name(PrismTracks.Vanilla);
+        var selected = rewardTrack == PrismTracks.Vanilla ? 1 : 0;
+        var picked = DrawTrackSegments(RewardTrackId,
+            new Rect(new Vector2(left, top), new Vector2(left + width, top + tap)), rewardTrackLabels, selected, scale);
+        if (picked != selected)
         {
-            return top;
+            rewardTrack = picked == 1 ? PrismTracks.Vanilla : PrismTracks.Modded;
         }
 
-        var gap = Metrics.Space.Md * scale;
-        var column = (width - gap * (PrismRewards.KindCount - 1)) / PrismRewards.KindCount;
-        var radius = MathF.Min(MedalUnits * scale, column * 0.5f);
-        var turn = (float)(ImGui.GetTime() * RingTurnPerSecond);
-        for (var index = 0; index < rewardKindCount; index++)
+        return top + tap + Metrics.Space.Lg * scale;
+    }
+
+    private float DrawPrizePodium(ImDrawListPtr drawList, float left, float top, float width,
+        List<PrismPrizeRow> rows, float scale)
+    {
+        var gap = Metrics.Space.Sm * scale;
+        var column = (width - gap * (PodiumSize - 1)) / PodiumSize;
+        var step = PedestalStepUnits * scale;
+        var chinese = ChineseAccount;
+        var content = 0f;
+        for (var index = 0; index < rows.Count; index++)
         {
-            var center = new Vector2(left + column * (index + 0.5f) + gap * index, top + radius);
+            content = MathF.Max(content, PedestalHeight(rows[index], chinese, column, scale));
+        }
+
+        var baseline = top;
+        for (var index = 0; index < rows.Count; index++)
+        {
+            var row = rows[index];
+            if (row.Rank is < 1 or > PodiumSize)
+            {
+                continue;
+            }
+
+            var outer = VisualRadius(row.Rank, column) * (row.Frame?.Scale ?? 1f);
+            baseline = MathF.Max(baseline,
+                top + outer * 2f + Metrics.Space.Md * scale + content + PedestalLift(row.Rank, step));
+        }
+
+        for (var slot = 0; slot < PodiumSize; slot++)
+        {
+            var rank = PodiumOrder[slot];
+            if (PrizeAt(rows, rank) is not { } row)
+            {
+                continue;
+            }
+
+            var x = left + slot * (column + gap);
+            var pedestal = new Rect(new Vector2(x, baseline - content - PedestalLift(rank, step)),
+                new Vector2(x + column, baseline));
+            var radius = VisualRadius(rank, column);
+            var outer = radius * (row.Frame?.Scale ?? 1f);
+            var center = new Vector2(pedestal.Center.X, pedestal.Min.Y - Metrics.Space.Md * scale - outer);
+            var rise = PrismMotion.At(screenAge, RiseDelay + RiseStagger * (PodiumSize - rank), Motion.Sheet);
             var mark = PrismMotion.Mark(drawList);
-            DrawRewardArt(drawList, center, radius, rewardKinds[index], turn, scale);
-            var shown = PrismMotion.At(screenAge, MedalDelay + index * PrismMotion.Stagger, Motion.PageSettle);
-            PrismMotion.Scale(drawList, mark, center, MedalRestScale + (1f - MedalRestScale) * shown, shown);
+            DrawPrizeVisual(drawList, center, radius, row, rank, scale);
+            DrawPedestal(drawList, pedestal, row, rank, chinese, scale);
+            if (rise < PrismMotion.Settled)
+            {
+                PrismMotion.Shift(drawList, mark, new Vector2(0f, (1f - rise) * RiseUnits * scale), rise);
+            }
         }
 
-        return top + radius * 2f + Metrics.Space.Xxl * scale;
+        return baseline;
     }
 
-    private void DrawRewardArt(ImDrawListPtr drawList, Vector2 center, float radius, PrismRewardKind kind, float turn,
+    private static float VisualRadius(int rank, float column) =>
+        column * (rank == 1 ? FirstVisualShare : PlaceVisualShare);
+
+    private static float PedestalLift(int rank, float step) => (PodiumSize - rank) * step;
+
+    private static PrismPrizeRow? PrizeAt(List<PrismPrizeRow> rows, int rank)
+    {
+        for (var index = 0; index < rows.Count; index++)
+        {
+            if (rows[index].Rank == rank)
+            {
+                return rows[index];
+            }
+        }
+
+        return null;
+    }
+
+    private static float NumeralPixels(int rank, float scale) =>
+        (rank == 1 ? FirstNumeralUnits : PlaceNumeralUnits) * scale;
+
+    private float PedestalHeight(PrismPrizeRow row, bool chinese, float column, float scale)
+    {
+        var pad = Metrics.Space.Sm * scale;
+        var height = pad + PrismType.Measure(Plain[1], PrismFace.Numerals, NumeralPixels(row.Rank, scale)).Y + pad;
+        var line = Typography.LineHeight(PrismType.Headline) + Metrics.Space.Xxs * scale;
+        if (row.CoinsFor(chinese) > 0)
+        {
+            height += line;
+        }
+
+        if (row.GilFor(chinese) > 0)
+        {
+            height += line;
+        }
+
+        if (row.Frame is not null && row.FrameDays > 0)
+        {
+            height += Typography.MeasureWrappedBlock(FrameDaysText(row.Rank, row.FrameDays), PrismType.Caption,
+                column - pad * 2f).Y + Metrics.Space.Xxs * scale;
+        }
+
+        return height + pad;
+    }
+
+    private void DrawPrizeVisual(ImDrawListPtr drawList, Vector2 center, float radius, PrismPrizeRow row, int rank,
         float scale)
     {
-        PrismArt.Medal(drawList, center, radius, rank: 1, turn, scale);
-        switch (kind)
+        var glow = rank == 1 ? PrismGlow.Spectrum : PrismGlow.Pearl;
+        var outer = radius * (row.Frame?.Scale ?? 1f);
+        if (rank == 1)
         {
-            case PrismRewardKind.Badge:
-                if (rewardBadge is not null)
-                {
-                    BadgeStrip.DrawOne(drawList, center, rewardBadge, images, Palette.Luminance(PrismArt.Back) >= 0.5f,
-                        radius * MedalGlyphShare);
-                    break;
-                }
-
-                var pixels = radius * MedalGlyphShare;
-                var size = PrismType.Measure(Plain[1], PrismFace.Numerals, pixels);
-                PrismType.Draw(drawList, center - size * 0.5f, Plain[1], PrismArt.Fore, PrismFace.Numerals, pixels);
-                break;
-            case PrismRewardKind.Frame:
-                DrawRewardAvatar(drawList, center, radius * MedalAvatarShare, scale);
-                break;
-            case PrismRewardKind.Coin:
-                CurrencyGlyph.Draw(drawList, CurrencyKind.Coins, center, radius * MedalGlyphShare);
-                break;
-            case PrismRewardKind.Gil:
-                if (GearItem(GameData.GilItemId, out _, out var iconId))
-                {
-                    var half = new Vector2(radius * MedalIconShare, radius * MedalIconShare);
-                    GameIconTile.Draw(drawList, textures, iconId, center - half, center + half, 0f, scale);
-                }
-
-                break;
+            SoftGlow.Draw(drawList, center, outer * FirstGlowReach, FirstGlow);
         }
+
+        DrawPrizeArt(drawList, center, radius, row);
+        PrismLight.CircleEdge(drawList, center, outer, glow, rank == 1 ? FirstRingAlpha : PlaceRingAlpha, scale);
+        PrismSparkles.Around(drawList, center, outer, rank, rank == 1 ? FirstSparkles : PlaceSparkles, glow,
+            SparkleAlpha, scale);
     }
 
-    private void DrawRewardAvatar(ImDrawListPtr drawList, Vector2 center, float room, float scale)
+    private void DrawPrizeArt(ImDrawListPtr drawList, Vector2 center, float radius, PrismPrizeRow row)
     {
-        var radius = MathF.Max(room / (1f + AvatarView.Reserve(rewardFrame, room) / room),
-            AvatarView.MinFrameRadius * scale);
-        var user = store.CurrentUser;
-        var name = user?.DisplayName is { Length: > 0 } display ? display : user?.Name ?? string.Empty;
+        var light = PrismArt.Light;
+        var outer = radius * (row.Frame?.Scale ?? 1f);
+        var extent = new Vector2(outer, outer);
+        if (row.Frame is { } frame)
+        {
+            DrawPrizeAvatar(drawList, center, radius, frame);
+            HoverTooltip.Show(new Rect(center - extent, center + extent), frame.Name, HoverLabelSide.Above);
+            if (row.Badge is not { } emblem)
+            {
+                return;
+            }
+
+            var size = radius * RewardEmblemShare;
+            var spot = center + new Vector2(radius * RewardEmblemOffset, radius * RewardEmblemOffset);
+            drawList.AddCircleFilled(spot, size * RewardEmblemBacking, ImGui.GetColorU32(PrismArt.Page),
+                RewardDiscSegments);
+            BadgeStrip.DrawOne(drawList, spot, emblem, images, light, size);
+            var half = new Vector2(size * 0.5f, size * 0.5f);
+            HoverTooltip.Show(new Rect(spot - half, spot + half), emblem.Name, HoverLabelSide.Below);
+            return;
+        }
+
+        drawList.AddCircleFilled(center, radius,
+            ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Tertiary)), RewardDiscSegments);
+        if (row.Badge is { } badge)
+        {
+            BadgeStrip.DrawOne(drawList, center, badge, images, light, radius * RewardBadgeShare);
+            HoverTooltip.Show(new Rect(center - extent, center + extent), badge.Name, HoverLabelSide.Above);
+            return;
+        }
+
+        CurrencyGlyph.Draw(drawList, CurrencyKind.Coins, center, radius * RewardCoinShare);
+    }
+
+    private void DrawPrizeAvatar(ImDrawListPtr drawList, Vector2 center, float radius, FrameStyle frame)
+    {
+        var user = glams.Me;
+        if (user is null)
+        {
+            glams.EnsureMe();
+        }
+
+        var name = AuthorName(user);
         var key = HashCode.Combine(name);
         var monogram = monogramText.IsCurrent(key) ? monogramText.Value : monogramText.Store(key, Initials.Of(name));
         AvatarView.Draw(drawList, center, radius, PrismArt.Muted, monogram, RewardMonogramScale,
             images.Avatar(user?.AvatarUrl, radius * 2f), RewardAvatarSegments);
-        if (rewardFrame is not null)
-        {
-            AvatarView.DrawFrame(drawList, center, radius, images, rewardFrame);
-        }
+        AvatarView.DrawFrame(drawList, center, radius, images, frame);
     }
 
-    private float DrawRewardChapter(ImDrawListPtr drawList, float left, float top, float width, PrismRewardKind kind,
-        int number,
+    private void DrawPedestal(ImDrawListPtr drawList, Rect pedestal, PrismPrizeRow row, int rank, bool chinese,
         float scale)
     {
-        var mark = PrismMotion.Mark(drawList);
-        var labelPixels = PrismArt.LabelPixels();
-        var labelLine = PrismType.LineHeight(PrismFace.Label, labelPixels);
-        var art = ChapterArtUnits * scale;
-        var gap = Metrics.Space.Lg * scale;
-        var textLeft = left + art * 2f + gap;
-        var textWidth = left + width - textLeft;
-        PrismArt.Hairline(drawList, left, left + width, top, PrismArt.Faint, scale);
-        top += Metrics.Space.Lg * scale;
-        DrawRewardArt(drawList, new Vector2(left + art, top + art), art, kind, 0f, scale);
-        var cursor = top;
-        PrismType.Draw(drawList, new Vector2(textLeft, cursor), Padded[number + 1], PrismArt.Muted, PrismFace.Label,
-            labelPixels);
-        cursor += labelLine;
-        var pixels = PrismType.Fit(Loc.T(RewardTitles[(int)kind]), PrismFace.Headline, textWidth, RewardTitleUnits * scale,
-            RewardTitleUnits * scale * RewardTitleMinShare, RewardTitleLines, out var lines);
-        cursor += PrismType.DrawLines(drawList, new Vector2(textLeft, cursor), lines, PrismArt.Fore, PrismFace.Headline,
-            pixels) + Metrics.Space.Xs * scale;
-        cursor += Typography.DrawWrappedLeft(new Vector2(textLeft, cursor), Loc.T(RewardBodies[(int)kind]), PrismArt.Muted,
-            TextStyles.Subheadline, textWidth);
-        cursor = DrawRewardNote(textLeft, cursor, textWidth, RewardExtra(kind), scale);
-        if (kind == PrismRewardKind.Gil && !ChineseAccount && Prizes is { GilNote.Length: > 0 } prizes)
+        var rounding = Metrics.Radius.Card * scale;
+        var level = rank == 1 ? FillLevel.Primary : FillLevel.Secondary;
+        Squircle.FillVerticalGradient(drawList, pedestal.Min, pedestal.Max, rounding,
+            ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, level)),
+            ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Quaternary)));
+        var edge = MathF.Max(1f, PedestalEdgeUnits * scale);
+        if (rank == 1)
         {
-            cursor = DrawRewardNote(textLeft, cursor, textWidth, prizes.GilNote, scale);
+            PrismLight.Strip(drawList, pedestal.Min.X + rounding, pedestal.Max.X - rounding, pedestal.Min.Y, edge,
+                PrismLight.TabAlpha);
+        }
+        else
+        {
+            drawList.AddRectFilled(new Vector2(pedestal.Min.X + rounding, pedestal.Min.Y),
+                new Vector2(pedestal.Max.X - rounding, pedestal.Min.Y + edge),
+                ImGui.GetColorU32(PedestalPearl with { W = PedestalPearlAlpha }));
         }
 
-        PrismMotion.Rise(drawList, mark, PrismMotion.At(screenAge, ChapterDelay + number * PrismMotion.Stagger,
-            Motion.PageSettle), PrismMotion.RiseUnits * scale);
-        return MathF.Max(cursor, top + art * 2f) + Metrics.Space.Xl * scale;
+        var pad = Metrics.Space.Sm * scale;
+        var pixels = NumeralPixels(rank, scale);
+        var digit = Plain[rank];
+        var size = PrismType.Measure(digit, PrismFace.Numerals, pixels);
+        PrismType.Draw(drawList, new Vector2(pedestal.Center.X - size.X * 0.5f, pedestal.Min.Y + pad), digit,
+            PrismArt.Fore, PrismFace.Numerals, pixels);
+        var y = pedestal.Min.Y + pad + size.Y + pad;
+        var room = pedestal.Width - pad * 2f;
+        var coins = row.CoinsFor(chinese);
+        if (coins > 0)
+        {
+            y = DrawCoinLine(drawList, pedestal.Center.X, y, NumberText.Group(coins), room, scale);
+        }
+
+        var gil = row.GilFor(chinese);
+        if (gil > 0)
+        {
+            y = DrawGilLine(drawList, pedestal.Center.X, y, NumberText.Group(gil), room, scale);
+        }
+
+        if (row.Frame is not null && row.FrameDays > 0)
+        {
+            Typography.DrawWrappedCentered(new Vector2(pedestal.Center.X, y), FrameDaysText(rank, row.FrameDays),
+                PrismArt.Muted, PrismType.Caption, room);
+        }
     }
 
-    private static float DrawRewardNote(float left, float top, float width, string note, float scale)
+    private static float DrawCoinLine(ImDrawListPtr drawList, float centerX, float top, string amount, float room,
+        float scale)
     {
-        if (note.Length == 0)
+        var style = FitStyle(amount, MathF.Max(1f, room - CurrencyGlyph.Reserve(
+            Typography.LineHeight(PrismType.Headline))), PrismType.Headline);
+        var size = CurrencyGlyph.MeasureAmount(amount, style);
+        CurrencyGlyph.DrawAmount(drawList, new Vector2(centerX - size.X * 0.5f, top), amount, CurrencyKind.Coins,
+            PrismArt.Fore, style);
+        return top + Typography.LineHeight(PrismType.Headline) + Metrics.Space.Xxs * scale;
+    }
+
+    private float DrawGilLine(ImDrawListPtr drawList, float centerX, float top, string amount, float room,
+        float scale)
+    {
+        var line = Typography.LineHeight(PrismType.Headline);
+        var icon = line * GilIconShare;
+        var gap = Metrics.Space.Xxs * scale;
+        var style = FitStyle(amount, MathF.Max(1f, room - icon - gap), PrismType.Headline);
+        var text = Typography.Measure(amount, style);
+        var left = centerX - (icon + gap + text.X) * 0.5f;
+        if (GearItem(GameData.GilItemId, out _, out var iconId))
+        {
+            var iconTop = top + (line - icon) * 0.5f;
+            GameIconTile.Draw(drawList, textures, iconId, new Vector2(left, iconTop),
+                new Vector2(left + icon, iconTop + icon), 0f, scale);
+        }
+
+        Typography.Draw(drawList, new Vector2(left + icon + gap, top + (line - text.Y) * 0.5f), amount,
+            PrismArt.Fore, style);
+        return top + line + Metrics.Space.Xxs * scale;
+    }
+
+    private string FrameDaysText(int rank, int days)
+    {
+        var slot = Math.Clamp(rank - 1, 0, frameDayTexts.Length - 1);
+        var key = HashCode.Combine(days, Loc.Current.Code);
+        return frameDayTexts[slot].IsCurrent(key)
+            ? frameDayTexts[slot].Value
+            : frameDayTexts[slot].Store(key, Loc.Plural(L.Prism.FrameDays, days));
+    }
+
+    private float DrawHeatPrizes(ImDrawListPtr drawList, float left, float top, float width, float scale)
+    {
+        top = DrawSectionTitle(drawList, left, left + width, top, Loc.T(L.Prism.HeatPrizesTitle), string.Empty,
+            scale) + Metrics.Space.Md * scale;
+        var gap = Metrics.Space.Sm * scale;
+        var cell = (width - gap * (PodiumSize - 1)) / PodiumSize;
+        var chinese = ChineseAccount;
+        var pad = Metrics.Space.Sm * scale;
+        var numeral = HeatNumeralUnits * scale;
+        var head = MathF.Max(PrismType.Measure(Plain[1], PrismFace.Numerals, numeral).Y, HeatIconUnits * scale);
+        var line = Typography.LineHeight(PrismType.Headline) + Metrics.Space.Xxs * scale;
+        var lines = 0;
+        for (var index = 0; index < heatPrizes.Count && index < PodiumSize; index++)
+        {
+            var row = heatPrizes[index];
+            lines = Math.Max(lines, (row.CoinsFor(chinese) > 0 ? 1 : 0) + (row.GilFor(chinese) > 0 ? 1 : 0));
+        }
+
+        var height = pad + head + pad + lines * line + pad;
+        for (var index = 0; index < heatPrizes.Count && index < PodiumSize; index++)
+        {
+            var row = heatPrizes[index];
+            var x = left + index * (cell + gap);
+            var rect = new Rect(new Vector2(x, top), new Vector2(x + cell, top + height));
+            Squircle.Fill(drawList, rect.Min, rect.Max, Metrics.Radius.Card * scale,
+                ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Tertiary)));
+            var digit = Plain[Math.Clamp(row.Rank, 0, Plain.Length - 1)];
+            var size = PrismType.Measure(digit, PrismFace.Numerals, numeral);
+            PrismType.Draw(drawList, new Vector2(rect.Min.X + pad, rect.Min.Y + pad + (head - size.Y) * 0.5f), digit,
+                PrismArt.Fore, PrismFace.Numerals, numeral);
+            DrawHeatArt(drawList, new Vector2(rect.Max.X - pad, rect.Min.Y + pad + head * 0.5f), row, scale);
+            var y = rect.Min.Y + pad + head + pad;
+            var room = cell - pad * 2f;
+            var coins = row.CoinsFor(chinese);
+            if (coins > 0)
+            {
+                y = DrawCoinLine(drawList, rect.Center.X, y, NumberText.Group(coins), room, scale);
+            }
+
+            var gil = row.GilFor(chinese);
+            if (gil > 0)
+            {
+                DrawGilLine(drawList, rect.Center.X, y, NumberText.Group(gil), room, scale);
+            }
+        }
+
+        return top + height;
+    }
+
+    private void DrawHeatArt(ImDrawListPtr drawList, Vector2 rightCenter, PrismPrizeRow row, float scale)
+    {
+        if (row.Badge is null && row.Frame is null)
+        {
+            return;
+        }
+
+        var half = HeatIconUnits * scale * 0.5f;
+        var center = new Vector2(rightCenter.X - half, rightCenter.Y);
+        DrawPrizeArt(drawList, center, half / (row.Frame?.Scale ?? 1f), row);
+        PrismSparkles.Around(drawList, center, half, row.Rank + PodiumSize, HeatSparkles, PrismGlow.Pearl,
+            SparkleAlpha, scale);
+    }
+
+    private float DrawJudgePrize(ImDrawListPtr drawList, float left, float top, float width, float scale)
+    {
+        var text = RewardLine(store.Week?.JudgeReward);
+        if (text.Length == 0)
         {
             return top;
         }
 
-        return top + Metrics.Space.Sm * scale + Typography.DrawWrappedLeft(new Vector2(left, top + Metrics.Space.Sm * scale),
-            note, PrismArt.Fore, TextStyles.Footnote, width);
+        var pad = Metrics.Space.Md * scale;
+        var line = Typography.LineHeight(PrismType.Headline);
+        var glyph = line * CurrencyGlyph.GlyphFraction;
+        var textLeft = left + pad + glyph + Metrics.Space.Sm * scale;
+        var room = MathF.Max(1f, left + width - pad - textLeft);
+        var block = Typography.MeasureWrappedBlock(text, PrismType.Body, room).Y;
+        var height = MathF.Max(block, line) + pad * 2f;
+        Squircle.Fill(drawList, new Vector2(left, top), new Vector2(left + width, top + height),
+            Metrics.Radius.Card * scale, ImGui.GetColorU32(Surfaces.Fill(PrismArt.Fore, FillLevel.Quaternary)));
+        var middle = top + height * 0.5f;
+        CurrencyGlyph.Draw(drawList, CurrencyKind.Coins, new Vector2(left + pad + glyph * 0.5f, middle), glyph);
+        Typography.DrawWrappedLeft(new Vector2(textLeft, middle - block * 0.5f), text, PrismArt.Fore, PrismType.Body,
+            room);
+        return top + height + Metrics.Space.Lg * scale;
     }
 
-    private string RewardExtra(PrismRewardKind kind)
+    private float DrawGilNote(ImDrawListPtr drawList, float left, float top, float width, float scale)
     {
-        switch (kind)
+        var chinese = ChineseAccount;
+        if (!AwardsGil(chinese))
         {
-            case PrismRewardKind.Frame when rewardFrameDays > 0:
-                var key = HashCode.Combine(rewardFrameDays, Loc.Current.Code);
-                return rewardDaysText.IsCurrent(key)
-                    ? rewardDaysText.Value
-                    : rewardDaysText.Store(key, Loc.Plural(L.Prism.FrameDays, rewardFrameDays));
-            case PrismRewardKind.Coin:
-                return RewardLine(store.Week?.JudgeReward);
-            case PrismRewardKind.Gil:
-                return Loc.T(ChineseAccount ? L.Prism.GilChinese : L.Prism.GilSent);
-            default:
-                return string.Empty;
+            return top;
         }
+
+        top += Typography.DrawWrappedLeft(new Vector2(left, top),
+            Loc.T(chinese ? L.Prism.GilChinese : L.Prism.GilSent), PrismArt.Muted, PrismType.Caption, width);
+        if (chinese || rewardsFor is not { GilNote.Length: > 0 } prizes)
+        {
+            return top;
+        }
+
+        return top + Metrics.Space.Xs * scale + Typography.DrawWrappedLeft(
+            new Vector2(left, top + Metrics.Space.Xs * scale), prizes.GilNote, PrismArt.Muted, PrismType.Caption,
+            width);
+    }
+
+    private bool AwardsGil(bool chinese)
+    {
+        for (var index = 0; index < finalPrizes.Count; index++)
+        {
+            if (chinese ? finalPrizes[index].ChineseCoins > 0 : finalPrizes[index].Gil > 0)
+            {
+                return true;
+            }
+        }
+
+        for (var index = 0; index < heatPrizes.Count; index++)
+        {
+            if (chinese ? heatPrizes[index].ChineseCoins > 0 : heatPrizes[index].Gil > 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

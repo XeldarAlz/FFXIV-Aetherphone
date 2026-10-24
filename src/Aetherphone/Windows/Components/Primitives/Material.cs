@@ -13,6 +13,8 @@ internal static class Material
     private const float EdgeRefraction = 0.7f;
     private const float PointerReachUnits = 56f;
     private const float FallbackBody = 0.14f;
+    private const float RimWidth = 1f;
+    private const float RefractionWidth = 1.2f;
     private const uint AlphaChannel = 0xFF000000;
     private static readonly Vector4 FrostedFill = new(0.12f, 0.12f, 0.15f, 0.86f);
     private static readonly Vector4 LightGlassCalm = new(0.92f, 0.94f, 1f, 0.20f);
@@ -258,8 +260,8 @@ internal static class Material
 
         var light = tone == GlassTone.Light;
         Squircle.Stroke(drawList, min, max, radius,
-            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, (light ? 0.40f : 0.22f) * opacity)), 1f * scale);
-        var inset = 1.5f * scale;
+            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, (light ? 0.40f : 0.22f) * opacity)), RimWidth * scale);
+        var inset = (RimWidth + RefractionWidth) * 0.5f * scale;
         var innerMin = new Vector2(min.X + inset, min.Y + inset);
         var innerMax = new Vector2(max.X - inset, max.Y - inset);
         if (innerMax.X - innerMin.X <= 1f || innerMax.Y - innerMin.Y <= 1f)
@@ -269,34 +271,11 @@ internal static class Material
 
         var bright = new Vector4(1f, 1f, 1f, (light ? 0.50f : 0.28f) * opacity);
         var dim = new Vector4(0f, 0f, 0f, (light ? 0.16f : 0.30f) * opacity);
-        RefractionEdge(drawList, innerMin, innerMax, MathF.Max(radius - inset, 0f), bright, dim, 1.2f * scale);
+        Squircle.StrokeShaded(drawList, innerMin, innerMax, MathF.Max(radius - inset, 0f), RefractionWidth * scale,
+            ImGui.GetColorU32(bright), ImGui.GetColorU32(bright with { W = bright.W * 0.45f }),
+            ImGui.GetColorU32(dim));
         SheenBlock(drawList, min, max, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f * opacity)),
             1f * scale, 0.5f);
-    }
-
-    private static void RefractionEdge(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius, Vector4 bright,
-        Vector4 dim, float thickness)
-    {
-        var box = Squircle.CornerBox(min, max, radius);
-        var brightColor = ImGui.GetColorU32(bright);
-        var dimColor = ImGui.GetColorU32(dim);
-        var side = ImGui.GetColorU32(bright with { W = bright.W * 0.45f });
-        if (max.X - min.X > 2f * box)
-        {
-            drawList.AddLine(new Vector2(min.X + box, min.Y), new Vector2(max.X - box, min.Y), brightColor, thickness);
-            drawList.AddLine(new Vector2(min.X + box, max.Y), new Vector2(max.X - box, max.Y), dimColor, thickness);
-        }
-
-        if (max.Y - min.Y > 2f * box)
-        {
-            drawList.AddLine(new Vector2(min.X, min.Y + box), new Vector2(min.X, max.Y - box), side, thickness);
-            drawList.AddLine(new Vector2(max.X, min.Y + box), new Vector2(max.X, max.Y - box), dimColor, thickness);
-        }
-
-        Squircle.StrokeCorner(drawList, min, max, radius, 0, bright, bright, thickness);
-        Squircle.StrokeCorner(drawList, min, max, radius, 1, dim, bright, thickness);
-        Squircle.StrokeCorner(drawList, min, max, radius, 2, dim, dim, thickness);
-        Squircle.StrokeCorner(drawList, min, max, radius, 3, bright, dim, thickness);
     }
 
     public static void EdgeSquircle(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius, float scale,

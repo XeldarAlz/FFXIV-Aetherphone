@@ -5,7 +5,6 @@ using Aetherphone.Core.Casino;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino.Venue;
 
@@ -39,7 +38,7 @@ internal sealed class HostGameGrid
             var open = CasinoGameGate.IsOpen(features, HostGames.Of(game).GameId);
             var poster = new PosterInfo(open, 0, metas[index], string.Empty,
                 VenuePosters.ShowsGilBadge(game, gilOpen) ? badge : string.Empty);
-            using (ImRaii.PushId(index))
+            using (UiScope.PushId(index))
             {
                 if (DrawPoster(drawList, game, tile, poster, layout, textBlock, phase, interactive && open, scale))
                 {

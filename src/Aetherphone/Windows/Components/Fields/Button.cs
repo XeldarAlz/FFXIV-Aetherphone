@@ -11,6 +11,8 @@ internal enum ButtonStyle : byte
     Tinted,
     Gray,
     Plain,
+    Bare,
+    Solid,
 }
 
 internal enum ButtonSize : byte
@@ -41,12 +43,19 @@ internal static class Button
     private const float TintedHoverAlpha = 0.28f;
     private const float ProminentHoverLift = 0.10f;
     private const float ProminentTopLift = 0.12f;
+    private const float SolidHoverMix = 0.08f;
+    private const float SolidPressMix = 0.15f;
     private const float HaloRest = 0.08f;
     private const float HaloHover = 0.26f;
     private const float SheenAlpha = 0.55f;
     private const float TopEdgeAlpha = 0.28f;
     private const float RimLightAlpha = 0.6f;
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
+    private static readonly Vector4 Black = new(0f, 0f, 0f, 1f);
+    private static Vector4 solidTone = new(-1f);
+    private static Vector4 solidInk;
+    private static Vector4 solidLabel;
+    private static bool solidLight;
 
     public static float Height(ButtonSize size) => size switch
     {
@@ -79,13 +88,22 @@ internal static class Button
 
     public static bool Draw(ImDrawListPtr drawList, Rect rect, string label, in ControlInk ink,
         ButtonStyle style = ButtonStyle.Prominent, ButtonRole role = ButtonRole.Normal, bool enabled = true,
-        bool overlay = false, string? id = null, float opacity = 1f, UiSound tapSound = UiSound.Tap)
+        bool overlay = false, string? id = null, float opacity = 1f, UiSound tapSound = UiSound.Tap,
+        float labelRoom = 0f)
     {
         var hovered = enabled && (overlay
             ? UiInteract.HoverWindowOnly(rect.Min, rect.Max)
             : UiInteract.Hover(rect.Min, rect.Max));
         var face = Surface(drawList, rect, ink, style, role, enabled, hovered, ImGui.GetID(id ?? label), opacity);
-        DrawLabel(drawList, face, label, id);
+        if (labelRoom > 0f)
+        {
+            DrawFittedLabel(drawList, face, label, LabelStyle(rect.Height), labelRoom);
+        }
+        else
+        {
+            DrawLabel(drawList, face, label, id);
+        }
+
         return enabled && UiInteract.Click(rect.Min, rect.Max, hovered, tapSound);
     }
 
@@ -121,6 +139,14 @@ internal static class Button
                 Squircle.Fill(drawList, face.Min, face.Max, radius, ImGui.GetColorU32(gray with { W = gray.W * alpha }));
                 labelInk = role == ButtonRole.Destructive ? toneInk : ink.Ink;
                 break;
+            case ButtonStyle.Solid:
+                labelInk = SolidLabel(tone, ink);
+                Squircle.Fill(drawList, face.Min, face.Max, radius, ImGui.GetColorU32(Palette.Mix(tone, labelInk,
+                    SolidHoverMix * pose.Hover + SolidPressMix * pose.Press) with { W = alpha }));
+                break;
+            case ButtonStyle.Bare:
+                labelInk = toneInk;
+                break;
             default:
                 if (pose.Hover > 0.001f)
                 {
@@ -133,7 +159,7 @@ internal static class Button
                 break;
         }
 
-        if (style != ButtonStyle.Plain)
+        if (style is not ButtonStyle.Plain and not ButtonStyle.Bare and not ButtonStyle.Solid)
         {
             MotionButton.RimLight(drawList, face, radius, pose.Hover * RimLightAlpha * alpha);
         }
@@ -163,6 +189,15 @@ internal static class Button
             face.LabelInk, style);
     }
 
+    private static void DrawFittedLabel(ImDrawListPtr drawList, in ButtonFace face, string label, TextStyle largest,
+        float room)
+    {
+        var style = new TextStyle(
+            Typography.FitScale(label, room, largest.Scale, TextStyles.Footnote.Scale, largest.Weight), largest.Weight);
+        Typography.DrawCentered(drawList, face.Face.Center, Typography.FitText(label, room, style), face.LabelInk,
+            style);
+    }
+
     private static void PaintProminent(ImDrawListPtr drawList, Rect face, float radius, Vector4 tone, in ButtonPose pose,
         float alpha)
     {
@@ -179,6 +214,21 @@ internal static class Button
         BrandMark.Sheen(drawList, face.Min, face.Max, radius, pose.Sheen, SheenAlpha * alpha);
         Squircle.StrokeDirectional(drawList, face.Min, face.Max, radius,
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, TopEdgeAlpha * alpha)), 1f * scale, new Vector2(0f, -1f), 2f);
+    }
+
+    private static Vector4 SolidLabel(Vector4 tone, in ControlInk ink)
+    {
+        if (tone == solidTone && ink.Ink == solidInk && ink.Light == solidLight)
+        {
+            return solidLabel;
+        }
+
+        var opposite = ink.Light ? White : Black;
+        solidTone = tone;
+        solidInk = ink.Ink;
+        solidLight = ink.Light;
+        solidLabel = Palette.ContrastRatio(tone, ink.Ink) >= Palette.ContrastRatio(tone, opposite) ? ink.Ink : opposite;
+        return solidLabel;
     }
 
     private static float Lerp(float from, float to, float amount) => from + (to - from) * amount;

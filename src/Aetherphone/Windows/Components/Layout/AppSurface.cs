@@ -63,15 +63,17 @@ internal static class AppSurface
     public static void DisarmNavBar() => navBarArmed = false;
 
     public static SurfaceScope Begin(Rect area, bool disableMouseWheelScroll = false) =>
-        BeginCore(area, SidePadding, disableMouseWheelScroll);
+        BeginCore(area, SidePadding, disableMouseWheelScroll, false);
 
     public static SurfaceScope Begin(Rect area, float sidePadding, bool disableMouseWheelScroll = false) =>
-        BeginCore(area, sidePadding, disableMouseWheelScroll);
+        BeginCore(area, sidePadding, disableMouseWheelScroll, false);
 
-    public static SurfaceScope BeginEdgeToEdge(Rect area, bool disableMouseWheelScroll = false) =>
-        BeginCore(area, 0f, disableMouseWheelScroll);
+    public static SurfaceScope BeginEdgeToEdge(Rect area, bool disableMouseWheelScroll = false,
+        bool smoothWheel = false) =>
+        BeginCore(area, 0f, disableMouseWheelScroll, smoothWheel);
 
-    private static SurfaceScope BeginCore(Rect area, float horizontalPadding, bool disableMouseWheelScroll)
+    private static SurfaceScope BeginCore(Rect area, float horizontalPadding, bool disableMouseWheelScroll,
+        bool smoothWheel)
     {
         var scale = UiScale.Current;
         var hostsNavBar = navBarArmed && depth == 0 &&
@@ -83,21 +85,23 @@ internal static class AppSurface
 
         ImGui.SetCursorScreenPos(area.Min);
         var key = ImGui.GetID("##appSurface");
-        var padding = ImRaii.PushStyle(ImGuiStyleVar.WindowPadding,
+        var padding = UiScope.PushStyle(ImGuiStyleVar.WindowPadding,
                 new Vector2(horizontalPadding * scale, TopPadding * scale))
             .Push(ImGuiStyleVar.ScrollbarSize, ScrollbarSizeUnits * scale)
             .Push(ImGuiStyleVar.ScrollbarRounding, ScrollbarRoundingUnits * scale);
         var flags = DragScrollHost.ScrollFlags(ImGuiWindowFlags.NoBackground);
-        if (disableMouseWheelScroll)
+        var glide = smoothWheel && !disableMouseWheelScroll &&
+                    !DragScrollHost.ParentTakesWheel(ImGuiP.GetCurrentWindowRead());
+        if (disableMouseWheelScroll || glide)
         {
             flags |= ImGuiWindowFlags.NoScrollWithMouse;
         }
 
-        var scrollbar = ScrollbarInk is { } ink ? ScrollLayout.PushScrollbarInk(ink) : null;
+        var scrollbar = ScrollbarInk is { } ink ? ScrollLayout.PushScrollbarInk(ink) : default;
         var child = ImRaii.Child("##appSurface", area.Size, false, flags);
         var freshVisit = ResetScrollOnNewVisit();
         ActiveFreshVisit = freshVisit;
-        var surface = DragScrollHost.Begin(key, IndicatorStripUnits * scale);
+        var surface = DragScrollHost.Begin(key, IndicatorStripUnits * scale, glide);
         if (hostsNavBar)
         {
             ReserveNavBarBand(freshVisit);
@@ -214,13 +218,13 @@ internal static class AppSurface
     public ref struct SurfaceScope
     {
         private ImRaii.ChildDisposable child;
-        private readonly IDisposable padding;
-        private readonly IDisposable? scrollbar;
+        private readonly UiScope.StyleScope padding;
+        private readonly UiScope.ColorScope scrollbar;
         private readonly DragScrollHost.Surface surface;
         private readonly bool freshVisit;
         private readonly float bottomInset;
 
-        internal SurfaceScope(ImRaii.ChildDisposable child, IDisposable padding, IDisposable? scrollbar,
+        internal SurfaceScope(ImRaii.ChildDisposable child, UiScope.StyleScope padding, UiScope.ColorScope scrollbar,
             DragScrollHost.Surface surface, bool freshVisit, float bottomInset)
         {
             this.child = child;
@@ -256,8 +260,8 @@ internal static class AppSurface
             TrackIndicator(surface.Grabbing);
             depth = Math.Max(0, depth - 1);
             child.Dispose();
-            padding?.Dispose();
-            scrollbar?.Dispose();
+            padding.Dispose();
+            scrollbar.Dispose();
         }
     }
 }

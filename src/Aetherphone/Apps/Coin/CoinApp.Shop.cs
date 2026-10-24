@@ -10,7 +10,6 @@ using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Coin;
 
@@ -51,7 +50,7 @@ internal sealed partial class CoinApp
     private void DrawShop(in PhoneContext context)
     {
         var navBar = AppHeader.BeginLargeTitle(context, false);
-        using (ImRaii.PushId("coin.shop"))
+        using (UiScope.PushId("coin.shop"))
         using (var surface = AppSurface.Begin(navBar.Body))
         {
             catalog.EnsureFresh();
@@ -235,7 +234,7 @@ internal sealed partial class CoinApp
     {
         var category = catalog.Category(route.CategoryId);
         var navBar = AppHeader.BeginLargeTitle(context);
-        using (ImRaii.PushId("coin.browse"))
+        using (UiScope.PushId("coin.browse"))
         using (var surface = AppSurface.Begin(navBar.Body))
         {
             browseRefresh.Draw(navBar.Body, surface.Pull, surface.Dragging, catalog.Fetching, ui.MutedInk,

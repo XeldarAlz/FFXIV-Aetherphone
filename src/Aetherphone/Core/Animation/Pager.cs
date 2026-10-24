@@ -4,16 +4,27 @@ internal sealed class Pager
 {
     private const float SettleSmoothTime = 0.30f;
     private const float FlingVelocity = 320f;
+    private const float VelocitySmoothing = 0.6f;
     private const float RubberLimit = 0.36f;
     private const float RubberGive = 0.62f;
 
+    private readonly float settleTime;
     private Spring scroll;
     private int page;
     private bool dragging;
     private float dragStartX;
+    private float dragStartValue;
     private int dragStartPage;
-    private float lastX;
-    private float velocityX;
+    private float velocity;
+
+    public Pager() : this(SettleSmoothTime)
+    {
+    }
+
+    public Pager(float settleTime)
+    {
+        this.settleTime = settleTime;
+    }
 
     public float Value => scroll.Value;
     public int Page => page;
@@ -23,9 +34,9 @@ internal sealed class Pager
     {
         dragging = true;
         dragStartX = mouseX;
-        dragStartPage = page;
-        lastX = mouseX;
-        velocityX = 0f;
+        dragStartValue = scroll.Value;
+        dragStartPage = (int)MathF.Round(scroll.Value);
+        velocity = 0f;
     }
 
     public void Drag(float mouseX, float width, int pageCount, float delta)
@@ -35,14 +46,13 @@ internal sealed class Pager
             return;
         }
 
+        var next = RubberBand(dragStartValue - (mouseX - dragStartX) / width, pageCount);
         if (delta > 0f)
         {
-            velocityX = (mouseX - lastX) / delta;
+            velocity += ((next - scroll.Value) / delta - velocity) * VelocitySmoothing;
         }
 
-        lastX = mouseX;
-        var raw = dragStartPage - (mouseX - dragStartX) / width;
-        scroll.SnapTo(RubberBand(raw, pageCount));
+        scroll.SnapTo(next);
     }
 
     public void Release(float width, int pageCount)
@@ -53,12 +63,11 @@ internal sealed class Pager
         }
 
         dragging = false;
-        var pageVelocity = width > 0f ? -velocityX / width : 0f;
         var displaced = scroll.Value - dragStartPage;
         var target = dragStartPage;
-        if (MathF.Abs(velocityX) > FlingVelocity)
+        if (MathF.Abs(velocity * width) > FlingVelocity)
         {
-            target = dragStartPage + MathF.Sign(-velocityX);
+            target = dragStartPage + MathF.Sign(velocity);
         }
         else if (MathF.Abs(displaced) > 0.5f)
         {
@@ -66,7 +75,7 @@ internal sealed class Pager
         }
 
         page = Math.Clamp(target, 0, Math.Max(0, pageCount - 1));
-        scroll.Velocity = pageVelocity;
+        scroll.Velocity = velocity;
     }
 
     public void Cancel()
@@ -82,7 +91,7 @@ internal sealed class Pager
             return;
         }
 
-        scroll.Step(page, SettleSmoothTime, delta);
+        scroll.Step(page, settleTime, delta);
     }
 
     public void SnapTo(int target, int pageCount)

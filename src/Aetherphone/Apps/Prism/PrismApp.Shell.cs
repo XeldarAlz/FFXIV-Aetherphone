@@ -23,17 +23,21 @@ internal readonly record struct PrismStop(
     GlamDto? Glam,
     GlamAuthorDto? Author,
     bool Saved,
+    bool Placings,
     GlamListKind Kind,
     uint ItemId,
     GlamModDto? Mod,
     string Tag,
     string Title,
     string OutfitId,
+    WeekGallery Gallery,
     float Scroll);
 
 internal sealed partial class PrismApp
 {
     private const float WearingBarUnits = 44f;
+    private const float TabBarUnits = 44f;
+    private const int PostSlot = 2;
     private const float WearingGapUnits = 8f;
     private const int HistoryDepth = 12;
     private const float KeepScroll = -1f;
@@ -45,8 +49,8 @@ internal sealed partial class PrismApp
     };
 
     private readonly PrismStop[] history = new PrismStop[HistoryDepth];
-    private readonly TabBar tabBar = new();
-    private readonly TabItem[] tabItems = new TabItem[TabRoots.Length];
+    private readonly TabBar tabBar = new() { Height = TabBarUnits, SideInset = 0f };
+    private readonly TabItem[] tabItems = new TabItem[TabRoots.Length + 1];
     private readonly AppSkin ui = new(AppPalettes.Neutral(AppAccents.For("prism")));
     private float bottomChrome;
     private int historyDepth;
@@ -55,7 +59,6 @@ internal sealed partial class PrismApp
     private PrismScreen bodyScreen;
     private PrismScreen drawingScreen;
     private float pendingScroll = KeepScroll;
-    private string? introWeek;
     private string wearingKey = string.Empty;
     private string wearingTitle = string.Empty;
     private string wearingGlamId = string.Empty;
@@ -65,11 +68,14 @@ internal sealed partial class PrismApp
 
     private static bool IsLibraryScreen(PrismScreen value) =>
         value is PrismScreen.GlamDetail or PrismScreen.Compose or PrismScreen.Profile or PrismScreen.GlamList
-            or PrismScreen.WardrobeOutfit or PrismScreen.WardrobeCover or PrismScreen.Rewards or PrismScreen.Activity;
+            or PrismScreen.WardrobeOutfit or PrismScreen.WardrobeCover or PrismScreen.WardrobeEdit
+            or PrismScreen.WardrobeMods or PrismScreen.WardrobeDesigns or PrismScreen.Rewards or PrismScreen.Activity
+            or PrismScreen.Gallery or PrismScreen.EditProfile or PrismScreen.ProfilePhoto or PrismScreen.BannerPick
+            or PrismScreen.BannerCrop;
 
     private static bool ShowsTabBar(PrismScreen value) =>
         IsTabRoot(value) || value is PrismScreen.GlamDetail or PrismScreen.Profile or PrismScreen.GlamList
-            or PrismScreen.WardrobeOutfit or PrismScreen.Rewards or PrismScreen.Activity;
+            or PrismScreen.WardrobeOutfit or PrismScreen.Rewards or PrismScreen.Activity or PrismScreen.Gallery;
 
     private bool Wearing(string key) => glamour.TryingOn && key.Length > 0 && wearingKey == key;
 
@@ -82,13 +88,13 @@ internal sealed partial class PrismApp
 
     private void DrawWearingBar(Rect content, float scale)
     {
-        var stage = TabBar.ContentArea(content, scale);
+        var stage = TabBar.ContentArea(content, scale, TabBarUnits);
         var height = WearingBarUnits * scale;
-        var side = Metrics.Space.GlassInset * scale;
-        var min = new Vector2(stage.Min.X + side, stage.Max.Y - height);
-        var max = new Vector2(stage.Max.X - side, stage.Max.Y);
-        using var layer = ScreenLayer.Begin("prism.wearing", new Rect(new Vector2(stage.Min.X, min.Y), stage.Max), false);
-        UiInteract.HoverOverlay(new Rect(min, max));
+        var min = new Vector2(stage.Min.X, stage.Max.Y - height);
+        var max = stage.Max;
+        var bar = new Rect(min, max);
+        using var layer = ScreenLayer.Begin("prism.wearing", TabBar.GlassLayer(bar, scale), false);
+        UiInteract.HoverOverlay(bar);
         var drawList = ImGui.GetWindowDrawList();
         Material.ThemedGlass(drawList, min, max, height * 0.5f, scale, ui.BackdropColor, TabBar.GlassOpacity);
         var left = min.X + height * 0.5f;
@@ -116,29 +122,55 @@ internal sealed partial class PrismApp
     private void FollowSkin(PhoneTheme theme)
     {
         ui.Theme = theme;
-        ui.Palette = ui.Palette with { Accent = PrismArt.Fore, BackdropTop = PrismArt.Back, BackdropBottom = PrismArt.Back };
+        ui.Palette = ui.Palette with
+        {
+            Accent = PrismArt.Fore,
+            TitleInk = PrismArt.Fore,
+            BodyInk = PrismArt.Fore,
+            MutedInk = PrismArt.Muted,
+            Hairline = PrismArt.Faint,
+            BackdropTop = PrismArt.Back,
+            BackdropBottom = PrismArt.Back,
+            FieldSurface = Surfaces.Fill(PrismArt.Fore, FillLevel.Tertiary),
+        };
     }
 
     private void DrawTabBar(Rect content)
     {
+        var post = glams.IsSignedIn;
+        var shift = post ? 1 : 0;
         tabItems[(int)PrismTab.Discover] =
             new TabItem(Loc.T(L.Prism.TabDiscover), PhoneIcons.Compass, PhoneIcons.CompassFilled);
         tabItems[(int)PrismTab.Week] = new TabItem(Loc.T(L.Prism.TabWeek), PhoneIcons.Crown);
-        tabItems[(int)PrismTab.Wardrobe] = new TabItem(Loc.T(L.Prism.TabWardrobe), IconGlyph.Of(FontAwesomeIcon.Tshirt));
-        tabItems[(int)PrismTab.Me] = new TabItem(Loc.T(L.Prism.TabMe), PhoneIcons.User, PhoneIcons.UserFilled);
-        TabBarAction? post = glams.IsSignedIn ? new TabBarAction(PhoneIcons.Plus, Loc.T(L.Prism.PostGlam)) : null;
-        var result = tabBar.Draw(content, ui, tabItems, (int)tab, post);
-        if (result.ActionTapped)
+        if (post)
+        {
+            tabItems[PostSlot] = new TabItem(Loc.T(L.Prism.PostGlam), PhoneIcons.Plus);
+        }
+
+        tabItems[(int)PrismTab.Wardrobe + shift] =
+            new TabItem(Loc.T(L.Prism.TabWardrobe), PhoneIcons.Shirt, PhoneIcons.ShirtFilled);
+        tabItems[(int)PrismTab.Me + shift] = new TabItem(Loc.T(L.Prism.TabMe), PhoneIcons.User, PhoneIcons.UserFilled);
+        var active = (int)tab + (tab >= PrismTab.Wardrobe ? shift : 0);
+        var tapped = tabBar.Draw(content, ui, tabItems.AsSpan(0, TabRoots.Length + shift), active).Tapped;
+        if (post && tapped == PostSlot)
         {
             StartCompose();
+            return;
         }
-        else if (result.Tapped == (int)tab && IsTabRoot(screen))
+
+        if (tapped < 0)
+        {
+            return;
+        }
+
+        var next = (PrismTab)(tapped - (post && tapped > PostSlot ? 1 : 0));
+        if (next == tab && IsTabRoot(screen))
         {
             pendingScroll = 0f;
         }
-        else if (result.Tapped >= 0)
+        else
         {
-            OpenTab((PrismTab)result.Tapped);
+            OpenTab(next);
         }
     }
 
@@ -160,13 +192,6 @@ internal sealed partial class PrismApp
         }
         else if (next == PrismTab.Week)
         {
-            var week = store.Week?.Id ?? string.Empty;
-            if (week != introWeek)
-            {
-                introWeek = week;
-                introDelay = IntroSeconds;
-            }
-
             store.Refresh();
         }
     }
@@ -179,8 +204,9 @@ internal sealed partial class PrismApp
             historyDepth--;
         }
 
-        history[historyDepth++] = new PrismStop(screen, glams.Detail, glams.Profile?.User, showSaved, listKind,
-            listItemId, listMod, listTag, listTitle, outfitId, bodyScreen == screen ? bodyScroll : 0f);
+        history[historyDepth++] = new PrismStop(screen, glams.Detail, glams.Profile?.User, showSaved, showPlacings,
+            listKind, listItemId, listMod, listTag, listTitle, outfitId, gallery,
+            bodyScreen == screen ? bodyScroll : 0f);
 
         Go(next);
     }
@@ -203,7 +229,7 @@ internal sealed partial class PrismApp
 
     private AppSurface.SurfaceScope BeginBody(Rect body)
     {
-        var surface = AppSurface.BeginEdgeToEdge(body);
+        var surface = AppSurface.BeginEdgeToEdge(body, smoothWheel: true);
         if (drawingScreen != screen)
         {
             return surface;
@@ -238,7 +264,8 @@ internal sealed partial class PrismApp
                 break;
             case PrismScreen.Me or PrismScreen.Profile when stop.Author is not null:
                 showSaved = stop.Saved;
-                glams.OpenProfile(stop.Author, stop.Saved);
+                showPlacings = stop.Placings;
+                glams.OpenProfile(stop.Screen == PrismScreen.Me ? glams.Me ?? stop.Author : stop.Author, stop.Saved);
                 break;
             case PrismScreen.GlamList:
                 listKind = stop.Kind;
@@ -250,6 +277,10 @@ internal sealed partial class PrismApp
                 break;
             case PrismScreen.WardrobeOutfit:
                 outfitId = stop.OutfitId;
+                break;
+            case PrismScreen.Gallery:
+                gallery = stop.Gallery;
+                glams.OpenWeek(gallery.WeekId, gallery.Track);
                 break;
         }
     }

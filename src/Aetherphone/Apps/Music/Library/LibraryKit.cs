@@ -4,7 +4,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Music.Library;
 
@@ -149,11 +148,11 @@ internal static class LibraryKit
         }
 
         bool submitted;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.FrameBgHovered, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.FrameBgActive, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
-        using (ImRaii.PushColor(ImGuiCol.TextDisabled, ui.MutedInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.FrameBgHovered, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.FrameBgActive, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, ui.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.TextDisabled, ui.MutedInk))
         {
             submitted = ImGui.InputTextWithHint(id, hint, ref text, maxLength, ImGuiInputTextFlags.EnterReturnsTrue);
         }

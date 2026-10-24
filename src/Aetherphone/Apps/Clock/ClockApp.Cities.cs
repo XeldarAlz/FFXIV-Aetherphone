@@ -9,7 +9,6 @@ using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Clock;
 
@@ -29,7 +28,7 @@ internal sealed partial class ClockApp
     {
         var scale = UiScale.Current;
         var navBar = AppHeader.BeginLargeTitle(context);
-        using (ImRaii.PushId("clock.cities"))
+        using (UiScope.PushId("clock.cities"))
         using (AppSurface.Begin(navBar.Body))
         {
             var width = ImGui.GetContentRegionAvail().X;

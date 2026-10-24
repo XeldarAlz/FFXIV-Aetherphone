@@ -6,7 +6,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Core.Venues;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Venues;
 
@@ -69,7 +68,7 @@ internal sealed partial class VenuesApp
         var navBar = AppHeader.BeginLargeTitle(context);
         var ctaTop = navBar.Body.Max.Y - (CtaHeight + CtaInset * 2f) * scale;
         var body = new Rect(navBar.Body.Min, new Vector2(navBar.Body.Max.X, ctaTop));
-        using (ImRaii.PushId("venues.filters"))
+        using (UiScope.PushId("venues.filters"))
         using (AppSurface.Begin(body))
         {
             var drawList = ImGui.GetWindowDrawList();

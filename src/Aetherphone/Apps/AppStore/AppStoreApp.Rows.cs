@@ -6,7 +6,6 @@ using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.AppStore;
 
@@ -97,7 +96,7 @@ internal sealed partial class AppStoreApp
 
         var cardMax = new Vector2(origin.X + width, origin.Y + count * RowHeight * scale);
         ui.Card(drawList, origin, cardMax, Metrics.Radius.Grouped * scale);
-        using var scope = ImRaii.PushId(RowsIdScope);
+        using var scope = UiScope.PushId(RowsIdScope);
         for (var rowIndex = 0; rowIndex < count; rowIndex++)
         {
             var app = entries[rowIndex];
@@ -123,7 +122,7 @@ internal sealed partial class AppStoreApp
 
         var cardMax = new Vector2(origin.X + width, origin.Y + count * RowHeight * scale);
         ui.Card(drawList, origin, cardMax, Metrics.Radius.Grouped * scale);
-        using var scope = ImRaii.PushId(UpdatesIdScope);
+        using var scope = UiScope.PushId(UpdatesIdScope);
         for (var rowIndex = 0; rowIndex < count; rowIndex++)
         {
             var update = entries[rowIndex];
@@ -228,7 +227,7 @@ internal sealed partial class AppStoreApp
         var enabled = !(installed && self);
         var active = hovered && enabled;
         uint key;
-        using (ImRaii.PushId(PillIdScope))
+        using (UiScope.PushId(PillIdScope))
         {
             key = ImGui.GetID(app.Id);
         }

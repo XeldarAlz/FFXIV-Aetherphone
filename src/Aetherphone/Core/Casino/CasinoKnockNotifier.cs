@@ -103,6 +103,11 @@ internal sealed class CasinoKnockNotifier : IDisposable
         }
 
         polledAtTick = nowTick;
+        StartKnockPoll(tableId);
+    }
+
+    private void StartKnockPoll(string tableId)
+    {
         work.Run("hosted knocks", async token =>
         {
             var answer = await casino.TableKnocksAsync(tableId, token).ConfigureAwait(false);

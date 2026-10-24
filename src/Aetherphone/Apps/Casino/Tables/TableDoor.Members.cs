@@ -7,7 +7,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino.Tables;
 
@@ -337,7 +336,7 @@ internal sealed partial class TableDoor
                     new Vector2(row.Max.X, row.Min.Y), ImGui.GetColorU32(ui.Hairline), Metrics.Stroke.Hairline);
             }
 
-            using (ImRaii.PushId(index))
+            using (UiScope.PushId(index))
             {
                 DrawMember(drawList, ui, card, members[index], memberLines[index], row, nameHeight, lineHeight, scale);
             }

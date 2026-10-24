@@ -538,7 +538,7 @@ internal sealed class HomeInteractionController
         settleTile = null;
         CancelTap();
         poses.Forget(tile.Key);
-        poses.Forget(string.Concat("dock:", tile.Key));
+        poses.Forget(tile.DockKey);
     }
 
     private int LocatePage(HomeTile tile)

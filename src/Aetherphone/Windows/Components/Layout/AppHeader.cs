@@ -372,7 +372,7 @@ internal static class AppHeader
         var grow = PressFx.Scale(key, down, PressFx.ControlPressedScale);
         var drawn = new Vector2(radius * grow, radius * grow);
         Material.ThemedGlass(drawList, center - drawn, center + drawn, radius * grow, scale, theme);
-        PhoneIcon.Draw(drawList, center, glyph, ink, NavBarMetrics.GlyphSize * scale * grow);
+        PhoneIcon.Draw(drawList, center, glyph, ink, NavBarMetrics.GlyphSize * scale * grow, optical: true);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

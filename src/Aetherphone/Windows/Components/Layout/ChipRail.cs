@@ -28,7 +28,9 @@ internal sealed class ChipRail
     private const float OverflowEpsilon = 0.5f;
 
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
+    private static readonly Vector4 Black = new(0f, 0f, 0f, 1f);
     private const float ActiveHoverLift = 0.10f;
+    private const float LightAccentLuminance = 0.5f;
 
     private float offset;
     private float maxOffset;
@@ -86,7 +88,7 @@ internal sealed class ChipRail
             if (cursorX + width >= row.Min.X && cursorX <= row.Max.X
                 && DrawChip(drawList, ui, labels[index], active[index],
                     new Vector2(cursorX, row.Center.Y), width, chipHeight * scale, scale, overlay, arrowHovered,
-                    interactive))
+                    interactive, row))
             {
                 tapped = index;
             }
@@ -162,13 +164,15 @@ internal sealed class ChipRail
     public static float LabelRoom(Rect chip) => chip.Width - chip.Height * 0.5f;
 
     private bool DrawChip(ImDrawListPtr drawList, AppSkin ui, string label, bool active, Vector2 leftCenter,
-        float width, float height, float scale, bool overlay, bool shadowed, bool interactive = true)
+        float width, float height, float scale, bool overlay, bool shadowed, bool interactive, Rect row)
     {
         var min = new Vector2(leftCenter.X, leftCenter.Y - height * 0.5f);
         var max = new Vector2(leftCenter.X + width, leftCenter.Y + height * 0.5f);
-        var hovered = interactive && !shadowed && Hovered(min, max, overlay);
+        var hitMin = Vector2.Max(min, row.Min);
+        var hitMax = Vector2.Min(max, row.Max);
+        var hovered = interactive && !shadowed && Hovered(hitMin, hitMax, overlay);
         PaintChip(drawList, new Rect(min, max), label, active, hovered && !dragging, ui.Ink);
-        return interactive && dragTravel <= DragSlop * scale && UiInteract.Click(min, max, hovered);
+        return interactive && dragTravel <= DragSlop * scale && UiInteract.Click(hitMin, hitMax, hovered);
     }
 
     public static void PaintChip(ImDrawListPtr drawList, Rect rect, string label, bool active, bool highlighted,
@@ -179,7 +183,7 @@ internal sealed class ChipRail
             ? Palette.Mix(ink.Accent, White, highlighted ? ActiveHoverLift : 0f)
             : Surfaces.Fill(ink, highlighted ? FillLevel.Secondary : FillLevel.Tertiary);
         Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
-        var labelInk = active ? White : ink.Ink;
+        var labelInk = !active ? ink.Ink : Palette.RelativeLuminance(ink.Accent) > LightAccentLuminance ? Black : White;
         var fitted = Typography.FitText(label, MathF.Max(1f, LabelRoom(rect)), LabelStyle);
         var fittedSize = Typography.Measure(fitted, LabelStyle);
         Typography.Draw(drawList, rect.Center - fittedSize * 0.5f, fitted, labelInk, LabelStyle);

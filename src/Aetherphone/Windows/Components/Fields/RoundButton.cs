@@ -9,12 +9,12 @@ internal static class RoundButton
 {
     public const float SmallRadius = 15f;
     public const float RegularRadius = Metrics.Size.GlassButton * 0.5f;
+    public const float GlyphFraction = 0.95f;
 
     private const float DisabledAlpha = 0.4f;
     private const float TintedAlpha = 0.20f;
     private const float TintedHoverAlpha = 0.28f;
     private const float RimLightAlpha = 0.5f;
-    private const float GlyphFraction = 0.95f;
     private const float ProminentHoverLift = 0.10f;
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
 
@@ -22,15 +22,15 @@ internal static class RoundButton
         ButtonStyle style = ButtonStyle.Gray, string tooltip = "", HoverLabelSide side = HoverLabelSide.Above,
         bool enabled = true, bool overlay = false, Vector4? glyphInk = null)
     {
-        var clicked = Draw(drawList, ImGui.GetID(tooltip.Length > 0 ? tooltip : glyph), center, radius, ink, style,
-            enabled, overlay, out var face);
+        var key = ImGui.GetID(tooltip.Length > 0 ? tooltip : glyph);
+        var clicked = Draw(drawList, key, center, radius, ink, style, enabled, overlay, out var face);
         var color = glyphInk ?? face.LabelInk;
         PhoneIcon.Draw(drawList, center, glyph, color with { W = face.LabelInk.W }, radius * GlyphFraction *
             (face.Face.Width / MathF.Max(radius * 2f, 0.0001f)));
         if (enabled && tooltip.Length > 0)
         {
-            HoverTooltip.Show(new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius)),
-                tooltip, side);
+            HoverTooltip.Show(key, new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius)),
+                tooltip, face.Hovered, side);
         }
 
         return clicked;
@@ -54,8 +54,8 @@ internal static class RoundButton
             glyphHeight * (face.Face.Width / MathF.Max(radius * 2f, 0.0001f)));
         if (enabled && tooltip.Length > 0)
         {
-            HoverTooltip.Show(new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius)),
-                tooltip, side);
+            HoverTooltip.Show(key, new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius)),
+                tooltip, face.Hovered, side);
         }
 
         return clicked;
@@ -114,6 +114,9 @@ internal static class RoundButton
                     Squircle.Fill(drawList, face.Min, face.Max, radius, ImGui.GetColorU32(gray with { W = gray.W * alpha }));
                     labelInk = ink.Ink;
                     break;
+                case ButtonStyle.Bare:
+                    labelInk = ink.Ink;
+                    break;
                 default:
                     if (pose.Hover > 0.001f)
                     {
@@ -127,7 +130,7 @@ internal static class RoundButton
             }
         }
 
-        if (style != ButtonStyle.Plain)
+        if (style is not ButtonStyle.Plain and not ButtonStyle.Bare)
         {
             MotionButton.RimLight(drawList, face, radius, pose.Hover * RimLightAlpha * alpha);
         }

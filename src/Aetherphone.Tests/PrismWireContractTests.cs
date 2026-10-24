@@ -146,6 +146,13 @@ public sealed class PrismWireContractTests
         Assert.NotNull(empty);
         Assert.NotNull(empty.Looks);
         Assert.Empty(empty.Looks);
+        Assert.Equal(0, empty.HeatCount);
+
+        var heat = JsonSerializer.Deserialize("{\"id\":\"b_2\",\"stage\":\"heat\",\"looks\":[],\"heatLabel\":\"B\","
+            + "\"heatIndex\":2,\"heatCount\":5}", AethernetJsonContext.Default.PrismBallotDto);
+        Assert.NotNull(heat);
+        Assert.Equal(2, heat.HeatIndex);
+        Assert.Equal(5, heat.HeatCount);
 
         var results = JsonSerializer.Deserialize("{\"weekId\":\"w_0\",\"title\":\"Gold Saucer glam\","
             + "\"heatPodium\":[{\"rank\":1,\"imageUrl\":\"https://x/p.jpg\",\"displayName\":\"Ada Moon\","
@@ -214,25 +221,55 @@ public sealed class PrismWireContractTests
     }
 
     [Fact]
-    public void RewardsOnlyListTheKindsTheWeekPaysOut()
+    public void RewardsShowWheneverAnyPrizeOrJudgeRewardIsSet()
     {
-        var kinds = new PrismRewardKind[PrismRewards.KindCount];
         var coinsOnly = JsonSerializer.Deserialize("{\"id\":\"w_1\",\"prizes\":{\"heat\":[30,20,10],"
-            + "\"final\":[2000,1500,1000],\"placings\":[{\"stage\":\"final\",\"rank\":1,\"coins\":2000,\"gil\":0,"
-            + "\"badge\":null,\"frame\":null}]}}", AethernetJsonContext.Default.PrismWeekDto);
-        Assert.Equal(1, PrismRewards.Offered(coinsOnly?.Prizes, null, kinds));
-        Assert.Equal(PrismRewardKind.Coin, kinds[0]);
+            + "\"final\":[2000,1500,1000],\"placings\":[]}}", AethernetJsonContext.Default.PrismWeekDto);
+        Assert.True(PrismRewards.Any(coinsOnly?.Prizes, null));
 
-        var everything = JsonSerializer.Deserialize("{\"id\":\"w_2\",\"prizes\":{\"placings\":[{\"stage\":\"final\","
-            + "\"rank\":1,\"gil\":500000,\"badge\":{\"id\":\"prism-gold\",\"name\":\"Cover star\",\"icon\":\"f005\"},"
-            + "\"frame\":{\"id\":\"prism-frame\",\"name\":\"Spectrum\",\"assetUrl\":\"https://x/f.png\"}}]}}",
+        var badgeOnly = JsonSerializer.Deserialize("{\"id\":\"w_2\",\"prizes\":{\"placings\":[{\"stage\":\"final\","
+            + "\"rank\":1,\"badge\":{\"id\":\"prism-gold\",\"name\":\"Cover star\",\"icon\":\"f005\"}}]}}",
             AethernetJsonContext.Default.PrismWeekDto);
-        Assert.Equal(3, PrismRewards.Offered(everything?.Prizes, null, kinds));
-        Assert.Equal(new[] { PrismRewardKind.Badge, PrismRewardKind.Frame, PrismRewardKind.Gil }, kinds[..3]);
+        Assert.True(PrismRewards.Any(badgeOnly?.Prizes, null));
 
-        Assert.Equal(0, PrismRewards.Offered(null, null, kinds));
-        Assert.Equal(1, PrismRewards.Offered(null, new PrismJudgeRewardDto(5, 4, 4), kinds));
-        Assert.Equal(PrismRewardKind.Coin, kinds[0]);
+        var nothing = JsonSerializer.Deserialize("{\"id\":\"w_3\",\"prizes\":{\"heat\":[0],\"final\":[],"
+            + "\"placings\":[{\"stage\":\"final\",\"rank\":1,\"coins\":0}]}}", AethernetJsonContext.Default.PrismWeekDto);
+        Assert.False(PrismRewards.Any(nothing?.Prizes, null));
+        Assert.False(PrismRewards.Any(null, null));
+        Assert.True(PrismRewards.Any(null, new PrismJudgeRewardDto(5, 4, 4)));
+    }
+
+    [Fact]
+    public void ChineseWinnersTakeTheirGilAsExtraCoins()
+    {
+        var week = JsonSerializer.Deserialize("{\"id\":\"w_1\",\"prizes\":{\"placings\":[{\"stage\":\"final\","
+            + "\"rank\":1,\"coins\":2000,\"gil\":500000,\"chineseCoins\":800}]}}",
+            AethernetJsonContext.Default.PrismWeekDto);
+        Assert.Equal(800, week?.Prizes?.Placings?[0].ChineseCoins);
+
+        var rows = new List<PrismPrizeRow>();
+        PrismRewards.Fill(rows, week?.Prizes, PrismPhases.StageFinal);
+        Assert.Equal(2000, rows[0].CoinsFor(false));
+        Assert.Equal(500000, rows[0].GilFor(false));
+        Assert.Equal(2800, rows[0].CoinsFor(true));
+        Assert.Equal(0, rows[0].GilFor(true));
+    }
+
+    [Fact]
+    public void TracksWithTheSamePrizesShowOneView()
+    {
+        const string Placings = "\"placings\":[{\"stage\":\"final\",\"rank\":1,\"coins\":2000,"
+            + "\"badge\":{\"id\":\"prism-gold\",\"name\":\"Cover star\",\"icon\":\"f005\"}}]";
+        var first = JsonSerializer.Deserialize("{\"heat\":[30],\"final\":[2000]," + Placings + "}",
+            AethernetJsonContext.Default.PrismPrizesDto);
+        var second = JsonSerializer.Deserialize("{\"heat\":[30],\"final\":[2000]," + Placings + "}",
+            AethernetJsonContext.Default.PrismPrizesDto);
+        var richer = JsonSerializer.Deserialize("{\"heat\":[30],\"final\":[2500]," + Placings + "}",
+            AethernetJsonContext.Default.PrismPrizesDto);
+        Assert.True(PrismRewards.Same(first, second));
+        Assert.False(PrismRewards.Same(first, richer));
+        Assert.False(PrismRewards.Same(first, null));
+        Assert.True(PrismRewards.Same(null, null));
     }
 
     [Fact]

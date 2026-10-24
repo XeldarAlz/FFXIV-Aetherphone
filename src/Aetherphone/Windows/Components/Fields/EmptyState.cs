@@ -88,7 +88,7 @@ internal static class EmptyState
         }
 
         var titleY = baseY + TitleOffset * scale;
-        Typography.DrawCentered(new Vector2(centerX, titleY), title, ui.TitleInk, TextStyles.Title3);
+        Typography.DrawCentered(drawList, new Vector2(centerX, titleY), title, ui.TitleInk, TextStyles.Title3);
         if (hint.Length == 0)
         {
             return fullBottom;
@@ -120,7 +120,7 @@ internal static class EmptyState
         var top = MathF.Max(body.Min.Y, body.Center.Y - blockHeight * 0.5f);
         var drawList = ImGui.GetWindowDrawList();
         drawList.PushClipRect(body.Min, body.Max, true);
-        Typography.DrawCentered(new Vector2(body.Center.X, top + titleHeight * 0.5f), title, ui.TitleInk,
+        Typography.DrawCentered(drawList, new Vector2(body.Center.X, top + titleHeight * 0.5f), title, ui.TitleInk,
             TextStyles.Title3);
         if (showHint)
         {

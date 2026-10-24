@@ -8,7 +8,6 @@ using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Social;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Velvet;
 
@@ -441,8 +440,8 @@ internal sealed partial class VelvetShell
         ImGui.SetCursorScreenPos(new Vector2(left, rowTop + rowHeight * 0.5f - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(MathF.Max(1f, right - left));
         Plugin.Fonts.NoticeText(value);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ink))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, ink))
         {
             return ImGui.InputText(id, ref value, maxLength, flags);
         }
@@ -549,7 +548,7 @@ internal sealed partial class VelvetShell
     private void DrawOnboardAboutStep(Rect body)
     {
         using (AppSurface.Begin(body))
-        using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
+        using (UiScope.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
         {
             var width = ScrollLayout.StableContentWidth();
             Gap(4f);
@@ -583,8 +582,8 @@ internal sealed partial class VelvetShell
         ImGui.SetCursorScreenPos(card.ContentOrigin);
         var fieldSize = new Vector2(card.ContentWidth, fieldHeight);
         var framePad = ImGui.GetStyle().FramePadding;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, VelvetTheme.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, VelvetTheme.TitleInk))
         {
             var wrapWidth = fieldSize.X - framePad.X * 2f - 4f * scale;
             SoftWrapField.Multiline("##ob_intro", ref editIntro, EditIntroMaxLength, fieldSize, wrapWidth);

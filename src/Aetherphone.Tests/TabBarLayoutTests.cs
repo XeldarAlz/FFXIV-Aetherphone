@@ -82,14 +82,43 @@ public sealed class TabBarLayoutTests
     }
 
     [Fact]
-    public void HighlightStaysInsideItsCell()
+    public void MiddleHighlightStaysInsideItsCell()
     {
         var capsule = TabBarLayout.FullCapsule(Area, 1f, false);
-        var cell = TabBarLayout.Cell(capsule, 3, 2, 1f);
-        var highlight = TabBarLayout.Highlight(cell, 1f);
+        var cell = TabBarLayout.Cell(capsule, 3, 1, 1f);
+        var highlight = TabBarLayout.Highlight(capsule, 3, 1, 1f);
         Assert.Equal(cell.Min.X + TabBarLayout.HighlightInset, highlight.Min.X, Tolerance);
         Assert.Equal(cell.Max.X - TabBarLayout.HighlightInset, highlight.Max.X, Tolerance);
         Assert.Equal(cell.Height - TabBarLayout.HighlightInset * 2f, highlight.Height, Tolerance);
+    }
+
+    [Theory]
+    [MemberData(nameof(Scales))]
+    public void EndHighlightKeepsOneGapToTheCapsuleAllRound(float scale)
+    {
+        var capsule = TabBarLayout.FullCapsule(Area, scale, false);
+        var gap = TabBarLayout.HighlightInset * scale;
+        var first = TabBarLayout.Highlight(capsule, 5, 0, scale);
+        var last = TabBarLayout.Highlight(capsule, 5, 4, scale);
+        Assert.Equal(capsule.Min.X + gap, first.Min.X, Tolerance);
+        Assert.Equal(capsule.Max.X - gap, last.Max.X, Tolerance);
+        Assert.Equal(capsule.Min.Y + gap, first.Min.Y, Tolerance);
+        Assert.Equal(capsule.Max.Y - gap, first.Max.Y, Tolerance);
+        Assert.Equal(capsule.Min.X + capsule.Height * 0.5f, first.Min.X + first.Height * 0.5f, Tolerance);
+        Assert.Equal(capsule.Max.X - capsule.Height * 0.5f, last.Max.X - last.Height * 0.5f, Tolerance);
+    }
+
+    [Fact]
+    public void SlidingHighlightBlendsTheSlotsEitherSide()
+    {
+        var capsule = TabBarLayout.FullCapsule(Area, 1f, false);
+        var from = TabBarLayout.Highlight(capsule, 4, 0, 1f);
+        var to = TabBarLayout.Highlight(capsule, 4, 1, 1f);
+        var halfway = TabBarLayout.Highlight(capsule, 4, 0.5f, 1f);
+        Assert.Equal((from.Min.X + to.Min.X) * 0.5f, halfway.Min.X, Tolerance);
+        Assert.Equal((from.Width + to.Width) * 0.5f, halfway.Width, Tolerance);
+        Assert.Equal(TabBarLayout.Highlight(capsule, 4, 3, 1f), TabBarLayout.Highlight(capsule, 4, 3f, 1f));
+        Assert.Equal(TabBarLayout.Highlight(capsule, 4, 0, 1f), TabBarLayout.Highlight(capsule, 4, -0.2f, 1f));
     }
 
     [Theory]

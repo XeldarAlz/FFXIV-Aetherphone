@@ -75,6 +75,8 @@ No language bakes the whole Han block, and players write in every script. A draw
 
 src/Aetherphone/Fonts/TablerIcons.ttf is a subset of Tabler Icons that tools/icon-font builds together with the `PhoneIcons` constants. The script remaps every glyph into a private block starting at U+E600, because Tabler's own codepoints collide with FontAwesome, and `FontService` never asks FontAwesome for that block, because the first font in a merge wins. Draw a Tabler glyph with `PhoneIcon.Draw(drawList, center, PhoneIcons.Home, color, boxHeight)`; FontAwesome icons go through the widgets that take a `FontAwesomeIcon`.
 
+At the same `boxHeight` a FontAwesome solid glyph is about a fifth taller than a Tabler outline and carries two to four times the ink. Where both families sit side by side at one level (tab bars, header and glass circle buttons), pass `optical: true`: `IconInk` measures each glyph's ink once per atlas build, scales FontAwesome glyphs to Tabler's optical size (0.8 of the box by the geometric mean of the ink, never past 22 of 24 units), and draws filled and solid glyphs 4% smaller than outlines. Tabler outlines keep their designed size, and no glyph grows. Leave it off where a screen was tuned to FontAwesome's own size, such as settings tiles.
+
 Every FontAwesome icon the source draws must be listed in `IconPlan.FontAwesomeCodepoints`. An unlisted one is learned on its first draw and costs a full atlas rebuild. `IconFontCoverageTests` checks the list, the bounds of the Tabler block, and that every `PhoneIcons` constant has a glyph in the TTF.
 
 To add an icon glyph:

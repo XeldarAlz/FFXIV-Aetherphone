@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
@@ -41,6 +42,7 @@ internal sealed class PrismStore : IDisposable
 {
     private const int EntryBaseSize = 1080;
     private const PostAspect EntryAspect = PostAspect.Portrait;
+    private const string UserReportTarget = "user";
 
     private readonly AethernetSession session;
     private readonly PrismClient client;
@@ -49,12 +51,16 @@ internal sealed class PrismStore : IDisposable
     private readonly StoreWork work = new("Prism");
     private readonly FailureSlot weekFailure = new();
     private readonly FailureSlot actionFailure = new();
+    private readonly ConcurrentDictionary<string, PrismResultsDto?> lastWeekResults = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<(string Week, string Code), string> weekTitles = new();
 
     private volatile PrismWeekDto? rawWeek;
     private volatile PrismWeekDto? week;
     private volatile string track = string.Empty;
     private volatile PrismResultsDto? results;
     private volatile PrismBallotDto? ballot;
+    private volatile string lastWeekId = string.Empty;
+    private volatile string lastWeekLanguage = string.Empty;
     private volatile bool loading;
     private volatile bool loadedOnce;
     private volatile bool weekFailed;
@@ -143,7 +149,6 @@ internal sealed class PrismStore : IDisposable
         var current = PrismTracks.Project(raw, id);
         week = current;
         ballot = null;
-        results = null;
         var lang = Loc.Current.Code;
         work.Run("results", token => LoadResultsAsync(current, lang, token));
     }
@@ -174,13 +179,99 @@ internal sealed class PrismStore : IDisposable
         if (fetched is not null)
         {
             results = fetched;
+            if (fetched.WeekId == current.PreviousWeekId)
+            {
+                KeepLastWeek(fetched.WeekId, lang);
+                lastWeekResults[showing] = fetched;
+            }
+
             return;
         }
 
-        if (results is { } held && !StillCurrent(held, current))
+        if (results is { } held && (!ShowsTrack(held, showing) || !StillCurrent(held, current)))
         {
             results = null;
         }
+    }
+
+    public static bool ShowsTrack(PrismResultsDto held, string showing) =>
+        held.Track.Length == 0 || held.Track == showing;
+
+    public PrismResultsDto? LastWeekResults(string trackId) =>
+        week is { PreviousWeekId.Length: > 0 } current &&
+        lastWeekResults.TryGetValue(trackId, out var held) && held?.WeekId == current.PreviousWeekId
+            ? held
+            : null;
+
+    public string WeekTitle(string weekId)
+    {
+        var key = (weekId, Loc.Current.Code);
+        if (weekTitles.TryGetValue(key, out var title))
+        {
+            return title;
+        }
+
+        if (weekId.Length > 0 && IsSignedIn && weekTitles.TryAdd(key, string.Empty))
+        {
+            work.Run("week title", async token =>
+            {
+                var fetched = await client.ResultsAsync(weekId, key.Code, string.Empty, token).ConfigureAwait(false);
+                if (fetched is { Title.Length: > 0 })
+                {
+                    weekTitles[key] = fetched.Title;
+                }
+            });
+        }
+
+        return string.Empty;
+    }
+
+    public void LoadLastWeekResults()
+    {
+        if (rawWeek is not { PreviousWeekId.Length: > 0 } raw)
+        {
+            return;
+        }
+
+        var previous = raw.PreviousWeekId;
+        var lang = Loc.Current.Code;
+        KeepLastWeek(previous, lang);
+        var tracks = PrismTracks.Of(raw);
+        for (var index = 0; index < tracks.Length; index++)
+        {
+            var id = tracks[index].Id;
+            if (!lastWeekResults.TryAdd(id, null))
+            {
+                continue;
+            }
+
+            work.Run("last week results", async token =>
+            {
+                var fetched = await client.ResultsAsync(previous, lang, id, token).ConfigureAwait(false);
+                if (fetched is not null && lastWeekId == previous && lastWeekLanguage == lang)
+                {
+                    lastWeekResults[id] = fetched;
+                }
+            }, () =>
+            {
+                if (lastWeekLanguage == lang)
+                {
+                    lastWeekResults.TryRemove(new KeyValuePair<string, PrismResultsDto?>(id, null));
+                }
+            });
+        }
+    }
+
+    private void KeepLastWeek(string previous, string lang)
+    {
+        if (lastWeekId == previous && lastWeekLanguage == lang)
+        {
+            return;
+        }
+
+        lastWeekResults.Clear();
+        lastWeekId = previous;
+        lastWeekLanguage = lang;
     }
 
     internal static bool StillCurrent(PrismResultsDto held, PrismWeekDto current) =>
@@ -329,6 +420,11 @@ internal sealed class PrismStore : IDisposable
     public void Report(string lookId, ReportReason reason, Action<bool> done)
     {
         work.Run("report", token => safety.ReportAsync(PrismClient.ReportTarget, lookId, reason, token), done);
+    }
+
+    public void ReportUser(string userId, ReportReason reason, Action<bool> done)
+    {
+        work.Run("report user", token => safety.ReportAsync(UserReportTarget, userId, reason, token), done);
     }
 
     private bool BeginAction()

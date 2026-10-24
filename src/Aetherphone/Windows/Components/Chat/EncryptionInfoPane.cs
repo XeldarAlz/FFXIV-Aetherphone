@@ -257,7 +257,7 @@ internal sealed class EncryptionInfoPane : IDisposable
         ImGui.SetCursorScreenPos(new Vector2(origin.X + 12f * scale,
             origin.Y + height * 0.5f - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(width - 24f * scale);
-        using (Dalamud.Interface.Utility.Raii.ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f))
                    .Push(ImGuiCol.Text, theme.TextStrong))
         {
             ImGui.InputText("##encryptionRecoveryCode", ref actions.CodeEntry, 64);
@@ -319,7 +319,7 @@ internal sealed class EncryptionInfoPane : IDisposable
         ImGui.SetCursorScreenPos(new Vector2(origin.X + 12f * scale,
             origin.Y + height * 0.5f - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(width - 24f * scale);
-        using (Dalamud.Interface.Utility.Raii.ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f))
                    .Push(ImGuiCol.Text, theme.TextStrong))
         {
             ImGui.InputText("##encryptionVerifyCode", ref actions.VerifyEntry, 64);

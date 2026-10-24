@@ -7,7 +7,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino.Tables;
 
@@ -129,10 +128,10 @@ internal sealed class HostSheet
         var block = HostCards.FooterBlock(reason, line, note, body.Width, scale);
         var scroll = new Rect(body.Min,
             new Vector2(body.Max.X, body.Max.Y - HostFlowLayout.FooterHeight(scale, block)));
-        using (ImRaii.PushId("casino.host"))
+        using (UiScope.PushId("casino.host"))
         {
             using (AppSurface.Begin(scroll))
-            using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
+            using (UiScope.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
             {
                 DrawContent(ui, gilOpen, scale);
             }
@@ -238,7 +237,7 @@ internal sealed class HostSheet
             ref readonly var info = ref HostGames.All[index];
             var cell = HostFlowLayout.GridCell(origin.X, origin.Y, width, index, HostFlowLayout.Columns, height, gap);
             var selected = info.Game == draft.Game;
-            using (ImRaii.PushId(index))
+            using (UiScope.PushId(index))
             {
                 var hovered = CasinoArt.PressCard(ImGui.GetID("switch"), cell.Min, cell.Max, out var pressedMin,
                     out var pressedMax);
@@ -315,7 +314,7 @@ internal sealed class HostSheet
             var selected = draft.Currency == currency;
             var tint = TableRow.CurrencyTint(currency, ui.Accent);
             var cell = HostFlowLayout.GridCell(origin.X, origin.Y, width, index, HostFlowLayout.Columns, height, gap);
-            using (ImRaii.PushId(index))
+            using (UiScope.PushId(index))
             {
                 var firstVertex = drawList.VtxBuffer.Size;
                 var hovered = CasinoArt.PressCard(ImGui.GetID("currency"), cell.Min, cell.Max, out var pressedMin,
@@ -510,7 +509,7 @@ internal sealed class HostSheet
             var listing = Listings[index];
             var selected = draft.Listing == listing;
             var cell = HostFlowLayout.GridCell(origin.X, origin.Y, width, index, HostFlowLayout.Columns, height, gap);
-            using (ImRaii.PushId(index))
+            using (UiScope.PushId(index))
             {
                 var hovered = CasinoArt.PressCard(ImGui.GetID("listing"), cell.Min, cell.Max, out var pressedMin,
                     out var pressedMax);

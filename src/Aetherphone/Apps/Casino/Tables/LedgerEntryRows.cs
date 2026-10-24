@@ -6,7 +6,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino.Tables;
 
@@ -99,7 +98,7 @@ internal sealed class LedgerEntryRows
         var tapped = -1;
         for (var index = 0; index < views.Length; index++)
         {
-            using var id = ImRaii.PushId(index);
+            using var id = UiScope.PushId(index);
             var origin = ImGui.GetCursorScreenPos();
             var row = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
             if (DrawRow(drawList, ui, views[index], row, tappable, nameHeight, metaHeight, pillHeight, scale))

@@ -9,7 +9,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Coin;
 
@@ -29,7 +28,7 @@ internal sealed partial class CoinApp
         inventory.EnsureFresh();
         var sku = FindSku(route.CategoryId, route.ItemId);
         var navBar = AppHeader.BeginLargeTitle(context);
-        using (ImRaii.PushId("coin.product"))
+        using (UiScope.PushId("coin.product"))
         using (AppSurface.Begin(navBar.Body))
         {
             var scale = UiScale.Current;

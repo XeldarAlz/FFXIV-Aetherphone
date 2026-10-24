@@ -10,7 +10,6 @@ using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Aethergram;
 
@@ -430,8 +429,8 @@ internal sealed partial class AethergramApp
         }
 
         var wrapWidth = field.Width - ImGui.GetStyle().FramePadding.X * 2f - 4f * scale;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, Ink.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
+        using (UiScope.PushColor(ImGuiCol.Text, Ink.TitleInk))
         {
             if (paragraphs)
             {

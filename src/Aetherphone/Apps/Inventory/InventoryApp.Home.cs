@@ -8,7 +8,6 @@ using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Inventory;
 
@@ -416,7 +415,7 @@ internal sealed partial class InventoryApp
         }
 
         var appear = resultsAppear.Step(1f, Motion.Appear, deltaSeconds);
-        using (ImRaii.PushStyle(ImGuiStyleVar.Alpha, MathF.Max(0.05f, appear)))
+        using (UiScope.PushStyle(ImGuiStyleVar.Alpha, MathF.Max(0.05f, appear)))
         {
             DrawItemList(results, ResultRowHeight(scale), scale);
         }

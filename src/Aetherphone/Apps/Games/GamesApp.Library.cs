@@ -5,7 +5,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Games;
 
@@ -64,7 +63,7 @@ internal sealed partial class GamesApp
         librarySortMenu.Gate();
         SyncLibraryLabels();
         var navBar = AppHeader.BeginLargeTitle(context, false);
-        using (ImRaii.PushId(LibraryScopeId))
+        using (UiScope.PushId(LibraryScopeId))
         using (AppSurface.Begin(navBar.Body))
         {
             var scale = UiScale.Current;
@@ -167,7 +166,7 @@ internal sealed partial class GamesApp
             drawList.GetClipRectMax().Y + gapY);
         var tapped = -1;
         var tappedIcon = default(Rect);
-        using (ImRaii.PushId(LibraryGridId))
+        using (UiScope.PushId(LibraryGridId))
         {
             for (var row = rows.First; row < rows.End; row++)
             {

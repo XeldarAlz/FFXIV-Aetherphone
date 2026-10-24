@@ -1,6 +1,5 @@
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -16,7 +15,7 @@ internal static class SettingsSection
         var scale = UiScale.Current;
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + Metrics.Space.Lg * scale);
         using (Plugin.Fonts.Push(TextStyles.Footnote.Scale, TextStyles.Footnote.Weight))
-        using (ImRaii.PushColor(ImGuiCol.Text, ink))
+        using (UiScope.PushColor(ImGuiCol.Text, ink))
         {
             ImGui.PushTextWrapPos(0f);
             Typography.Wrapped(text);

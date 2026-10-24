@@ -162,7 +162,7 @@ internal sealed class WardrobeStore
         Commit(kept.ToArray());
     }
 
-    public int StartImport(GlamourService glamour)
+    public int StartImport(List<(Guid Id, string Name)> designs)
     {
         if (loading || Importing)
         {
@@ -171,16 +171,18 @@ internal sealed class WardrobeStore
 
         var current = outfits;
         imported.Clear();
-        foreach (var (id, (name, _, _, _)) in glamour.Designs())
+        for (var index = 0; index < designs.Count; index++)
         {
-            if (!HasDesign(current, id))
+            if (!HasDesign(current, designs[index].Id))
             {
-                importQueue.Enqueue((id, name));
+                importQueue.Enqueue(designs[index]);
             }
         }
 
         return importQueue.Count;
     }
+
+    public bool HasDesign(Guid id) => HasDesign(outfits, id);
 
     public int PumpImport(GlamourService glamour)
     {

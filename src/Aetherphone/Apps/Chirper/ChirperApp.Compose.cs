@@ -9,7 +9,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Chirper;
 
@@ -141,8 +140,8 @@ internal sealed partial class ChirperApp
                 composeFocus = false;
             }
 
-            using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-            using (ImRaii.PushColor(ImGuiCol.Text, ChirperInk.TitleInk))
+            using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+            using (UiScope.PushColor(ImGuiCol.Text, ChirperInk.TitleInk))
             using (Plugin.Fonts.Push(ComposeInputStyle.Scale))
             {
                 SoftWrapField.Paragraphs("##chirpBody", ref draft, MaxPostLength,
@@ -184,7 +183,7 @@ internal sealed partial class ChirperApp
                 ImGui.SetCursorScreenPos(new Vector2(inputX, statusTop));
                 using (Typography.WrapAt(inputX + inputWidth))
                 using (Plugin.Fonts.Push(TextStyles.Subheadline.Scale, TextStyles.Subheadline.Weight))
-                using (ImRaii.PushColor(ImGuiCol.Text, ChirperInk.Danger))
+                using (UiScope.PushColor(ImGuiCol.Text, ChirperInk.Danger))
                 {
                     Typography.Wrapped(composeStatus);
                 }

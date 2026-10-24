@@ -9,7 +9,6 @@ using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Muster;
 
@@ -43,7 +42,7 @@ internal sealed partial class MusterApp
         cardAnchorReported = false;
         refreshEverything ??= RefreshEverything;
         var navBar = AppHeader.BeginLargeTitle(context, false);
-        using (ImRaii.PushId("muster.discover"))
+        using (UiScope.PushId("muster.discover"))
         using (var surface = AppSurface.Begin(navBar.Body))
         {
             discoverRefresh.Draw(navBar.Body, surface.Pull, surface.Dragging,

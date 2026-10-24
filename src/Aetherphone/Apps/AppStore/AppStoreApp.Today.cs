@@ -7,7 +7,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.AppStore;
 
@@ -41,7 +40,7 @@ internal sealed partial class AppStoreApp
     private void DrawTodayTab(in PhoneContext context)
     {
         var navBar = AppHeader.BeginLargeTitle(context, false);
-        using (ImRaii.PushId("appstore.today"))
+        using (UiScope.PushId("appstore.today"))
         using (var surface = AppSurface.Begin(navBar.Body))
         {
             TakeScrollReset(surface);
@@ -104,7 +103,7 @@ internal sealed partial class AppStoreApp
         var overPill = UiInteract.Hover(pill.Min, pill.Max);
         var hovered = UiInteract.Hover(card.Min, card.Max) && !overPill;
         float press;
-        using (ImRaii.PushId("appstore.hero"))
+        using (UiScope.PushId("appstore.hero"))
         {
             press = PressFx.Scale(ImGui.GetID(app.Id), hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left),
                 PressFx.CardPressedScale);

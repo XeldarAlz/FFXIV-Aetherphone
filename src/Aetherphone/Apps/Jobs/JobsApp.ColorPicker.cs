@@ -201,7 +201,7 @@ internal sealed partial class JobsApp
     private void DrawPickerFieldHosts(Rect hexRect, Rect nameRect, float scale)
     {
         var inset = Metrics.Space.Md * scale;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, default(Vector4))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, default(Vector4))
                    .Push(ImGuiCol.FrameBgHovered, default(Vector4))
                    .Push(ImGuiCol.FrameBgActive, default(Vector4))
                    .Push(ImGuiCol.Text, default(Vector4))

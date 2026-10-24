@@ -14,11 +14,17 @@ internal static class DragScrollHost
         public bool Grabbing;
         public float GrabPointerY;
         public float GrabScrollY;
+        public Spring Wheel;
+        public float WheelTarget;
+        public float WheelLast;
+        public bool Wheeling;
+        public bool Smooth;
 
         public void Reset()
         {
             Scroller.Reset();
             Pressed = false;
+            Wheeling = false;
             ClearGrab();
         }
 
@@ -26,6 +32,7 @@ internal static class DragScrollHost
         {
             Scroller.CancelGesture();
             Pressed = false;
+            Wheeling = false;
             ClearGrab();
         }
 
@@ -70,6 +77,10 @@ internal static class DragScrollHost
     }
 
     private const int EvictAfterFrames = 240;
+    private const float ImGuiWheelStepFontSizes = 5f;
+    private const float ImGuiWheelStepMaxShare = 0.67f;
+    private const float WheelRestEpsilon = 0.5f;
+    private const float WheelYieldPixels = 1f;
 
     private static readonly Dictionary<uint, Region> Regions = new();
     private static readonly List<uint> stale = new();
@@ -111,7 +122,7 @@ internal static class DragScrollHost
         return UiInteract.HoverWindowOnly(new Vector2(windowMax.X - stripWidth, windowMin.Y), windowMax, false);
     }
 
-    public static Surface Begin(uint key, float grabStripWidth = 0f)
+    public static Surface Begin(uint key, float grabStripWidth = 0f, bool smoothWheel = false)
     {
         var frame = ImGui.GetFrameCount();
         EvictStale(frame);
@@ -123,6 +134,7 @@ internal static class DragScrollHost
 
         var gapped = region.LastFrame != frame - 1;
         region.LastFrame = frame;
+        region.Smooth = smoothWheel;
 
         var scroller = region.Scroller;
         scroller.Scale = UiScale.Current;
@@ -134,6 +146,10 @@ internal static class DragScrollHost
         }
 
         scroller.SyncOffset(ImGui.GetScrollY());
+        if (smoothWheel)
+        {
+            Glide(region, frame);
+        }
 
         if (!Enabled)
         {
@@ -211,6 +227,7 @@ internal static class DragScrollHost
         {
             scroller.Press(pointerY);
             region.Pressed = true;
+            region.Wheeling = false;
             region.EdgePress = grabStripWidth > 0f && ImGui.GetScrollMaxY() > 0f &&
                                HoversEdgeStrip(grabStripWidth);
         }
@@ -241,6 +258,95 @@ internal static class DragScrollHost
 
         return new Surface(region, scroller.PullDistance, scroller.IsDragging, region.Grabbing);
     }
+
+    public static bool ParentTakesWheel(ImGuiWindowPtr parent)
+    {
+        var window = parent;
+        while (!window.IsNull && (window.Flags & ImGuiWindowFlags.ChildWindow) != 0 &&
+               (window.ScrollMax.Y == 0f || (window.Flags & ImGuiWindowFlags.NoScrollWithMouse) != 0))
+        {
+            window = window.ParentWindow;
+        }
+
+        return !window.IsNull && (window.Flags & ImGuiWindowFlags.NoScrollWithMouse) == 0;
+    }
+
+    private static void Glide(Region region, int frame)
+    {
+        var io = ImGui.GetIO();
+        if (io.MouseWheel == 0f && !region.Wheeling)
+        {
+            return;
+        }
+
+        var window = ImGuiP.GetCurrentWindowRead();
+        var maxY = MathF.Max(0f, window.ScrollMax.Y);
+        var down = ImGui.IsMouseDown(ImGuiMouseButton.Left);
+        if (region.Wheeling &&
+            (down || MathF.Abs(window.Scroll.Y - MathF.Min(region.WheelLast, maxY)) > WheelYieldPixels))
+        {
+            region.Wheeling = false;
+        }
+
+        if (io.MouseWheel != 0f && !io.KeyShift && ReceivesWheel(window, frame))
+        {
+            var parentScale = window.ParentWindow.IsNull ? 1f : window.ParentWindow.FontWindowScale;
+            var font = io.FontDefault.IsNull ? io.Fonts.Fonts[0] : io.FontDefault;
+            var fontSize = io.FontGlobalScale * font.FontSize * font.Scale * window.FontWindowScale * parentScale;
+            var view = window.InnerRect.Max.Y - window.InnerRect.Min.Y;
+            var step = io.MouseWheel *
+                       MathF.Floor(MathF.Min(ImGuiWheelStepFontSizes * fontSize, view * ImGuiWheelStepMaxShare));
+            if (down)
+            {
+                ImGui.SetScrollY(Math.Clamp(window.Scroll.Y - step, 0f, maxY));
+                return;
+            }
+
+            if (!region.Wheeling)
+            {
+                region.Wheel.SnapTo(window.Scroll.Y);
+                region.WheelTarget = window.Scroll.Y;
+                region.Wheeling = true;
+            }
+
+            region.WheelTarget -= step;
+        }
+
+        if (!region.Wheeling)
+        {
+            return;
+        }
+
+        region.WheelTarget = Math.Clamp(region.WheelTarget, 0f, maxY);
+        region.Wheel.Value = MathF.Min(region.Wheel.Value, maxY);
+        var next = region.Wheel.Step(region.WheelTarget, Motion.PageSettle,
+            MathF.Min(io.DeltaTime, TransitionTiming.MaxFrameSeconds));
+        if (MathF.Abs(next - region.WheelTarget) <= WheelRestEpsilon)
+        {
+            next = region.WheelTarget;
+            region.Wheeling = false;
+        }
+
+        region.WheelLast = next;
+        ImGui.SetScrollY(next);
+    }
+
+    private static bool ReceivesWheel(ImGuiWindowPtr window, int frame)
+    {
+        var context = ImGui.GetCurrentContext();
+        var target = context.WheelingWindow.IsNull ? context.HoveredWindow : context.WheelingWindow;
+        while (!target.IsNull && target != window && (target.Flags & ImGuiWindowFlags.ChildWindow) != 0 &&
+               !GlidesAt(target, frame) &&
+               (target.ScrollMax.Y == 0f || (target.Flags & ImGuiWindowFlags.NoScrollWithMouse) != 0))
+        {
+            target = target.ParentWindow;
+        }
+
+        return target == window;
+    }
+
+    private static bool GlidesAt(ImGuiWindowPtr window, int frame) =>
+        window.ScrollMax.Y > 0f && Regions.TryGetValue(window.ChildId, out var region) && region.Smooth && frame - region.LastFrame <= 1;
 
     private static void DragThumb(Region region, float pointerY)
     {

@@ -9,7 +9,6 @@ using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Message;
 
@@ -574,8 +573,8 @@ internal sealed partial class MessageApp
         ImGui.SetCursorScreenPos(cardMin + new Vector2(pad, pad));
         var inputWidth = cardMax.X - cardMin.X - pad * 2f;
         var wrapWidth = inputWidth - ImGui.GetStyle().FramePadding.X * 2f - 4f * scale;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, ui.TitleInk))
         {
             SoftWrapField.Multiline("##msgEditGroupDescription", ref editGroupDescription, DescriptionMaxLength,
                 new Vector2(inputWidth, cardMax.Y - cardMin.Y - pad * 2f), wrapWidth);
@@ -584,7 +583,7 @@ internal sealed partial class MessageApp
         if (editGroupDescription.Length == 0)
         {
             ImGui.SetCursorScreenPos(cardMin + new Vector2(pad + 4f * scale, pad + 2f * scale));
-            using (ImRaii.PushColor(ImGuiCol.Text, ui.MutedInk))
+            using (UiScope.PushColor(ImGuiCol.Text, ui.MutedInk))
             {
                 Typography.Plain(Loc.T(L.Message.AddDescription));
             }

@@ -16,7 +16,6 @@ using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Feedback;
 
@@ -274,7 +273,7 @@ internal sealed partial class FeedbackApp : IResumableApp
         ImGui.Dummy(new Vector2(width, MathF.Max(0f, bottom - origin.Y)));
     }
 
-    private static ImRaii.StyleDisposable ZeroItemSpacing() => ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero);
+    private static UiScope.StyleScope ZeroItemSpacing() => UiScope.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero);
 
     public void Dispose()
     {

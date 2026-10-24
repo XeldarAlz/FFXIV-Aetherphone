@@ -825,8 +825,8 @@ internal sealed partial class ChirperApp
             var bioInputSize = new Vector2(bioField.Width - Metrics.Space.Sm * 2f * scale,
                 bioField.Height - Metrics.Space.Xs * 2f * scale);
             ImGui.SetCursorScreenPos(bioInputMin);
-            using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-            using (ImRaii.PushColor(ImGuiCol.Text, ChirperInk.TitleInk))
+            using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+            using (UiScope.PushColor(ImGuiCol.Text, ChirperInk.TitleInk))
             {
                 var wrapWidth = bioInputSize.X - ImGui.GetStyle().FramePadding.X * 2f - 4f * scale;
                 SoftWrapField.Multiline("##chirperEditBio", ref editBio, SocialProfilePages.BioMax, bioInputSize,
@@ -855,8 +855,8 @@ internal sealed partial class ChirperApp
         ImGui.SetCursorScreenPos(new Vector2(left, rowTop + rowHeight * 0.5f - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(MathF.Max(1f, right - left));
         Plugin.Fonts.NoticeText(value);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ink))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, ink))
         {
             return ImGui.InputText(id, ref value, maxLength, flags);
         }

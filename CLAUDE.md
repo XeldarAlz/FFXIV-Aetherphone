@@ -34,6 +34,7 @@ Types in use: feat, fix, docs, refactor, chore, plus perf, style, ci, test, reve
 ## Top style rules
 
 - This is an immediate mode UI (Dear ImGui): Draw code runs every frame. No LINQ, no per-frame allocations, no reflection on a per-frame path.
+- Push colors, styles, ids and disabled state through `UiScope`, never `ImRaii`: Dalamud's versions are classes and allocate on every push.
 - No comments; code is self-documenting. The only allowance is a why the code cannot express, or the source of a magic constant.
 - No abbreviations in names, even loop variables: index, entryIndex, drawList, never i or dl.
 - Braces on every if, else, and loop body. Early returns over nesting. Explicit accessibility keywords, even for private members. Attributes on their own line, except a single short marker on a one-line property or field.

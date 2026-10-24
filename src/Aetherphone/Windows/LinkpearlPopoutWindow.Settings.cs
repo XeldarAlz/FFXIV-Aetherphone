@@ -5,7 +5,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows;
 
@@ -32,7 +31,7 @@ internal sealed partial class LinkpearlPopoutWindow
     private void DrawSettingsPanel(Rect body, PhoneTheme theme, InboxRow row)
     {
         var scale = UiScale.Current;
-        using (ImRaii.PushId(settingIds.Panel))
+        using (UiScope.PushId(settingIds.Panel))
         using (AppSurface.Begin(body))
         {
             DrawChatCard(theme, row, scale);

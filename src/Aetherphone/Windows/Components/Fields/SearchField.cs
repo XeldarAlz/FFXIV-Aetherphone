@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -36,8 +35,8 @@ internal static class SearchField
         ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 44f * scale);
         Plugin.Fonts.NoticeText(hint);
         Plugin.Fonts.NoticeText(text);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, titleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
+        using (UiScope.PushColor(ImGuiCol.Text, titleInk))
         {
             return ImGui.InputTextWithHint(imguiId, hint, ref text, maxLength, ImGuiInputTextFlags.EnterReturnsTrue);
         }
@@ -79,8 +78,8 @@ internal static class SearchField
             ImGui.SetKeyboardFocusHere();
         }
 
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, titleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
+        using (UiScope.PushColor(ImGuiCol.Text, titleInk))
         {
             ImGui.InputTextWithHint(imguiId, hint, ref text, maxLength, ImGuiInputTextFlags.None);
         }

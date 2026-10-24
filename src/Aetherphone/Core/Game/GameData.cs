@@ -17,6 +17,7 @@ internal sealed class GameData
     private const uint ChinaRegionId = 5;
     public const string ChineseLocale = "cn";
     private const uint PoeticsItemId = 28;
+    private const uint StainKnown = 0x1000000u;
 
     private readonly IDataManager data;
     private readonly IObjectTable objectTable;
@@ -27,6 +28,7 @@ internal sealed class GameData
     private uint[]? triviaEmoteIds;
     private byte[]? dailyBonusRouletteRowIds;
     private byte[]? weeklyHuntBillIndices;
+    private uint[]? stainColors;
     private Dictionary<uint, uint[]>? classJobIdsByCategory;
     private Dictionary<string, string>? worldRegionCodes;
     private bool? chineseGameClient;
@@ -596,6 +598,24 @@ internal sealed class GameData
         }
 
         return stain.Name.ExtractText();
+    }
+
+    public uint StainColor(byte stainId)
+    {
+        if (stainId == 0 || !GameSheets.Available)
+        {
+            return 0;
+        }
+
+        stainColors ??= new uint[byte.MaxValue + 1];
+        var known = stainColors[stainId];
+        if (known == 0)
+        {
+            known = StainKnown | (data.GetExcelSheet<Stain>().TryGetRow(stainId, out var stain) ? stain.Color : 0u);
+            stainColors[stainId] = known;
+        }
+
+        return known & ~StainKnown;
     }
 
     public void CollectTomestoneItemIds(List<uint> into, out uint limitedItemId)

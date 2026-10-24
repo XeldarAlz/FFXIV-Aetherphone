@@ -11,7 +11,6 @@ using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Casino;
 
@@ -53,7 +52,7 @@ internal sealed partial class CasinoApp
     private void DrawLimits(Rect body)
     {
         var scale = UiScale.Current;
-        using (ImRaii.PushId("casino.limits"))
+        using (UiScope.PushId("casino.limits"))
         using (var surface = AppSurface.Begin(body))
         {
             ConsumeLimitsResult();

@@ -260,9 +260,12 @@ internal sealed class CasinoTradeSync : IDisposable
             return;
         }
 
-        var request = pending.Dequeue();
-        var account = accountId;
         sending = true;
+        StartRecord(pending.Dequeue(), accountId);
+    }
+
+    private void StartRecord(CasinoLedgerTradeRequest request, string account)
+    {
         work.Run("trade record", async token =>
         {
             CasinoLedgerResultDto? result = null;

@@ -8,7 +8,6 @@ using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Health;
 
@@ -51,7 +50,7 @@ internal sealed partial class HealthApp
     {
         var context = new PhoneContext(area, theme, navigation);
         var navBar = AppHeader.BeginLargeTitle(context);
-        using (ImRaii.PushId(MetricScrollIds[(int)metric]))
+        using (UiScope.PushId(MetricScrollIds[(int)metric]))
         using (AppSurface.Begin(navBar.Body))
         {
             var scale = UiScale.Current;

@@ -6,7 +6,6 @@ using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Message;
 
@@ -288,8 +287,8 @@ internal sealed partial class MessageApp
         var scale = UiScale.Current;
         SearchBar.Surface(ImGui.GetWindowDrawList(), rect, ui.Ink);
         ImGui.SetNextItemWidth(rect.Width - 36f * scale);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, ui.TitleInk))
         using (Plugin.Fonts.Push(TextStyles.Body.Scale, TextStyles.Body.Weight))
         {
             ImGui.SetCursorScreenPos(new Vector2(rect.Min.X + 18f * scale,

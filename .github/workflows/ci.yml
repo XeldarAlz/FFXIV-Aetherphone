@@ -71,6 +71,10 @@ jobs:
         shell: bash
         run: tools/guards/check namespace
 
+      - name: Verify no allocating ImRaii scopes
+        shell: bash
+        run: tools/guards/check imraii-scopes
+
   # Full build. Needs Dalamud present at the standard plugin path so
   # Dalamud.NET.Sdk can resolve $(DalamudLibPath).
   build:

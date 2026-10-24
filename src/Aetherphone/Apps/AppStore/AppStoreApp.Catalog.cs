@@ -6,7 +6,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.AppStore;
 
@@ -37,7 +36,7 @@ internal sealed partial class AppStoreApp
     private void DrawAppsTab(in PhoneContext context)
     {
         var navBar = AppHeader.BeginLargeTitle(context, false);
-        using (ImRaii.PushId("appstore.apps"))
+        using (UiScope.PushId("appstore.apps"))
         using (var surface = AppSurface.Begin(navBar.Body))
         {
             TakeScrollReset(surface);
@@ -82,7 +81,7 @@ internal sealed partial class AppStoreApp
     {
         var hovered = UiInteract.Hover(card.Min, card.Max);
         float press;
-        using (ImRaii.PushId("appstore.categoryCard"))
+        using (UiScope.PushId("appstore.categoryCard"))
         {
             press = PressFx.Scale(ImGui.GetID((int)category), hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left),
                 PressFx.CardPressedScale);
@@ -143,8 +142,8 @@ internal sealed partial class AppStoreApp
     private void DrawCategoryView(in PhoneContext context, in StoreView view, int depth)
     {
         var navBar = AppHeader.BeginLargeTitle(context);
-        using (ImRaii.PushId("appstore.category"))
-        using (ImRaii.PushId(view.Serial))
+        using (UiScope.PushId("appstore.category"))
+        using (UiScope.PushId(view.Serial))
         using (AppSurface.Begin(navBar.Body))
         {
             var scale = UiScale.Current;
@@ -163,8 +162,8 @@ internal sealed partial class AppStoreApp
     private void DrawUpdatesView(in PhoneContext context, in StoreView view, int depth)
     {
         var navBar = AppHeader.BeginLargeTitle(context);
-        using (ImRaii.PushId("appstore.updates"))
-        using (ImRaii.PushId(view.Serial))
+        using (UiScope.PushId("appstore.updates"))
+        using (UiScope.PushId(view.Serial))
         using (AppSurface.Begin(navBar.Body))
         {
             var scale = UiScale.Current;
@@ -182,7 +181,7 @@ internal sealed partial class AppStoreApp
     private void DrawSearchTab(in PhoneContext context)
     {
         var navBar = AppHeader.BeginLargeTitle(context, false);
-        using (ImRaii.PushId("appstore.search"))
+        using (UiScope.PushId("appstore.search"))
         using (var surface = AppSurface.Begin(navBar.Body))
         {
             TakeScrollReset(surface);

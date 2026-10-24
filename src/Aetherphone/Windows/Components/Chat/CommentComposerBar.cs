@@ -8,7 +8,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -94,8 +93,8 @@ internal static class CommentComposerBar
         }
 
         var submitted = false;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, style.TextInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
+        using (UiScope.PushColor(ImGuiCol.Text, style.TextInk))
         {
             submitted = MentionField.SingleLineWithHint(inputId, hint, ref draft, maxLength, mentions)
                         && !emoji.Suggesting;

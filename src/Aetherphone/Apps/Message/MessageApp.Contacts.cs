@@ -7,7 +7,6 @@ using Aetherphone.Core.Social;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Message;
 
@@ -354,8 +353,8 @@ internal sealed partial class MessageApp
         ImGui.SetCursorScreenPos(fieldMin + new Vector2(pad, pad));
         var inputWidth = fieldMax.X - fieldMin.X - pad * 2f;
         var wrapWidth = inputWidth - ImGui.GetStyle().FramePadding.X * 2f - 4f * scale;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, ui.TitleInk))
         using (Plugin.Fonts.Push(TextStyles.Body.Scale, TextStyles.Body.Weight))
         {
             SoftWrapField.Multiline("##msgNumberReason", ref reasonDraft, ReasonMaxLength,
@@ -365,7 +364,7 @@ internal sealed partial class MessageApp
         if (reasonDraft.Length == 0)
         {
             ImGui.SetCursorScreenPos(fieldMin + new Vector2(pad + 4f * scale, pad + 2f * scale));
-            using (ImRaii.PushColor(ImGuiCol.Text, ui.MutedInk))
+            using (UiScope.PushColor(ImGuiCol.Text, ui.MutedInk))
             using (Plugin.Fonts.Push(TextStyles.Body.Scale, TextStyles.Body.Weight))
             {
                 Typography.Plain(Loc.T(L.Friends.ReasonHint));

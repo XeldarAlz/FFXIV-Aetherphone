@@ -19,7 +19,7 @@ internal enum ExperienceState : byte
 }
 
 internal readonly record struct CampaignMoment(CampaignPhase Phase, int CurrentIndex, int NextIndex,
-    int NextStreamedIndex, long SecondsToStart)
+    int CurrentDjIndex, int NextDjIndex, long SecondsToStart)
 {
     public bool WindowOpen => Phase is CampaignPhase.Live or CampaignPhase.Between;
 }
@@ -35,7 +35,6 @@ internal static class CampaignCountdown
         var experiences = campaign.Experiences;
         var current = -1;
         var next = -1;
-        var nextStreamed = -1;
         for (var index = 0; index < experiences.Length; index++)
         {
             var experience = experiences[index];
@@ -50,37 +49,56 @@ internal static class CampaignCountdown
             {
                 next = index;
             }
+        }
 
-            if (state != ExperienceState.Ended && !string.IsNullOrEmpty(experience.TwitchUrl)
-                && (nextStreamed < 0 || experience.StartsAtUnix < experiences[nextStreamed].StartsAtUnix))
+        var djSets = campaign.DjSets;
+        var currentDj = -1;
+        var nextDj = -1;
+        for (var index = 0; index < djSets.Length; index++)
+        {
+            var djSet = djSets[index];
+            var state = StateOf(djSet, nowUnix);
+            if (state == ExperienceState.Live && currentDj < 0)
             {
-                nextStreamed = index;
+                currentDj = index;
+            }
+
+            if (state == ExperienceState.Upcoming
+                && (nextDj < 0 || djSet.StartsAtUnix < djSets[nextDj].StartsAtUnix))
+            {
+                nextDj = index;
             }
         }
 
         if (nowUnix >= campaign.EndsAtUnix)
         {
-            return new CampaignMoment(CampaignPhase.Ended, current, next, nextStreamed, 0L);
+            return new CampaignMoment(CampaignPhase.Ended, current, next, currentDj, nextDj, 0L);
         }
 
         if (nowUnix < campaign.StartsAtUnix)
         {
-            return new CampaignMoment(CampaignPhase.Before, current, next, nextStreamed,
+            return new CampaignMoment(CampaignPhase.Before, current, next, currentDj, nextDj,
                 campaign.StartsAtUnix - nowUnix);
         }
 
         return new CampaignMoment(current >= 0 ? CampaignPhase.Live : CampaignPhase.Between, current, next,
-            nextStreamed, 0L);
+            currentDj, nextDj, 0L);
     }
 
-    public static ExperienceState StateOf(CampaignExperienceDto experience, long nowUnix)
+    public static ExperienceState StateOf(CampaignExperienceDto experience, long nowUnix) =>
+        StateOf(experience.StartsAtUnix, experience.EndsAtUnix, nowUnix);
+
+    public static ExperienceState StateOf(CampaignDjSetDto djSet, long nowUnix) =>
+        StateOf(djSet.StartsAtUnix, djSet.EndsAtUnix, nowUnix);
+
+    private static ExperienceState StateOf(long startsAtUnix, long endsAtUnix, long nowUnix)
     {
-        if (nowUnix >= experience.EndsAtUnix)
+        if (nowUnix >= endsAtUnix)
         {
             return ExperienceState.Ended;
         }
 
-        return nowUnix >= experience.StartsAtUnix ? ExperienceState.Live : ExperienceState.Upcoming;
+        return nowUnix >= startsAtUnix ? ExperienceState.Live : ExperienceState.Upcoming;
     }
 
     public static string Text(long remainingSeconds)

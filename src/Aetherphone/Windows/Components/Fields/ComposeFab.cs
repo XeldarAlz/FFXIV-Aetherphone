@@ -11,7 +11,6 @@ namespace Aetherphone.Windows.Components;
 internal static class ComposeFab
 {
     private const float DefaultRadius = 26f;
-    private const float HoverGrow = 0.12f;
     private const float HoverTopLift = 0.18f;
     private const float HoverBottomLift = 0.10f;
     private const float HoverRimAlpha = 0.30f;
@@ -45,7 +44,7 @@ internal static class ComposeFab
         var eased = HoverEase(childId, hovered);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
         var press = PressFx.Scale(childId, pressed, PressFx.ControlPressedScale);
-        var drawRadius = radius * (1f + HoverGrow * eased) * press;
+        var drawRadius = radius * press;
         if (gradientBottom is { } deep)
         {
             AccentGloss.Circle(drawList, center, drawRadius, Palette.Mix(accent, White, HoverTopLift * eased),

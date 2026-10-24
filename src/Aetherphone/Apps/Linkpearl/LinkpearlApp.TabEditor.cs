@@ -5,7 +5,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Linkpearl;
 
@@ -123,8 +122,8 @@ internal sealed partial class LinkpearlApp
         }
 
         Plugin.Fonts.NoticeText(editorName);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, frameTheme.TextStrong))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, frameTheme.TextStrong))
         {
             ImGui.InputTextWithHint("##linkpearl.tabname", Loc.T(L.Linkpearl.TabName), ref editorName,
                 TabNameMaxLength);

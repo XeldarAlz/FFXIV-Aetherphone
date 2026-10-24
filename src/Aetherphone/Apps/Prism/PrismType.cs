@@ -14,9 +14,14 @@ internal enum PrismFace : byte
 
 internal static class PrismType
 {
-    public const float DisplayUnits = 48f;
     public const float TitleUnits = 32f;
     public const float HeadingUnits = 24f;
+    public const int HeroLines = 2;
+
+    public static readonly TextStyle Title = TextStyles.Title2;
+    public static readonly TextStyle Headline = TextStyles.Headline;
+    public static readonly TextStyle Body = TextStyles.Subheadline;
+    public static readonly TextStyle Caption = TextStyles.Footnote;
 
     private const float LabelLeading = 1.45f;
     private const float HeadlineLeading = 1.02f;
@@ -30,10 +35,15 @@ internal static class PrismType
     private static readonly List<string> Scratch = new();
     private static readonly Dictionary<BalanceKey, float> BalanceCache = new();
     private static readonly Dictionary<BalanceKey, string> SentenceCache = new();
+    private static readonly Dictionary<HeroKey, HeroFit> HeroCache = new();
 
     private readonly record struct WrapKey(string Text, PrismFace Face, int Pixels, int Width);
 
     private readonly record struct BalanceKey(string Text, float Scale, FontWeight Weight, int Width);
+
+    private readonly record struct HeroKey(string Text, int Width, float Pixels, int Fonts);
+
+    private readonly record struct HeroFit(float Pixels, string[] Lines);
 
     public static float Snap(PrismFace face, float pixels) =>
         Tier(face, pixels) * Plugin.Fonts.BaseSize * UiScale.Current * Plugin.Fonts.Zoom;
@@ -256,6 +266,64 @@ internal static class PrismType
         var pixels = FitRequest(ref probe, maxPixels, minPixels);
         lines = Wrap(text, face, pixels, width);
         return pixels;
+    }
+
+    public static float Hero(string text, float width, out string[] lines)
+    {
+        var top = TitleUnits * UiScale.Current;
+        var key = new HeroKey(text, (int)MathF.Round(width), Snap(PrismFace.Headline, top), Plugin.Fonts.Generation);
+        if (!HeroCache.TryGetValue(key, out var fit))
+        {
+            if (HeroCache.Count >= CacheLimit)
+            {
+                HeroCache.Clear();
+            }
+
+            var pixels = Fit(text, PrismFace.Headline, width, top, HeadingUnits * UiScale.Current, HeroLines,
+                out var wrapped);
+            fit = new HeroFit(pixels, CapHero(text, wrapped, pixels, width));
+            HeroCache[key] = fit;
+        }
+
+        lines = fit.Lines;
+        return fit.Pixels;
+    }
+
+    public static float HeroHeight(string text, float width)
+    {
+        var pixels = Hero(text, width, out var lines);
+        return lines.Length * LineHeight(PrismFace.Headline, pixels);
+    }
+
+    public static float DrawHero(ImDrawListPtr drawList, Vector2 topLeft, string text, float width, Vector4 ink)
+    {
+        var pixels = Hero(text, width, out var lines);
+        return DrawLines(drawList, topLeft, lines, ink, PrismFace.Headline, pixels);
+    }
+
+    private static string[] CapHero(string text, string[] lines, float pixels, float width)
+    {
+        if (lines.Length <= HeroLines && Widest(lines, PrismFace.Headline, pixels) <= width)
+        {
+            return lines;
+        }
+
+        if (lines.Length == 1)
+        {
+            return [Ellipsize(lines[0], pixels, width)];
+        }
+
+        var start = text.IndexOf(lines[1], lines[0].Length, StringComparison.Ordinal);
+        var rest = start >= 0 ? text[start..] : string.Join(' ', lines, 1, lines.Length - 1);
+        return [Ellipsize(lines[0], pixels, width), Ellipsize(rest, pixels, width)];
+    }
+
+    private static string Ellipsize(string text, float pixels, float width)
+    {
+        using (Push(text, PrismFace.Headline, pixels))
+        {
+            return Typography.FitInCurrentFont(text, width * ImGui.GetFontSize() / Snap(PrismFace.Headline, pixels));
+        }
     }
 
     internal static float FitRequest<TProbe>(ref TProbe probe, float maxPixels, float minPixels)

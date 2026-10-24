@@ -5,7 +5,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Linkpearl;
 
@@ -229,7 +228,7 @@ internal sealed partial class LinkpearlApp
         var inputLeft = hashLeft + hashSize.X + Metrics.Space.Xxs * scale;
         ImGui.SetCursorScreenPos(new Vector2(inputLeft, field.Center.Y - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(MathF.Max(1f, field.Max.X - Metrics.Space.Md * scale - inputLeft));
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f))
                    .Push(ImGuiCol.Text, frameTheme.TextStrong))
         {
             if (!ImGui.InputText(ChannelHexFieldId, ref channelHexDigits, ChannelHexDigitCount,

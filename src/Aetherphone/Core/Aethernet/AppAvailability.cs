@@ -134,7 +134,11 @@ internal sealed class AppAvailability : IDisposable
         }
 
         Volatile.Write(ref pushedDuringFetch, 0);
-        var token = cancellation.Token;
+        StartFetch(cancellation.Token);
+    }
+
+    private void StartFetch(CancellationToken token)
+    {
         _ = Task.Run(async () =>
         {
             var served = false;

@@ -7,7 +7,6 @@ using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Velvet;
 
@@ -201,7 +200,7 @@ internal sealed partial class VelvetShell
 
             VSectionHeader.Overline(Loc.T(L.Velvet.EditDetailsHeader));
             SyncEditSummaries();
-            using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
+            using (UiScope.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero))
             {
                 for (var index = 0; index < EditSections.Length; index++)
                 {
@@ -223,8 +222,8 @@ internal sealed partial class VelvetShell
         var field = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
         var drawList = ImGui.GetWindowDrawList();
         var inset = Metrics.Space.Md * scale;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, VelvetTheme.TitleInk))
+        using (UiScope.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (UiScope.PushColor(ImGuiCol.Text, VelvetTheme.TitleInk))
         {
             if (multiline)
             {

@@ -8,7 +8,6 @@ using Aetherphone.Windows.Components;
 using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Fishing;
 
@@ -97,7 +96,7 @@ internal sealed partial class FishingApp
 
     private void DrawFishList(Rect body, float scale)
     {
-        using var id = ImRaii.PushId("fishing.fish");
+        using var id = UiScope.PushId("fishing.fish");
         using var surface = AppSurface.Begin(body);
         if (scrollFishListToTop)
         {

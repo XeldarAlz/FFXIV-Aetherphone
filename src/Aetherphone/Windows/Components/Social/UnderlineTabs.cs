@@ -17,43 +17,56 @@ internal readonly record struct UnderlineTabStyle(
 
 internal static class UnderlineTabs
 {
+    public const float LabelPadUnits = 16f;
+
     private const float HoverPadX = 14f;
     private const float HoverPadY = 6f;
     private const float LabelLift = 2f;
 
     public static int Draw(Rect row, string leftLabel, string rightLabel, bool rightActive, ref Spring slide,
-        SocialInk ink, in UnderlineTabStyle style, UiSound tapSound = UiSound.Tap)
+        SocialInk ink, in UnderlineTabStyle style, UiSound tapSound = UiSound.Tap) =>
+        Draw(row, [leftLabel, rightLabel], rightActive ? 1 : 0, ref slide, ink, style, tapSound);
+
+    public static int Draw(Rect row, ReadOnlySpan<string> labels, int active, ref Spring slide, SocialInk ink,
+        in UnderlineTabStyle style, UiSound tapSound = UiSound.Tap)
     {
         var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
-        var half = row.Width * 0.5f;
-        var leftRect = new Rect(row.Min, new Vector2(row.Min.X + half, row.Max.Y));
-        var rightRect = new Rect(new Vector2(row.Min.X + half, row.Min.Y), row.Max);
-        var leftHovered = UiInteract.Hover(leftRect.Min, leftRect.Max);
-        var rightHovered = UiInteract.Hover(rightRect.Min, rightRect.Max);
-        if (leftHovered || rightHovered)
+        var count = labels.Length;
+        if (count == 0)
         {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            return -1;
         }
 
-        DrawLabel(drawList, leftRect, leftLabel, !rightActive, leftHovered, ink, style);
-        DrawLabel(drawList, rightRect, rightLabel, rightActive, rightHovered, ink, style);
+        var slot = row.Width / count;
+        var picked = -1;
+        for (var index = 0; index < count; index++)
+        {
+            var cell = new Rect(new Vector2(row.Min.X + slot * index, row.Min.Y),
+                new Vector2(row.Min.X + slot * (index + 1), row.Max.Y));
+            var hovered = UiInteract.Hover(cell.Min, cell.Max);
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+
+            DrawLabel(drawList, cell, labels[index], index == active, hovered, ink, style);
+            if (UiInteract.Click(cell.Min, cell.Max, hovered, tapSound))
+            {
+                picked = index;
+            }
+        }
+
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        slide.Step(rightActive ? 1f : 0f, style.SmoothTime, delta);
+        slide.Step(active, style.SmoothTime, delta);
         var inset = style.Inset * scale;
-        var underlineWidth = half - inset;
-        var underlineLeft = row.Min.X + inset + slide.Value * (half - inset);
+        var underlineLeft = row.Min.X + slide.Value * slot + inset * (1f - slide.Value / MathF.Max(1f, count - 1));
         var underlineTop = row.Max.Y - style.Underline * scale;
         Squircle.Fill(drawList, new Vector2(underlineLeft, underlineTop),
-            new Vector2(underlineLeft + underlineWidth, row.Max.Y), style.Underline * scale * 0.5f,
+            new Vector2(underlineLeft + slot - inset, row.Max.Y), style.Underline * scale * 0.5f,
             ImGui.GetColorU32(style.UnderlineInk));
         FeedCell.Hairline(drawList, row.Min.X, row.Max.X, row.Max.Y, ink.Hairline);
-        if (UiInteract.Click(leftRect.Min, leftRect.Max, leftHovered, tapSound))
-        {
-            return 0;
-        }
-
-        return UiInteract.Click(rightRect.Min, rightRect.Max, rightHovered, tapSound) ? 1 : -1;
+        return picked;
     }
 
     public static int DrawIcons(Rect row, ReadOnlySpan<string> glyphs, ReadOnlySpan<string> labels, int active,
@@ -100,9 +113,9 @@ internal static class UnderlineTabs
         var scale = UiScale.Current;
         var textStyle = active ? style.Active : style.Idle;
         var color = active ? style.ActiveInk : hovered ? ink.TitleInk : style.IdleInk;
-        var fitted = Typography.FitText(label, MathF.Max(1f, rect.Width - 16f * scale), textStyle);
+        var fitted = Typography.FitText(label, MathF.Max(1f, rect.Width - LabelPadUnits * scale), textStyle);
         var center = rect.Center - new Vector2(0f, LabelLift * scale);
-        if (hovered)
+        if (hovered && !active)
         {
             var size = Typography.Measure(fitted, textStyle);
             var half = new Vector2(size.X * 0.5f + HoverPadX * scale, size.Y * 0.5f + HoverPadY * scale);

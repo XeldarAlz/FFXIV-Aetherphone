@@ -9,7 +9,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Core.Translation;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Chirper;
 
@@ -175,7 +174,7 @@ internal sealed partial class ChirperApp
                 ImGui.SetCursorScreenPos(new Vector2(left, cursorY));
                 using (Typography.WrapAt(right))
                 using (Plugin.Fonts.Push(HeadBodyStyle.Scale))
-                using (ImRaii.PushColor(ImGuiCol.Text, ChirperInk.BodyInk))
+                using (UiScope.PushColor(ImGuiCol.Text, ChirperInk.BodyInk))
                 {
                     Typography.Wrapped(bodyText);
                 }
@@ -548,7 +547,7 @@ internal sealed partial class ChirperApp
                 ImGui.SetCursorScreenPos(new Vector2(textLeft, bodyTop));
                 using (Typography.WrapAt(contentRight))
                 using (Plugin.Fonts.Push(ReplyBodyStyle.Scale))
-                using (ImRaii.PushColor(ImGuiCol.Text, ChirperInk.BodyInk))
+                using (UiScope.PushColor(ImGuiCol.Text, ChirperInk.BodyInk))
                 {
                     Typography.Wrapped(commentText);
                 }
